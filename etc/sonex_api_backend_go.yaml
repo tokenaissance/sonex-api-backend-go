@@ -9,3 +9,16 @@ PostgreSQL:
   User: postgres
   Password: postgres
   DbName: points_service
+Chains:
+  - ChainId: 1946
+    Name: Minato
+    Nodes: # URL:Weight
+      http://10.1.30.101:8545: 100 # 内部
+      http://35.213.179.122:8545: 100 # 外部
+      # https://rpc.minato.soneium.org: 50
+      # https://soneium-minato.rpc.scs.startale.com?apikey=MTMwqry0P0CnqHPnLqmOqUsTxkiPa5ST: 50
+      # https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
+    MinDelayBlocks: 5
+    MinDelayWaitMillisecond: 2000
+    MaxLogsNumber: 10000
+    QuoterAddress: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
