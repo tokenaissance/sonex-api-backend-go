@@ -11,7 +11,9 @@
             "mode": "auto",
             "program": "${workspaceFolder}/sonex_api_backend_go.go",
             "args": [],
-            "env": {}
+            "env": {
+                "DEBUG": "true",
+            }
         }
     ]
 }

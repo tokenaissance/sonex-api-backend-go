@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 
 	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
@@ -21,7 +22,12 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
-	server := rest.MustNewServer(c.RestConf)
+	opts := []rest.RunOption{}
+	opts = append(opts, rest.WithCors(), rest.WithCorsHeaders())
+	if c.Debug {
+		opts = append(opts, rest.WithFileServer("/swagger", http.Dir("./static/swagger")))
+	}
+	server := rest.MustNewServer(c.RestConf, opts...)
 	defer server.Stop()
 
 	ctx := svc.NewServiceContext(c)
