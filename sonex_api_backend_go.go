@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/svc"
@@ -25,6 +26,14 @@ func main() {
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)
+
+	// Register chain handler
+	chainHandlerManager, err := chain_handler.NewChainHandlerManager(ctx)
+	if err != nil {
+		panic(err)
+	}
+	chainHandlerManager.AddHandler(1946, &chain_handler.DemoHandler{})
+	chainHandlerManager.Start()
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()
