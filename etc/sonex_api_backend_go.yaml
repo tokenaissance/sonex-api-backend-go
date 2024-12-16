@@ -1,3 +1,11 @@
 Name: sonex_api_backend_go
 Host: 0.0.0.0
 Port: 8888
+Log:
+  Level: debug
+PostgreSQL:
+  Host: 10.0.0.150
+  Port: 5432
+  User: postgres
+  Password: postgres
+  DbName: points_service
