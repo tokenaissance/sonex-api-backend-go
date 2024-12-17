@@ -28,7 +28,6 @@ CREATE TABLE "public"."chain_scanner_prograss" (
   "height" int8 NOT NULL
 )
 ;
-ALTER TABLE "public"."chain_scanner_prograss" OWNER TO "postgres";
 
 -- ----------------------------
 -- Records of chain_scanner_prograss

@@ -14,13 +14,7 @@ func NewChainHandlerManager(serverCtx *svc.ServiceContext) (*ChainHandlerManager
 		chainScanners: map[int64]*chain_scanner.ChainScanner{},
 	}
 	for _, chain := range serverCtx.Config.Chains {
-		chainScanner, err := chain_scanner.NewChainScanner(
-			serverCtx.Config.PostgreSQL.DateSource(),
-			chain,
-			chain.MinDelayBlocks,
-			chain.MinDelayWaitMillisecond,
-			chain.MaxLogsNumber,
-		)
+		chainScanner, err := chain_scanner.NewChainScanner(serverCtx.Config.PostgreSQL.DateSource(), chain)
 		if err != nil {
 			return nil, err
 		}

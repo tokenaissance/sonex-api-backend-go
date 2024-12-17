@@ -11,7 +11,7 @@ import (
 type DemoHandler struct {
 }
 
-func (handler *DemoHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts) (error, bool) {
+func (handler *DemoHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
 	height, err := client.BlockNumber(context.Background())
 	if err != nil {
 		return err, false

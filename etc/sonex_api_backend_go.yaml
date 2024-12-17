@@ -8,7 +8,7 @@ PostgreSQL:
   Port: 5432
   User: postgres
   Password: postgres
-  DbName: demo
+  DbName: sonex_api_backend
 Chains:
   - ChainId: 1946
     Name: Minato
@@ -18,7 +18,13 @@ Chains:
       # https://rpc.minato.soneium.org: 50
       # https://soneium-minato.rpc.scs.startale.com?apikey=MTMwqry0P0CnqHPnLqmOqUsTxkiPa5ST: 50
       # https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
-    MinDelayBlocks: 5
+    MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
-    MaxLogsNumber: 10000
-    QuoterAddress: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
+    MaxLogsNumber: 5000
+  - ChainId: 81
+    Name: Shibuya
+    Nodes: # URL:Weight
+      https://evm.shibuya.astar.network: 100
+    MinConfirmations: 3
+    MinDelayWaitMillisecond: 2000
+    MaxLogsNumber: 3000

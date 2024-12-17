@@ -6,5 +6,5 @@ import (
 )
 
 type IHandler interface {
-	Execute(client *ethclient.Client, opt *bind.FilterOpts) (error, bool)
+	Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool)
 }

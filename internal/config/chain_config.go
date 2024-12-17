@@ -11,10 +11,9 @@ type ChainConfig struct {
 	ChainId                 int64            `json:","`
 	Name                    string           `json:","`
 	Nodes                   map[string]int64 `json:","`
-	MinDelayBlocks          int64            `json:",default=5"`
+	MinConfirmations        int64            `json:",default=5"`
 	MinDelayWaitMillisecond int64            `json:",default=2000"`
 	MaxLogsNumber           int64            `json:",default=10000"`
-	QuoterAddress           string           `json:",optional"`
 }
 
 func (config *ChainConfig) GetNode() string {
