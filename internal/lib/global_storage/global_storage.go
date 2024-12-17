@@ -52,6 +52,8 @@ func SetToken(chainId int64, address string, token Token) {
 }
 
 func GetToken(chainId int64, address string) (*Token, error) {
+	tokensLock.RLock()
+	defer tokensLock.RUnlock()
 	_, ok := tokens[int(chainId)]
 	if !ok {
 		return nil, fmt.Errorf("%s", "Miss token infomation")
@@ -64,6 +66,8 @@ func GetToken(chainId int64, address string) (*Token, error) {
 }
 
 func AllTokens(chainId int64) []Token {
+	tokensLock.RLock()
+	defer tokensLock.RUnlock()
 	_, ok := tokens[int(chainId)]
 	if !ok {
 		tokens[int(chainId)] = map[string]Token{}
@@ -87,6 +91,8 @@ func SetPrice(chainId int64, token string, price *big.Int) {
 }
 
 func GetPrice(chainId int64, token string) (*big.Int, error) {
+	pricesLock.RLock()
+	defer pricesLock.RUnlock()
 	_, ok := prices[int(chainId)]
 	if !ok {
 		return nil, fmt.Errorf("%s", "Miss token price")
