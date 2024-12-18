@@ -7,5 +7,5 @@ type Config struct {
 	rest.RestConf
 	PostgreSQL PgConfig      `json:","`
 	Chains     []ChainConfig `json:","`
-	Sonexes    []SonexConfig `json:","`
+	Sonexes    []SonexConfig `json:",optional"`
 }
