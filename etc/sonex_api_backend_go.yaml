@@ -13,18 +13,24 @@ Chains:
   - ChainId: 1946
     Name: Minato
     Nodes: # URL:Weight
-      http://10.1.30.101:8545: 100 # 内部
-      http://35.213.179.122:8545: 100 # 外部
+      http://10.1.30.101:8545: 100 # snap内部
+      http://35.213.179.122:8545: 100 # snap外部
+      http://10.1.30.102:8545: 100 # full内部
+      http://34.124.205.209:8545: 100 # full外部
       # https://rpc.minato.soneium.org: 50
       # https://soneium-minato.rpc.scs.startale.com?apikey=MTMwqry0P0CnqHPnLqmOqUsTxkiPa5ST: 50
       # https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
-  - ChainId: 81
-    Name: Shibuya
-    Nodes: # URL:Weight
-      https://evm.shibuya.astar.network: 100
-    MinConfirmations: 3
-    MinDelayWaitMillisecond: 2000
-    MaxLogsNumber: 3000
+  # - ChainId: 81
+  #   Name: Shibuya
+  #   Nodes: # URL:Weight
+  #     https://evm.shibuya.astar.network: 100
+  #   MinConfirmations: 3
+  #   MinDelayWaitMillisecond: 2000
+  #   MaxLogsNumber: 3000
+Sonexes:
+  - ChainId: 1946
+    Factory: 0x69196462dD5105B85dD2941B3e0e0Df083A69152
+    PositionManager: 0xeC816FCdc262601C0E23902c679FDd87CFb24077

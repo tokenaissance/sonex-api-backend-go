@@ -17,11 +17,11 @@ type Token struct {
 	IsStablecoin bool
 }
 
-var tokensLock sync.RWMutex
 var tokens map[int]map[string]Token
+var tokensLock sync.RWMutex
 
-var pricesLock sync.RWMutex
 var prices map[int]map[string]*big.Int
+var pricesLock sync.RWMutex
 
 func init() {
 	tokens = map[int]map[string]Token{}

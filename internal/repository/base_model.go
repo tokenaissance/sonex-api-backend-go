@@ -16,6 +16,6 @@ func IsTx(conn sqlx.SqlConn) bool {
 	return err != nil
 }
 
-func NowUTC() string {
-	return time.Now().UTC().Format("2006-01-02 15:04:05+00")
+func NowUTC() time.Time {
+	return time.Now().UTC()
 }
