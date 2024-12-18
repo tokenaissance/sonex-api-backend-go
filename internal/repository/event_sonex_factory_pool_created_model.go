@@ -18,7 +18,7 @@ type (
 		eventSonexFactoryPoolCreatedModel
 		withSession(session sqlx.Session) EventSonexFactoryPoolCreatedModel
 		New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) (int64, error)
-		QueryByChainIdFactory(ctx context.Context, chainId int64, factory string) ([]EventSonexFactoryPoolCreated, error)
+		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -47,10 +47,10 @@ func (m *customEventSonexFactoryPoolCreatedModel) New(ctx context.Context, chain
 	return id, err
 }
 
-func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdFactory(ctx context.Context, chainId int64, factory string) ([]EventSonexFactoryPoolCreated, error) {
+func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error) {
 	var resp []EventSonexFactoryPoolCreated
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND to_ = $2 LIMIT 1", eventSonexFactoryPoolCreatedRows, m.table)
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, factory)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND to_ = $2", eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, positionManager)
 	if err != nil {
 		return nil, err
 	}

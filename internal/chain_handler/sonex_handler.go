@@ -34,16 +34,20 @@ func NewSonexHandler(dataSource string, chain config.ChainConfig, config config.
 	}, nil
 }
 
-func (handler *SonexHandler) getTranscations(client *ethclient.Client, blockNumbers []int64) (map[string]*struct {
+func (handler *SonexHandler) getTranscations(ctx context.Context, client *ethclient.Client, blockNumbers []int64) (map[string]*struct {
 	Time time.Time
 	From common.Address
 	Tx   *types.Transaction
 }, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	nodeCaller, err := node_caller.NewNodeCaller(client)
 	if err != nil {
 		return nil, err
 	}
-	blocks, err := nodeCaller.BatchBlockByNumber(context.Background(), blockNumbers)
+	blocks, err := nodeCaller.BatchBlockByNumber(ctx, blockNumbers)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +115,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 		var numbers []int64
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := handler.getTranscations(client, numbers)
+		transactions, err := handler.getTranscations(opt.Context, client, numbers)
 		if err != nil {
 			handleErr = err
 			return
@@ -160,7 +164,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		}
 
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-		poolCreatedRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainIdFactory(opt.Context, handler.chain.ChainId, handler.config.PositionManager)
+		poolCreatedRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainIdPositionManager(opt.Context, handler.chain.ChainId, handler.config.PositionManager)
 		if err != nil {
 			handleErr = err
 		}
@@ -211,7 +215,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						}
 					}()
 
-					numberSet = map[int64]struct{}{}
+					numberSet := map[int64]struct{}{}
 
 					pool, err := uniswap_v3.NewUniswapV3Pool(poolAddress, client)
 					if err != nil {
@@ -269,7 +273,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 					var numbers []int64
 					linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-					transactions, err := handler.getTranscations(client, numbers)
+					transactions, err := handler.getTranscations(opt.Context, client, numbers)
 					if err != nil {
 						handleErr = err
 						return
@@ -484,7 +488,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 		var numbers []int64
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := handler.getTranscations(client, numbers)
+		transactions, err := handler.getTranscations(opt.Context, client, numbers)
 		if err != nil {
 			handleErr = err
 			return
