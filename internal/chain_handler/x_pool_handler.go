@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/contract/x_pool"
+	"sonex_api_backend_go/internal/lib/log"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
 	"sync"
+	"time"
 
 	"github.com/ahmetb/go-linq/v3"
+	"github.com/avast/retry-go/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -153,241 +156,249 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			return common.HexToAddress(item.EventPool)
 		}).ToSlice(&poolAddresses)
 
+		retrys := 0
 		waitForRetryPools := []common.Address{}
-		for {
-			// Retry
-			if len(waitForRetryPools) != 0 {
-				poolAddresses = waitForRetryPools
-				waitForRetryPools = []common.Address{}
-				logx.Errorf("Retry handle pools[%d]: %v", len(poolAddresses), poolAddresses)
-			}
+		err = retry.Do(
+			func() error {
+				var poolWg sync.WaitGroup
 
-			var poolWg sync.WaitGroup
+				results := make(chan struct {
+					Err         error
+					PoolAddress common.Address
+				}, len(poolAddresses))
 
-			results := make(chan struct {
-				Err         error
-				PoolAddress common.Address
-			}, len(poolAddresses))
-
-			for _, poolAddress := range poolAddresses {
-				poolWg.Add(1)
-				go func(
-					poolAddress common.Address,
-					client *ethclient.Client,
-					ch chan struct {
-						Err         error
-						PoolAddress common.Address
-					}) {
-					sendResult := func(err error) {
-						ch <- struct {
+				for _, poolAddress := range poolAddresses {
+					poolWg.Add(1)
+					go func(
+						poolAddress common.Address,
+						client *ethclient.Client,
+						ch chan struct {
 							Err         error
 							PoolAddress common.Address
-						}{
-							Err:         err,
-							PoolAddress: poolAddress,
+						}) {
+						sendResult := func(err error) {
+							ch <- struct {
+								Err         error
+								PoolAddress common.Address
+							}{
+								Err:         err,
+								PoolAddress: poolAddress,
+							}
 						}
-					}
 
-					defer poolWg.Done()
-					defer func() {
-						if err := recover(); err != nil {
-							sendResult(fmt.Errorf("%s %s(panic)", poolAddress, err))
-							return
-						}
-					}()
+						defer poolWg.Done()
+						defer func() {
+							if err := recover(); err != nil {
+								sendResult(fmt.Errorf("%s %s(panic)", poolAddress, err))
+								return
+							}
+						}()
 
-					numberSet := map[int64]struct{}{}
+						numberSet := map[int64]struct{}{}
 
-					pool, err := x_pool.NewStakingPool(poolAddress, client)
-					if err != nil {
-						sendResult(err)
-						return
-					}
-
-					// Claimed event
-					claimedLogs, err := pool.FilterClaimed(opt, nil)
-					if err != nil {
-						sendResult(err)
-						return
-					}
-					claimedEvents := []*x_pool.StakingPoolClaimed{}
-					for claimedLogs.Next() {
-						if err = claimedLogs.Error(); err != nil {
+						pool, err := x_pool.NewStakingPool(poolAddress, client)
+						if err != nil {
 							sendResult(err)
 							return
 						}
-						numberSet[int64(claimedLogs.Event.Raw.BlockNumber)] = struct{}{}
-						claimedEvents = append(claimedEvents, claimedLogs.Event)
-					}
-
-					// Withdrawed event
-					withdrawedLogs, err := pool.FilterWithdrawed(opt, nil)
-					if err != nil {
-						sendResult(err)
-						return
-					}
-					withdrawedEvents := []*x_pool.StakingPoolWithdrawed{}
-					for withdrawedLogs.Next() {
-						if err = withdrawedLogs.Error(); err != nil {
-							sendResult(err)
-							return
-						}
-						numberSet[int64(withdrawedLogs.Event.Raw.BlockNumber)] = struct{}{}
-						withdrawedEvents = append(withdrawedEvents, withdrawedLogs.Event)
-					}
-
-					// Deposited event
-					depositedLogs, err := pool.FilterDeposited(opt, nil)
-					if err != nil {
-						sendResult(err)
-						return
-					}
-					depositedEvents := []*x_pool.StakingPoolDeposited{}
-					for depositedLogs.Next() {
-						if err = depositedLogs.Error(); err != nil {
-							sendResult(err)
-							return
-						}
-						numberSet[int64(depositedLogs.Event.Raw.BlockNumber)] = struct{}{}
-						depositedEvents = append(depositedEvents, depositedLogs.Event)
-					}
-
-					var numbers []int64
-					linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-					transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
-					if err != nil {
-						sendResult(err)
-						return
-					}
-
-					conn := repository.NewConn(handler.dataSource)
-					err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-						eventXPoolPoolClaimedModel := repository.NewEventXPoolPoolClaimedModel(sqlx.NewSqlConnFromSession(s))
-						eventXPoolPoolWithdrawedModel := repository.NewEventXPoolPoolWithdrawedModel(sqlx.NewSqlConnFromSession(s))
-						eventXPoolPoolDestroiedModel := repository.NewEventXPoolPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
 
 						// Claimed event
-						{
-							for _, event := range claimedEvents {
-								blockNumber := int64(event.Raw.BlockNumber)
-								tx := transactions[event.Raw.TxHash.Hex()]
-								txIndex := int64(event.Raw.Index)
-								txHash := tx.Tx.Hash().Hex()
-								txAt := tx.Time
-								from := tx.From.Hex()
-								to := tx.Tx.To().Hex()
-								value := tx.Tx.Value().String()
-								user := event.User.Hex()
-								amount := event.Amount.String()
-								height := event.Height.Int64()
-
-								// If handled, ignore
-								_, err := eventXPoolPoolClaimedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
-								switch err {
-								case repository.ErrNotFound:
-								case nil:
-									continue
-								default:
-									return err
-								}
-
-								_, err = eventXPoolPoolClaimedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
-								if err != nil {
-									return err
-								}
+						claimedLogs, err := pool.FilterClaimed(opt, nil)
+						if err != nil {
+							sendResult(err)
+							return
+						}
+						claimedEvents := []*x_pool.StakingPoolClaimed{}
+						for claimedLogs.Next() {
+							if err = claimedLogs.Error(); err != nil {
+								sendResult(err)
+								return
 							}
+							numberSet[int64(claimedLogs.Event.Raw.BlockNumber)] = struct{}{}
+							claimedEvents = append(claimedEvents, claimedLogs.Event)
 						}
 
 						// Withdrawed event
-						{
-							for _, event := range withdrawedEvents {
-								blockNumber := int64(event.Raw.BlockNumber)
-								tx := transactions[event.Raw.TxHash.Hex()]
-								txIndex := int64(event.Raw.Index)
-								txHash := tx.Tx.Hash().Hex()
-								txAt := tx.Time
-								from := tx.From.Hex()
-								to := tx.Tx.To().Hex()
-								value := tx.Tx.Value().String()
-								user := event.User.Hex()
-								amount := event.Amount.String()
-								height := event.Height.Int64()
+						withdrawedLogs, err := pool.FilterWithdrawed(opt, nil)
+						if err != nil {
+							sendResult(err)
+							return
+						}
+						withdrawedEvents := []*x_pool.StakingPoolWithdrawed{}
+						for withdrawedLogs.Next() {
+							if err = withdrawedLogs.Error(); err != nil {
+								sendResult(err)
+								return
+							}
+							numberSet[int64(withdrawedLogs.Event.Raw.BlockNumber)] = struct{}{}
+							withdrawedEvents = append(withdrawedEvents, withdrawedLogs.Event)
+						}
 
-								// If handled, ignore
-								_, err := eventXPoolPoolWithdrawedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
-								switch err {
-								case repository.ErrNotFound:
-								case nil:
-									continue
-								default:
-									return err
-								}
+						// Deposited event
+						depositedLogs, err := pool.FilterDeposited(opt, nil)
+						if err != nil {
+							sendResult(err)
+							return
+						}
+						depositedEvents := []*x_pool.StakingPoolDeposited{}
+						for depositedLogs.Next() {
+							if err = depositedLogs.Error(); err != nil {
+								sendResult(err)
+								return
+							}
+							numberSet[int64(depositedLogs.Event.Raw.BlockNumber)] = struct{}{}
+							depositedEvents = append(depositedEvents, depositedLogs.Event)
+						}
 
-								_, err = eventXPoolPoolWithdrawedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
-								if err != nil {
-									return err
+						var numbers []int64
+						linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
+						transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
+						if err != nil {
+							sendResult(err)
+							return
+						}
+
+						conn := repository.NewConn(handler.dataSource)
+						err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
+							eventXPoolPoolClaimedModel := repository.NewEventXPoolPoolClaimedModel(sqlx.NewSqlConnFromSession(s))
+							eventXPoolPoolWithdrawedModel := repository.NewEventXPoolPoolWithdrawedModel(sqlx.NewSqlConnFromSession(s))
+							eventXPoolPoolDestroiedModel := repository.NewEventXPoolPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
+
+							// Claimed event
+							{
+								for _, event := range claimedEvents {
+									blockNumber := int64(event.Raw.BlockNumber)
+									tx := transactions[event.Raw.TxHash.Hex()]
+									txIndex := int64(event.Raw.Index)
+									txHash := tx.Tx.Hash().Hex()
+									txAt := tx.Time
+									from := tx.From.Hex()
+									to := tx.Tx.To().Hex()
+									value := tx.Tx.Value().String()
+									user := event.User.Hex()
+									amount := event.Amount.String()
+									height := event.Height.Int64()
+
+									// If handled, ignore
+									_, err := eventXPoolPoolClaimedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									switch err {
+									case repository.ErrNotFound:
+									case nil:
+										continue
+									default:
+										return err
+									}
+
+									_, err = eventXPoolPoolClaimedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									if err != nil {
+										return err
+									}
 								}
 							}
+
+							// Withdrawed event
+							{
+								for _, event := range withdrawedEvents {
+									blockNumber := int64(event.Raw.BlockNumber)
+									tx := transactions[event.Raw.TxHash.Hex()]
+									txIndex := int64(event.Raw.Index)
+									txHash := tx.Tx.Hash().Hex()
+									txAt := tx.Time
+									from := tx.From.Hex()
+									to := tx.Tx.To().Hex()
+									value := tx.Tx.Value().String()
+									user := event.User.Hex()
+									amount := event.Amount.String()
+									height := event.Height.Int64()
+
+									// If handled, ignore
+									_, err := eventXPoolPoolWithdrawedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									switch err {
+									case repository.ErrNotFound:
+									case nil:
+										continue
+									default:
+										return err
+									}
+
+									_, err = eventXPoolPoolWithdrawedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									if err != nil {
+										return err
+									}
+								}
+							}
+
+							// Deposited event (The contract has not been updated yet)
+							{
+								_ = depositedEvents
+								_ = eventXPoolPoolDestroiedModel
+								// for _, event := range depositedEvents {
+								// 	blockNumber := int64(event.Raw.BlockNumber)
+								// 	tx := transactions[event.Raw.TxHash.Hex()]
+								// 	txIndex := int64(event.Raw.Index)
+								// 	txHash := tx.Tx.Hash().Hex()
+								// 	txAt := tx.Time
+								// 	from := tx.From.Hex()
+								// 	to := tx.Tx.To().Hex()
+								// 	value := tx.Tx.Value().String()
+								// 	ethBalance := event.EthBalance.String()
+								// 	stakingBalance := event.StakingBalance.String()
+								// 	rewardBalance := event.RewardBalance.String()
+								// 	recipient := event.Recipient.Hex()
+
+								// 	// If handled, ignore
+								// 	_, err := eventXPoolPoolDestroiedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+								// 	switch err {
+								// 	case repository.ErrNotFound:
+								// 	case nil:
+								// 		continue
+								// 	default:
+								// 		return err
+								// 	}
+
+								// 	_, err = eventXPoolPoolDestroiedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, ethBalance, stakingBalance, rewardBalance, recipient)
+								// 	if err != nil {
+								// 		return err
+								// 	}
+								// }
+							}
+
+							return nil
+						})
+						if err != nil {
+							sendResult(err)
+							return
 						}
 
-						// Deposited event (The contract has not been updated yet)
-						{
-							_ = depositedEvents
-							_ = eventXPoolPoolDestroiedModel
-							// for _, event := range depositedEvents {
-							// 	blockNumber := int64(event.Raw.BlockNumber)
-							// 	tx := transactions[event.Raw.TxHash.Hex()]
-							// 	txIndex := int64(event.Raw.Index)
-							// 	txHash := tx.Tx.Hash().Hex()
-							// 	txAt := tx.Time
-							// 	from := tx.From.Hex()
-							// 	to := tx.Tx.To().Hex()
-							// 	value := tx.Tx.Value().String()
-							// 	ethBalance := event.EthBalance.String()
-							// 	stakingBalance := event.StakingBalance.String()
-							// 	rewardBalance := event.RewardBalance.String()
-							// 	recipient := event.Recipient.Hex()
-
-							// 	// If handled, ignore
-							// 	_, err := eventXPoolPoolDestroiedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
-							// 	switch err {
-							// 	case repository.ErrNotFound:
-							// 	case nil:
-							// 		continue
-							// 	default:
-							// 		return err
-							// 	}
-
-							// 	_, err = eventXPoolPoolDestroiedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, ethBalance, stakingBalance, rewardBalance, recipient)
-							// 	if err != nil {
-							// 		return err
-							// 	}
-							// }
-						}
-
-						return nil
-					})
-					if err != nil {
-						sendResult(err)
-						return
-					}
-
-				}(poolAddress, client, results)
-			}
-
-			poolWg.Wait()
-			close(results)
-
-			// Handle results
-			for result := range results {
-				if result.Err != nil {
-					waitForRetryPools = append(waitForRetryPools, result.PoolAddress)
-					logx.Errorf("Handle pool error: %s\n", result.Err)
+					}(poolAddress, client, results)
 				}
-			}
-			if len(waitForRetryPools) == 0 {
-				break
-			}
+
+				poolWg.Wait()
+				close(results)
+
+				// Handle results
+				for result := range results {
+					if result.Err != nil {
+						waitForRetryPools = append(waitForRetryPools, result.PoolAddress)
+						logx.Errorf("Handle pool error: %s\n", result.Err)
+					}
+				}
+				if len(waitForRetryPools) != 0 {
+					return fmt.Errorf("%s", fmt.Sprintf("Retry handle pools[%d]: %v", len(waitForRetryPools), waitForRetryPools))
+				}
+
+				return nil
+			},
+			retry.Delay(time.Second*5),
+			retry.DelayType(retry.FixedDelay),
+			retry.OnRetry(func(n uint, err error) {
+				retrys += 1
+				logx.Infof(log.Warning("Retrying handle pools %d times, pools: %v, error: %s", retrys, waitForRetryPools, err))
+			}),
+		)
+		if err != nil {
+			logx.Errorf(log.Alert("Retry handle pools %d times, but failed: %v", retrys, waitForRetryPools))
+			return nil
 		}
 
 		return nil
