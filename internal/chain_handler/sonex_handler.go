@@ -132,6 +132,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			if len(waitForRetryPools) != 0 {
 				poolAddresses = waitForRetryPools
 				waitForRetryPools = []common.Address{}
+				logx.Errorf("Retry handle pools[%d]: %v", len(poolAddresses), poolAddresses)
 			}
 
 			var poolWg sync.WaitGroup
