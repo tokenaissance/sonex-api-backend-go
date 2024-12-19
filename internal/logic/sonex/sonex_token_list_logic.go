@@ -1,4 +1,4 @@
-package logic
+package sonex
 
 import (
 	"context"
@@ -9,21 +9,21 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type Sonex_api_backend_goLogic struct {
+type SonexTokenListLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
 
-func NewSonex_api_backend_goLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Sonex_api_backend_goLogic {
-	return &Sonex_api_backend_goLogic{
+func NewSonexTokenListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexTokenListLogic {
+	return &SonexTokenListLogic{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
 }
 
-func (l *Sonex_api_backend_goLogic) Sonex_api_backend_go(req *types.Request) (resp *types.Response, err error) {
+func (l *SonexTokenListLogic) SonexTokenList(req *types.SonexTokenListRequest) (resp *types.SonexTokenListResponse, err error) {
 	// todo: add your logic here and delete this line
 
 	return

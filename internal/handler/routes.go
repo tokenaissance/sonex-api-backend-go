@@ -6,6 +6,8 @@ package handler
 import (
 	"net/http"
 
+	sonex "sonex_api_backend_go/internal/handler/sonex"
+	x_pool "sonex_api_backend_go/internal/handler/x_pool"
 	"sonex_api_backend_go/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -16,9 +18,41 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
-				Path:    "/from/:name",
-				Handler: Sonex_api_backend_goHandler(serverCtx),
+				Path:    "/meta",
+				Handler: MetaHandler(serverCtx),
 			},
 		},
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/token/list",
+				Handler: sonex.SonexTokenListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/token/prices",
+				Handler: sonex.SonexTokenPriceHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/sonex"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/pool/list",
+				Handler: x_pool.XPoolPoolListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/pool/stats",
+				Handler: x_pool.XPoolPoolStatsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/x_pool"),
 	)
 }

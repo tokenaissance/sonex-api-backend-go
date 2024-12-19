@@ -3,10 +3,40 @@
 
 package types
 
-type Request struct {
+type MetaRequest struct {
+}
+
+type MetaResponse struct {
+}
+
+type SonexTokenListRequest struct {
 	Name string `path:"name,options=you|me"`
 }
 
-type Response struct {
+type SonexTokenListResponse struct {
+	Message string `json:"message"`
+}
+
+type SonexTokenPricesRequest struct {
+	Name string `path:"name,options=you|me"`
+}
+
+type SonexTokenPricesResponse struct {
+	Message string `json:"message"`
+}
+
+type XPoolPoolListRequest struct {
+	Name string `path:"name,options=you|me"`
+}
+
+type XPoolPoolListResponse struct {
+	Message string `json:"message"`
+}
+
+type XPoolPoolStatsRequest struct {
+	Name string `path:"name,options=you|me"`
+}
+
+type XPoolPoolStatsResponse struct {
 	Message string `json:"message"`
 }

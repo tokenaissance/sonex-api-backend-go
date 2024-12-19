@@ -1,14 +1,93 @@
 syntax = "v1"
 
-type Request {
+/*
+Global Module
+*/
+type MetaRequest {}
+
+type MetaResponse {}
+
+service sonex_api_backend_go {
+	@handler MetaHandler
+	get /meta (MetaRequest) returns (MetaResponse)
+}
+
+/*
+Sonex Module
+*/
+type SonexTokenListRequest {
 	Name string `path:"name,options=you|me"`
 }
 
-type Response {
+type SonexTokenListResponse {
 	Message string `json:"message"`
 }
 
-service sonex_api_backend_go{
-	@handler Sonex_api_backend_goHandler
-	get /from/:name (Request) returns (Response)
+type SonexTokenPricesRequest {
+	Name string `path:"name,options=you|me"`
 }
+
+type SonexTokenPricesResponse {
+	Message string `json:"message"`
+}
+
+@server (
+	prefix: /sonex
+	group:  sonex
+)
+service sonex_api_backend_go {
+	@handler SonexTokenListHandler
+	get /token/list (SonexTokenListRequest) returns (SonexTokenListResponse)
+
+	@handler SonexTokenPriceHandler
+	get /token/prices (SonexTokenPricesRequest) returns (SonexTokenPricesResponse)
+}
+
+/*
+Farm Module
+*/
+// type FarmRequest {
+//  Name string `path:"name,options=you|me"`
+// }
+// type FarmResponse {
+//  Message string `json:"message"`
+// }
+// @server (
+//  prefix: /farm
+//  group:  farm
+// )
+// service sonex_api_backend_go {
+//  @handler FarmMothedHandler
+//  get /mothed (FarmRequest) returns (FarmResponse)
+// }
+/*
+XPool Module
+*/
+type XPoolPoolListRequest {
+	Name string `path:"name,options=you|me"`
+}
+
+type XPoolPoolListResponse {
+	Message string `json:"message"`
+}
+
+type XPoolPoolStatsRequest {
+	Name string `path:"name,options=you|me"`
+}
+
+type XPoolPoolStatsResponse {
+	Message string `json:"message"`
+}
+
+@server (
+	prefix: /x_pool
+	group:  x_pool
+)
+service sonex_api_backend_go {
+	@handler XPoolPoolListHandler
+	get /pool/list (XPoolPoolListRequest) returns (XPoolPoolListResponse)
+
+	@handler XPoolPoolStatsHandler
+	get /pool/stats (XPoolPoolStatsRequest) returns (XPoolPoolStatsResponse)
+}
+

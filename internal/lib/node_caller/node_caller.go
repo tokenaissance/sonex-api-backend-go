@@ -162,7 +162,7 @@ func (nodeCaller *NodeCaller) BatchBlockByNumber(ctx context.Context, numbers []
 	return result, nil
 }
 
-func (nodeCaller *NodeCaller) QuoteExactInput(ctx context.Context, quoter string, path []byte, amountIn *big.Int) (*QuoteExactOut, error) {
+func (nodeCaller *NodeCaller) QuoteExactInput(ctx context.Context, quoter string, path []byte, amountIn *big.Int) (*QuoteExactInputResult, error) {
 	if quoter == "" || !common.IsHexAddress(quoter) {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
@@ -185,7 +185,7 @@ func (nodeCaller *NodeCaller) QuoteExactInput(ctx context.Context, quoter string
 		return nil, err
 	}
 
-	var output QuoteExactOut
+	var output QuoteExactInputResult
 	err = abi.UnpackIntoInterface(&output, "quoteExactInput", result)
 	if err != nil {
 		return nil, err
