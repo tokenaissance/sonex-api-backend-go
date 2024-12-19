@@ -3,18 +3,15 @@ package chain_handler
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
 	"sync"
-	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -32,50 +29,6 @@ func NewSonexHandler(dataSource string, chain config.ChainConfig, config config.
 		chain:      &chain,
 		config:     &config,
 	}, nil
-}
-
-func (handler *SonexHandler) getTranscations(ctx context.Context, client *ethclient.Client, blockNumbers []int64) (map[string]*struct {
-	Time time.Time
-	From common.Address
-	Tx   *types.Transaction
-}, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	nodeCaller, err := node_caller.NewNodeCaller(client)
-	if err != nil {
-		return nil, err
-	}
-	blocks, err := nodeCaller.BatchBlockByNumber(ctx, blockNumbers)
-	if err != nil {
-		return nil, err
-	}
-	transactions := map[string]*struct {
-		Time time.Time
-		From common.Address
-		Tx   *types.Transaction
-	}{}
-	for _, block := range blocks {
-		txAt := time.Unix(int64(block.Time()), 0).UTC()
-		for _, transaction := range block.Transactions() {
-			from, err := types.LatestSignerForChainID(big.NewInt(handler.config.ChainId)).Sender(transaction)
-			if err != nil {
-				return nil, err
-			}
-			transactions[transaction.Hash().Hex()] = &struct {
-				Time time.Time
-				From common.Address
-				Tx   *types.Transaction
-			}{
-				Time: txAt,
-				From: from,
-				Tx:   transaction,
-			}
-		}
-	}
-
-	return transactions, nil
 }
 
 func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
@@ -115,7 +68,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 		var numbers []int64
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := handler.getTranscations(opt.Context, client, numbers)
+		transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
 		if err != nil {
 			handleErr = err
 			return
@@ -273,7 +226,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 					var numbers []int64
 					linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-					transactions, err := handler.getTranscations(opt.Context, client, numbers)
+					transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
 					if err != nil {
 						handleErr = err
 						return
@@ -488,7 +441,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 		var numbers []int64
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := handler.getTranscations(opt.Context, client, numbers)
+		transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
 		if err != nil {
 			handleErr = err
 			return

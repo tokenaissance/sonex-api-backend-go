@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -191,4 +192,48 @@ func (nodeCaller *NodeCaller) QuoteExactInput(ctx context.Context, quoter string
 		return nil, err
 	}
 	return &output, nil
+}
+
+func GetTranscations(ctx context.Context, client *ethclient.Client, chainId int64, blockNumbers []int64) (map[string]*struct {
+	Time time.Time
+	From common.Address
+	Tx   *types.Transaction
+}, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	nodeCaller, err := NewNodeCaller(client)
+	if err != nil {
+		return nil, err
+	}
+	blocks, err := nodeCaller.BatchBlockByNumber(ctx, blockNumbers)
+	if err != nil {
+		return nil, err
+	}
+	transactions := map[string]*struct {
+		Time time.Time
+		From common.Address
+		Tx   *types.Transaction
+	}{}
+	for _, block := range blocks {
+		txAt := time.Unix(int64(block.Time()), 0).UTC()
+		for _, transaction := range block.Transactions() {
+			from, err := types.LatestSignerForChainID(big.NewInt(chainId)).Sender(transaction)
+			if err != nil {
+				return nil, err
+			}
+			transactions[transaction.Hash().Hex()] = &struct {
+				Time time.Time
+				From common.Address
+				Tx   *types.Transaction
+			}{
+				Time: txAt,
+				From: from,
+				Tx:   transaction,
+			}
+		}
+	}
+
+	return transactions, nil
 }
