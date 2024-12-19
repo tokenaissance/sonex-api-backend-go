@@ -228,7 +228,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
 					transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
 					if err != nil {
-						handleErr = err
+						sendResult(err)
 						return
 					}
 
@@ -346,7 +346,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return nil
 					})
 					if err != nil {
-						handleErr = err
+						sendResult(err)
 						return
 					}
 
