@@ -95,5 +95,5 @@ COMMENT ON COLUMN xpool_user_action.amount IS '交易数量';
 COMMENT ON COLUMN xpool_user_action.is_user IS '是否为用户操作（TRUE-是，FALSE-否）';
 COMMENT ON COLUMN xpool_user_action.tx_time IS '成交时间';
 COMMENT ON COLUMN xpool_user_action.created_at IS '创建时间';
-COMMENT ON COLUMN xpool_user_action.updated_at IS '更新时间';
+COMMENT ON COLUMN xpool_user_action.updated_at IS '更新时间'; 
 
