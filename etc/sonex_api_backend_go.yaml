@@ -4,10 +4,10 @@ Port: 8888
 Log:
   Level: debug
 PostgreSQL:
-  Host: 10.0.0.150
+  Host: 127.0.0.1
   Port: 5432
   User: postgres
-  Password: postgres
+  Password: 123456Abc
   DbName: sonex_api_backend
 Chains:
   - ChainId: 1946

@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	sonex "sonex_api_backend_go/internal/handler/sonex"
-	x_pool "sonex_api_backend_go/internal/handler/x_pool"
+	xpool "sonex_api_backend_go/internal/handler/xpool"
 	"sonex_api_backend_go/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -43,16 +43,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// Xpool list
 				Method:  http.MethodGet,
 				Path:    "/pool/list",
-				Handler: x_pool.XPoolPoolListHandler(serverCtx),
+				Handler: xpool.XpoolPoolListHandler(serverCtx),
 			},
 			{
+				// Xpool stats
 				Method:  http.MethodGet,
 				Path:    "/pool/stats",
-				Handler: x_pool.XPoolPoolStatsHandler(serverCtx),
+				Handler: xpool.XpoolPoolStatsHandler(serverCtx),
 			},
 		},
-		rest.WithPrefix("/x_pool"),
+		rest.WithPrefix("/xpool"),
 	)
 }
