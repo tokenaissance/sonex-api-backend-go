@@ -3,6 +3,8 @@ package xpool
 import (
 	"net/http"
 
+	"sonex_api_backend_go/internal/handler/response"
+	"sonex_api_backend_go/internal/handler/response/code"
 	"sonex_api_backend_go/internal/logic/xpool"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -19,15 +21,13 @@ func XpoolPoolStatsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := xpool.NewXpoolPoolStatsLogic(r.Context(), svcCtx)
-		resp, err := l.XpoolPoolStats(&req)
+		result, err := l.XpoolPoolStats(&req)
+		var resp response.ApiResponse
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			resp = response.Error(code.XpoolError, err.Error())
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, ApiResponse{
-				Code: 0,
-				Msg:  "success",
-				Data: resp,
-			})
+			resp = response.Success(result)
 		}
+		httpx.OkJson(w, resp)
 	}
 }
