@@ -55,6 +55,7 @@ type (
 		EventAmount1      string    `db:"event_amount1"`
 		EventSqrtPriceX96 string    `db:"event_sqrt_price_x96"`
 		EventTick         string    `db:"event_tick"`
+		ExtraPool         string    `db:"extra_pool"`
 	}
 )
 
@@ -100,14 +101,14 @@ func (m *defaultEventSonexPoolSwapModel) FindOneByChainIdTxHash(ctx context.Cont
 }
 
 func (m *defaultEventSonexPoolSwapModel) Insert(ctx context.Context, data *EventSonexPoolSwap) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", m.table, eventSonexPoolSwapRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventSender, data.EventRecipient, data.EventAmount0, data.EventAmount1, data.EventSqrtPriceX96, data.EventTick)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", m.table, eventSonexPoolSwapRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventSender, data.EventRecipient, data.EventAmount0, data.EventAmount1, data.EventSqrtPriceX96, data.EventTick, data.ExtraPool)
 	return ret, err
 }
 
 func (m *defaultEventSonexPoolSwapModel) Update(ctx context.Context, newData *EventSonexPoolSwap) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventSonexPoolSwapRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventSender, newData.EventRecipient, newData.EventAmount0, newData.EventAmount1, newData.EventSqrtPriceX96, newData.EventTick)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventSender, newData.EventRecipient, newData.EventAmount0, newData.EventAmount1, newData.EventSqrtPriceX96, newData.EventTick, newData.ExtraPool)
 	return err
 }
 
