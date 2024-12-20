@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
-	"sonex_api_backend_go/internal/lib/global_storage"
+	"sonex_api_backend_go/internal/lib/global"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -42,7 +42,7 @@ func (m *customChainScannerPrograssModel) UpdateHeightByChainId(ctx context.Cont
 		switch err {
 		case ErrNotFound:
 			query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5)", m.table, chainScannerPrograssRows)
-			id, err := global_storage.NewId()
+			id, err := global.NewId()
 			if err != nil {
 				return err
 			}

@@ -10,7 +10,9 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/sonex_api_backend_go.go",
-            "args": [],
+            "args": [
+                "-l"
+            ],
             "env": {
                 "DEBUG": "true",
             }
