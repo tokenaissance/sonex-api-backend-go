@@ -27,10 +27,20 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types.PoolsResponse, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	result, err := model.GetPoolList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
+	data, meta, err := model.GetPoolList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 	if err != nil {
-		return nil, err
+		return &types.PoolsResponse{
+			Code:    400,
+			Data:    []*types.PoolsResponse_Pool{},
+			Meta:    &types.PaginationMeta{},
+			Message: err.Error(),
+		}, nil
 	}
 
-	return result, nil
+	return &types.PoolsResponse{
+		Code:    200,
+		Data:    data,
+		Meta:    meta,
+		Message: "success",
+	}, nil
 }

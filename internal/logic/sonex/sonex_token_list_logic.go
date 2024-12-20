@@ -27,11 +27,21 @@ func NewSonexTokenListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *So
 func (l *SonexTokenListLogic) SonexTokenList(req *types.TokenListRequest) (resp *types.TokenListResponse, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
-	result, err := model.GetTokenList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
+	data, meta, err := model.GetTokenList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 
 	if err != nil {
-		return nil, err
+		return &types.TokenListResponse{
+			Code:    400,
+			Data:    []*types.Token_TokenDetail{},
+			Meta:    &types.PaginationMeta{},
+			Message: err.Error(),
+		}, nil
 	}
 
-	return result, nil
+	return &types.TokenListResponse{
+		Code:    200,
+		Data:    data,
+		Meta:    meta,
+		Message: "success",
+	}, nil
 }

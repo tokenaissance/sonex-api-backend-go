@@ -17,8 +17,8 @@ type (
 	SonexTokenModel interface {
 		sonexTokenModel
 		withSession(session sqlx.Session) SonexTokenModel
-		GetTopTokenList(ctx context.Context, chainId int, positionManager string) (*types.TokenTopResponse, error)
-		GetTokenList(ctx context.Context, opts *types.TokenListRequest, positionManager string) (*types.TokenListResponse, error)
+		GetTopTokenList(ctx context.Context, chainId int, positionManager string) ([]*types.Token_TokenDetail, error)
+		GetTokenList(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error)
 	}
 
 	customSonexTokenModel struct {
@@ -45,7 +45,7 @@ type TokenData struct {
 	Logo     string `db:"logo"`
 }
 
-func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int, positionManager string) (*types.TokenTopResponse, error) {
+func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int, positionManager string) ([]*types.Token_TokenDetail, error) {
 	var tokens []TokenData
 	var pools []PoolData
 
@@ -56,7 +56,7 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 		ORDER BY sort`, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &tokens, tokenQuery)
 	if err != nil {
-		return nil, err
+		return []*types.Token_TokenDetail{}, err
 	}
 
 	poolQuery := fmt.Sprintf(`
@@ -69,12 +69,12 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 		WHERE token0.address IS NOT NULL AND token1.address IS NOT NULL and pool.chain_id = %d AND pool.to_ = '%s'`, m.table, m.table, chainId, positionManager)
 	err = m.conn.QueryRowsCtx(ctx, &pools, poolQuery)
 	if err != nil {
-		return nil, err
+		return []*types.Token_TokenDetail{}, err
 	}
 
-	var tokenDetails []types.Token_TokenDetail
+	var tokenDetails = make([]*types.Token_TokenDetail, 0)
 	for _, token := range tokens {
-		tokenDetail := types.Token_TokenDetail{
+		tokenDetail := &types.Token_TokenDetail{
 			Address:  token.Address,
 			Symbol:   token.Symbol,
 			Name:     token.Name,
@@ -88,7 +88,7 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 				_ = json.Unmarshal([]byte(pool.Token0Additional), &token0Additional)
 				_ = json.Unmarshal([]byte(pool.Token1Additional), &token1Additional)
 
-				tokenDetail.Pools = append(tokenDetail.Pools, types.Token_PoolDetail{
+				tokenDetail.Pools = append(tokenDetail.Pools, &types.Token_PoolDetail{
 					ID:        pool.ID,
 					Address:   pool.EventPool,
 					FeeTier:   int(pool.EventFee),
@@ -118,15 +118,10 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 		tokenDetails = append(tokenDetails, tokenDetail)
 	}
 
-	response := &types.TokenTopResponse{
-		StatusCode: 200,
-		Tokens:     tokenDetails,
-	}
-
-	return response, nil
+	return tokenDetails, nil
 }
 
-func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.TokenListRequest, positionManager string) (*types.TokenListResponse, error) {
+func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error) {
 	var tokens []TokenData
 	var pools []PoolData
 	var totalCount int
@@ -138,7 +133,7 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 	countQuery := "SELECT COUNT(*) " + tokenQuery
 	err := m.conn.QueryRowCtx(ctx, &totalCount, countQuery)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tokenQuery = `SELECT address, symbol, name, decimals, logo ` + tokenQuery
@@ -152,7 +147,7 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 	tokenQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", opts.Take, (opts.Page-1)*opts.Take)
 	err = m.conn.QueryRowsCtx(ctx, &tokens, tokenQuery)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	poolQuery := fmt.Sprintf(`
@@ -166,12 +161,12 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 
 	err = m.conn.QueryRowsCtx(ctx, &pools, poolQuery)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var tokenDetails []types.Token_TokenDetail
+	var tokenDetails []*types.Token_TokenDetail
 	for _, token := range tokens {
-		tokenDetail := types.Token_TokenDetail{
+		tokenDetail := &types.Token_TokenDetail{
 			Address:  token.Address,
 			Symbol:   token.Symbol,
 			Name:     token.Name,
@@ -185,7 +180,7 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 				_ = json.Unmarshal([]byte(pool.Token0Additional), &token0Additional)
 				_ = json.Unmarshal([]byte(pool.Token1Additional), &token1Additional)
 
-				tokenDetail.Pools = append(tokenDetail.Pools, types.Token_PoolDetail{
+				tokenDetail.Pools = append(tokenDetail.Pools, &types.Token_PoolDetail{
 					ID:        pool.ID,
 					Address:   pool.EventPool,
 					FeeTier:   int(pool.EventFee),
@@ -216,7 +211,7 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 	}
 
 	pageCount := (totalCount + int(opts.Take) - 1) / int(opts.Take)
-	meta := types.PaginationMeta{
+	meta := &types.PaginationMeta{
 		Page:            int(opts.Page),
 		Take:            int(opts.Take),
 		ItemCount:       totalCount,
@@ -225,11 +220,5 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 		HasNextPage:     int(opts.Page) < pageCount,
 	}
 
-	response := &types.TokenListResponse{
-		StatusCode: 200,
-		Data:       tokenDetails,
-		Meta:       meta,
-	}
-
-	return response, nil
+	return tokenDetails, meta, nil
 }

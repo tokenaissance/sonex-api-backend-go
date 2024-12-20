@@ -22,7 +22,7 @@ type (
 		TableName() string
 		New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) (int64, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
-		GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) (*types.PoolsResponse, error)
+		GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -81,7 +81,7 @@ type PoolData struct {
 	Token1Additional string `db:"token1_additional"`
 }
 
-func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) (*types.PoolsResponse, error) {
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error) {
 	var poolData []PoolData
 	var totalCount int
 
@@ -122,7 +122,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	countQuery := "SELECT COUNT(*) " + baseQuery
 	err := m.conn.QueryRowCtx(ctx, &totalCount, countQuery, args...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional %s", baseQuery)
@@ -136,17 +136,17 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 
 	err = m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var pools []types.PoolsResponse_Pool
+	var pools []*types.PoolsResponse_Pool
 	for _, pd := range poolData {
 		var token0Additional types.PoolsResponse_TokenAdditional
 		var token1Additional types.PoolsResponse_TokenAdditional
 		_ = json.Unmarshal([]byte(pd.Token0Additional), &token0Additional)
 		_ = json.Unmarshal([]byte(pd.Token1Additional), &token1Additional)
 
-		pool := types.PoolsResponse_Pool{
+		pool := &types.PoolsResponse_Pool{
 			Id:      pd.EventPool,
 			Address: pd.EventPool,
 			FeeTier: int(pd.EventFee),
@@ -169,7 +169,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	}
 
 	pageCount := (totalCount + int(opts.Take) - 1) / int(opts.Take)
-	meta := types.PaginationMeta{
+	meta := &types.PaginationMeta{
 		Page:            int(opts.Page),
 		Take:            int(opts.Take),
 		ItemCount:       totalCount,
@@ -178,11 +178,5 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		HasNextPage:     int(opts.Page) < pageCount,
 	}
 
-	response := &types.PoolsResponse{
-		StatusCode: 200,
-		Data:       pools,
-		Meta:       meta,
-	}
-
-	return response, nil
+	return pools, meta, nil
 }

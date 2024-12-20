@@ -29,9 +29,10 @@ type PoolsRequest struct {
 }
 
 type PoolsResponse struct {
-	StatusCode int                  `json:"statusCode"`
-	Data       []PoolsResponse_Pool `json:"data"`
-	Meta       PaginationMeta       `json:"meta"`
+	Code    int                   `json:"code"`
+	Data    []*PoolsResponse_Pool `json:"data"`
+	Meta    *PaginationMeta       `json:"meta"`
+	Message string                `json:"message"`
 }
 
 type PoolsResponse_Pool struct {
@@ -99,14 +100,16 @@ type TokenListRequest struct {
 }
 
 type TokenListResponse struct {
-	StatusCode int                 `json:"statusCode"`
-	Data       []Token_TokenDetail `json:"data"`
-	Meta       PaginationMeta      `json:"meta"`
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
 }
 
 type TokenTopResponse struct {
-	StatusCode int                 `json:"statusCode"`
-	Tokens     []Token_TokenDetail `json:"tokens"`
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Message string               `json:"message"`
 }
 
 type Token_PoolDetail struct {
@@ -123,12 +126,12 @@ type Token_PoolDetail struct {
 }
 
 type Token_TokenDetail struct {
-	Address  string             `json:"address"`
-	Symbol   string             `json:"symbol"`
-	Name     string             `json:"name"`
-	Decimals int                `json:"decimals"`
-	Logo     string             `json:"logo"`
-	Pools    []Token_PoolDetail `json:"pools"`
+	Address  string              `json:"address"`
+	Symbol   string              `json:"symbol"`
+	Name     string              `json:"name"`
+	Decimals int                 `json:"decimals"`
+	Logo     string              `json:"logo"`
+	Pools    []*Token_PoolDetail `json:"pools"`
 }
 
 type Token_TokenInfo struct {
