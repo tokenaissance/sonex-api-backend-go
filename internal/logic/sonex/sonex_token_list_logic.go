@@ -23,7 +23,7 @@ func NewSonexTokenListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *So
 	}
 }
 
-func (l *SonexTokenListLogic) SonexTokenList(req *types.SonexTokenListRequest) (resp *types.SonexTokenListResponse, err error) {
+func (l *SonexTokenListLogic) SonexTokenList(req *types.TokenListRequest) (resp *types.TokenListResponse, err error) {
 	// todo: add your logic here and delete this line
 
 	return

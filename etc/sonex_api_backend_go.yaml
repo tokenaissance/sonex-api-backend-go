@@ -4,11 +4,11 @@ Port: 8888
 Log:
   Level: debug
 PostgreSQL:
-  Host: 10.0.0.150
+  Host: 10.1.84.8
   Port: 5432
-  User: postgres
-  Password: postgres
-  DbName: sonex_api_backend
+  User: apibackendgo
+  Password: cCdmZ2iRFFmB
+  DbName: sonex-api-backend-go
 Chains:
   - ChainId: 1946
     Name: Minato

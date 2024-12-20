@@ -66,7 +66,7 @@ func main() {
 	}
 
 	// Start chain listen
-	chainHandlerManager.Start()
+	// chainHandlerManager.Start()
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()

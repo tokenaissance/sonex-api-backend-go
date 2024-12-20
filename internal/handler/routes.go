@@ -28,13 +28,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
-				Path:    "/token/list",
-				Handler: sonex.SonexTokenListHandler(serverCtx),
+				Path:    "/pools",
+				Handler: sonex.SonexPoolListHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
 				Path:    "/token/prices",
 				Handler: sonex.SonexTokenPriceHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/tokens",
+				Handler: sonex.SonexTokenListHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/sonex"),

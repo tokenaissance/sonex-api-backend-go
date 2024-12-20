@@ -9,12 +9,77 @@ type MetaRequest struct {
 type MetaResponse struct {
 }
 
-type SonexTokenListRequest struct {
-	Name string `path:"name,options=you|me"`
+type PaginationMeta struct {
+	Page            int  `json:"page"`
+	Take            int  `json:"take"`
+	ItemCount       int  `json:"itemCount"`
+	PageCount       int  `json:"pageCount"`
+	HasPreviousPage bool `json:"hasPreviousPage"`
+	HasNextPage     bool `json:"hasNextPage"`
 }
 
-type SonexTokenListResponse struct {
-	Message string `json:"message"`
+type PoolsRequest struct {
+	Order         string `form:"order,default=ASC"`
+	Page          int64  `form:"page,default=1"`
+	Take          int64  `form:"take,default=10"`
+	Keywords      string `form:"keywords,optional"`
+	Token0Address string `form:"token0Address,optional"`
+	Token1Address string `form:"token1Address,optional"`
+}
+
+type PoolsResponse struct {
+	StatusCode int                  `json:"statusCode"`
+	Data       []PoolsResponse_Pool `json:"data"`
+	Meta       PaginationMeta       `json:"meta"`
+}
+
+type PoolsResponse_Pool struct {
+	Id          string               `json:"id"`
+	Address     string               `json:"address"`
+	FeeTier     int                  `json:"feeTier"`
+	Liquidity   string               `json:"liquidity"`
+	Token0      PoolsResponse_Token  `json:"token0"`
+	Token1      PoolsResponse_Token  `json:"token1"`
+	Token0Price string               `json:"token0Price"`
+	Token1Price string               `json:"token1Price"`
+	Tick        string               `json:"tick"`
+	Volume      PoolsResponse_Volume `json:"volume"`
+	TvlUSD      string               `json:"tvlUSD"`
+	Yield24h    string               `json:"yield24h"`
+}
+
+type PoolsResponse_Token struct {
+	Address    string                        `json:"address"`
+	Symbol     string                        `json:"symbol"`
+	Name       string                        `json:"name"`
+	Decimals   int                           `json:"decimals"`
+	Logo       string                        `json:"logo"`
+	Additional PoolsResponse_TokenAdditional `json:"additional"`
+}
+
+type PoolsResponse_TokenAdditional struct {
+	Audits string `json:"audits"`
+	Social struct {
+		Github   string `json:"github"`
+		Reddit   string `json:"reddit"`
+		Discord  string `json:"discord"`
+		Twitter  string `json:"twitter"`
+		Bitclout string `json:"bitclout"`
+		Telegram string `json:"telegram"`
+	} `json:"social"`
+	Website     string `json:"website"`
+	Whitepaper  string `json:"whitepaper"`
+	Description string `json:"description"`
+}
+
+type PoolsResponse_Volume struct {
+	Date         int64  `json:"date"`
+	Address      string `json:"address"`
+	Token0Price  string `json:"token0Price"`
+	Token1Price  string `json:"token1Price"`
+	VolumeToken0 string `json:"volumeToken0"`
+	VolumeToken1 string `json:"volumeToken1"`
+	Volume       string `json:"volume"`
 }
 
 type SonexTokenPricesRequest struct {
@@ -23,6 +88,57 @@ type SonexTokenPricesRequest struct {
 
 type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
+}
+
+type TokenListRequest struct {
+	Order        string `form:"order,default=ASC"`     // Sorting order, default is "ASC"
+	Page         int64  `form:"page,default=1"`        // Current page number, default is 1
+	Take         int64  `form:"take,default=10"`       // Number of items per page, default is 10
+	Keywords     string `form:"keywords,optional"`     // Optional search keywords
+	TokenAddress string `form:"tokenAddress,optional"` // Optional filter by token address
+}
+
+type TokenListResponse struct {
+	StatusCode int                       `json:"statusCode"`
+	Data       []TokenListResponse_Token `json:"data"`
+	Meta       PaginationMeta            `json:"meta"`
+}
+
+type TokenListResponse_KlineData struct {
+	Timestamp int64  `json:"timestamp"`
+	Open      string `json:"open"`
+	High      string `json:"high"`
+	Low       string `json:"low"`
+	Close     string `json:"close"`
+}
+
+type TokenListResponse_Token struct {
+	ID           string                          `json:"id"`
+	Address      string                          `json:"address"`
+	Symbol       string                          `json:"symbol"`
+	Name         string                          `json:"name"`
+	Decimals     int                             `json:"decimals"`
+	Volume       string                          `json:"volume"`
+	Logo         string                          `json:"logo"`
+	Sort         int                             `json:"sort"`
+	PriceHistory []interface{}                   `json:"priceHistory"` // Assuming price history is dynamic
+	Kline        []TokenListResponse_KlineData   `json:"kline"`
+	HourVolume   TokenListResponse_VolumeDetails `json:"hourVolume"`
+	DayVolume    TokenListResponse_VolumeDetails `json:"dayVolume"`
+	FDV          string                          `json:"fdv"`
+}
+
+type TokenListResponse_VolumeDetails struct {
+	ID                  string `json:"id"`
+	PeriodStartUnix     string `json:"periodStartUnix"`
+	FeesUSD             string `json:"feesUSD"`
+	VolumeUSD           string `json:"volumeUSD"`
+	Volume              string `json:"volume"`
+	TotalValueLocked    string `json:"totalValueLocked"`
+	IsNegative          bool   `json:"isNegative"`
+	Ratio               string `json:"ratio"`
+	TotalValueLockedUSD string `json:"totalValueLockedUSD,omitempty"`
+	PriceUSD            string `json:"priceUSD,omitempty"`
 }
 
 type XPoolPoolListRequest struct {
