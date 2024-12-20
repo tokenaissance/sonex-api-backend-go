@@ -51,12 +51,25 @@ func main() {
 		panic(err)
 	}
 	for _, chain := range c.Chains {
-		// UniswapV3 handler
+		// Sonex handler
 		{
-			sonexConfigA := linq.From(c.Sonexes).SingleWithT(func(item config.SonexConfig) bool { return item.ChainId == chain.ChainId })
-			if sonexConfigA != nil {
-				sonexConfig, _ := sonexConfigA.(config.SonexConfig)
-				handler, err := chain_handler.NewSonexHandler(c.PostgreSQL.DateSource(), chain, sonexConfig)
+			configA := linq.From(c.Sonexes).SingleWithT(func(item config.SonexConfig) bool { return item.ChainId == chain.ChainId })
+			if configA != nil {
+				config, _ := configA.(config.SonexConfig)
+				handler, err := chain_handler.NewSonexHandler(c.PostgreSQL.DateSource(), chain, config)
+				if err != nil {
+					panic(err)
+				}
+				chainHandlerManager.AddHandler(1946, handler)
+			}
+		}
+
+		// X Pool handler
+		{
+			configA := linq.From(c.XPools).SingleWithT(func(item config.XPoolConfig) bool { return item.ChainId == chain.ChainId })
+			if configA != nil {
+				config, _ := configA.(config.XPoolConfig)
+				handler, err := chain_handler.NewXPoolHandler(c.PostgreSQL.DateSource(), chain, config)
 				if err != nil {
 					panic(err)
 				}
