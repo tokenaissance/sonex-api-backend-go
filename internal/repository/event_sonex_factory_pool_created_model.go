@@ -66,6 +66,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdPositionManager(
 }
 
 type PoolData struct {
+	ID               int64  `json:"id"`
 	EventFee         int64  `db:"event_fee"`
 	EventPool        string `db:"event_pool"`
 	Token0Name       string `db:"token0_name"`
@@ -124,7 +125,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		return nil, err
 	}
 
-	dataQuery := fmt.Sprintf("SELECT pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional %s", baseQuery)
+	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional %s", baseQuery)
 	switch opts.Order {
 	case "ASC":
 		dataQuery += " ORDER BY pool.id ASC"

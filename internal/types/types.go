@@ -92,54 +92,52 @@ type SonexTokenPricesResponse struct {
 }
 
 type TokenListRequest struct {
-	Order        string `form:"order,default=ASC"`     // Sorting order, default is "ASC"
-	Page         int64  `form:"page,default=1"`        // Current page number, default is 1
-	Take         int64  `form:"take,default=10"`       // Number of items per page, default is 10
-	Keywords     string `form:"keywords,optional"`     // Optional search keywords
-	TokenAddress string `form:"tokenAddress,optional"` // Optional filter by token address
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946"`
 }
 
 type TokenListResponse struct {
-	StatusCode int                       `json:"statusCode"`
-	Data       []TokenListResponse_Token `json:"data"`
-	Meta       PaginationMeta            `json:"meta"`
+	StatusCode int                 `json:"statusCode"`
+	Data       []Token_TokenDetail `json:"data"`
+	Meta       PaginationMeta      `json:"meta"`
 }
 
-type TokenListResponse_KlineData struct {
-	Timestamp int64  `json:"timestamp"`
-	Open      string `json:"open"`
-	High      string `json:"high"`
-	Low       string `json:"low"`
-	Close     string `json:"close"`
+type TokenTopResponse struct {
+	StatusCode int                 `json:"statusCode"`
+	Tokens     []Token_TokenDetail `json:"tokens"`
 }
 
-type TokenListResponse_Token struct {
-	ID           string                          `json:"id"`
-	Address      string                          `json:"address"`
-	Symbol       string                          `json:"symbol"`
-	Name         string                          `json:"name"`
-	Decimals     int                             `json:"decimals"`
-	Volume       string                          `json:"volume"`
-	Logo         string                          `json:"logo"`
-	Sort         int                             `json:"sort"`
-	PriceHistory []interface{}                   `json:"priceHistory"` // Assuming price history is dynamic
-	Kline        []TokenListResponse_KlineData   `json:"kline"`
-	HourVolume   TokenListResponse_VolumeDetails `json:"hourVolume"`
-	DayVolume    TokenListResponse_VolumeDetails `json:"dayVolume"`
-	FDV          string                          `json:"fdv"`
+type Token_PoolDetail struct {
+	ID          int64           `json:"id"`
+	Address     string          `json:"address"`
+	FeeTier     int             `json:"feeTier"`
+	Liquidity   string          `json:"liquidity"`
+	Token0      Token_TokenInfo `json:"token0"`
+	Token1      Token_TokenInfo `json:"token1"`
+	Token0Price string          `json:"token0Price"`
+	Token1Price string          `json:"token1Price"`
+	Tick        string          `json:"tick"`
+	Volume      interface{}     `json:"volume"`
 }
 
-type TokenListResponse_VolumeDetails struct {
-	ID                  string `json:"id"`
-	PeriodStartUnix     string `json:"periodStartUnix"`
-	FeesUSD             string `json:"feesUSD"`
-	VolumeUSD           string `json:"volumeUSD"`
-	Volume              string `json:"volume"`
-	TotalValueLocked    string `json:"totalValueLocked"`
-	IsNegative          bool   `json:"isNegative"`
-	Ratio               string `json:"ratio"`
-	TotalValueLockedUSD string `json:"totalValueLockedUSD,omitempty"`
-	PriceUSD            string `json:"priceUSD,omitempty"`
+type Token_TokenDetail struct {
+	Address  string             `json:"address"`
+	Symbol   string             `json:"symbol"`
+	Name     string             `json:"name"`
+	Decimals int                `json:"decimals"`
+	Logo     string             `json:"logo"`
+	Pools    []Token_PoolDetail `json:"pools"`
+}
+
+type Token_TokenInfo struct {
+	Address    string                 `json:"address"`
+	Symbol     string                 `json:"symbol"`
+	Name       string                 `json:"name"`
+	Decimals   int                    `json:"decimals"`
+	Logo       string                 `json:"logo"`
+	Additional map[string]interface{} `json:"additional"`
 }
 
 type XPoolPoolListRequest struct {

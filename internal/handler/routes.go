@@ -38,8 +38,13 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/tokens",
+				Path:    "/tokens/list",
 				Handler: sonex.SonexTokenListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/tokens/top",
+				Handler: sonex.SonexTokenTopHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/sonex"),
