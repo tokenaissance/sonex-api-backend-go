@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
-	"sonex_api_backend_go/internal/lib/global_storage"
+	"sonex_api_backend_go/internal/lib/global"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -46,7 +46,7 @@ func (m *customEventSonexPoolSwapModel) withSession(session sqlx.Session) EventS
 }
 
 func (m *customEventSonexPoolSwapModel) New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) (int64, error) {
-	id, err := global_storage.NewId()
+	id, err := global.NewId()
 	if err != nil {
 		return 0, err
 	}

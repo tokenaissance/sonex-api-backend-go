@@ -8,7 +8,7 @@ import (
 	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
-	"sonex_api_backend_go/internal/lib/global_storage"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/svc"
 
 	"github.com/ahmetb/go-linq/v3"
@@ -17,21 +17,35 @@ import (
 	"github.com/zeromicro/go-zero/rest"
 )
 
+var runLocally = flag.Bool("l", false, "running locally")
 var configFile = flag.String("f", "etc/sonex_api_backend_go.yaml", "the config file")
 
 func main() {
 	flag.Parse()
 
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	if *runLocally {
+		conf.MustLoad("etc/sonex_api_backend_go_local.yaml", &c)
+	} else {
+		conf.MustLoad(*configFile, &c)
+	}
 
 	// Global configure
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
 
-	err := global_storage.NewIdGenerater(0)
+	err := global.InitIdGenerater(0)
 	if err != nil {
 		panic(err)
+	}
+	for _, chain := range c.Chains {
+		global.InitTokenCacher(chain)
+		for _, token := range chain.Tokens {
+			err = global.SetToken(chain.ChainId, token.Address, token.IsStablecoin)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	opts := []rest.RunOption{}
