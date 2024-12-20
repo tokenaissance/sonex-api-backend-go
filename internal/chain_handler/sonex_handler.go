@@ -265,7 +265,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolMintModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1)
+									_, err = eventSonexPoolMintModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
 									if err != nil {
 										return err
 									}
@@ -300,7 +300,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolSwapModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick)
+									_, err = eventSonexPoolSwapModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
 									if err != nil {
 										return err
 									}
@@ -335,7 +335,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolBurnModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1)
+									_, err = eventSonexPoolBurnModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
 									if err != nil {
 										return err
 									}
