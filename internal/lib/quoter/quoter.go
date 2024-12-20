@@ -8,6 +8,7 @@ import (
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"strings"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,6 +27,69 @@ func NewQuoter(chain config.ChainConfig) (*Quoter, error) {
 	return &Quoter{
 		chain: chain,
 	}, nil
+}
+
+func FindPaths(pools []Pool, from common.Address, to common.Address) []Path {
+	contains := func(tokens []common.Address, address common.Address) bool {
+		for _, token := range tokens {
+			if token == address {
+				return true
+			}
+		}
+		return false
+	}
+
+	graph := make(map[string][]Pool)
+	for _, pool := range pools {
+		graph[pool.Token0.Hex()] = append(graph[pool.Token0.Hex()], pool)
+		graph[pool.Token1.Hex()] = append(graph[pool.Token1.Hex()], pool)
+	}
+
+	var paths []Path
+	visited := make(map[string]bool)
+
+	var dfs func(currentToken common.Address, path Path)
+	dfs = func(currentToken common.Address, path Path) {
+		visited[currentToken.Hex()] = true
+		if currentToken.Hex() == to.Hex() {
+			pathCopy := Path{
+				Tokens: append([]common.Address{}, path.Tokens...),
+				Fees:   append([]int64{}, path.Fees...),
+			}
+			paths = append(paths, pathCopy)
+		} else {
+			for _, pool := range graph[currentToken.Hex()] {
+				var nextToken common.Address
+				var fee int64
+
+				if pool.Token0.Hex() == currentToken.Hex() {
+					nextToken = pool.Token1
+					fee = pool.Fee
+				} else {
+					nextToken = pool.Token0
+					fee = pool.Fee
+				}
+
+				if !visited[nextToken.Hex()] {
+					if !contains(path.Tokens, common.HexToAddress(pool.Token1.Hex())) {
+						path.Tokens = append(path.Tokens, common.HexToAddress(pool.Token1.Hex()))
+						path.Fees = append(path.Fees, fee)
+					}
+
+					dfs(nextToken, path)
+
+					path.Tokens = path.Tokens[:len(path.Tokens)-1]
+					path.Fees = path.Fees[:len(path.Fees)-1]
+				}
+			}
+		}
+
+		visited[currentToken.Hex()] = false
+	}
+	dfs(from, Path{Tokens: []common.Address{common.HexToAddress(from.Hex())}, Fees: []int64{}})
+
+	linq.From(paths).OrderByT(func(item Path) int { return len(item.Tokens) }).ToSlice(&paths)
+	return paths
 }
 
 func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn *big.Int) (*QuoteExactInputResult, error) {
