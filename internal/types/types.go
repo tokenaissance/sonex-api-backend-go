@@ -22,6 +22,7 @@ type PoolsRequest struct {
 	Order         string `form:"order,default=ASC"`
 	Page          int64  `form:"page,default=1"`
 	Take          int64  `form:"take,default=10"`
+	ChainId       int64  `form:"chainId,default=1946"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`

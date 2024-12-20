@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sonex_api_backend_go/internal/lib/global_storage"
+	"sonex_api_backend_go/internal/types"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -19,6 +20,7 @@ type (
 		withSession(session sqlx.Session) EventSonexFactoryPoolCreatedModel
 		New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) (int64, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
+		GetPoolList(ctx context.Context, opts *types.PoolsRequest) ([]*types.PoolsResponse, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -55,4 +57,15 @@ func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdPositionManager(
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse, error) {
+	var resp []EventSonexFactoryPoolCreated
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND to_ = $2", eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, opts.ChainId, positionManager)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
