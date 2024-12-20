@@ -6,6 +6,7 @@ require (
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/ethereum/go-ethereum v1.14.12
 	github.com/jackc/pgx/v5 v5.6.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/zeromicro/go-zero v1.7.4
 )
