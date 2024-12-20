@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sonex_api_backend_go/internal/lib/global_storage"
 	"sonex_api_backend_go/internal/types"
@@ -21,7 +22,7 @@ type (
 		TableName() string
 		New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) (int64, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
-		GetPoolList(ctx context.Context, opts *types.PoolsRequest) ([]*types.PoolsResponse, error)
+		GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) (*types.PoolsResponse, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -64,13 +65,123 @@ func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdPositionManager(
 	return resp, nil
 }
 
-func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse, error) {
-	var resp []EventSonexFactoryPoolCreated
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND to_ = $2", eventSonexFactoryPoolCreatedRows, m.table)
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, opts.ChainId, positionManager)
+type PoolData struct {
+	EventFee         int64  `db:"event_fee"`
+	EventPool        string `db:"event_pool"`
+	Token0Name       string `db:"token0_name"`
+	Token0Symbol     string `db:"token0_symbol"`
+	Token0Address    string `db:"token0_address"`
+	Token0Logo       string `db:"token0_logo"`
+	Token0Additional string `db:"token0_additional"`
+	Token1Name       string `db:"token1_name"`
+	Token1Symbol     string `db:"token1_symbol"`
+	Token1Address    string `db:"token1_address"`
+	Token1Logo       string `db:"token1_logo"`
+	Token1Additional string `db:"token1_additional"`
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) (*types.PoolsResponse, error) {
+	var poolData []PoolData
+	var totalCount int
+
+	baseQuery := fmt.Sprintf(`
+		FROM %s AS pool
+		LEFT JOIN sonex_token AS token0 ON pool.event_token0 = token0.address
+		LEFT JOIN sonex_token AS token1 ON pool.event_token1 = token1.address
+		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
+	args := []interface{}{opts.ChainId, positionManager}
+
+	paramIndex := 3
+
+	if opts.Token0Address != "" {
+		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
+		args = append(args, opts.Token0Address)
+		paramIndex++
+	}
+
+	if opts.Token1Address != "" {
+		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
+		args = append(args, opts.Token1Address)
+		paramIndex++
+	}
+
+	if opts.Keywords != "" {
+		baseQuery += fmt.Sprintf(`
+			AND (pool.event_pool ILIKE $%d OR
+			token0.name ILIKE $%d OR
+			token1.name ILIKE $%d OR
+			token0.symbol ILIKE $%d OR
+			token1.symbol ILIKE $%d OR
+			token0.address ILIKE $%d OR
+			token1.address ILIKE $%d)`, paramIndex, paramIndex, paramIndex, paramIndex, paramIndex, paramIndex, paramIndex)
+		args = append(args, "%"+opts.Keywords+"%")
+		paramIndex++
+	}
+
+	countQuery := "SELECT COUNT(*) " + baseQuery
+	err := m.conn.QueryRowCtx(ctx, &totalCount, countQuery, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	dataQuery := fmt.Sprintf("SELECT pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional %s", baseQuery)
+	switch opts.Order {
+	case "ASC":
+		dataQuery += " ORDER BY pool.id ASC"
+	default:
+		dataQuery += " ORDER BY pool.id DESC"
+	}
+	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", opts.Take, (opts.Page-1)*opts.Take)
+
+	err = m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	var pools []types.PoolsResponse_Pool
+	for _, pd := range poolData {
+		var token0Additional types.PoolsResponse_TokenAdditional
+		var token1Additional types.PoolsResponse_TokenAdditional
+		_ = json.Unmarshal([]byte(pd.Token0Additional), &token0Additional)
+		_ = json.Unmarshal([]byte(pd.Token1Additional), &token1Additional)
+
+		pool := types.PoolsResponse_Pool{
+			Id:      pd.EventPool,
+			Address: pd.EventPool,
+			FeeTier: int(pd.EventFee),
+			Token0: types.PoolsResponse_Token{
+				Address:    pd.Token0Address,
+				Symbol:     pd.Token0Symbol,
+				Name:       pd.Token0Name,
+				Logo:       pd.Token0Logo,
+				Additional: token0Additional,
+			},
+			Token1: types.PoolsResponse_Token{
+				Address:    pd.Token1Address,
+				Symbol:     pd.Token1Symbol,
+				Name:       pd.Token1Name,
+				Logo:       pd.Token1Logo,
+				Additional: token1Additional,
+			},
+		}
+		pools = append(pools, pool)
+	}
+
+	pageCount := (totalCount + int(opts.Take) - 1) / int(opts.Take)
+	meta := types.PaginationMeta{
+		Page:            int(opts.Page),
+		Take:            int(opts.Take),
+		ItemCount:       totalCount,
+		PageCount:       pageCount,
+		HasPreviousPage: opts.Page > 1,
+		HasNextPage:     int(opts.Page) < pageCount,
+	}
+
+	response := &types.PoolsResponse{
+		StatusCode: 200,
+		Data:       pools,
+		Meta:       meta,
+	}
+
+	return response, nil
 }

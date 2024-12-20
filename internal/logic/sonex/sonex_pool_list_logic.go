@@ -27,7 +27,10 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types.PoolsResponse, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	result, err := model.QueryByChainIdPositionManager(l.ctx, req.ChainId, l.svcCtx.Config.Sonexes[0].PositionManager)
+	result, err := model.GetPoolList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
+	if err != nil {
+		return nil, err
+	}
 
-	return
+	return result, nil
 }
