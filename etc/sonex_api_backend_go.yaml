@@ -4,11 +4,11 @@ Port: 8888
 Log:
   Level: debug
 PostgreSQL:
-  Host: 10.1.84.8
+  Host: 127.0.0.1
   Port: 5432
-  User: apibackendgo
-  Password: cCdmZ2iRFFmB
-  DbName: sonex-api-backend-go
+  User: postgres
+  Password: 123456Abc
+  DbName: sonex_api_backend
 Chains:
   - ChainId: 1946
     Name: Minato
@@ -23,6 +23,9 @@ Chains:
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
+    Tokens:
+      - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
+        IsStableCoin: true
   # - ChainId: 81
   #   Name: Shibuya
   #   Nodes: # URL:Weight
