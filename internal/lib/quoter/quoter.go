@@ -51,6 +51,7 @@ func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength i
 	var dfs func(currentToken common.Address, path Path)
 	dfs = func(currentToken common.Address, path Path) {
 		visited[currentToken.Hex()] = true
+
 		if currentToken.Hex() == to.Hex() {
 			pathCopy := Path{
 				Pools:  append([]Pool{}, path.Pools...),
@@ -63,7 +64,7 @@ func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength i
 				var nextToken common.Address
 				var fee int64
 
-				if pool.Token0.Hex() == currentToken.Hex() {
+				if pool.Token0 == currentToken {
 					nextToken = pool.Token1
 					fee = pool.Fee
 				} else {
@@ -71,29 +72,25 @@ func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength i
 					fee = pool.Fee
 				}
 
-				if !visited[nextToken.Hex()] {
-					if !contains(path.Tokens, common.HexToAddress(pool.Token1.Hex())) {
+				if !visited[nextToken.Hex()] && (maxLength == 0 || int64(len(path.Pools)) < maxLength) {
+					if !contains(path.Tokens, nextToken) {
 						path.Pools = append(path.Pools, pool)
-						path.Tokens = append(path.Tokens, common.HexToAddress(pool.Token1.Hex()))
+						path.Tokens = append(path.Tokens, nextToken)
 						path.Fees = append(path.Fees, fee)
 
-						if maxLength != 0 && len(path.Pools) > int(maxLength) {
-							return
-						}
+						dfs(nextToken, path)
+
+						path.Pools = path.Pools[:len(path.Pools)-1]
+						path.Tokens = path.Tokens[:len(path.Tokens)-1]
+						path.Fees = path.Fees[:len(path.Fees)-1]
 					}
-
-					dfs(nextToken, path)
-
-					path.Pools = path.Pools[:len(path.Pools)-1]
-					path.Tokens = path.Tokens[:len(path.Tokens)-1]
-					path.Fees = path.Fees[:len(path.Fees)-1]
 				}
 			}
 		}
 
 		visited[currentToken.Hex()] = false
 	}
-	dfs(from, Path{Tokens: []common.Address{common.HexToAddress(from.Hex())}, Fees: []int64{}})
+	dfs(from, Path{Tokens: []common.Address{from}, Fees: []int64{}})
 
 	linq.From(paths).OrderByT(func(item Path) int { return len(item.Tokens) }).ToSlice(&paths)
 	return paths
