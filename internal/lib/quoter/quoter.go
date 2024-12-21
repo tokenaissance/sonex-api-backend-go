@@ -29,7 +29,7 @@ func NewQuoter(chain config.ChainConfig) (*Quoter, error) {
 	}, nil
 }
 
-func FindPaths(pools []Pool, from common.Address, to common.Address) []Path {
+func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength int64) []Path {
 	contains := func(tokens []common.Address, address common.Address) bool {
 		for _, token := range tokens {
 			if token == address {
@@ -53,6 +53,7 @@ func FindPaths(pools []Pool, from common.Address, to common.Address) []Path {
 		visited[currentToken.Hex()] = true
 		if currentToken.Hex() == to.Hex() {
 			pathCopy := Path{
+				Pools:  append([]Pool{}, path.Pools...),
 				Tokens: append([]common.Address{}, path.Tokens...),
 				Fees:   append([]int64{}, path.Fees...),
 			}
@@ -72,12 +73,18 @@ func FindPaths(pools []Pool, from common.Address, to common.Address) []Path {
 
 				if !visited[nextToken.Hex()] {
 					if !contains(path.Tokens, common.HexToAddress(pool.Token1.Hex())) {
+						path.Pools = append(path.Pools, pool)
 						path.Tokens = append(path.Tokens, common.HexToAddress(pool.Token1.Hex()))
 						path.Fees = append(path.Fees, fee)
+
+						if maxLength != 0 && len(path.Pools) > int(maxLength) {
+							return
+						}
 					}
 
 					dfs(nextToken, path)
 
+					path.Pools = path.Pools[:len(path.Pools)-1]
 					path.Tokens = path.Tokens[:len(path.Tokens)-1]
 					path.Fees = path.Fees[:len(path.Fees)-1]
 				}
