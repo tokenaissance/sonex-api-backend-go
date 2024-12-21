@@ -43,6 +43,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/token/quote",
+				Handler: sonex.SonexTokenQuoteHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/tokens/list",
 				Handler: sonex.SonexTokenListHandler(serverCtx),
 			},

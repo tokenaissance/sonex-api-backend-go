@@ -228,6 +228,54 @@
         ]
       }
     },
+    "/sonex/token/quote": {
+      "get": {
+        "operationId": "SonexTokenQuoteHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TokenQuoteResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "is_cache",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean",
+            "default": "true"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/tokens/list": {
       "get": {
         "operationId": "SonexTokenListHandler",
@@ -679,7 +727,7 @@
           "type": "string"
         },
         "social": {
-          "$ref": "#/definitions/PoolsResponse_TokenAdditional_Social"
+          "$ref": "#/definitions/Token_Social"
         },
         "website": {
           "type": "string"
@@ -698,38 +746,6 @@
         "website",
         "whitepaper",
         "description"
-      ]
-    },
-    "PoolsResponse_TokenAdditional_Social": {
-      "type": "object",
-      "properties": {
-        "github": {
-          "type": "string"
-        },
-        "reddit": {
-          "type": "string"
-        },
-        "discord": {
-          "type": "string"
-        },
-        "twitter": {
-          "type": "string"
-        },
-        "bitclout": {
-          "type": "string"
-        },
-        "telegram": {
-          "type": "string"
-        }
-      },
-      "title": "PoolsResponse_TokenAdditional_Social",
-      "required": [
-        "github",
-        "reddit",
-        "discord",
-        "twitter",
-        "bitclout",
-        "telegram"
       ]
     },
     "PoolsResponse_Volume": {
@@ -1018,9 +1034,6 @@
             "type": "string"
           }
         },
-        "path": {
-          "type": "string"
-        },
         "value": {
           "type": "string"
         }
@@ -1028,6 +1041,73 @@
       "title": "TokenPriceResponse_Price",
       "required": [
         "stablecoin",
+        "routers",
+        "value"
+      ]
+    },
+    "TokenQuoteRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "is_cache": {
+          "type": "boolean",
+          "format": "boolean",
+          "default": "true"
+        }
+      },
+      "title": "TokenQuoteRequest",
+      "required": [
+        "chain_id",
+        "from",
+        "to"
+      ]
+    },
+    "TokenQuoteResponse": {
+      "type": "object",
+      "properties": {
+        "prices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TokenQuoteResponse_Price"
+          }
+        }
+      },
+      "title": "TokenQuoteResponse",
+      "required": [
+        "prices"
+      ]
+    },
+    "TokenQuoteResponse_Price": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "routers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "title": "TokenQuoteResponse_Price",
+      "required": [
+        "target",
         "routers",
         "path",
         "value"
@@ -1105,6 +1185,38 @@
         "token1Price",
         "tick",
         "volume"
+      ]
+    },
+    "Token_Social": {
+      "type": "object",
+      "properties": {
+        "github": {
+          "type": "string"
+        },
+        "reddit": {
+          "type": "string"
+        },
+        "discord": {
+          "type": "string"
+        },
+        "twitter": {
+          "type": "string"
+        },
+        "bitclout": {
+          "type": "string"
+        },
+        "telegram": {
+          "type": "string"
+        }
+      },
+      "title": "Token_Social",
+      "required": [
+        "github",
+        "reddit",
+        "discord",
+        "twitter",
+        "bitclout",
+        "telegram"
       ]
     },
     "Token_TokenDetail": {

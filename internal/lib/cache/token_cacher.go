@@ -140,7 +140,7 @@ func (cacher *TokenCacher) SetPriceCacheExpireSeconds(duration int64) {
 	cacher.priceCacheExpireSeconds = duration
 }
 
-func (cacher *TokenCacher) GetPricesTo(pools []quoter.Pool, from string, to string, isCache bool) ([]Price, error) {
+func (cacher *TokenCacher) QuoteTo(pools []quoter.Pool, from string, to string, isCache bool) ([]Price, error) {
 	fromToken, err := cacher.Get(from)
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (cacher *TokenCacher) GetPricesTo(pools []quoter.Pool, from string, to stri
 	return prices, nil
 }
 
-func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token string, isCache bool) ([]Price, error) {
+func (cacher *TokenCacher) Quote(pools []quoter.Pool, token string, isCache bool) ([]Price, error) {
 	stablecoins := cacher.GetStablecoins()
 	if len(stablecoins) == 0 {
 		return nil, fmt.Errorf("%s", "No any stablecoins")
@@ -291,7 +291,7 @@ func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token string, isCache 
 				}
 			}()
 
-			prices, err := cacher.GetPricesTo(pools, token, stablecoin.Address, isCache)
+			prices, err := cacher.QuoteTo(pools, token, stablecoin.Address, isCache)
 			if err != nil {
 				panic(err)
 			}

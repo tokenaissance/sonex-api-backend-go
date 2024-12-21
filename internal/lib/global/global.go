@@ -81,14 +81,28 @@ func GetStablecoin(chainId int64) []cache.Token {
 	return cacher.GetStablecoins()
 }
 
-func GetPrice(pools []quoter.Pool, chainId int64, token string, isCache bool) ([]cache.Price, error) {
+func GetPrices(pools []quoter.Pool, chainId int64, token string, isCache bool) ([]cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
-	prices, err := cacher.GetPrices(pools, token, isCache)
+	prices, err := cacher.Quote(pools, token, isCache)
+	if err != nil {
+		return nil, err
+	}
+	return prices, nil
+}
+
+func Quote(pools []quoter.Pool, chainId int64, from string, to string, isCache bool) ([]cache.Price, error) {
+	tokenCachersLock.RLock()
+	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%s", "Miss token cacher")
+	}
+	prices, err := cacher.QuoteTo(pools, from, to, isCache)
 	if err != nil {
 		return nil, err
 	}

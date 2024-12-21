@@ -73,7 +73,7 @@ func TestTokenCacherGetPricesTo(t *testing.T) {
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
 	cacher := NewTokenCacher(c.Chains[0])
-	prices, err := cacher.GetPricesTo(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655", false)
+	prices, err := cacher.QuoteTo(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -114,7 +114,7 @@ func TestTokenCacherGetPrices(t *testing.T) {
 	cacher := NewTokenCacher(c.Chains[0])
 	_ = cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
 
-	prices, err := cacher.GetPrices(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", false)
+	prices, err := cacher.Quote(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -157,7 +157,7 @@ func TestTokenCacherGetPricesWithCache(t *testing.T) {
 
 	start := time.Now()
 
-	prices, err := cacher.GetPrices(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", true)
+	prices, err := cacher.Quote(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -173,7 +173,7 @@ func TestTokenCacherGetPricesWithCache(t *testing.T) {
 
 	time.Sleep(time.Second * 10)
 
-	prices, err = cacher.GetPrices(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", true)
+	prices, err = cacher.Quote(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", true)
 	if err != nil {
 		t.Error(err)
 	}

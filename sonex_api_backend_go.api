@@ -32,12 +32,29 @@ type TokenPriceRequest {
 type TokenPriceResponse_Price {
 	Stablecoin string   `json:"stablecoin"`
 	Routers    []string `json:"routers"`
-	Path       string   `json:"path"`
 	Value      string   `json:"value"`
 }
 
 type TokenPriceResponse {
 	Prices []TokenPriceResponse_Price `json:"prices"`
+}
+
+type TokenQuoteRequest {
+	ChainId int64  `form:"chain_id"`
+	From    string `form:"from"`
+	To      string `form:"to"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenQuoteResponse_Price {
+	Target  string   `json:"target"`
+	Routers []string `json:"routers"`
+	Path    string   `json:"path"`
+	Value   string   `json:"value"`
+}
+
+type TokenQuoteResponse {
+	Prices []TokenQuoteResponse_Price `json:"prices"`
 }
 
 type TokenListRequest {
@@ -214,6 +231,9 @@ type SwapEventResponse {
 service sonex_api_backend_go {
 	@handler SonexTokenPriceHandler
 	get /token/price (TokenPriceRequest) returns (TokenPriceResponse)
+
+	@handler SonexTokenQuoteHandler
+	get /token/quote (TokenQuoteRequest) returns (TokenQuoteResponse)
 
 	@handler SonexTokenListHandler
 	get /tokens/list (TokenListRequest) returns (TokenListResponse)
