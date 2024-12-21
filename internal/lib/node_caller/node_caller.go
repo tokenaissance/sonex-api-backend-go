@@ -6,12 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
-	"strings"
+	"sonex_api_backend_go/internal/config"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -20,18 +18,12 @@ import (
 )
 
 type NodeCaller struct {
-	client  *ethclient.Client
-	chainId int64
+	chain config.ChainConfig
 }
 
-func NewNodeCaller(client *ethclient.Client) (*NodeCaller, error) {
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return nil, err
-	}
+func NewNodeCaller(chain config.ChainConfig) (*NodeCaller, error) {
 	return &NodeCaller{
-		client:  client,
-		chainId: chainId.Int64(),
+		chain: chain,
 	}, nil
 }
 
@@ -63,7 +55,11 @@ func (nodeCaller *NodeCaller) BatchHeaderByNumber(ctx context.Context, numbers [
 			Result: &headers[i],
 		}
 	}
-	err := nodeCaller.client.Client().BatchCallContext(ctx, requests)
+	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+	if err != nil {
+		return nil, err
+	}
+	err = client.Client().BatchCallContext(ctx, requests)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +86,11 @@ func (nodeCaller *NodeCaller) BatchBlockByNumber(ctx context.Context, numbers []
 			Result: &rawMessages[i],
 		}
 	}
-	err := nodeCaller.client.Client().BatchCallContext(ctx, requests)
+	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+	if err != nil {
+		return nil, err
+	}
+	err = client.Client().BatchCallContext(ctx, requests)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,12 @@ func (nodeCaller *NodeCaller) BatchBlockByNumber(ctx context.Context, numbers []
 					Result: &uncles[i],
 				}
 			}
-			if err := nodeCaller.client.Client().BatchCallContext(ctx, reqs); err != nil {
+			client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+			if err != nil {
+				return nil, err
+			}
+			err = client.Client().BatchCallContext(ctx, reqs)
+			if err != nil {
 				return nil, err
 			}
 			for i := range reqs {
@@ -163,38 +168,7 @@ func (nodeCaller *NodeCaller) BatchBlockByNumber(ctx context.Context, numbers []
 	return result, nil
 }
 
-func (nodeCaller *NodeCaller) QuoteExactInput(ctx context.Context, quoter string, path []byte, amountIn *big.Int) (*QuoteExactInputResult, error) {
-	if quoter == "" || !common.IsHexAddress(quoter) {
-		return nil, fmt.Errorf("%s", "Invalid parameter")
-	}
-	quoterAddress := common.HexToAddress(quoter)
-
-	abi, err := abi.JSON(strings.NewReader(uniswap_v3.IquoterV2MetaData.ABI))
-	if err != nil {
-		return nil, err
-	}
-	data, err := abi.Pack("quoteExactInput", path, amountIn)
-	if err != nil {
-		return nil, err
-	}
-	msg := ethereum.CallMsg{
-		To:   &quoterAddress,
-		Data: data,
-	}
-	result, err := nodeCaller.client.CallContract(context.Background(), msg, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var output QuoteExactInputResult
-	err = abi.UnpackIntoInterface(&output, "quoteExactInput", result)
-	if err != nil {
-		return nil, err
-	}
-	return &output, nil
-}
-
-func GetTranscations(ctx context.Context, client *ethclient.Client, chainId int64, blockNumbers []int64) (map[string]*struct {
+func (nodeCaller *NodeCaller) GetTranscations(ctx context.Context, blockNumbers []int64) (map[string]*struct {
 	Time time.Time
 	From common.Address
 	Tx   *types.Transaction
@@ -203,10 +177,6 @@ func GetTranscations(ctx context.Context, client *ethclient.Client, chainId int6
 		ctx = context.Background()
 	}
 
-	nodeCaller, err := NewNodeCaller(client)
-	if err != nil {
-		return nil, err
-	}
 	blocks, err := nodeCaller.BatchBlockByNumber(ctx, blockNumbers)
 	if err != nil {
 		return nil, err
@@ -219,7 +189,7 @@ func GetTranscations(ctx context.Context, client *ethclient.Client, chainId int6
 	for _, block := range blocks {
 		txAt := time.Unix(int64(block.Time()), 0).UTC()
 		for _, transaction := range block.Transactions() {
-			from, err := types.LatestSignerForChainID(big.NewInt(chainId)).Sender(transaction)
+			from, err := types.LatestSignerForChainID(big.NewInt(nodeCaller.chain.ChainId)).Sender(transaction)
 			if err != nil {
 				return nil, err
 			}

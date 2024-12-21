@@ -15,12 +15,27 @@ service sonex_api_backend_go {
 /*
 Sonex Module
 */
-type SonexTokenListRequest {
-	Name string `path:"name,options=you|me"`
+type TokenListRequest {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"` // Current page number, default is 1
+	Take    int64  `form:"take,default=10"` // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946"`
 }
 
-type SonexTokenListResponse {
-	Message string `json:"message"`
+type PaginationMeta {
+	Page            int  `json:"page"`
+	Take            int  `json:"take"`
+	ItemCount       int  `json:"itemCount"`
+	PageCount       int  `json:"pageCount"`
+	HasPreviousPage bool `json:"hasPreviousPage"`
+	HasNextPage     bool `json:"hasNextPage"`
+}
+
+type TokenListResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
 }
 
 type SonexTokenPricesRequest {
@@ -31,16 +46,125 @@ type SonexTokenPricesResponse {
 	Message string `json:"message"`
 }
 
+type PoolsRequest {
+	Order         string `form:"order,default=ASC"`
+	Page          int64  `form:"page,default=1"`
+	Take          int64  `form:"take,default=10"`
+	ChainId       int64  `form:"chainId,default=1946"`
+	Keywords      string `form:"keywords,optional"`
+	Token0Address string `form:"token0Address,optional"`
+	Token1Address string `form:"token1Address,optional"`
+}
+
+type PoolsResponse_TokenAdditional {
+	Audits string `json:"audits"`
+	Social {
+		Github   string `json:"github"`
+		Reddit   string `json:"reddit"`
+		Discord  string `json:"discord"`
+		Twitter  string `json:"twitter"`
+		Bitclout string `json:"bitclout"`
+		Telegram string `json:"telegram"`
+	} `json:"social"`
+	Website     string `json:"website"`
+	Whitepaper  string `json:"whitepaper"`
+	Description string `json:"description"`
+}
+
+type PoolsResponse_Token {
+	Address    string                        `json:"address"`
+	Symbol     string                        `json:"symbol"`
+	Name       string                        `json:"name"`
+	Decimals   int                           `json:"decimals"`
+	Logo       string                        `json:"logo"`
+	Additional PoolsResponse_TokenAdditional `json:"additional"`
+}
+
+type PoolsResponse_Volume {
+	Date         int64  `json:"date"`
+	Address      string `json:"address"`
+	Token0Price  string `json:"token0Price"`
+	Token1Price  string `json:"token1Price"`
+	VolumeToken0 string `json:"volumeToken0"`
+	VolumeToken1 string `json:"volumeToken1"`
+	Volume       string `json:"volume"`
+}
+
+type PoolsResponse_Pool {
+	Id          string               `json:"id"`
+	Address     string               `json:"address"`
+	FeeTier     int                  `json:"feeTier"`
+	Liquidity   string               `json:"liquidity"`
+	Token0      PoolsResponse_Token  `json:"token0"`
+	Token1      PoolsResponse_Token  `json:"token1"`
+	Token0Price string               `json:"token0Price"`
+	Token1Price string               `json:"token1Price"`
+	Tick        string               `json:"tick"`
+	Volume      PoolsResponse_Volume `json:"volume"`
+	TvlUSD      string               `json:"tvlUSD"`
+	Yield24h    string               `json:"yield24h"`
+}
+
+type PoolsResponse {
+	Code    int                   `json:"code"`
+	Data    []*PoolsResponse_Pool `json:"data"`
+	Meta    *PaginationMeta       `json:"meta"`
+	Message string                `json:"message"`
+}
+
+type TokenTopResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Message string               `json:"message"`
+}
+
+type Token_TokenDetail {
+	Address  string              `json:"address"`
+	Symbol   string              `json:"symbol"`
+	Name     string              `json:"name"`
+	Decimals int                 `json:"decimals"`
+	Logo     string              `json:"logo"`
+	Pools    []*Token_PoolDetail `json:"pools"`
+}
+
+type Token_PoolDetail {
+	ID          int64           `json:"id"`
+	Address     string          `json:"address"`
+	FeeTier     int             `json:"feeTier"`
+	Liquidity   string          `json:"liquidity"`
+	Token0      Token_TokenInfo `json:"token0"`
+	Token1      Token_TokenInfo `json:"token1"`
+	Token0Price string          `json:"token0Price"`
+	Token1Price string          `json:"token1Price"`
+	Tick        string          `json:"tick"`
+	Volume      interface{}     `json:"volume"`
+}
+
+type Token_TokenInfo {
+	Address    string                 `json:"address"`
+	Symbol     string                 `json:"symbol"`
+	Name       string                 `json:"name"`
+	Decimals   int                    `json:"decimals"`
+	Logo       string                 `json:"logo"`
+	Additional map[string]interface{} `json:"additional"`
+}
+
 @server (
 	prefix: /sonex
 	group:  sonex
 )
 service sonex_api_backend_go {
 	@handler SonexTokenListHandler
-	get /token/list (SonexTokenListRequest) returns (SonexTokenListResponse)
+	get /tokens/list (TokenListRequest) returns (TokenListResponse)
+
+	@handler SonexPoolListHandler
+	get /pools (PoolsRequest) returns (PoolsResponse)
 
 	@handler SonexTokenPriceHandler
 	get /token/prices (SonexTokenPricesRequest) returns (SonexTokenPricesResponse)
+
+	@handler SonexTokenTopHandler
+	get /tokens/top returns (TokenTopResponse)
 }
 
 /*

@@ -35,6 +35,10 @@ func NewXpoolHandler(dataSource string, chain config.ChainConfig, config config.
 }
 
 func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
+	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain)
+	if err != nil {
+		return err, false
+	}
 	factory, err := xpool.NewStakingFactory(common.HexToAddress(handler.config.Factory), client)
 	if err != nil {
 		return err, false
@@ -70,7 +74,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 	var numbers []int64
 	linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-	transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
+	transactions, err := nodeCaller.GetTranscations(opt.Context, numbers)
 	if err != nil {
 		return err, false
 	}
@@ -252,7 +256,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 						var numbers []int64
 						linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-						transactions, err := node_caller.GetTranscations(opt.Context, client, handler.chain.ChainId, numbers)
+						transactions, err := nodeCaller.GetTranscations(opt.Context, numbers)
 						if err != nil {
 							sendResult(err)
 							return

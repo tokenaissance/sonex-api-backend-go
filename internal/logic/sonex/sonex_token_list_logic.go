@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -23,8 +24,24 @@ func NewSonexTokenListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *So
 	}
 }
 
-func (l *SonexTokenListLogic) SonexTokenList(req *types.SonexTokenListRequest) (resp *types.SonexTokenListResponse, err error) {
-	// todo: add your logic here and delete this line
+func (l *SonexTokenListLogic) SonexTokenList(req *types.TokenListRequest) (resp *types.TokenListResponse, err error) {
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	model := repository.NewSonexTokenModel(conn)
+	data, meta, err := model.GetTokenList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 
-	return
+	if err != nil {
+		return &types.TokenListResponse{
+			Code:    400,
+			Data:    []*types.Token_TokenDetail{},
+			Meta:    &types.PaginationMeta{},
+			Message: err.Error(),
+		}, nil
+	}
+
+	return &types.TokenListResponse{
+		Code:    200,
+		Data:    data,
+		Meta:    meta,
+		Message: "success",
+	}, nil
 }

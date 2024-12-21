@@ -15,6 +15,7 @@ type ChainConfig struct {
 	MinDelayWaitMillisecond int64            `json:",default=2000"`
 	MaxLogsNumber           int64            `json:",default=10000"`
 	Tokens                  []TokenConfig    `json:",optional"`
+	Quoter                  string           `json:",optional"`
 }
 
 type TokenConfig struct {

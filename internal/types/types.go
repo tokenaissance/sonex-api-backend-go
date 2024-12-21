@@ -9,12 +9,79 @@ type MetaRequest struct {
 type MetaResponse struct {
 }
 
-type SonexTokenListRequest struct {
-	Name string `path:"name,options=you|me"`
+type PaginationMeta struct {
+	Page            int  `json:"page"`
+	Take            int  `json:"take"`
+	ItemCount       int  `json:"itemCount"`
+	PageCount       int  `json:"pageCount"`
+	HasPreviousPage bool `json:"hasPreviousPage"`
+	HasNextPage     bool `json:"hasNextPage"`
 }
 
-type SonexTokenListResponse struct {
-	Message string `json:"message"`
+type PoolsRequest struct {
+	Order         string `form:"order,default=ASC"`
+	Page          int64  `form:"page,default=1"`
+	Take          int64  `form:"take,default=10"`
+	ChainId       int64  `form:"chainId,default=1946"`
+	Keywords      string `form:"keywords,optional"`
+	Token0Address string `form:"token0Address,optional"`
+	Token1Address string `form:"token1Address,optional"`
+}
+
+type PoolsResponse struct {
+	Code    int                   `json:"code"`
+	Data    []*PoolsResponse_Pool `json:"data"`
+	Meta    *PaginationMeta       `json:"meta"`
+	Message string                `json:"message"`
+}
+
+type PoolsResponse_Pool struct {
+	Id          string               `json:"id"`
+	Address     string               `json:"address"`
+	FeeTier     int                  `json:"feeTier"`
+	Liquidity   string               `json:"liquidity"`
+	Token0      PoolsResponse_Token  `json:"token0"`
+	Token1      PoolsResponse_Token  `json:"token1"`
+	Token0Price string               `json:"token0Price"`
+	Token1Price string               `json:"token1Price"`
+	Tick        string               `json:"tick"`
+	Volume      PoolsResponse_Volume `json:"volume"`
+	TvlUSD      string               `json:"tvlUSD"`
+	Yield24h    string               `json:"yield24h"`
+}
+
+type PoolsResponse_Token struct {
+	Address    string                        `json:"address"`
+	Symbol     string                        `json:"symbol"`
+	Name       string                        `json:"name"`
+	Decimals   int                           `json:"decimals"`
+	Logo       string                        `json:"logo"`
+	Additional PoolsResponse_TokenAdditional `json:"additional"`
+}
+
+type PoolsResponse_TokenAdditional struct {
+	Audits string `json:"audits"`
+	Social struct {
+		Github   string `json:"github"`
+		Reddit   string `json:"reddit"`
+		Discord  string `json:"discord"`
+		Twitter  string `json:"twitter"`
+		Bitclout string `json:"bitclout"`
+		Telegram string `json:"telegram"`
+	} `json:"social"`
+	Website     string `json:"website"`
+	Whitepaper  string `json:"whitepaper"`
+	Description string `json:"description"`
+}
+
+type PoolsResponse_Volume struct {
+	Date         int64  `json:"date"`
+	Address      string `json:"address"`
+	Token0Price  string `json:"token0Price"`
+	Token1Price  string `json:"token1Price"`
+	VolumeToken0 string `json:"volumeToken0"`
+	VolumeToken1 string `json:"volumeToken1"`
+	Volume       string `json:"volume"`
 }
 
 type SonexTokenPricesRequest struct {
@@ -23,6 +90,57 @@ type SonexTokenPricesRequest struct {
 
 type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
+}
+
+type TokenListRequest struct {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946"`
+}
+
+type TokenListResponse struct {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
+type TokenTopResponse struct {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Message string               `json:"message"`
+}
+
+type Token_PoolDetail struct {
+	ID          int64           `json:"id"`
+	Address     string          `json:"address"`
+	FeeTier     int             `json:"feeTier"`
+	Liquidity   string          `json:"liquidity"`
+	Token0      Token_TokenInfo `json:"token0"`
+	Token1      Token_TokenInfo `json:"token1"`
+	Token0Price string          `json:"token0Price"`
+	Token1Price string          `json:"token1Price"`
+	Tick        string          `json:"tick"`
+	Volume      interface{}     `json:"volume"`
+}
+
+type Token_TokenDetail struct {
+	Address  string              `json:"address"`
+	Symbol   string              `json:"symbol"`
+	Name     string              `json:"name"`
+	Decimals int                 `json:"decimals"`
+	Logo     string              `json:"logo"`
+	Pools    []*Token_PoolDetail `json:"pools"`
+}
+
+type Token_TokenInfo struct {
+	Address    string                 `json:"address"`
+	Symbol     string                 `json:"symbol"`
+	Name       string                 `json:"name"`
+	Decimals   int                    `json:"decimals"`
+	Logo       string                 `json:"logo"`
+	Additional map[string]interface{} `json:"additional"`
 }
 
 type XpoolPoolListRequest struct {
