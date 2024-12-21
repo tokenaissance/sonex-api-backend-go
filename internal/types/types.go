@@ -93,14 +93,15 @@ type SonexTokenPricesResponse struct {
 }
 
 type SwapEvent struct {
-	ID      int64            `json:"id"`
-	Address string           `json:"address"`
-	Token0  Token_TokenInfo  `json:"token0"`
-	Token1  Token_TokenInfo  `json:"token1"`
-	Pool    Token_PoolDetail `json:"pool"`
-	Hash    string           `json:"hash"`
-	Amount0 float64          `json:"amount0"`
-	Amount1 float64          `json:"amount1"`
+	ID        int64            `json:"id"`
+	Address   string           `json:"address"`
+	Token0    Token_TokenInfo  `json:"token0"`
+	Token1    Token_TokenInfo  `json:"token1"`
+	Pool      Token_PoolDetail `json:"pool"`
+	Hash      string           `json:"hash"`
+	Amount0   float64          `json:"amount0"`
+	Amount1   float64          `json:"amount1"`
+	CreatedAt string           `json:"created_at"`
 }
 
 type SwapEventRequest struct {
@@ -165,12 +166,12 @@ type Token_TokenDetail struct {
 }
 
 type Token_TokenInfo struct {
-	Address    string                 `json:"address"`
-	Symbol     string                 `json:"symbol"`
-	Name       string                 `json:"name"`
-	Decimals   int                    `json:"decimals"`
-	Logo       string                 `json:"logo"`
-	Additional map[string]interface{} `json:"additional"`
+	Address    string      `json:"address"`
+	Symbol     string      `json:"symbol"`
+	Name       string      `json:"name"`
+	Decimals   int         `json:"decimals"`
+	Logo       string      `json:"logo"`
+	Additional interface{} `json:"additional"`
 }
 
 type XpoolPoolListRequest struct {
