@@ -5,7 +5,15 @@ Global Module
 */
 type MetaRequest {}
 
-type MetaResponse {}
+type ChainSyncPrograss {
+	ChainId   int64  `json:"chain_id"`
+	Height    int64  `json:"height"`
+	UpdatedAt string `json:"update_at"`
+}
+
+type MetaResponse {
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
+}
 
 service sonex_api_backend_go {
 	@handler MetaHandler

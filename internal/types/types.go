@@ -3,10 +3,17 @@
 
 package types
 
+type ChainSyncPrograss struct {
+	ChainId   int64  `json:"chain_id"`
+	Height    int64  `json:"height"`
+	UpdatedAt string `json:"update_at"`
+}
+
 type MetaRequest struct {
 }
 
 type MetaResponse struct {
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
 }
 
 type PaginationMeta struct {
