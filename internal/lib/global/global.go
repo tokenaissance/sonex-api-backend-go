@@ -6,6 +6,7 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/id_generater"
+	"sonex_api_backend_go/internal/lib/quoter"
 	"sync"
 	"time"
 
@@ -17,15 +18,15 @@ var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
 var tokenCachersLock sync.RWMutex
 
-var prices map[int]map[string]*big.Int
-var pricesLock sync.RWMutex
-
 func init() {
 	cronExecuter = cron.New(cron.WithSeconds(), cron.WithLocation(time.UTC))
 	tokenCachers = map[int64]*cache.TokenCacher{}
-	prices = map[int]map[string]*big.Int{}
 
 	cronExecuter.Start()
+}
+
+func AddCronJob(cron string, job func()) (cron.EntryID, error) {
+	return cronExecuter.AddFunc(cron, job)
 }
 
 func InitIdGenerater(workerId int64) error {
@@ -47,12 +48,12 @@ func InitTokenCacher(chain config.ChainConfig) {
 	tokenCachers[chain.ChainId] = cache.NewTokenCacher(chain)
 }
 
-func GetToken(chainId int64, address string) *cache.Token {
+func GetToken(chainId int64, address string) (cache.Token, error) {
 	tokenCachersLock.RLock()
 	defer tokenCachersLock.RUnlock()
 	cacher, ok := tokenCachers[chainId]
 	if !ok {
-		return nil
+		return cache.Token{}, fmt.Errorf("%s", "Miss token cacher")
 	}
 	return cacher.Get(address)
 }
@@ -71,26 +72,16 @@ func SetToken(chainId int64, address string, isStablecoin bool) error {
 	return nil
 }
 
-func SetPrice(chainId int64, token string, price *big.Int) {
-	pricesLock.Lock()
-	defer pricesLock.Unlock()
-	_, ok := prices[int(chainId)]
+func GetStablecoin(chainId int64) []cache.Token {
+	tokenCachersLock.RLock()
+	defer tokenCachersLock.RUnlock()
+	cacher, ok := tokenCachers[chainId]
 	if !ok {
-		prices[int(chainId)] = map[string]*big.Int{}
+		return nil
 	}
-	prices[int(chainId)][token] = price
+	return cacher.GetStablecoins()
 }
 
-func GetPrice(chainId int64, token string) (*big.Int, error) {
-	pricesLock.RLock()
-	defer pricesLock.RUnlock()
-	_, ok := prices[int(chainId)]
-	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token price")
-	}
-	price, ok := prices[int(chainId)][token]
-	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token price")
-	}
-	return price, nil
+func GetPrice(chainId int64, token string) ([]quoter.Pool, *big.Int, error) {
+	return nil, big.NewInt(0), nil
 }
