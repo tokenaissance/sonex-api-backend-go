@@ -87,11 +87,13 @@ type SwapData struct {
 	Token0Name       string  `db:"token0_name"`
 	Token0Symbol     string  `db:"token0_symbol"`
 	Token0Address    string  `db:"token0_address"`
+	Token0Decimals   int     `db:"token0_decimals"`
 	Token0Logo       string  `db:"token0_logo"`
 	Token0Additional string  `db:"token0_additional"`
 	Token1Name       string  `db:"token1_name"`
 	Token1Symbol     string  `db:"token1_symbol"`
 	Token1Address    string  `db:"token1_address"`
+	Token1Decimals   int     `db:"token1_decimals"`
 	Token1Logo       string  `db:"token1_logo"`
 	Token1Additional string  `db:"token1_additional"`
 	CreatedAt        string  `db:"created_at"`
@@ -151,8 +153,8 @@ func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts 
 		SELECT S.id, S.tx_hash as hash, S.tx_at as created_at, S.event_recipient as address,
 		       S.event_amount0 as amount0, S.event_amount1 as amount1,
 		       pool.event_pool as pool, pool.id as pool_id, pool.event_fee as fee,
-		       token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional,
-		       token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional
+		       token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
+		       token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional
 		%s`, swapQuery)
 
 	switch opts.Order {
@@ -191,6 +193,7 @@ func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts 
 			Symbol:     event.Token0Symbol,
 			Name:       event.Token0Name,
 			Logo:       event.Token0Logo,
+			Decimals:   event.Token0Decimals,
 			Additional: token0Additional,
 		}
 
@@ -199,6 +202,7 @@ func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts 
 			Symbol:     event.Token1Symbol,
 			Name:       event.Token1Name,
 			Logo:       event.Token1Logo,
+			Decimals:   event.Token1Decimals,
 			Additional: token1Additional,
 		}
 
