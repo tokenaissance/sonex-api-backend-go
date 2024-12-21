@@ -67,18 +67,20 @@ type PoolsResponse_Token struct {
 }
 
 type PoolsResponse_TokenAdditional struct {
-	Audits string `json:"audits"`
-	Social struct {
-		Github   string `json:"github"`
-		Reddit   string `json:"reddit"`
-		Discord  string `json:"discord"`
-		Twitter  string `json:"twitter"`
-		Bitclout string `json:"bitclout"`
-		Telegram string `json:"telegram"`
-	} `json:"social"`
-	Website     string `json:"website"`
-	Whitepaper  string `json:"whitepaper"`
-	Description string `json:"description"`
+	Audits      string                               `json:"audits"`
+	Social      PoolsResponse_TokenAdditional_Social `json:"social"`
+	Website     string                               `json:"website"`
+	Whitepaper  string                               `json:"whitepaper"`
+	Description string                               `json:"description"`
+}
+
+type PoolsResponse_TokenAdditional_Social struct {
+	Github   string `json:"github"`
+	Reddit   string `json:"reddit"`
+	Discord  string `json:"discord"`
+	Twitter  string `json:"twitter"`
+	Bitclout string `json:"bitclout"`
+	Telegram string `json:"telegram"`
 }
 
 type PoolsResponse_Volume struct {
@@ -142,6 +144,23 @@ type TokenListResponse struct {
 	Data    []*Token_TokenDetail `json:"data"`
 	Meta    *PaginationMeta      `json:"meta"`
 	Message string               `json:"message"`
+}
+
+type TokenPriceRequest struct {
+	ChainId int64  `form:"chain_id"`
+	Token   string `form:"token"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenPriceResponse struct {
+	Prices []TokenPriceResponse_Price `json:"prices"`
+}
+
+type TokenPriceResponse_Price struct {
+	Stablecoin string   `json:"stablecoin"`
+	Routers    []string `json:"routers"`
+	Path       string   `json:"path"`
+	Value      string   `json:"value"`
 }
 
 type TokenTopResponse struct {

@@ -52,7 +52,7 @@ type (
 		Value            string    `db:"value"`
 		EventToken0      string    `db:"event_token0"`
 		EventToken1      string    `db:"event_token1"`
-		EventFee         string    `db:"event_fee"`
+		EventFee         int64     `db:"event_fee"`
 		EventTickSpacing string    `db:"event_tick_spacing"`
 		EventPool        string    `db:"event_pool"`
 	}
