@@ -1,7 +1,7 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : postgres
+ Source Server         : develop
  Source Server Type    : PostgreSQL
  Source Server Version : 160003 (160003)
  Source Host           : 10.0.0.150:5432
@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 19/12/2024 19:54:52
+ Date: 21/12/2024 11:34:10
 */
 
 
@@ -61,7 +61,8 @@ CREATE TABLE "public"."event_sonex_pool_burn" (
   "event_tick_upper" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_amount0" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_amount1" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+  "event_amount1" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "extra_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
 
@@ -86,7 +87,8 @@ CREATE TABLE "public"."event_sonex_pool_mint" (
   "event_tick_lower" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_tick_upper" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_amount0" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_amount1" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+  "event_amount1" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "extra_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
 
@@ -111,7 +113,8 @@ CREATE TABLE "public"."event_sonex_pool_swap" (
   "event_amount0" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_amount1" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_sqrt_price_x96" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_tick" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+  "event_tick" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "extra_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
 
@@ -234,9 +237,13 @@ CREATE INDEX "pool_burn_index_chain_id_block_number" ON "public"."event_sonex_po
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-CREATE INDEX "pool_burn_index_chain_id_event_owner" ON "public"."event_sonex_pool_burn" USING btree (
+CREATE INDEX "pool_burn_index_chain_id_owner" ON "public"."event_sonex_pool_burn" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_owner" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "pool_burn_index_chain_id_pool" ON "public"."event_sonex_pool_burn" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "extra_pool" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 CREATE UNIQUE INDEX "pool_burn_index_chain_id_tx_hash" ON "public"."event_sonex_pool_burn" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
@@ -255,11 +262,15 @@ CREATE INDEX "pool_mint_index_chain_block_number" ON "public"."event_sonex_pool_
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-CREATE INDEX "pool_mint_index_chain_id_tx_event_owner" ON "public"."event_sonex_pool_mint" USING btree (
+CREATE INDEX "pool_mint_index_chain_id_owner" ON "public"."event_sonex_pool_mint" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_owner" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
-CREATE INDEX "pool_mint_index_chain_id_tx_event_sender" ON "public"."event_sonex_pool_mint" USING btree (
+CREATE INDEX "pool_mint_index_chain_id_pool" ON "public"."event_sonex_pool_mint" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "extra_pool" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "pool_mint_index_chain_id_sender" ON "public"."event_sonex_pool_mint" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_sender" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
@@ -280,11 +291,15 @@ CREATE INDEX "pool_swap_index_chain_block_number" ON "public"."event_sonex_pool_
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-CREATE INDEX "pool_swap_index_chain_id_tx_event_recipient" ON "public"."event_sonex_pool_swap" USING btree (
+CREATE INDEX "pool_swap_index_chain_id_pool" ON "public"."event_sonex_pool_swap" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "extra_pool" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "pool_swap_index_chain_id_recipient" ON "public"."event_sonex_pool_swap" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_recipient" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
-CREATE INDEX "pool_swap_index_chain_id_tx_event_sender" ON "public"."event_sonex_pool_swap" USING btree (
+CREATE INDEX "pool_swap_index_chain_id_sender" ON "public"."event_sonex_pool_swap" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_sender" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
