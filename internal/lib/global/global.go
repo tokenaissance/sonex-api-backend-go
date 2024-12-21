@@ -2,7 +2,6 @@ package global
 
 import (
 	"fmt"
-	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/id_generater"
@@ -44,14 +43,14 @@ func NewId() (int64, error) {
 
 func InitTokenCacher(chain config.ChainConfig) {
 	tokenCachersLock.Lock()
-	defer tokenCachersLock.Unlock()
 	tokenCachers[chain.ChainId] = cache.NewTokenCacher(chain)
+	tokenCachersLock.Unlock()
 }
 
 func GetToken(chainId int64, address string) (cache.Token, error) {
 	tokenCachersLock.RLock()
-	defer tokenCachersLock.RUnlock()
 	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
 		return cache.Token{}, fmt.Errorf("%s", "Miss token cacher")
 	}
@@ -60,8 +59,8 @@ func GetToken(chainId int64, address string) (cache.Token, error) {
 
 func SetToken(chainId int64, address string, isStablecoin bool) error {
 	tokenCachersLock.RLock()
-	defer tokenCachersLock.RUnlock()
 	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
 		return fmt.Errorf("%s", "Miss token cacher")
 	}
@@ -74,14 +73,24 @@ func SetToken(chainId int64, address string, isStablecoin bool) error {
 
 func GetStablecoin(chainId int64) []cache.Token {
 	tokenCachersLock.RLock()
-	defer tokenCachersLock.RUnlock()
 	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
 		return nil
 	}
 	return cacher.GetStablecoins()
 }
 
-func GetPrice(chainId int64, token string) ([]quoter.Pool, *big.Int, error) {
-	return nil, big.NewInt(0), nil
+func GetPrice(pools []quoter.Pool, chainId int64, token string, isCache bool) ([]cache.Price, error) {
+	tokenCachersLock.RLock()
+	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%s", "Miss token cacher")
+	}
+	prices, err := cacher.GetPrices(pools, token, isCache)
+	if err != nil {
+		return nil, err
+	}
+	return prices, nil
 }

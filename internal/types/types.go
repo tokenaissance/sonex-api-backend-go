@@ -3,10 +3,17 @@
 
 package types
 
+type ChainSyncPrograss struct {
+	ChainId   int64  `json:"chain_id"`
+	Height    int64  `json:"height"`
+	UpdatedAt string `json:"update_at"`
+}
+
 type MetaRequest struct {
 }
 
 type MetaResponse struct {
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
 }
 
 type PaginationMeta struct {
@@ -128,6 +135,23 @@ type TokenListResponse struct {
 	Data    []*Token_TokenDetail `json:"data"`
 	Meta    *PaginationMeta      `json:"meta"`
 	Message string               `json:"message"`
+}
+
+type TokenPriceRequest struct {
+	ChainId int64  `form:"chain_id"`
+	Token   string `form:"token"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenPriceResponse struct {
+	Prices []TokenPriceResponse_Price `json:"prices"`
+}
+
+type TokenPriceResponse_Price struct {
+	Stablecoin string   `json:"stablecoin"`
+	Routers    []string `json:"routers"`
+	Path       string   `json:"path"`
+	Value      string   `json:"value"`
 }
 
 type TokenTopResponse struct {

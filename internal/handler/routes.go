@@ -38,7 +38,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/token/prices",
+				Path:    "/token/price",
 				Handler: sonex.SonexTokenPriceHandler(serverCtx),
 			},
 			{
