@@ -12,11 +12,7 @@ require (
 	github.com/zeromicro/go-zero v1.7.4
 )
 
-<<<<<<< HEAD
 require github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-=======
-require github.com/klen-ygs/gorm-zero v1.3.3 // indirect
->>>>>>> dev
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -84,7 +80,7 @@ require (
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.31.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/sync v0.9.0
 	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/text v0.20.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240711142825-46eb208f015d // indirect

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/lib/quoter"
 	"sonex_api_backend_go/internal/module/xpool/utils"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -451,17 +452,18 @@ func (l *XpoolPoolListLogic) updateUserPoolsData(userAddr string) error {
 func (l *XpoolPoolListLogic) getTokenPrices(chainId uint64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
 	prices := &TokenPrices{}
 
-	stakingPrice, err := global.GetPrice(int64(chainId), stakingToken.Hex())
+	// stakingPrice, err := global.GetPrice(int64(chainId), stakingToken.Hex())
+	stakingPrice, err := global.GetPrices([]quoter.Pool{}, int64(chainId), stakingToken.Hex(), true) // TODO: 需要确认一下
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staking token price: %v", err)
 	}
-	prices.StakingTokenPrice = stakingPrice
+	prices.StakingTokenPrice = stakingPrice[0].Value
 
-	rewardPrice, err := global.GetPrice(int64(chainId), rewardToken.Hex())
+	rewardPrice, err := global.GetPrices([]quoter.Pool{}, int64(chainId), rewardToken.Hex(), true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reward token price: %v", err)
 	}
-	prices.RewardTokenPrice = rewardPrice
+	prices.RewardTokenPrice = rewardPrice[0].Value
 
 	return prices, nil
 }
