@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
+	"sonex_api_backend_go/internal/lib/quoter"
 	"sync"
 	"time"
 
@@ -30,6 +31,8 @@ type Token struct {
 
 type Price struct {
 	Token     string
+	Pools     []quoter.Pool
+	Path      []byte
 	Value     *big.Int
 	UpdatedAt time.Time
 }
@@ -42,12 +45,12 @@ func NewTokenCacher(chain config.ChainConfig) *TokenCacher {
 	}
 }
 
-func (c *TokenCacher) Get(address string) (Token, error) {
-	var result Token
-	if token, ok := c.tokens[address]; ok {
-		result = token
-	} else {
-		client, err := ethclient.Dial(c.chain.GetNode())
+func (cacher *TokenCacher) Get(address string) (Token, error) {
+	cacher.tokensLock.RLock()
+	token, ok := cacher.tokens[address]
+	cacher.tokensLock.RUnlock()
+	if !ok {
+		client, err := ethclient.Dial(cacher.chain.GetNode())
 		if err != nil {
 			return Token{}, err
 		}
@@ -67,18 +70,18 @@ func (c *TokenCacher) Get(address string) (Token, error) {
 		if err != nil {
 			return Token{}, err
 		}
-		c.tokensLock.Lock()
-		defer c.tokensLock.Unlock()
-		c.tokens[address] = Token{
+		token = Token{
 			Address:      address,
 			Name:         name,
 			Symbol:       symbol,
 			Decimals:     int64(decimals),
 			IsStablecoin: false,
 		}
-		result = c.tokens[address]
+		cacher.tokensLock.Lock()
+		cacher.tokens[address] = token
+		cacher.tokensLock.Unlock()
 	}
-	return result, nil
+	return token, nil
 }
 
 func (c *TokenCacher) Set(address string, isStablecoin bool) error {
@@ -88,16 +91,17 @@ func (c *TokenCacher) Set(address string, isStablecoin bool) error {
 	}
 	token.IsStablecoin = isStablecoin
 	c.tokensLock.Lock()
-	defer c.tokensLock.Unlock()
 	c.tokens[address] = token
+	c.tokensLock.Unlock()
 	return nil
 }
 
-func (c *TokenCacher) GetStablecoins() []Token {
-	c.tokensLock.RLock()
-	defer c.tokensLock.RUnlock()
+func (cacher *TokenCacher) GetStablecoins() []Token {
+	cacher.tokensLock.RLock()
+	tokens := cacher.tokens
+	cacher.tokensLock.RUnlock()
 	var result []Token
-	linq.From(c.tokens).
+	linq.From(tokens).
 		WhereT(func(item linq.KeyValue) bool {
 			token, _ := item.Value.(Token)
 			return token.IsStablecoin
@@ -107,18 +111,24 @@ func (c *TokenCacher) GetStablecoins() []Token {
 	return result
 }
 
-func (c *TokenCacher) GetAll() []Token {
-	c.tokensLock.RLock()
-	defer c.tokensLock.RUnlock()
+func (cacher *TokenCacher) GetAll() []Token {
+	cacher.tokensLock.RLock()
+	tokens := cacher.tokens
+	cacher.tokensLock.RUnlock()
 	var result []Token
-	linq.From(c.tokens).
+	linq.From(tokens).
 		SelectT(func(item linq.KeyValue) Token { return item.Value.(Token) }).
 		ToSlice(&result)
 	return result
 }
 
-func (c *TokenCacher) GetPrice(address string) (*big.Int, error) {
-	c.pricesLock.RLock()
-	defer c.pricesLock.RUnlock()
-	return nil, nil
+func (cacher *TokenCacher) GetPrice(address string, isCache bool) ([]quoter.Pool, []byte, *big.Int, error) {
+	cacher.pricesLock.RLock()
+	token, err := cacher.Get(address)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	cacher.pricesLock.RUnlock()
+	_ = token
+	return nil, nil, nil, nil
 }
