@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/types"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -19,6 +20,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
 		New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) (int64, error)
 		PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error)
+		GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error)
 	}
 
 	customEventSonexPoolSwapModel struct {
@@ -70,4 +72,64 @@ func (m *defaultEventSonexPoolSwapModel) PageQueryWithPool(ctx context.Context, 
 		return nil, 0, err
 	}
 	return resp, total, err
+}
+
+func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error) {
+	var resp []*types.SwapEvent
+	var meta *types.PaginationMeta
+	var totalCount int64
+	baseQuery := "WHERE S.chain_id = $1"
+
+	args := []interface{}{opts.ChainId}
+
+	paramIndex := 2
+
+	if opts.Token != "" {
+		baseQuery += fmt.Sprintf(" AND (C.event_token0 = $%d OR C.event_token1 = $%d)", paramIndex, paramIndex)
+		args = append(args, opts.Token)
+		paramIndex++
+	}
+
+	if opts.Token0 != "" {
+		baseQuery += fmt.Sprintf(" AND C.event_token0 = $%d", paramIndex)
+		args = append(args, opts.Token0)
+		paramIndex++
+	}
+
+	if opts.Token1 != "" {
+		baseQuery += fmt.Sprintf(" AND C.event_token1 = $%d", paramIndex)
+		args = append(args, opts.Token1)
+		paramIndex++
+	}
+
+	countQuery := "SELECT COUNT(*) " + baseQuery
+	err := m.conn.QueryRowCtx(ctx, &totalCount, countQuery, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dataQuery := fmt.Sprintf("SELECT S.id, S.created_at, S.block_number, S.tx_hash, S.tx_at, S.value, S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, FROM %s S %s", m.table, baseQuery)
+	switch opts.Order {
+	case "ASC":
+		dataQuery += " ORDER BY pool.id ASC"
+	default:
+		dataQuery += " ORDER BY pool.id DESC"
+	}
+	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", opts.Take, (opts.Page-1)*opts.Take)
+
+	err = m.conn.QueryRowsCtx(ctx, &resp, dataQuery, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pageCount := (totalCount + opts.Take - 1) / opts.Take
+	meta = &types.PaginationMeta{
+		Page:            int(opts.Page),
+		Take:            int(opts.Take),
+		ItemCount:       int(totalCount),
+		PageCount:       int(pageCount),
+		HasPreviousPage: opts.Page > 1,
+		HasNextPage:     opts.Page < pageCount,
+	}
+	return resp, meta, nil
 }

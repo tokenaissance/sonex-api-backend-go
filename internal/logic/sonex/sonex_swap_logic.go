@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -24,7 +25,22 @@ func NewSonexSwapLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexSw
 }
 
 func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *types.SwapEventResponse, err error) {
-	// todo: add your logic here and delete this line
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	model := repository.NewEventSonexPoolSwapModel(conn)
+	data, meta, err := model.GetSwapEvents(l.ctx, req)
+	if err != nil {
+		return &types.SwapEventResponse{
+			Code:    400,
+			Data:    []*types.SwapEvent{},
+			Meta:    &types.PaginationMeta{},
+			Message: err.Error(),
+		}, nil
+	}
 
-	return
+	return &types.SwapEventResponse{
+		Code:    200,
+		Data:    data,
+		Meta:    meta,
+		Message: "success",
+	}, nil
 }
