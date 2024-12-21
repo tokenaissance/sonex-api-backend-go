@@ -85,8 +85,8 @@ type PoolsResponse_Volume struct {
 }
 
 type SonexTokenKlineRequest struct {
-	Address  string `path:"address"`
-	Interval string `path:"interval"`
+	Address  string `name:"address"`
+	Interval string `name:"interval"`
 }
 
 type SonexTokenKlineResponse struct {

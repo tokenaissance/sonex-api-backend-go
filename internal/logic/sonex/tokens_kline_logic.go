@@ -2,6 +2,7 @@ package sonex
 
 import (
 	"context"
+	"sonex_api_backend_go/internal/task"
 
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -25,6 +26,7 @@ func NewTokensKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Token
 
 func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp *types.SonexTokenKlineResponse, err error) {
 	// todo: add your logic here and delete this line
-
+	// 模拟调用
+	task.HandleRecordTokenPrice(l.svcCtx)
 	return
 }
