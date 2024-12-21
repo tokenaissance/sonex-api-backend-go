@@ -23,6 +23,7 @@ Chains:
     Tokens:
       - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
         IsStableCoin: true
+    Quoter: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
 Sonexes:
   - ChainId: 1946
     Factory: 0x69196462dD5105B85dD2941B3e0e0Df083A69152
