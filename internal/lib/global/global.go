@@ -2,10 +2,10 @@ package global
 
 import (
 	"fmt"
-	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/id_generater"
+	"sonex_api_backend_go/internal/lib/quoter"
 	"sync"
 	"time"
 
@@ -17,15 +17,15 @@ var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
 var tokenCachersLock sync.RWMutex
 
-var prices map[int]map[string]*big.Int
-var pricesLock sync.RWMutex
-
 func init() {
 	cronExecuter = cron.New(cron.WithSeconds(), cron.WithLocation(time.UTC))
 	tokenCachers = map[int64]*cache.TokenCacher{}
-	prices = map[int]map[string]*big.Int{}
 
 	cronExecuter.Start()
+}
+
+func AddCronJob(cron string, job func()) (cron.EntryID, error) {
+	return cronExecuter.AddFunc(cron, job)
 }
 
 func InitIdGenerater(workerId int64) error {
@@ -43,24 +43,24 @@ func NewId() (int64, error) {
 
 func InitTokenCacher(chain config.ChainConfig) {
 	tokenCachersLock.Lock()
-	defer tokenCachersLock.Unlock()
 	tokenCachers[chain.ChainId] = cache.NewTokenCacher(chain)
+	tokenCachersLock.Unlock()
 }
 
-func GetToken(chainId int64, address string) *cache.Token {
+func GetToken(chainId int64, address string) (cache.Token, error) {
 	tokenCachersLock.RLock()
-	defer tokenCachersLock.RUnlock()
 	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil
+		return cache.Token{}, fmt.Errorf("%s", "Miss token cacher")
 	}
 	return cacher.Get(address)
 }
 
 func SetToken(chainId int64, address string, isStablecoin bool) error {
 	tokenCachersLock.RLock()
-	defer tokenCachersLock.RUnlock()
 	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
 		return fmt.Errorf("%s", "Miss token cacher")
 	}
@@ -71,26 +71,40 @@ func SetToken(chainId int64, address string, isStablecoin bool) error {
 	return nil
 }
 
-func SetPrice(chainId int64, token string, price *big.Int) {
-	pricesLock.Lock()
-	defer pricesLock.Unlock()
-	_, ok := prices[int(chainId)]
+func GetStablecoin(chainId int64) []cache.Token {
+	tokenCachersLock.RLock()
+	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
-		prices[int(chainId)] = map[string]*big.Int{}
+		return nil
 	}
-	prices[int(chainId)][token] = price
+	return cacher.GetStablecoins()
 }
 
-func GetPrice(chainId int64, token string) (*big.Int, error) {
-	pricesLock.RLock()
-	defer pricesLock.RUnlock()
-	_, ok := prices[int(chainId)]
+func GetPrices(pools []quoter.Pool, chainId int64, token string, isCache bool) ([]cache.Price, error) {
+	tokenCachersLock.RLock()
+	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token price")
+		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
-	price, ok := prices[int(chainId)][token]
+	prices, err := cacher.Quote(pools, token, isCache)
+	if err != nil {
+		return nil, err
+	}
+	return prices, nil
+}
+
+func Quote(pools []quoter.Pool, chainId int64, from string, to string, isCache bool) ([]cache.Price, error) {
+	tokenCachersLock.RLock()
+	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token price")
+		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
-	return price, nil
+	prices, err := cacher.QuoteTo(pools, from, to, isCache)
+	if err != nil {
+		return nil, err
+	}
+	return prices, nil
 }

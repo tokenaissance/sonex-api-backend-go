@@ -4,11 +4,11 @@ Port: 8888
 Log:
   Level: debug
 PostgreSQL:
-  Host: 127.0.0.1
+  Host: 10.1.84.8
   Port: 5432
-  User: postgres
-  Password: 123456Abc
-  DbName: sonex_api_backend
+  User: apibackendgo
+  Password: cCdmZ2iRFFmB
+  DbName: sonex-api-backend-go
 Redis:
   Host: 127.0.0.1
   Port: 6379
@@ -22,22 +22,13 @@ Chains:
       http://35.213.179.122:8545: 100 # snap外部
       http://10.1.30.102:8545: 100 # full内部
       http://34.124.205.209:8545: 100 # full外部
-      # https://rpc.minato.soneium.org: 50
-      # https://soneium-minato.rpc.scs.startale.com?apikey=MTMwqry0P0CnqHPnLqmOqUsTxkiPa5ST: 50
-      # https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
     Tokens:
       - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
         IsStableCoin: true
-  # - ChainId: 81
-  #   Name: Shibuya
-  #   Nodes: # URL:Weight
-  #     https://evm.shibuya.astar.network: 100
-  #   MinConfirmations: 3
-  #   MinDelayWaitMillisecond: 2000
-  #   MaxLogsNumber: 3000
+    Quoter: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
 Sonexes:
   - ChainId: 1946
     Factory: 0x69196462dD5105B85dD2941B3e0e0Df083A69152

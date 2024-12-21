@@ -7,6 +7,7 @@ import (
 )
 
 type Path struct {
+	Pools  []Pool
 	Tokens []common.Address
 	Fees   []int64
 }

@@ -15,46 +15,1541 @@
     "application/json"
   ],
   "paths": {
-    "/from/{name}": {
+    "/meta": {
       "get": {
-        "operationId": "Sonex_api_backend_goHandler",
+        "operationId": "MetaHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/Response"
+              "$ref": "#/definitions/MetaResponse"
+            }
+          }
+        },
+        "tags": [
+          "sonex_api_backend_go"
+        ]
+      }
+    },
+    "/sonex/pools": {
+      "get": {
+        "operationId": "SonexPoolListHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PoolsResponse"
             }
           }
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
+            "name": "order",
+            "in": "query",
             "required": true,
+            "type": "string",
+            "default": "ASC"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "10"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          },
+          {
+            "name": "keywords",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token0Address",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token1Address",
+            "in": "query",
+            "required": false,
             "type": "string"
           }
         ],
         "tags": [
-          "sonex_api_backend_go"
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/swaps": {
+      "get": {
+        "operationId": "SonexSwapHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SwapEventResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "order",
+            "description": " Sorting order, default is \"ASC\"",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "default": "ASC"
+          },
+          {
+            "name": "page",
+            "description": " Current page number, default is 1",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          },
+          {
+            "name": "take",
+            "description": " Number of items per page, default is 10",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "10"
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "poolAddress",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token0",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token1",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/token/price": {
+      "get": {
+        "operationId": "SonexTokenPriceHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TokenPriceResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "is_cache",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean",
+            "default": "true"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/token/quote": {
+      "get": {
+        "operationId": "SonexTokenQuoteHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TokenQuoteResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "is_cache",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean",
+            "default": "true"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/tokens/list": {
+      "get": {
+        "operationId": "SonexTokenListHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TokenListResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "order",
+            "description": " Sorting order, default is \"ASC\"",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "default": "ASC"
+          },
+          {
+            "name": "page",
+            "description": " Current page number, default is 1",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          },
+          {
+            "name": "take",
+            "description": " Number of items per page, default is 10",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "10"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/tokens/top": {
+      "get": {
+        "operationId": "SonexTokenTopHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TokenTopResponse"
+            }
+          }
+        },
+        "tags": [
+          "sonex"
+        ]
+      }
+    },
+    "/xpool/pool/list": {
+      "get": {
+        "summary": "Xpool list",
+        "operationId": "XpoolPoolListHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/XpoolPoolListResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "user_address",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "staked_only",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "hot",
+              "apr"
+            ]
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "10"
+          }
+        ],
+        "tags": [
+          "xpool"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/xpool/pool/stats": {
+      "get": {
+        "summary": "Xpool stats",
+        "operationId": "XpoolPoolStatsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/XpoolPoolStatsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pool_address",
+            "description": " 质押池地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "description": " 金额（USD）",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          },
+          {
+            "name": "duration",
+            "description": " 质押时长（单位：天）",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+              "1",
+              "7",
+              "30",
+              "365",
+              "1825"
+            ]
+          }
+        ],
+        "tags": [
+          "xpool"
+        ],
+        "consumes": [
+          "multipart/form-data"
         ]
       }
     }
   },
   "definitions": {
-    "Request": {
+    "ChainSyncPrograss": {
       "type": "object",
-      "title": "Request"
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "height": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "update_at": {
+          "type": "string"
+        }
+      },
+      "title": "ChainSyncPrograss",
+      "required": [
+        "chain_id",
+        "height",
+        "update_at"
+      ]
     },
-    "Response": {
+    "MetaRequest": {
+      "type": "object",
+      "title": "MetaRequest"
+    },
+    "MetaResponse": {
+      "type": "object",
+      "properties": {
+        "chain_sync_prograsses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ChainSyncPrograss"
+          }
+        }
+      },
+      "title": "MetaResponse",
+      "required": [
+        "chain_sync_prograsses"
+      ]
+    },
+    "PaginationMeta": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "take": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "itemCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "hasPreviousPage": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "hasNextPage": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "PaginationMeta",
+      "required": [
+        "page",
+        "take",
+        "itemCount",
+        "pageCount",
+        "hasPreviousPage",
+        "hasNextPage"
+      ]
+    },
+    "PoolsRequest": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "type": "string",
+          "default": "ASC"
+        },
+        "page": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        },
+        "take": {
+          "type": "integer",
+          "format": "int64",
+          "default": "10"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        },
+        "keywords": {
+          "type": "string"
+        },
+        "token0Address": {
+          "type": "string"
+        },
+        "token1Address": {
+          "type": "string"
+        }
+      },
+      "title": "PoolsRequest",
+      "required": [
+        "order",
+        "page",
+        "take"
+      ]
+    },
+    "PoolsResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PoolsResponse_Pool"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "PoolsResponse",
+      "required": [
+        "code",
+        "data",
+        "meta",
+        "message"
+      ]
+    },
+    "PoolsResponse_Pool": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "feeTier": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "liquidity": {
+          "type": "string"
+        },
+        "token0": {
+          "$ref": "#/definitions/PoolsResponse_Token"
+        },
+        "token1": {
+          "$ref": "#/definitions/PoolsResponse_Token"
+        },
+        "token0Price": {
+          "type": "string"
+        },
+        "token1Price": {
+          "type": "string"
+        },
+        "tick": {
+          "type": "string"
+        },
+        "volume": {
+          "$ref": "#/definitions/PoolsResponse_Volume"
+        },
+        "tvlUSD": {
+          "type": "string"
+        },
+        "yield24h": {
+          "type": "string"
+        }
+      },
+      "title": "PoolsResponse_Pool",
+      "required": [
+        "id",
+        "address",
+        "feeTier",
+        "liquidity",
+        "token0",
+        "token1",
+        "token0Price",
+        "token1Price",
+        "tick",
+        "volume",
+        "tvlUSD",
+        "yield24h"
+      ]
+    },
+    "PoolsResponse_Token": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "additional": {
+          "$ref": "#/definitions/PoolsResponse_TokenAdditional"
+        }
+      },
+      "title": "PoolsResponse_Token",
+      "required": [
+        "address",
+        "symbol",
+        "name",
+        "decimals",
+        "logo",
+        "additional"
+      ]
+    },
+    "PoolsResponse_TokenAdditional": {
+      "type": "object",
+      "properties": {
+        "audits": {
+          "type": "string"
+        },
+        "social": {
+          "$ref": "#/definitions/Token_Social"
+        },
+        "website": {
+          "type": "string"
+        },
+        "whitepaper": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "title": "PoolsResponse_TokenAdditional",
+      "required": [
+        "audits",
+        "social",
+        "website",
+        "whitepaper",
+        "description"
+      ]
+    },
+    "PoolsResponse_Volume": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "address": {
+          "type": "string"
+        },
+        "token0Price": {
+          "type": "string"
+        },
+        "token1Price": {
+          "type": "string"
+        },
+        "volumeToken0": {
+          "type": "string"
+        },
+        "volumeToken1": {
+          "type": "string"
+        },
+        "volume": {
+          "type": "string"
+        }
+      },
+      "title": "PoolsResponse_Volume",
+      "required": [
+        "date",
+        "address",
+        "token0Price",
+        "token1Price",
+        "volumeToken0",
+        "volumeToken1",
+        "volume"
+      ]
+    },
+    "SonexTokenPricesRequest": {
+      "type": "object",
+      "title": "SonexTokenPricesRequest"
+    },
+    "SonexTokenPricesResponse": {
       "type": "object",
       "properties": {
         "message": {
           "type": "string"
         }
       },
-      "title": "Response",
+      "title": "SonexTokenPricesResponse",
       "required": [
         "message"
+      ]
+    },
+    "SwapEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "address": {
+          "type": "string"
+        },
+        "token0": {
+          "$ref": "#/definitions/Token_TokenInfo"
+        },
+        "token1": {
+          "$ref": "#/definitions/Token_TokenInfo"
+        },
+        "pool": {
+          "$ref": "#/definitions/Token_PoolDetail"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "amount0": {
+          "type": "number",
+          "format": "double"
+        },
+        "amount1": {
+          "type": "number",
+          "format": "double"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "title": "SwapEvent",
+      "required": [
+        "id",
+        "address",
+        "token0",
+        "token1",
+        "pool",
+        "hash",
+        "amount0",
+        "amount1",
+        "created_at"
+      ]
+    },
+    "SwapEventRequest": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "type": "string",
+          "default": "ASC",
+          "description": " Sorting order, default is \"ASC\""
+        },
+        "page": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1",
+          "description": " Current page number, default is 1"
+        },
+        "take": {
+          "type": "integer",
+          "format": "int64",
+          "default": "10",
+          "description": " Number of items per page, default is 10"
+        },
+        "address": {
+          "type": "string"
+        },
+        "poolAddress": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "token0": {
+          "type": "string"
+        },
+        "token1": {
+          "type": "string"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "SwapEventRequest",
+      "required": [
+        "order",
+        "page",
+        "take"
+      ]
+    },
+    "SwapEventResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SwapEvent"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "SwapEventResponse",
+      "required": [
+        "code",
+        "data",
+        "meta",
+        "message"
+      ]
+    },
+    "TokenListRequest": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "type": "string",
+          "default": "ASC",
+          "description": " Sorting order, default is \"ASC\""
+        },
+        "page": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1",
+          "description": " Current page number, default is 1"
+        },
+        "take": {
+          "type": "integer",
+          "format": "int64",
+          "default": "10",
+          "description": " Number of items per page, default is 10"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "TokenListRequest",
+      "required": [
+        "order",
+        "page",
+        "take"
+      ]
+    },
+    "TokenListResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Token_TokenDetail"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "TokenListResponse",
+      "required": [
+        "code",
+        "data",
+        "meta",
+        "message"
+      ]
+    },
+    "TokenPriceRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token": {
+          "type": "string"
+        },
+        "is_cache": {
+          "type": "boolean",
+          "format": "boolean",
+          "default": "true"
+        }
+      },
+      "title": "TokenPriceRequest",
+      "required": [
+        "chain_id",
+        "token"
+      ]
+    },
+    "TokenPriceResponse": {
+      "type": "object",
+      "properties": {
+        "prices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TokenPriceResponse_Price"
+          }
+        }
+      },
+      "title": "TokenPriceResponse",
+      "required": [
+        "prices"
+      ]
+    },
+    "TokenPriceResponse_Price": {
+      "type": "object",
+      "properties": {
+        "stablecoin": {
+          "type": "string"
+        },
+        "routers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "title": "TokenPriceResponse_Price",
+      "required": [
+        "stablecoin",
+        "routers",
+        "value"
+      ]
+    },
+    "TokenQuoteRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "is_cache": {
+          "type": "boolean",
+          "format": "boolean",
+          "default": "true"
+        }
+      },
+      "title": "TokenQuoteRequest",
+      "required": [
+        "chain_id",
+        "from",
+        "to"
+      ]
+    },
+    "TokenQuoteResponse": {
+      "type": "object",
+      "properties": {
+        "prices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TokenQuoteResponse_Price"
+          }
+        }
+      },
+      "title": "TokenQuoteResponse",
+      "required": [
+        "prices"
+      ]
+    },
+    "TokenQuoteResponse_Price": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "routers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "title": "TokenQuoteResponse_Price",
+      "required": [
+        "target",
+        "routers",
+        "path",
+        "value"
+      ]
+    },
+    "TokenTopResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Token_TokenDetail"
+          }
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "TokenTopResponse",
+      "required": [
+        "code",
+        "data",
+        "message"
+      ]
+    },
+    "Token_PoolDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "address": {
+          "type": "string"
+        },
+        "feeTier": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "liquidity": {
+          "type": "string"
+        },
+        "token0": {
+          "$ref": "#/definitions/Token_TokenInfo"
+        },
+        "token1": {
+          "$ref": "#/definitions/Token_TokenInfo"
+        },
+        "token0Price": {
+          "type": "string"
+        },
+        "token1Price": {
+          "type": "string"
+        },
+        "tick": {
+          "type": "string"
+        },
+        "volume": {
+          "type": "object"
+        }
+      },
+      "title": "Token_PoolDetail",
+      "required": [
+        "id",
+        "address",
+        "feeTier",
+        "liquidity",
+        "token0",
+        "token1",
+        "token0Price",
+        "token1Price",
+        "tick",
+        "volume"
+      ]
+    },
+    "Token_Social": {
+      "type": "object",
+      "properties": {
+        "github": {
+          "type": "string"
+        },
+        "reddit": {
+          "type": "string"
+        },
+        "discord": {
+          "type": "string"
+        },
+        "twitter": {
+          "type": "string"
+        },
+        "bitclout": {
+          "type": "string"
+        },
+        "telegram": {
+          "type": "string"
+        }
+      },
+      "title": "Token_Social",
+      "required": [
+        "github",
+        "reddit",
+        "discord",
+        "twitter",
+        "bitclout",
+        "telegram"
+      ]
+    },
+    "Token_TokenDetail": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "pools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Token_PoolDetail"
+          }
+        }
+      },
+      "title": "Token_TokenDetail",
+      "required": [
+        "address",
+        "symbol",
+        "name",
+        "decimals",
+        "logo",
+        "pools"
+      ]
+    },
+    "Token_TokenInfo": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "additional": {
+          "type": "object"
+        }
+      },
+      "title": "Token_TokenInfo",
+      "required": [
+        "address",
+        "symbol",
+        "name",
+        "decimals",
+        "logo",
+        "additional"
+      ]
+    },
+    "XpoolPoolListRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "user_address": {
+          "type": "string"
+        },
+        "keyword": {
+          "type": "string"
+        },
+        "staked_only": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "order_by": {
+          "type": "string",
+          "enum": [
+            "hot",
+            "apr"
+          ]
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32",
+          "default": "10"
+        }
+      },
+      "title": "XpoolPoolListRequest"
+    },
+    "XpoolPoolListResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "staking_token_name": {
+          "type": "string",
+          "description": " 质押的代币名称"
+        },
+        "staking_token_symbol": {
+          "type": "string",
+          "description": " 质押的代币符号"
+        },
+        "staking_token_address": {
+          "type": "string",
+          "description": " 质押的代币合约地址"
+        },
+        "staking_token_decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 质押的代币合约精度"
+        },
+        "staking_token_price": {
+          "type": "string",
+          "description": " 质押的代币价格"
+        },
+        "reward_token_name": {
+          "type": "string",
+          "description": " 奖励的代币名称"
+        },
+        "reward_token_symbol": {
+          "type": "string",
+          "description": " 奖励的代币符号"
+        },
+        "reward_token_address": {
+          "type": "string",
+          "description": " 奖励的代币合约地址"
+        },
+        "reward_token_decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 奖励的代币合约精度"
+        },
+        "reward_token_price": {
+          "type": "string",
+          "description": " 奖励的代币价格"
+        },
+        "pool_address": {
+          "type": "string",
+          "description": " 质押池合约地址"
+        },
+        "reward_per_block": {
+          "type": "string",
+          "description": " 出块奖励"
+        },
+        "total_staked": {
+          "type": "string",
+          "description": " 质押池的质押币总数量"
+        },
+        "block_time": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 出块时长 单位s"
+        },
+        "tvl": {
+          "type": "string",
+          "description": " 质押池的质押总价值（USD）"
+        },
+        "apr": {
+          "type": "string",
+          "description": " 年化收益率"
+        },
+        "join_num": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 参与人数"
+        },
+        "status": {
+          "type": "string",
+          "description": " 运行状态（1-正常，2-已撤销）"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "title": "XpoolPoolListResponse",
+      "required": [
+        "id",
+        "chain_id",
+        "staking_token_name",
+        "staking_token_symbol",
+        "staking_token_address",
+        "staking_token_decimals",
+        "staking_token_price",
+        "reward_token_name",
+        "reward_token_symbol",
+        "reward_token_address",
+        "reward_token_decimals",
+        "reward_token_price",
+        "pool_address",
+        "reward_per_block",
+        "total_staked",
+        "block_time",
+        "tvl",
+        "apr",
+        "join_num",
+        "status",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "XpoolPoolStatsRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pool_address": {
+          "type": "string",
+          "description": " 质押池地址"
+        },
+        "amount": {
+          "type": "number",
+          "format": "double",
+          "description": " 金额（USD）"
+        },
+        "duration": {
+          "type": "integer",
+          "format": "int32",
+          "enum": [
+            "1",
+            "7",
+            "30",
+            "365",
+            "1825"
+          ],
+          "description": " 质押时长（单位：天）"
+        }
+      },
+      "title": "XpoolPoolStatsRequest",
+      "required": [
+        "pool_address"
+      ]
+    },
+    "XpoolPoolStatsResponse": {
+      "type": "object",
+      "properties": {
+        "pool_address": {
+          "type": "string",
+          "description": " 质押池合约地址"
+        },
+        "total_staked": {
+          "type": "string",
+          "description": " 质押池总质押代币数量"
+        },
+        "join_num": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 参与质押人数"
+        },
+        "reward_per_block": {
+          "type": "string",
+          "description": " 每块奖励数量"
+        },
+        "block_time": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 出块秒数"
+        },
+        "every_day_yield": {
+          "type": "string",
+          "description": " 每日产量"
+        },
+        "reward_token_price": {
+          "type": "string",
+          "description": " 奖励币价（USD）"
+        },
+        "staking_token_price": {
+          "type": "string",
+          "description": " 质押币价（USD）"
+        },
+        "TVL": {
+          "type": "string",
+          "description": " 质押池当前总质押价值（USD）"
+        },
+        "APR": {
+          "type": "string",
+          "description": " 年化收益率"
+        },
+        "ROI": {
+          "type": "string",
+          "description": " 投资回报率"
+        },
+        "profit": {
+          "type": "string",
+          "description": " 投资回报金额（USD）"
+        }
+      },
+      "title": "XpoolPoolStatsResponse",
+      "required": [
+        "pool_address",
+        "total_staked",
+        "join_num",
+        "reward_per_block",
+        "block_time",
+        "every_day_yield",
+        "reward_token_price",
+        "staking_token_price",
+        "TVL",
+        "APR",
+        "ROI",
+        "profit"
       ]
     }
   },

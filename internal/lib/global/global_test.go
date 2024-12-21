@@ -15,6 +15,6 @@ func TestGlobalGetToken(t *testing.T) {
 	for _, conf := range c.Chains {
 		InitTokenCacher(conf)
 	}
-	token := GetToken(1946, "0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
+	token, _ := GetToken(1946, "0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
 	fmt.Printf("%+v\n", token)
 }

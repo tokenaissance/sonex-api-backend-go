@@ -3,10 +3,17 @@
 
 package types
 
+type ChainSyncPrograss struct {
+	ChainId   int64  `json:"chain_id"`
+	Height    int64  `json:"height"`
+	UpdatedAt string `json:"update_at"`
+}
+
 type MetaRequest struct {
 }
 
 type MetaResponse struct {
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
 }
 
 type PaginationMeta struct {
@@ -22,7 +29,7 @@ type PoolsRequest struct {
 	Order         string `form:"order,default=ASC"`
 	Page          int64  `form:"page,default=1"`
 	Take          int64  `form:"take,default=10"`
-	ChainId       int64  `form:"chainId,default=1946"`
+	ChainId       int64  `form:"chainId,default=1946,optional"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
@@ -60,18 +67,11 @@ type PoolsResponse_Token struct {
 }
 
 type PoolsResponse_TokenAdditional struct {
-	Audits string `json:"audits"`
-	Social struct {
-		Github   string `json:"github"`
-		Reddit   string `json:"reddit"`
-		Discord  string `json:"discord"`
-		Twitter  string `json:"twitter"`
-		Bitclout string `json:"bitclout"`
-		Telegram string `json:"telegram"`
-	} `json:"social"`
-	Website     string `json:"website"`
-	Whitepaper  string `json:"whitepaper"`
-	Description string `json:"description"`
+	Audits      string       `json:"audits"`
+	Social      Token_Social `json:"social"`
+	Website     string       `json:"website"`
+	Whitepaper  string       `json:"whitepaper"`
+	Description string       `json:"description"`
 }
 
 type PoolsResponse_Volume struct {
@@ -84,6 +84,15 @@ type PoolsResponse_Volume struct {
 	Volume       string `json:"volume"`
 }
 
+type SonexTokenKlineRequest struct {
+	Address  string `name:"address"`
+	Interval string `name:"interval"`
+}
+
+type SonexTokenKlineResponse struct {
+	Message string `json:"message"`
+}
+
 type SonexTokenPricesRequest struct {
 	Name string `path:"name,options=you|me"`
 }
@@ -92,11 +101,42 @@ type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
 }
 
+type SwapEvent struct {
+	ID        int64            `json:"id"`
+	Address   string           `json:"address"`
+	Token0    Token_TokenInfo  `json:"token0"`
+	Token1    Token_TokenInfo  `json:"token1"`
+	Pool      Token_PoolDetail `json:"pool"`
+	Hash      string           `json:"hash"`
+	Amount0   float64          `json:"amount0"`
+	Amount1   float64          `json:"amount1"`
+	CreatedAt string           `json:"created_at"`
+}
+
+type SwapEventRequest struct {
+	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	Address     string `form:"address,optional"`
+	PoolAddress string `form:"poolAddress,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapEventResponse struct {
+	Code    int             `json:"code"`
+	Data    []*SwapEvent    `json:"data"`
+	Meta    *PaginationMeta `json:"meta"`
+	Message string          `json:"message"`
+}
+
 type TokenListRequest struct {
 	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
 	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type TokenListResponse struct {
@@ -104,6 +144,40 @@ type TokenListResponse struct {
 	Data    []*Token_TokenDetail `json:"data"`
 	Meta    *PaginationMeta      `json:"meta"`
 	Message string               `json:"message"`
+}
+
+type TokenPriceRequest struct {
+	ChainId int64  `form:"chain_id"`
+	Token   string `form:"token"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenPriceResponse struct {
+	Prices []TokenPriceResponse_Price `json:"prices"`
+}
+
+type TokenPriceResponse_Price struct {
+	Stablecoin string   `json:"stablecoin"`
+	Routers    []string `json:"routers"`
+	Value      string   `json:"value"`
+}
+
+type TokenQuoteRequest struct {
+	ChainId int64  `form:"chain_id"`
+	From    string `form:"from"`
+	To      string `form:"to"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenQuoteResponse struct {
+	Prices []TokenQuoteResponse_Price `json:"prices"`
+}
+
+type TokenQuoteResponse_Price struct {
+	Target  string   `json:"target"`
+	Routers []string `json:"routers"`
+	Path    string   `json:"path"`
+	Value   string   `json:"value"`
 }
 
 type TokenTopResponse struct {
@@ -125,6 +199,15 @@ type Token_PoolDetail struct {
 	Volume      interface{}     `json:"volume"`
 }
 
+type Token_Social struct {
+	Github   string `json:"github"`
+	Reddit   string `json:"reddit"`
+	Discord  string `json:"discord"`
+	Twitter  string `json:"twitter"`
+	Bitclout string `json:"bitclout"`
+	Telegram string `json:"telegram"`
+}
+
 type Token_TokenDetail struct {
 	Address  string              `json:"address"`
 	Symbol   string              `json:"symbol"`
@@ -135,12 +218,12 @@ type Token_TokenDetail struct {
 }
 
 type Token_TokenInfo struct {
-	Address    string                 `json:"address"`
-	Symbol     string                 `json:"symbol"`
-	Name       string                 `json:"name"`
-	Decimals   int                    `json:"decimals"`
-	Logo       string                 `json:"logo"`
-	Additional map[string]interface{} `json:"additional"`
+	Address    string      `json:"address"`
+	Symbol     string      `json:"symbol"`
+	Name       string      `json:"name"`
+	Decimals   int         `json:"decimals"`
+	Logo       string      `json:"logo"`
+	Additional interface{} `json:"additional"`
 }
 
 type XpoolPoolListRequest struct {

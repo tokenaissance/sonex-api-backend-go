@@ -21,6 +21,7 @@ type (
 		withSession(session sqlx.Session) EventSonexFactoryPoolCreatedModel
 		TableName() string
 		New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) (int64, error)
+		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
 		GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error)
 	}
@@ -55,6 +56,16 @@ func (m *customEventSonexFactoryPoolCreatedModel) New(ctx context.Context, chain
 	return id, err
 }
 
+func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error) {
+	var resp []EventSonexFactoryPoolCreated
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1", eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error) {
 	var resp []EventSonexFactoryPoolCreated
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND to_ = $2", eventSonexFactoryPoolCreatedRows, m.table)
@@ -74,11 +85,13 @@ type PoolData struct {
 	Token0Address    string `db:"token0_address"`
 	Token0Logo       string `db:"token0_logo"`
 	Token0Additional string `db:"token0_additional"`
+	Token0Decimals   int    `db:"token0_decimals"`
 	Token1Name       string `db:"token1_name"`
 	Token1Symbol     string `db:"token1_symbol"`
 	Token1Address    string `db:"token1_address"`
 	Token1Logo       string `db:"token1_logo"`
 	Token1Additional string `db:"token1_additional"`
+	Token1Decimals   int    `db:"token1_decimals"`
 }
 
 func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error) {
@@ -125,7 +138,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		return nil, nil, err
 	}
 
-	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional %s", baseQuery)
+	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token0.decimals AS token0_decimals, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional, token1.decimals AS token1_decimals,  %s", baseQuery)
 	switch opts.Order {
 	case "ASC":
 		dataQuery += " ORDER BY pool.id ASC"
@@ -155,6 +168,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 				Symbol:     pd.Token0Symbol,
 				Name:       pd.Token0Name,
 				Logo:       pd.Token0Logo,
+				Decimals:   pd.Token0Decimals,
 				Additional: token0Additional,
 			},
 			Token1: types.PoolsResponse_Token{
@@ -162,6 +176,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 				Symbol:     pd.Token1Symbol,
 				Name:       pd.Token1Name,
 				Logo:       pd.Token1Logo,
+				Decimals:   pd.Token1Decimals,
 				Additional: token1Additional,
 			},
 		}
