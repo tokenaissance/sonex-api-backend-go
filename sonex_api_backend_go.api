@@ -19,7 +19,7 @@ type TokenListRequest {
 	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page    int64  `form:"page,default=1"` // Current page number, default is 1
 	Take    int64  `form:"take,default=10"` // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type PaginationMeta {
@@ -50,7 +50,7 @@ type PoolsRequest {
 	Order         string `form:"order,default=ASC"`
 	Page          int64  `form:"page,default=1"`
 	Take          int64  `form:"take,default=10"`
-	ChainId       int64  `form:"chainId,default=1946"`
+	ChainId       int64  `form:"chainId,default=1946,optional"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
@@ -149,6 +149,36 @@ type Token_TokenInfo {
 	Additional map[string]interface{} `json:"additional"`
 }
 
+type SwapEventRequest {
+	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page        int64  `form:"page,default=1"` // Current page number, default is 1
+	Take        int64  `form:"take,default=10"` // Number of items per page, default is 10
+	address     string `form:"address,optional"`
+	poolAddress string `form:"poolAddress,optional"`
+	token       string `form:"token,optional"`
+	token0      string `form:"token0,optional"`
+	token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapEvent {
+	ID      int64            `json:"id"`
+	Address string           `json:"address"`
+	Token0  Token_TokenInfo  `json:"token0"`
+	Token1  Token_TokenInfo  `json:"token1"`
+	Pool    Token_PoolDetail `json:"pool"`
+	Hash    string           `json:"hash"`
+	Amount0 float64          `json:"amount0"`
+	Amount1 float64          `json:"amount1"`
+}
+
+type SwapEventResponse {
+	Code    int             `json:"code"`
+	Data    []*SwapEvent    `json:"data"`
+	Meta    *PaginationMeta `json:"meta"`
+	Message string          `json:"message"`
+}
+
 @server (
 	prefix: /sonex
 	group:  sonex
@@ -157,14 +187,17 @@ service sonex_api_backend_go {
 	@handler SonexTokenListHandler
 	get /tokens/list (TokenListRequest) returns (TokenListResponse)
 
+	@handler SonexTokenTopHandler
+	get /tokens/top returns (TokenTopResponse)
+
 	@handler SonexPoolListHandler
 	get /pools (PoolsRequest) returns (PoolsResponse)
 
 	@handler SonexTokenPriceHandler
 	get /token/prices (SonexTokenPricesRequest) returns (SonexTokenPricesResponse)
 
-	@handler SonexTokenTopHandler
-	get /tokens/top returns (TokenTopResponse)
+	@handler SonexSwapHandler
+	get /swaps (SwapEventRequest) returns (SwapEventResponse)
 }
 
 /*

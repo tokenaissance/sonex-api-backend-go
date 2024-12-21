@@ -22,7 +22,7 @@ type PoolsRequest struct {
 	Order         string `form:"order,default=ASC"`
 	Page          int64  `form:"page,default=1"`
 	Take          int64  `form:"take,default=10"`
-	ChainId       int64  `form:"chainId,default=1946"`
+	ChainId       int64  `form:"chainId,default=1946,optional"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
@@ -92,11 +92,41 @@ type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
 }
 
+type SwapEvent struct {
+	ID      int64            `json:"id"`
+	Address string           `json:"address"`
+	Token0  Token_TokenInfo  `json:"token0"`
+	Token1  Token_TokenInfo  `json:"token1"`
+	Pool    Token_PoolDetail `json:"pool"`
+	Hash    string           `json:"hash"`
+	Amount0 float64          `json:"amount0"`
+	Amount1 float64          `json:"amount1"`
+}
+
+type SwapEventRequest struct {
+	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	Address     string `form:"address,optional"`
+	PoolAddress string `form:"poolAddress,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapEventResponse struct {
+	Code    int             `json:"code"`
+	Data    []*SwapEvent    `json:"data"`
+	Meta    *PaginationMeta `json:"meta"`
+	Message string          `json:"message"`
+}
+
 type TokenListRequest struct {
 	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
 	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type TokenListResponse struct {
