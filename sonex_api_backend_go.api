@@ -56,19 +56,21 @@ type PoolsRequest {
 	Token1Address string `form:"token1Address,optional"`
 }
 
+type Token_Social {
+	Github   string `json:"github"`
+	Reddit   string `json:"reddit"`
+	Discord  string `json:"discord"`
+	Twitter  string `json:"twitter"`
+	Bitclout string `json:"bitclout"`
+	Telegram string `json:"telegram"`
+}
+
 type PoolsResponse_TokenAdditional {
-	Audits string `json:"audits"`
-	Social {
-		Github   string `json:"github"`
-		Reddit   string `json:"reddit"`
-		Discord  string `json:"discord"`
-		Twitter  string `json:"twitter"`
-		Bitclout string `json:"bitclout"`
-		Telegram string `json:"telegram"`
-	} `json:"social"`
-	Website     string `json:"website"`
-	Whitepaper  string `json:"whitepaper"`
-	Description string `json:"description"`
+	Audits      string       `json:"audits"`
+	Social      Token_Social `json:"social"`
+	Website     string       `json:"website"`
+	Whitepaper  string       `json:"whitepaper"`
+	Description string       `json:"description"`
 }
 
 type PoolsResponse_Token {

@@ -60,18 +60,11 @@ type PoolsResponse_Token struct {
 }
 
 type PoolsResponse_TokenAdditional struct {
-	Audits string `json:"audits"`
-	Social struct {
-		Github   string `json:"github"`
-		Reddit   string `json:"reddit"`
-		Discord  string `json:"discord"`
-		Twitter  string `json:"twitter"`
-		Bitclout string `json:"bitclout"`
-		Telegram string `json:"telegram"`
-	} `json:"social"`
-	Website     string `json:"website"`
-	Whitepaper  string `json:"whitepaper"`
-	Description string `json:"description"`
+	Audits      string       `json:"audits"`
+	Social      Token_Social `json:"social"`
+	Website     string       `json:"website"`
+	Whitepaper  string       `json:"whitepaper"`
+	Description string       `json:"description"`
 }
 
 type PoolsResponse_Volume struct {
@@ -154,6 +147,15 @@ type Token_PoolDetail struct {
 	Token1Price string          `json:"token1Price"`
 	Tick        string          `json:"tick"`
 	Volume      interface{}     `json:"volume"`
+}
+
+type Token_Social struct {
+	Github   string `json:"github"`
+	Reddit   string `json:"reddit"`
+	Discord  string `json:"discord"`
+	Twitter  string `json:"twitter"`
+	Bitclout string `json:"bitclout"`
+	Telegram string `json:"telegram"`
 }
 
 type Token_TokenDetail struct {
