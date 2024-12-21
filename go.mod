@@ -11,6 +11,8 @@ require (
 	github.com/zeromicro/go-zero v1.7.4
 )
 
+require github.com/klen-ygs/gorm-zero v1.3.3 // indirect
+
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect

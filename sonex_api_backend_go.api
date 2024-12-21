@@ -224,6 +224,15 @@ type SwapEventResponse {
 	Message string          `json:"message"`
 }
 
+type SonexTokenKlineRequest {
+	Address  string `path:"address"`
+	Interval string `path:"interval"`
+}
+
+type SonexTokenKlineResponse {
+	Message string `json:"message"`
+}
+
 @server (
 	prefix: /sonex
 	group:  sonex
@@ -246,6 +255,9 @@ service sonex_api_backend_go {
 
 	@handler SonexSwapHandler
 	get /swaps (SwapEventRequest) returns (SwapEventResponse)
+
+	@handler TokensKlineHandler
+	get /tokens/kline (SonexTokenKlineRequest) returns (SonexTokenKlineResponse)
 }
 
 /*

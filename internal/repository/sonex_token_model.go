@@ -222,3 +222,25 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 
 	return tokenDetails, meta, nil
 }
+
+func (m *customSonexTokenModel) GetTokens(ctx context.Context) error {
+	poolQuery := fmt.Sprintf("select * from %s", m.table)
+	var tokens []TokenData
+	err := m.conn.QueryRowsCtx(ctx, &tokens, poolQuery)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	fmt.Println(tokens)
+	//var conn sqlx.SqlConn
+	//var users []*User
+	//err := conn.QueryRowsCtx(context.Background(), &users, "select id, name from user where name = ?", "dylan")
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//_ = users
+
+	return nil
+}

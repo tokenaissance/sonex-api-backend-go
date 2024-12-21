@@ -84,6 +84,15 @@ type PoolsResponse_Volume struct {
 	Volume       string `json:"volume"`
 }
 
+type SonexTokenKlineRequest struct {
+	Address  string `path:"address"`
+	Interval string `path:"interval"`
+}
+
+type SonexTokenKlineResponse struct {
+	Message string `json:"message"`
+}
+
 type SonexTokenPricesRequest struct {
 	Name string `path:"name,options=you|me"`
 }
