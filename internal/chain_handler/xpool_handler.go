@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sonex_api_backend_go/internal/config"
-	"sonex_api_backend_go/internal/lib/contract/x_pool"
+	"sonex_api_backend_go/internal/lib/contract/xpool"
 	"sonex_api_backend_go/internal/lib/log"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
@@ -20,22 +20,22 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-type XPoolHandler struct {
+type XpoolHandler struct {
 	dataSource string
 	chain      *config.ChainConfig
-	config     *config.XPoolConfig
+	config     *config.XpoolConfig
 }
 
-func NewXPoolHandler(dataSource string, chain config.ChainConfig, config config.XPoolConfig) (*XPoolHandler, error) {
-	return &XPoolHandler{
+func NewXpoolHandler(dataSource string, chain config.ChainConfig, config config.XpoolConfig) (*XpoolHandler, error) {
+	return &XpoolHandler{
 		dataSource: dataSource,
 		chain:      &chain,
 		config:     &config,
 	}, nil
 }
 
-func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
-	factory, err := x_pool.NewStakingFactory(common.HexToAddress(handler.config.Factory), client)
+func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
+	factory, err := xpool.NewStakingFactory(common.HexToAddress(handler.config.Factory), client)
 	if err != nil {
 		return err, false
 	}
@@ -46,7 +46,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 	if err != nil {
 		return err, false
 	}
-	poolCreatedEvents := []*x_pool.StakingFactoryPoolCreated{}
+	poolCreatedEvents := []*xpool.StakingFactoryPoolCreated{}
 	for poolCreatedLogs.Next() {
 		if err = poolCreatedLogs.Error(); err != nil {
 			return err, false
@@ -59,7 +59,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 	if err != nil {
 		return err, false
 	}
-	poolDestroiedEvents := []*x_pool.StakingFactoryPoolDestroied{}
+	poolDestroiedEvents := []*xpool.StakingFactoryPoolDestroied{}
 	for poolDestroiedLogs.Next() {
 		if err = poolDestroiedLogs.Error(); err != nil {
 			return err, false
@@ -77,8 +77,8 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 	conn := repository.NewConn(handler.dataSource)
 	err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-		eventXPoolFactoryPoolCreatedModel := repository.NewEventXPoolFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
-		eventXPoolFactoryPoolDestroiedModel := repository.NewEventXPoolFactoryPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
+		eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
+		eventXpoolFactoryPoolDestroiedModel := repository.NewEventXpoolFactoryPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
 
 		// PoolCreated Event
 		{
@@ -97,7 +97,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				rewardPreBlock := event.RewardPerBlock.String()
 
 				// If handled, ignore
-				_, err := eventXPoolFactoryPoolCreatedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+				_, err := eventXpoolFactoryPoolCreatedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
@@ -106,7 +106,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				_, err = eventXPoolFactoryPoolCreatedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, stakingToken, rewardToken, rewardPreBlock)
+				_, err = eventXpoolFactoryPoolCreatedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, stakingToken, rewardToken, rewardPreBlock)
 				if err != nil {
 					return err
 				}
@@ -131,7 +131,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				recipient := event.Recipient.Hex()
 
 				// If handled, ignore
-				_, err := eventXPoolFactoryPoolDestroiedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+				_, err := eventXpoolFactoryPoolDestroiedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
@@ -140,19 +140,19 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				_, err = eventXPoolFactoryPoolDestroiedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, ethBalance, stakingBalance, rewardBalance, recipient)
+				_, err = eventXpoolFactoryPoolDestroiedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, ethBalance, stakingBalance, rewardBalance, recipient)
 				if err != nil {
 					return err
 				}
 			}
 		}
 
-		poolCreatedRecords, err := eventXPoolFactoryPoolCreatedModel.QueryByChainIdFactory(ctx, handler.chain.ChainId, handler.config.Factory)
+		poolCreatedRecords, err := eventXpoolFactoryPoolCreatedModel.QueryByChainIdFactory(ctx, handler.chain.ChainId, handler.config.Factory)
 		if err != nil {
 			return err
 		}
 		var poolAddresses []common.Address
-		linq.From(poolCreatedRecords).SelectT(func(item repository.EventXPoolFactoryPoolCreated) common.Address {
+		linq.From(poolCreatedRecords).SelectT(func(item repository.EventXpoolFactoryPoolCreated) common.Address {
 			return common.HexToAddress(item.EventPool)
 		}).ToSlice(&poolAddresses)
 
@@ -196,7 +196,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 						numberSet := map[int64]struct{}{}
 
-						pool, err := x_pool.NewStakingPool(poolAddress, client)
+						pool, err := xpool.NewStakingPool(poolAddress, client)
 						if err != nil {
 							sendResult(err)
 							return
@@ -208,7 +208,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							sendResult(err)
 							return
 						}
-						claimedEvents := []*x_pool.StakingPoolClaimed{}
+						claimedEvents := []*xpool.StakingPoolClaimed{}
 						for claimedLogs.Next() {
 							if err = claimedLogs.Error(); err != nil {
 								sendResult(err)
@@ -224,7 +224,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							sendResult(err)
 							return
 						}
-						withdrawedEvents := []*x_pool.StakingPoolWithdrawed{}
+						withdrawedEvents := []*xpool.StakingPoolWithdrawed{}
 						for withdrawedLogs.Next() {
 							if err = withdrawedLogs.Error(); err != nil {
 								sendResult(err)
@@ -240,7 +240,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							sendResult(err)
 							return
 						}
-						depositedEvents := []*x_pool.StakingPoolDeposited{}
+						depositedEvents := []*xpool.StakingPoolDeposited{}
 						for depositedLogs.Next() {
 							if err = depositedLogs.Error(); err != nil {
 								sendResult(err)
@@ -260,9 +260,9 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 						conn := repository.NewConn(handler.dataSource)
 						err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-							eventXPoolPoolClaimedModel := repository.NewEventXPoolPoolClaimedModel(sqlx.NewSqlConnFromSession(s))
-							eventXPoolPoolWithdrawedModel := repository.NewEventXPoolPoolWithdrawedModel(sqlx.NewSqlConnFromSession(s))
-							eventXPoolPoolDestroiedModel := repository.NewEventXPoolPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
+							eventXpoolPoolClaimedModel := repository.NewEventXpoolPoolClaimedModel(sqlx.NewSqlConnFromSession(s))
+							eventXpoolPoolWithdrawedModel := repository.NewEventXpoolPoolWithdrawedModel(sqlx.NewSqlConnFromSession(s))
+							eventXpoolPoolDestroiedModel := repository.NewEventXpoolPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
 
 							// Claimed event
 							{
@@ -280,7 +280,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									height := event.Height.Int64()
 
 									// If handled, ignore
-									_, err := eventXPoolPoolClaimedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventXpoolPoolClaimedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -289,7 +289,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventXPoolPoolClaimedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									_, err = eventXpoolPoolClaimedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
 									if err != nil {
 										return err
 									}
@@ -312,7 +312,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									height := event.Height.Int64()
 
 									// If handled, ignore
-									_, err := eventXPoolPoolWithdrawedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventXpoolPoolWithdrawedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -321,7 +321,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventXPoolPoolWithdrawedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									_, err = eventXpoolPoolWithdrawedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
 									if err != nil {
 										return err
 									}
@@ -331,7 +331,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							// Deposited event (The contract has not been updated yet)
 							{
 								_ = depositedEvents
-								_ = eventXPoolPoolDestroiedModel
+								_ = eventXpoolPoolDestroiedModel
 								// for _, event := range depositedEvents {
 								// 	blockNumber := int64(event.Raw.BlockNumber)
 								// 	tx := transactions[event.Raw.TxHash.Hex()]
@@ -347,7 +347,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 								// 	recipient := event.Recipient.Hex()
 
 								// 	// If handled, ignore
-								// 	_, err := eventXPoolPoolDestroiedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+								// 	_, err := eventXpoolPoolDestroiedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
 								// 	switch err {
 								// 	case repository.ErrNotFound:
 								// 	case nil:
@@ -356,7 +356,7 @@ func (handler *XPoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 								// 		return err
 								// 	}
 
-								// 	_, err = eventXPoolPoolDestroiedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, ethBalance, stakingBalance, rewardBalance, recipient)
+								// 	_, err = eventXpoolPoolDestroiedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, ethBalance, stakingBalance, rewardBalance, recipient)
 								// 	if err != nil {
 								// 		return err
 								// 	}

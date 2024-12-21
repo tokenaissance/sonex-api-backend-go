@@ -8,5 +8,5 @@ type Config struct {
 	PostgreSQL PgConfig      `json:","`
 	Chains     []ChainConfig `json:","`
 	Sonexes    []SonexConfig `json:",optional"`
-	XPools     []XPoolConfig `json:",optional"`
+	XPools     []XpoolConfig `json:",optional"`
 }
