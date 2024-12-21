@@ -80,7 +80,7 @@ func main() {
 
 		// X Pool handler
 		{
-			configA := linq.From(c.XPools).SingleWithT(func(item config.XpoolConfig) bool { return item.ChainId == chain.ChainId })
+			configA := linq.From(c.Xpools).SingleWithT(func(item config.XpoolConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
 				config, _ := configA.(config.XpoolConfig)
 				handler, err := chain_handler.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, config)

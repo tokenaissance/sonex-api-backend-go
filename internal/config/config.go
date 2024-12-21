@@ -8,5 +8,12 @@ type Config struct {
 	PostgreSQL PgConfig      `json:","`
 	Chains     []ChainConfig `json:","`
 	Sonexes    []SonexConfig `json:",optional"`
-	XPools     []XpoolConfig `json:",optional"`
+	Xpools     []XpoolConfig `json:",optional"`
+	Redis      RedisConfig   `json:","`
+}
+
+type RedisConfig struct {
+	Host     string
+	Password string
+	DB       int
 }

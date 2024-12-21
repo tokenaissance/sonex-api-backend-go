@@ -12,12 +12,6 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-type ApiResponse struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
-}
-
 type PoolListResponse struct {
 	List   []*types.XpoolPoolListResponse `json:"list"`
 	Limit  int                            `json:"limit"`

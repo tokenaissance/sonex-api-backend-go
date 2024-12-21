@@ -151,6 +151,7 @@ type XpoolPoolListRequest struct {
 	OrderBy     string `form:"order_by,optional,options=hot|apr"`
 	Offset      int    `form:"offset,optional"`
 	Limit       int    `form:"limit,optional,default=10"`
+	UserPools []string `json:"-"`
 }
 
 type XpoolPoolListResponse struct {

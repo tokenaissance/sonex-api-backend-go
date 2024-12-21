@@ -9,6 +9,11 @@ PostgreSQL:
   User: postgres
   Password: 123456Abc
   DbName: sonex_api_backend
+Redis:
+  Host: 127.0.0.1
+  Port: 6379
+  Password: 
+  Db: 0
 Chains:
   - ChainId: 1946
     Name: Minato
@@ -37,6 +42,6 @@ Sonexes:
   - ChainId: 1946
     Factory: 0x69196462dD5105B85dD2941B3e0e0Df083A69152
     PositionManager: 0xeC816FCdc262601C0E23902c679FDd87CFb24077
-XPools:
+Xpools:
   - ChainId: 1946
     Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531
