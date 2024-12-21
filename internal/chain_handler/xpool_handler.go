@@ -397,11 +397,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			retry.DelayType(retry.FixedDelay),
 			retry.OnRetry(func(n uint, err error) {
 				retrys += 1
-				logx.Infof(log.Warning("Retrying handle pools %d times, pools: %v, error: %s", retrys, waitForRetryPools, err))
+				logx.Infof("%s", log.Warning("Retrying handle pools %d times, pools: %v, error: %s", retrys, waitForRetryPools, err))
 			}),
 		)
 		if err != nil {
-			logx.Errorf(log.Alert("Retry handle pools %d times, but failed: %v", retrys, waitForRetryPools))
+			logx.Errorf("%s", log.Alert("Retry handle pools %d times, but failed: %v", retrys, waitForRetryPools))
 			return nil
 		}
 

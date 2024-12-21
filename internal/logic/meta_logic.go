@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -24,7 +25,21 @@ func NewMetaLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MetaLogic {
 }
 
 func (l *MetaLogic) Meta(req *types.MetaRequest) (resp *types.MetaResponse, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	model := repository.NewChainScannerPrograssModel(conn)
+	chainScannerPrograsses := []types.ChainSyncPrograss{}
+	for _, chain := range l.svcCtx.Config.Chains {
+		chainScannerPrograss, err := model.FindOneByChainId(l.ctx, chain.ChainId)
+		if err != nil {
+			continue
+		}
+		chainScannerPrograsses = append(chainScannerPrograsses, types.ChainSyncPrograss{
+			ChainId:   chain.ChainId,
+			Height:    chainScannerPrograss.Height,
+			UpdatedAt: chainScannerPrograss.UpdatedAt.String(),
+		})
+	}
+	return &types.MetaResponse{
+		ChainSyncPrograsses: chainScannerPrograsses,
+	}, nil
 }

@@ -5,7 +5,15 @@ Global Module
 */
 type MetaRequest {}
 
-type MetaResponse {}
+type ChainSyncPrograss {
+	ChainId   int64  `json:"chain_id"`
+	Height    int64  `json:"height"`
+	UpdatedAt string `json:"update_at"`
+}
+
+type MetaResponse {
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
+}
 
 service sonex_api_backend_go {
 	@handler MetaHandler
@@ -15,6 +23,23 @@ service sonex_api_backend_go {
 /*
 Sonex Module
 */
+type TokenPriceRequest {
+	ChainId int64  `form:"chain_id"`
+	Token   string `form:"token"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenPriceResponse_Price {
+	Stablecoin string   `json:"stablecoin"`
+	Routers    []string `json:"routers"`
+	Path       string   `json:"path"`
+	Value      string   `json:"value"`
+}
+
+type TokenPriceResponse {
+	Prices []TokenPriceResponse_Price `json:"prices"`
+}
+
 type TokenListRequest {
 	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page    int64  `form:"page,default=1"` // Current page number, default is 1
@@ -155,11 +180,11 @@ type SwapEventRequest {
 	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page        int64  `form:"page,default=1"` // Current page number, default is 1
 	Take        int64  `form:"take,default=10"` // Number of items per page, default is 10
-	address     string `form:"address,optional"`
-	poolAddress string `form:"poolAddress,optional"`
-	token       string `form:"token,optional"`
-	token0      string `form:"token0,optional"`
-	token1      string `form:"token1,optional"`
+	Address     string `form:"address,optional"`
+	PoolAddress string `form:"poolAddress,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
 	ChainId     int64  `form:"chainId,default=1946,optional"`
 }
 
@@ -187,6 +212,9 @@ type SwapEventResponse {
 	group:  sonex
 )
 service sonex_api_backend_go {
+	@handler SonexTokenPriceHandler
+	get /token/price (TokenPriceRequest) returns (TokenPriceResponse)
+
 	@handler SonexTokenListHandler
 	get /tokens/list (TokenListRequest) returns (TokenListResponse)
 
@@ -195,9 +223,6 @@ service sonex_api_backend_go {
 
 	@handler SonexPoolListHandler
 	get /pools (PoolsRequest) returns (PoolsResponse)
-
-	@handler SonexTokenPriceHandler
-	get /token/prices (SonexTokenPricesRequest) returns (SonexTokenPricesResponse)
 
 	@handler SonexSwapHandler
 	get /swaps (SwapEventRequest) returns (SwapEventResponse)
