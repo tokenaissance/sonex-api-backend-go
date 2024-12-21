@@ -150,8 +150,25 @@ type TokenPriceResponse struct {
 type TokenPriceResponse_Price struct {
 	Stablecoin string   `json:"stablecoin"`
 	Routers    []string `json:"routers"`
-	Path       string   `json:"path"`
 	Value      string   `json:"value"`
+}
+
+type TokenQuoteRequest struct {
+	ChainId int64  `form:"chain_id"`
+	From    string `form:"from"`
+	To      string `form:"to"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenQuoteResponse struct {
+	Prices []TokenQuoteResponse_Price `json:"prices"`
+}
+
+type TokenQuoteResponse_Price struct {
+	Target  string   `json:"target"`
+	Routers []string `json:"routers"`
+	Path    string   `json:"path"`
+	Value   string   `json:"value"`
 }
 
 type TokenTopResponse struct {

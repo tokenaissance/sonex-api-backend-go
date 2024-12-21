@@ -2,7 +2,6 @@ package sonex
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 
 	"sonex_api_backend_go/internal/lib/cache"
@@ -55,7 +54,7 @@ func (l *SonexTokenPriceLogic) SonexTokenPrice(req *types.TokenPriceRequest) (re
 		}).
 		ToSlice(&pools)
 
-	prices, err := global.GetPrice(pools, req.ChainId, token.Hex(), req.IsCache)
+	prices, err := global.GetPrices(pools, req.ChainId, token.Hex(), req.IsCache)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,6 @@ func (l *SonexTokenPriceLogic) SonexTokenPrice(req *types.TokenPriceRequest) (re
 			return types.TokenPriceResponse_Price{
 				Stablecoin: item.To,
 				Routers:    routers,
-				Path:       base64.StdEncoding.EncodeToString(item.Path),
 				Value:      item.Value.String(),
 			}
 		}).
