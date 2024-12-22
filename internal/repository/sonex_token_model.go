@@ -61,8 +61,8 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 
 	poolQuery := fmt.Sprintf(`
 		SELECT pool.id, pool.event_pool, pool.event_fee,
-		       token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.additional AS token0_additional,
-		       token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.additional AS token1_additional
+		       token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
+		       token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional
 		FROM event_sonex_factory_pool_created AS pool
 		LEFT JOIN %s AS token0 ON pool.event_token0 = token0.address
 		LEFT JOIN %s AS token1 ON pool.event_token1 = token1.address
@@ -152,8 +152,8 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 
 	poolQuery := fmt.Sprintf(`
 		SELECT pool.id, pool.event_pool, pool.event_fee,
-		       token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.additional AS token0_additional,
-		       token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.additional AS token1_additional
+		       token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
+		       token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional
 		FROM event_sonex_factory_pool_created AS pool
 		LEFT JOIN %s AS token0 ON pool.event_token0 = token0.address
 		LEFT JOIN %s AS token1 ON pool.event_token1 = token1.address

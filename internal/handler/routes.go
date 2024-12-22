@@ -48,6 +48,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/tokens",
+				Handler: sonex.SonexTokensHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/tokens/kline",
 				Handler: sonex.TokensKlineHandler(serverCtx),
 			},
