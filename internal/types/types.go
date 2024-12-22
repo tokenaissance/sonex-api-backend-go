@@ -49,18 +49,20 @@ type PoolsResponse struct {
 }
 
 type PoolsResponse_Pool struct {
-	Id          string              `json:"id"`
-	Address     string              `json:"address"`
-	FeeTier     int                 `json:"feeTier"`
-	Liquidity   string              `json:"liquidity"`
-	Token0      PoolsResponse_Token `json:"token0"`
-	Token1      PoolsResponse_Token `json:"token1"`
-	Token0Price string              `json:"token0Price"`
-	Token1Price string              `json:"token1Price"`
-	Tick        string              `json:"tick"`
-	Volume      float64             `json:"volume"`
-	TvlUSD      string              `json:"tvlUSD"`
-	Yield24h    string              `json:"yield24h"`
+	Id            string              `json:"id"`
+	Address       string              `json:"address"`
+	FeeTier       int                 `json:"feeTier"`
+	Liquidity     string              `json:"liquidity"`
+	Token0        PoolsResponse_Token `json:"token0"`
+	Token1        PoolsResponse_Token `json:"token1"`
+	Token0Price   string              `json:"token0Price"`
+	Token1Price   string              `json:"token1Price"`
+	Tick          string              `json:"tick"`
+	Volume        float64             `json:"volume"`
+	TvlUSD        float64             `json:"tvlUSD"`
+	Token0Balance float64             `json:"token0Balance"`
+	Token1Balance float64             `json:"token1Balance"`
+	Yield24h      float64             `json:"yield24h"`
 }
 
 type PoolsResponse_Token struct {
@@ -91,12 +93,22 @@ type PoolsResponse_Volume struct {
 }
 
 type SonexTokenKlineRequest struct {
-	Address  string `path:"address"`
-	Interval string `path:"interval"`
+	Address  string `form:"address"`
+	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
 }
 
 type SonexTokenKlineResponse struct {
-	Message string `json:"message"`
+	Code    int                     `json:"code"`
+	Data    []SonexTokenPriceRecord `json:"data"`
+	Message string                  `json:"message"`
+}
+
+type SonexTokenPriceRecord struct {
+	Id           int64  `json:"id"`
+	TokenSymbol  string `json:"token_symbol"`
+	TokenAddress string `json:"token_address"`
+	Price        string `json:"price"`
+	CreatedAt    string `json:"created_at"`
 }
 
 type SonexTokenPricesRequest struct {
