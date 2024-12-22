@@ -1,0 +1,7 @@
+.vscode/
+
+sonex_api_backend_go_local.yaml
+.idea
+.air.conf
+air_errors.log
+main.exe

@@ -1,0 +1,32 @@
+name: Build and Push to GCP Artifact Registry
+
+on:
+  push:
+    branches:
+      - dev 
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v2
+
+    - name: Authenticate with GCP
+      env:
+        GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      run: |
+        echo "${GCP_SERVICE_ACCOUNT_KEY}" > gcp-key.json
+        gcloud auth activate-service-account --key-file=gcp-key.json
+        gcloud config set project arched-logic-440921-h3
+        gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+
+    - name: Build and Push Docker Image
+      run: |
+        IMAGE_NAME=asia-southeast1-docker.pkg.dev/arched-logic-440921-h3/sonex-api-backend-go/sonex-api-backend-go:latest
+        docker build -t $IMAGE_NAME .
+        docker push $IMAGE_NAME

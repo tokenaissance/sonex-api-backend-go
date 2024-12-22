@@ -1,14 +1,383 @@
 syntax = "v1"
 
-type Request {
+/*
+Global Module
+*/
+type MetaRequest {}
+
+type ChainSyncPrograss {
+	ChainId   int64  `json:"chain_id"`
+	Height    int64  `json:"height"`
+	UpdatedAt string `json:"update_at"`
+}
+
+type MetaResponse {
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
+}
+
+service sonex_api_backend_go {
+	@handler MetaHandler
+	get /meta (MetaRequest) returns (MetaResponse)
+}
+
+/*
+Sonex Module
+*/
+type TokenPriceRequest {
+	ChainId int64  `form:"chain_id"`
+	Token   string `form:"token"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenPriceResponse_Price {
+	Stablecoin string   `json:"stablecoin"`
+	Router     []string `json:"router"`
+	Value      string   `json:"value"`
+}
+
+type TokenPriceResponse {
+	Prices []TokenPriceResponse_Price `json:"prices"`
+}
+
+type TokenQuoteRequest {
+	ChainId int64  `form:"chain_id"`
+	From    string `form:"from"`
+	To      string `form:"to"`
+	IsCache bool   `form:"is_cache,optional,default=true"`
+}
+
+type TokenQuoteResponse_Price {
+	Target string   `json:"target"`
+	Router []string `json:"router"`
+	Path   string   `json:"path"`
+	Value  string   `json:"value"`
+}
+
+type TokenQuoteResponse {
+	Prices []TokenQuoteResponse_Price `json:"prices"`
+}
+
+type TokenListRequest {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"` // Current page number, default is 1
+	Take    int64  `form:"take,default=10"` // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type PaginationMeta {
+	Page            int  `json:"page"`
+	Take            int  `json:"take"`
+	ItemCount       int  `json:"itemCount"`
+	PageCount       int  `json:"pageCount"`
+	HasPreviousPage bool `json:"hasPreviousPage"`
+	HasNextPage     bool `json:"hasNextPage"`
+}
+
+type TokenListResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
+type TokensRequest {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"` // Current page number, default is 1
+	Take    int64  `form:"take,default=10"` // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type TokensResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
+type SonexTokenPricesRequest {
 	Name string `path:"name,options=you|me"`
 }
 
-type Response {
+type SonexTokenPricesResponse {
 	Message string `json:"message"`
 }
 
-service sonex_api_backend_go{
-	@handler Sonex_api_backend_goHandler
-	get /from/:name (Request) returns (Response)
+type PoolsRequest {
+	Order         string `form:"order,default=ASC"`
+	Page          int64  `form:"page,default=1"`
+	Take          int64  `form:"take,default=10"`
+	ChainId       int64  `form:"chainId,default=1946,optional"`
+	Keywords      string `form:"keywords,optional"`
+	Token0Address string `form:"token0Address,optional"`
+	Token1Address string `form:"token1Address,optional"`
 }
+
+type Token_Social {
+	Github   string `json:"github"`
+	Reddit   string `json:"reddit"`
+	Discord  string `json:"discord"`
+	Twitter  string `json:"twitter"`
+	Bitclout string `json:"bitclout"`
+	Telegram string `json:"telegram"`
+}
+
+type PoolsResponse_TokenAdditional {
+	Audits      string       `json:"audits"`
+	Social      Token_Social `json:"social"`
+	Website     string       `json:"website"`
+	Whitepaper  string       `json:"whitepaper"`
+	Description string       `json:"description"`
+}
+
+type PoolsResponse_Token {
+	Address    string                        `json:"address"`
+	Symbol     string                        `json:"symbol"`
+	Name       string                        `json:"name"`
+	Decimals   int                           `json:"decimals"`
+	Logo       string                        `json:"logo"`
+	Additional PoolsResponse_TokenAdditional `json:"additional"`
+}
+
+type PoolsResponse_Volume {
+	Date         int64  `json:"date"`
+	Address      string `json:"address"`
+	Token0Price  string `json:"token0Price"`
+	Token1Price  string `json:"token1Price"`
+	VolumeToken0 string `json:"volumeToken0"`
+	VolumeToken1 string `json:"volumeToken1"`
+	Volume       string `json:"volume"`
+}
+
+type PoolsResponse_Pool {
+	Id          string              `json:"id"`
+	Address     string              `json:"address"`
+	FeeTier     int                 `json:"feeTier"`
+	Liquidity   string              `json:"liquidity"`
+	Token0      PoolsResponse_Token `json:"token0"`
+	Token1      PoolsResponse_Token `json:"token1"`
+	Token0Price string              `json:"token0Price"`
+	Token1Price string              `json:"token1Price"`
+	Tick        string              `json:"tick"`
+	Volume      float64             `json:"volume"`
+	TvlUSD      string              `json:"tvlUSD"`
+	Yield24h    string              `json:"yield24h"`
+}
+
+type PoolsResponse {
+	Code    int                   `json:"code"`
+	Data    []*PoolsResponse_Pool `json:"data"`
+	Meta    *PaginationMeta       `json:"meta"`
+	Message string                `json:"message"`
+}
+
+type TokenTopResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Message string               `json:"message"`
+}
+
+type Token_TokenDetail {
+	Address  string              `json:"address"`
+	Symbol   string              `json:"symbol"`
+	Name     string              `json:"name"`
+	Decimals int                 `json:"decimals"`
+	Logo     string              `json:"logo"`
+	Pools    []*Token_PoolDetail `json:"pools"`
+	Volume   float64             `json:"volume"`
+}
+
+type Token_PoolDetail {
+	ID          int64           `json:"id"`
+	Address     string          `json:"address"`
+	FeeTier     int             `json:"feeTier"`
+	Liquidity   string          `json:"liquidity"`
+	Token0      Token_TokenInfo `json:"token0"`
+	Token1      Token_TokenInfo `json:"token1"`
+	Token0Price string          `json:"token0Price"`
+	Token1Price string          `json:"token1Price"`
+	Tick        string          `json:"tick"`
+	Volume      interface{}     `json:"volume"`
+}
+
+type Token_TokenInfo {
+	Address    string      `json:"address"`
+	Symbol     string      `json:"symbol"`
+	Name       string      `json:"name"`
+	Decimals   int         `json:"decimals"`
+	Logo       string      `json:"logo"`
+	Additional interface{} `json:"additional"`
+}
+
+type SwapEventRequest {
+	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page        int64  `form:"page,default=1"` // Current page number, default is 1
+	Take        int64  `form:"take,default=10"` // Number of items per page, default is 10
+	Address     string `form:"address,optional"`
+	PoolAddress string `form:"poolAddress,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapEvent {
+	ID        int64            `json:"id"`
+	Address   string           `json:"address"`
+	Token0    Token_TokenInfo  `json:"token0"`
+	Token1    Token_TokenInfo  `json:"token1"`
+	Pool      Token_PoolDetail `json:"pool"`
+	Hash      string           `json:"hash"`
+	Amount0   float64          `json:"amount0"`
+	Amount1   float64          `json:"amount1"`
+	CreatedAt string           `json:"created_at"`
+}
+
+type SwapEventResponse {
+	Code    int             `json:"code"`
+	Data    []*SwapEvent    `json:"data"`
+	Meta    *PaginationMeta `json:"meta"`
+	Message string          `json:"message"`
+}
+
+type TokenVolume {
+	Address string  `json:"address"`
+	Amounts float64 `json:"amounts"`
+}
+
+type PoolVolume {
+	Address  string  `json:"address"`
+	Amounts0 float64 `json:"amounts0"`
+	Amounts1 float64 `json:"amounts1"`
+}
+
+type SonexTokenKlineRequest {
+	Address  string `path:"address"`
+	Interval string `path:"interval"`
+}
+
+type SonexTokenKlineResponse {
+	Message string `json:"message"`
+}
+
+@server (
+	prefix: /sonex
+	group:  sonex
+)
+service sonex_api_backend_go {
+	@handler SonexTokenPriceHandler
+	get /token/price (TokenPriceRequest) returns (TokenPriceResponse)
+
+	@handler SonexTokenQuoteHandler
+	get /token/quote (TokenQuoteRequest) returns (TokenQuoteResponse)
+
+	@handler SonexTokenListHandler
+	get /tokens/list (TokenListRequest) returns (TokenListResponse)
+
+	@handler SonexTokensHandler
+	get /tokens (TokenListRequest) returns (TokensResponse)
+
+	@handler SonexTokenTopHandler
+	get /tokens/top returns (TokenTopResponse)
+
+	@handler SonexPoolListHandler
+	get /pools (PoolsRequest) returns (PoolsResponse)
+
+	@handler SonexSwapHandler
+	get /swaps (SwapEventRequest) returns (SwapEventResponse)
+
+	@handler TokensKlineHandler
+	get /tokens/kline (SonexTokenKlineRequest) returns (SonexTokenKlineResponse)
+}
+
+/*
+Farm Module
+*/
+// type FarmRequest {
+//  Name string `path:"name,options=you|me"`
+// }
+// type FarmResponse {
+//  Message string `json:"message"`
+// }
+// @server (
+//  prefix: /farm
+//  group:  farm
+// )
+// service sonex_api_backend_go {
+//  @handler FarmMothedHandler
+//  get /mothed (FarmRequest) returns (FarmResponse)
+// }
+/*
+Xpool Module
+*/
+type XpoolPoolListRequest {
+	ChainId     uint64   `form:"chain_id,optional"`
+	UserAddress string   `form:"user_address,optional"`
+	Keyword     string   `form:"keyword,optional"`
+	StakedOnly  string   `form:"staked_only,optional,options=true|false"`
+	OrderBy     string   `form:"order_by,optional,options=hot|apr"`
+	Offset      int      `form:"offset,optional"`
+	Limit       int      `form:"limit,optional,default=10"`
+	UserPools   []string `json:"-"`
+}
+
+type XpoolPoolListResponse {
+	Id                   int64  `json:"id"`
+	ChainId              int64  `json:"chain_id"` // 链ID
+	StakingTokenName     string `json:"staking_token_name"` // 质押的代币名称
+	StakingTokenSymbol   string `json:"staking_token_symbol"` // 质押的代币符号
+	StakingTokenAddress  string `json:"staking_token_address"` // 质押的代币合约地址
+	StakingTokenDecimals int64  `json:"staking_token_decimals"` // 质押的代币合约精度
+	StakingTokenPrice    string `json:"staking_token_price"` // 质押的代币价格
+	RewardTokenName      string `json:"reward_token_name"` // 奖励的代币名称
+	RewardTokenSymbol    string `json:"reward_token_symbol"` // 奖励的代币符号
+	RewardTokenAddress   string `json:"reward_token_address"` // 奖励的代币合约地址
+	RewardTokenDecimals  int64  `json:"reward_token_decimals"` // 奖励的代币合约精度
+	RewardTokenPrice     string `json:"reward_token_price"` // 奖励的代币价格
+	PoolAddress          string `json:"pool_address"` // 质押池合约地址
+	RewardPerBlock       string `json:"reward_per_block"` // 出块奖励
+	TotalStaked          string `json:"total_staked"` // 质押池的质押币总数量
+	BlockTime            int64  `json:"block_time"` // 出块时长 单位s
+	TVL                  string `json:"tvl"` // 质押池的质押总价值（USD）
+	APR                  string `json:"apr"` // 年化收益率
+	JoinNum              int64  `json:"join_num"` // 参与人数
+	Status               string `json:"status"` // 运行状态（1-正常，2-已撤销）
+	CreatedAt            string `json:"created_at"`
+	UpdatedAt            string `json:"updated_at"`
+}
+
+type XpoolPoolStatsRequest {
+	ChainId     uint64  `form:"chain_id,optional"`
+	PoolAddress string  `form:"pool_address"` // 质押池地址
+	Amount      float64 `form:"amount,optional"` // 金额（USD）
+	Duration    int     `form:"duration,optional,options=1|7|30|365|1825"` // 质押时长（单位：天）
+}
+
+type XpoolPoolStatsResponse {
+	PoolAddress       string `json:"pool_address"` // 质押池合约地址
+	TotalStaked       string `json:"total_staked"` // 质押池总质押代币数量
+	JoinNum           int64  `json:"join_num"` // 参与质押人数
+	RewardPerBlock    string `json:"reward_per_block"` // 每块奖励数量
+	BlockTime         int64  `json:"block_time"` // 出块秒数
+	EveryDayYield     string `json:"every_day_yield"` // 每日产量
+	RewardTokenPrice  string `json:"reward_token_price"` // 奖励币价（USD）
+	StakingTokenPrice string `json:"staking_token_price"` // 质押币价（USD）
+	TVL               string `json:"TVL"` // 质押池当前总质押价值（USD）
+	APR               string `json:"APR"` // 年化收益率
+	ROI               string `json:"ROI"` // 投资回报率
+	Profit            string `json:"profit"` // 投资回报金额（USD）
+}
+
+@server (
+	prefix: /xpool
+	group:  xpool
+)
+service sonex_api_backend_go {
+	@doc "Xpool list"
+	@handler XpoolPoolListHandler
+	get /pool/list (XpoolPoolListRequest) returns (XpoolPoolListResponse)
+
+	@doc "Xpool stats"
+	@handler XpoolPoolStatsHandler
+	get /pool/stats (XpoolPoolStatsRequest) returns (XpoolPoolStatsResponse)
+}
+
