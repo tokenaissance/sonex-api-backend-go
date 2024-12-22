@@ -31,7 +31,7 @@ type TokenPriceRequest {
 
 type TokenPriceResponse_Price {
 	Stablecoin string   `json:"stablecoin"`
-	Router     []string `json:"routers"`
+	Router     []string `json:"router"`
 	Value      string   `json:"value"`
 }
 
@@ -48,7 +48,7 @@ type TokenQuoteRequest {
 
 type TokenQuoteResponse_Price {
 	Target string   `json:"target"`
-	Router []string `json:"routers"`
+	Router []string `json:"router"`
 	Path   string   `json:"path"`
 	Value  string   `json:"value"`
 }

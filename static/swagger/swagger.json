@@ -276,6 +276,22 @@
         ]
       }
     },
+    "/sonex/tokens/kline": {
+      "get": {
+        "operationId": "TokensKlineHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SonexTokenKlineResponse"
+            }
+          }
+        },
+        "tags": [
+          "sonex"
+        ]
+      }
+    },
     "/sonex/tokens/list": {
       "get": {
         "operationId": "SonexTokenListHandler",
@@ -785,6 +801,22 @@
         "volume"
       ]
     },
+    "SonexTokenKlineRequest": {
+      "type": "object",
+      "title": "SonexTokenKlineRequest"
+    },
+    "SonexTokenKlineResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "SonexTokenKlineResponse",
+      "required": [
+        "message"
+      ]
+    },
     "SonexTokenPricesRequest": {
       "type": "object",
       "title": "SonexTokenPricesRequest"
@@ -1028,7 +1060,7 @@
         "stablecoin": {
           "type": "string"
         },
-        "routers": {
+        "router": {
           "type": "array",
           "items": {
             "type": "string"
@@ -1041,7 +1073,7 @@
       "title": "TokenPriceResponse_Price",
       "required": [
         "stablecoin",
-        "routers",
+        "router",
         "value"
       ]
     },
@@ -1092,7 +1124,7 @@
         "target": {
           "type": "string"
         },
-        "routers": {
+        "router": {
           "type": "array",
           "items": {
             "type": "string"
@@ -1108,7 +1140,7 @@
       "title": "TokenQuoteResponse_Price",
       "required": [
         "target",
-        "routers",
+        "router",
         "path",
         "value"
       ]

@@ -158,7 +158,7 @@ type TokenPriceResponse struct {
 
 type TokenPriceResponse_Price struct {
 	Stablecoin string   `json:"stablecoin"`
-	Router     []string `json:"routers"`
+	Router     []string `json:"router"`
 	Value      string   `json:"value"`
 }
 
@@ -175,7 +175,7 @@ type TokenQuoteResponse struct {
 
 type TokenQuoteResponse_Price struct {
 	Target string   `json:"target"`
-	Router []string `json:"routers"`
+	Router []string `json:"router"`
 	Path   string   `json:"path"`
 	Value  string   `json:"value"`
 }
