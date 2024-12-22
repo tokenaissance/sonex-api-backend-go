@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"sync"
 	"time"
 
+	lp "sonex_api_backend_go/internal/lib/pool"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -49,6 +51,28 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 			Message: err.Error(),
 		}, nil
 	}
+
+	balanceFetcher := lp.NewTokenBalanceFetcher(l.svcCtx.Config.Chains[0])
+	var wg sync.WaitGroup
+	mu := &sync.Mutex{}
+
+	for i := range data {
+		wg.Add(1)
+		go func(pool *types.PoolsResponse_Pool) {
+			defer wg.Done()
+
+			balance0, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token0.Address, int64(pool.Token0.Decimals))
+			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
+
+			mu.Lock()
+			pool.Token0Balance = balance0
+			pool.Token1Balance = balance1
+			pool.TvlUSD = balance0 + balance1
+			mu.Unlock()
+		}(data[i])
+	}
+
+	wg.Wait()
 
 	poolVolumes, err := model.GetPoolVolumes(l.ctx, l.svcCtx.Config.Sonexes[0].ChainId, true)
 	if err == nil {
