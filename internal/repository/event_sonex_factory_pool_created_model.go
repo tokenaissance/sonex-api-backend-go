@@ -24,6 +24,7 @@ type (
 		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
 		GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error)
+		GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -194,4 +195,36 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	}
 
 	return pools, meta, nil
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error) {
+	volumeQuery := `
+		SELECT
+			sp.extra_pool AS address,
+			SUM(ABS(CAST(sp.event_amount0 AS numeric))) AS amounts0,
+			SUM(ABS(CAST(sp.event_amount1 AS numeric))) AS amounts1
+		FROM
+			event_sonex_pool_swap sp
+		WHERE sp.chain_id = %d
+	`
+
+	if last24Hours {
+		// Assuming `transaction_time` is a timestamp column in your table
+		volumeQuery += " AND sp.tx_at >= NOW() - INTERVAL '24 HOURS'"
+	}
+
+	// Complete the query with grouping
+	volumeQuery += " GROUP BY sp.extra_pool"
+
+	// Format the query with the chainId
+	volumeQuery = fmt.Sprintf(volumeQuery, chainId)
+
+	// Execute the query and scan results into poolVolumes slice
+	var poolVolumes []types.PoolVolume
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumes, volumeQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	return poolVolumes, nil
 }

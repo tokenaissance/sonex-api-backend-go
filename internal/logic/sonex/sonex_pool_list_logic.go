@@ -2,6 +2,7 @@ package sonex
 
 import (
 	"context"
+	"math"
 
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -35,6 +36,20 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 			Meta:    &types.PaginationMeta{},
 			Message: err.Error(),
 		}, nil
+	}
+
+	poolVolumes, err := model.GetPoolVolumes(l.ctx, l.svcCtx.Config.Sonexes[0].ChainId, true)
+	if err == nil {
+		for _, pool := range data {
+			for _, volume := range poolVolumes {
+				if pool.Address == volume.Address {
+					factor0 := math.Pow(10, float64(pool.Token0.Decimals))
+					factor1 := math.Pow(10, float64(pool.Token1.Decimals))
+					pool.Volume = volume.Amounts0/factor0 + volume.Amounts1/factor1
+					break
+				}
+			}
+		}
 	}
 
 	return &types.PoolsResponse{

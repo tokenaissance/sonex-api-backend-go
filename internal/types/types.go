@@ -25,6 +25,12 @@ type PaginationMeta struct {
 	HasNextPage     bool `json:"hasNextPage"`
 }
 
+type PoolVolume struct {
+	Address  string  `json:"address"`
+	Amounts0 float64 `json:"amounts0"`
+	Amounts1 float64 `json:"amounts1"`
+}
+
 type PoolsRequest struct {
 	Order         string `form:"order,default=ASC"`
 	Page          int64  `form:"page,default=1"`
@@ -43,18 +49,18 @@ type PoolsResponse struct {
 }
 
 type PoolsResponse_Pool struct {
-	Id          string               `json:"id"`
-	Address     string               `json:"address"`
-	FeeTier     int                  `json:"feeTier"`
-	Liquidity   string               `json:"liquidity"`
-	Token0      PoolsResponse_Token  `json:"token0"`
-	Token1      PoolsResponse_Token  `json:"token1"`
-	Token0Price string               `json:"token0Price"`
-	Token1Price string               `json:"token1Price"`
-	Tick        string               `json:"tick"`
-	Volume      PoolsResponse_Volume `json:"volume"`
-	TvlUSD      string               `json:"tvlUSD"`
-	Yield24h    string               `json:"yield24h"`
+	Id          string              `json:"id"`
+	Address     string              `json:"address"`
+	FeeTier     int                 `json:"feeTier"`
+	Liquidity   string              `json:"liquidity"`
+	Token0      PoolsResponse_Token `json:"token0"`
+	Token1      PoolsResponse_Token `json:"token1"`
+	Token0Price string              `json:"token0Price"`
+	Token1Price string              `json:"token1Price"`
+	Tick        string              `json:"tick"`
+	Volume      float64             `json:"volume"`
+	TvlUSD      string              `json:"tvlUSD"`
+	Yield24h    string              `json:"yield24h"`
 }
 
 type PoolsResponse_Token struct {
@@ -186,6 +192,11 @@ type TokenTopResponse struct {
 	Message string               `json:"message"`
 }
 
+type TokenVolume struct {
+	Address string  `json:"address"`
+	Amounts float64 `json:"amounts"`
+}
+
 type Token_PoolDetail struct {
 	ID          int64           `json:"id"`
 	Address     string          `json:"address"`
@@ -215,6 +226,7 @@ type Token_TokenDetail struct {
 	Decimals int                 `json:"decimals"`
 	Logo     string              `json:"logo"`
 	Pools    []*Token_PoolDetail `json:"pools"`
+	Volume   float64             `json:"volume"`
 }
 
 type Token_TokenInfo struct {
