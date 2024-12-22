@@ -85,8 +85,8 @@ type PoolsResponse_Volume struct {
 }
 
 type SonexTokenKlineRequest struct {
-	Address  string `name:"address"`
-	Interval string `name:"interval"`
+	Address  string `path:"address"`
+	Interval string `path:"interval"`
 }
 
 type SonexTokenKlineResponse struct {
@@ -227,14 +227,14 @@ type Token_TokenInfo struct {
 }
 
 type XpoolPoolListRequest struct {
-	ChainId     uint64 `form:"chain_id,optional"`
-	UserAddress string `form:"user_address,optional"`
-	Keyword     string `form:"keyword,optional"`
-	StakedOnly  string `form:"staked_only,optional,options=true|false"`
-	OrderBy     string `form:"order_by,optional,options=hot|apr"`
-	Offset      int    `form:"offset,optional"`
-	Limit       int    `form:"limit,optional,default=10"`
-	UserPools []string `json:"-"`
+	ChainId     uint64   `form:"chain_id,optional"`
+	UserAddress string   `form:"user_address,optional"`
+	Keyword     string   `form:"keyword,optional"`
+	StakedOnly  string   `form:"staked_only,optional,options=true|false"`
+	OrderBy     string   `form:"order_by,optional,options=hot|apr"`
+	Offset      int      `form:"offset,optional"`
+	Limit       int      `form:"limit,optional,default=10"`
+	UserPools   []string `json:"-"`
 }
 
 type XpoolPoolListResponse struct {
