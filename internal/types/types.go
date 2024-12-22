@@ -85,8 +85,8 @@ type PoolsResponse_Volume struct {
 }
 
 type SonexTokenKlineRequest struct {
-	Address  string `name:"address"`
-	Interval string `name:"interval"`
+	Address  string `path:"address"`
+	Interval string `path:"interval"`
 }
 
 type SonexTokenKlineResponse struct {
@@ -158,7 +158,7 @@ type TokenPriceResponse struct {
 
 type TokenPriceResponse_Price struct {
 	Stablecoin string   `json:"stablecoin"`
-	Router     []string `json:"routers"`
+	Router     []string `json:"router"`
 	Value      string   `json:"value"`
 }
 
@@ -175,7 +175,7 @@ type TokenQuoteResponse struct {
 
 type TokenQuoteResponse_Price struct {
 	Target string   `json:"target"`
-	Router []string `json:"routers"`
+	Router []string `json:"router"`
 	Path   string   `json:"path"`
 	Value  string   `json:"value"`
 }
@@ -234,7 +234,6 @@ type XpoolPoolListRequest struct {
 	OrderBy     string `form:"order_by,optional,options=hot|apr"`
 	Offset      int    `form:"offset,optional"`
 	Limit       int    `form:"limit,optional,default=10"`
-	UserPools []string `json:"-"`
 }
 
 type XpoolPoolListResponse struct {
