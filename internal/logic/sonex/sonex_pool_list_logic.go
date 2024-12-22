@@ -2,7 +2,9 @@ package sonex
 
 import (
 	"context"
+	"encoding/json"
 	"math"
+	"time"
 
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -26,6 +28,16 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 }
 
 func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types.PoolsResponse, err error) {
+	const cacheKey = "sonex_dex:uniswap:pool_list"
+
+	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	if err == nil && len(cachedResponse) > 0 {
+		var cachedResp types.PoolsResponse
+		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+			return &cachedResp, nil
+		}
+	}
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	data, meta, err := model.GetPoolList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
@@ -52,10 +64,17 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 		}
 	}
 
-	return &types.PoolsResponse{
+	response := &types.PoolsResponse{
 		Code:    200,
 		Data:    data,
 		Meta:    meta,
 		Message: "success",
-	}, nil
+	}
+
+	responseBytes, err := json.Marshal(response)
+	if err == nil {
+		l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+	}
+
+	return response, nil
 }

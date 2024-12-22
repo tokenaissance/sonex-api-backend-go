@@ -2,7 +2,9 @@ package sonex
 
 import (
 	"context"
+	"encoding/json"
 	"math"
+	"time"
 
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -26,6 +28,16 @@ func NewSonexTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Sonex
 }
 
 func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types.TokensResponse, err error) {
+	const cacheKey = "sonex_dex:uniswap:tokens"
+
+	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	if err == nil && len(cachedResponse) > 0 {
+		var cachedResp types.TokensResponse
+		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+			return &cachedResp, nil
+		}
+	}
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
 	data, meta, err := model.GetTokens(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
@@ -59,10 +71,17 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 		}
 	}
 
-	return &types.TokensResponse{
+	response := &types.TokensResponse{
 		Code:    200,
 		Data:    data,
 		Meta:    meta,
 		Message: "success",
-	}, nil
+	}
+
+	responseBytes, err := json.Marshal(response)
+	if err == nil {
+		l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+	}
+
+	return response, nil
 }
