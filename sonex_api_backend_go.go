@@ -3,18 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/ahmetb/go-linq/v3"
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/rest"
 	"net/http"
-
 	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/svc"
-
-	"github.com/ahmetb/go-linq/v3"
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
-	"github.com/zeromicro/go-zero/rest"
+	"sonex_api_backend_go/internal/task"
 )
 
 var runLocally = flag.Bool("l", false, "running locally")
@@ -29,7 +28,8 @@ func main() {
 	} else {
 		conf.MustLoad(*configFile, &c)
 	}
-
+	task.Config = &c
+	task.Boot()
 	// Global configure
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
