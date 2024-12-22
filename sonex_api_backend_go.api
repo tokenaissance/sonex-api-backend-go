@@ -252,6 +252,30 @@ type PoolVolume {
 	Amounts1 float64 `json:"amounts1"`
 }
 
+type MyPositionRequest {
+	Address    string `form:"address"`
+	FilterType string `form:"filter_type,optional,default=none"`
+}
+
+type PositionData {
+	TokenID       int64            `json:"tokenId"`
+	Balance       float64          `json:"balance"`
+	ClaimableFees float64          `json:"claimableFees"`
+	IsClosed      bool             `json:"isClosed"`
+	TickUpper     string           `json:"tickUpper"`
+	TickLower     string           `json:"tickLower"`
+	PNL30d        string           `json:"pnl30d"`
+	Ratio         float64          `json:"ratio"`
+	IsNegative    bool             `json:"isNegative"`
+	Pool          Token_PoolDetail `json:"pool"`
+}
+
+type MyPositionResponse {
+	Code    int             `json:"code"`
+	Data    []*PositionData `json:"data"`
+	Message string          `json:"message"`
+}
+
 type SonexTokenKlineRequest {
 	Address  string `path:"address"`
 	Interval string `path:"interval"`
@@ -283,6 +307,9 @@ service sonex_api_backend_go {
 
 	@handler SonexPoolListHandler
 	get /pools (PoolsRequest) returns (PoolsResponse)
+
+	@handler SonexMyPositionHandler
+	get /pools/my_position (MyPositionRequest) returns (MyPositionResponse)
 
 	@handler SonexSwapHandler
 	get /swaps (SwapEventRequest) returns (SwapEventResponse)

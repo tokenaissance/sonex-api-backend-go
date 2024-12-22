@@ -16,6 +16,17 @@ type MetaResponse struct {
 	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
 }
 
+type MyPositionRequest struct {
+	Address    string `form:"address"`
+	FilterType string `form:"filter_type,optional,default=none"`
+}
+
+type MyPositionResponse struct {
+	Code    int             `json:"code"`
+	Data    []*PositionData `json:"data"`
+	Message string          `json:"message"`
+}
+
 type PaginationMeta struct {
 	Page            int  `json:"page"`
 	Take            int  `json:"take"`
@@ -90,6 +101,19 @@ type PoolsResponse_Volume struct {
 	VolumeToken0 string `json:"volumeToken0"`
 	VolumeToken1 string `json:"volumeToken1"`
 	Volume       string `json:"volume"`
+}
+
+type PositionData struct {
+	TokenID       int64            `json:"tokenId"`
+	Balance       float64          `json:"balance"`
+	ClaimableFees float64          `json:"claimableFees"`
+	IsClosed      bool             `json:"isClosed"`
+	TickUpper     string           `json:"tickUpper"`
+	TickLower     string           `json:"tickLower"`
+	PNL30d        string           `json:"pnl30d"`
+	Ratio         float64          `json:"ratio"`
+	IsNegative    bool             `json:"isNegative"`
+	Pool          Token_PoolDetail `json:"pool"`
 }
 
 type SonexTokenKlineRequest struct {
