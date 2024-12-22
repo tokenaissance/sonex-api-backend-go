@@ -19,6 +19,8 @@ type (
 		withSession(session sqlx.Session) SonexTokenModel
 		GetTopTokenList(ctx context.Context, chainId int, positionManager string) ([]*types.Token_TokenDetail, error)
 		GetTokenList(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error)
+		GetTokens(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error)
+		GetTokenVolumes(ctx context.Context) ([]types.TokenVolume, error)
 	}
 
 	customSonexTokenModel struct {
@@ -128,7 +130,7 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 
 	tokenQuery := fmt.Sprintf(`
 		FROM %s
-		WHERE "isHidden" = false AND "recommendOrder" > 0`, m.table)
+		WHERE "isHidden" = false`, m.table)
 
 	countQuery := "SELECT COUNT(*) " + tokenQuery
 	err := m.conn.QueryRowCtx(ctx, &totalCount, countQuery)
@@ -221,4 +223,92 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 	}
 
 	return tokenDetails, meta, nil
+}
+
+func (m *customSonexTokenModel) GetTokens(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error) {
+	var tokens []TokenData
+	var totalCount int
+
+	tokenQuery := fmt.Sprintf(`
+		FROM %s
+		WHERE "isHidden" = false`, m.table)
+
+	countQuery := "SELECT COUNT(*) " + tokenQuery
+	err := m.conn.QueryRowCtx(ctx, &totalCount, countQuery)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tokenQuery = `SELECT address, symbol, name, decimals, logo ` + tokenQuery
+
+	switch opts.Order {
+	case "ASC":
+		tokenQuery += " ORDER BY sort ASC"
+	default:
+		tokenQuery += " ORDER BY sort DESC"
+	}
+	tokenQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", opts.Take, (opts.Page-1)*opts.Take)
+	err = m.conn.QueryRowsCtx(ctx, &tokens, tokenQuery)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var tokenDetails []*types.Token_TokenDetail
+	for _, token := range tokens {
+		tokenDetail := &types.Token_TokenDetail{
+			Address:  token.Address,
+			Symbol:   token.Symbol,
+			Name:     token.Name,
+			Decimals: token.Decimals,
+			Logo:     token.Logo,
+		}
+
+		tokenDetails = append(tokenDetails, tokenDetail)
+	}
+
+	pageCount := (totalCount + int(opts.Take) - 1) / int(opts.Take)
+	meta := &types.PaginationMeta{
+		Page:            int(opts.Page),
+		Take:            int(opts.Take),
+		ItemCount:       totalCount,
+		PageCount:       pageCount,
+		HasPreviousPage: opts.Page > 1,
+		HasNextPage:     int(opts.Page) < pageCount,
+	}
+
+	return tokenDetails, meta, nil
+}
+
+func (m *customSonexTokenModel) GetTokenVolumes(ctx context.Context) ([]types.TokenVolume, error) {
+	// Query for retrieving token volumes
+	volumeQuery := `
+		SELECT
+			st.address AS token_address,
+			SUM(
+				CASE
+					WHEN st.address = pf.event_token0 THEN ABS(CAST(sp.event_amount0 AS numeric))
+					WHEN st.address = pf.event_token1 THEN ABS(CAST(sp.event_amount1 AS numeric))
+					ELSE 0
+				END
+			) AS total_amount
+		FROM
+			sonex_token st
+		LEFT JOIN
+			event_sonex_factory_pool_created pf ON st.address = pf.event_token0 OR st.address = pf.event_token1
+		LEFT JOIN
+			event_sonex_pool_swap sp ON pf.event_pool = sp.extra_pool
+		GROUP BY
+			st.address
+		ORDER BY
+			total_amount DESC;
+	`
+
+	// Execute the query and scan results into tokenVolumes slice
+	var tokenVolumes []types.TokenVolume
+	err := m.conn.QueryRowsCtx(ctx, &tokenVolumes, volumeQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	return tokenVolumes, nil
 }
