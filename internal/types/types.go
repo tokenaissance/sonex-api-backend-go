@@ -226,6 +226,20 @@ type Token_TokenInfo struct {
 	Additional interface{} `json:"additional"`
 }
 
+type TokensRequest struct {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type TokensResponse struct {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
 type XpoolPoolListRequest struct {
 	ChainId     uint64 `form:"chain_id,optional"`
 	UserAddress string `form:"user_address,optional"`

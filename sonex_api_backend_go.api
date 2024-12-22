@@ -80,6 +80,20 @@ type TokenListResponse {
 	Message string               `json:"message"`
 }
 
+type TokensRequest {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"` // Current page number, default is 1
+	Take    int64  `form:"take,default=10"` // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type TokensResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
 type SonexTokenPricesRequest {
 	Name string `path:"name,options=you|me"`
 }
@@ -246,6 +260,9 @@ service sonex_api_backend_go {
 
 	@handler SonexTokenListHandler
 	get /tokens/list (TokenListRequest) returns (TokenListResponse)
+
+	@handler SonexTokensHandler
+	get /tokens (TokenListRequest) returns (TokensResponse)
 
 	@handler SonexTokenTopHandler
 	get /tokens/top returns (TokenTopResponse)
