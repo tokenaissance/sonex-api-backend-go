@@ -3,14 +3,15 @@ package task
 import (
 	"context"
 	"fmt"
+	"github.com/gogf/gf/v2/util/grand"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/repository"
-	"sonex_api_backend_go/internal/svc"
 	"time"
 )
 
-func HandleRecordTokenPrice(serverCtx *svc.ServiceContext) {
-	conn := repository.NewConn(serverCtx.Config.PostgreSQL.DateSource())
+func HandleRecordTokenPrice(config *config.Config) {
+	conn := repository.NewConn(config.PostgreSQL.DateSource())
 	//model := repository.NewSonexTokenModel(conn)
 	//results, total, err := model.GetTokenList(context.Background(), req)
 
@@ -24,7 +25,8 @@ func HandleRecordTokenPrice(serverCtx *svc.ServiceContext) {
 	}
 	defer blk.Flush()
 	for _, token := range tokens {
-		err = blk.Insert(token.Symbol, token.Address, 0, time.Now().Format("2006-01-02 15:04:05"))
+		//global.GetPrices()
+		err = blk.Insert(token.Symbol, token.Address, grand.N(1, 100), time.Now().Format("2006-01-02 15:04:05"))
 		if err != nil {
 			panic(err)
 		}
