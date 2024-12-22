@@ -117,12 +117,22 @@ type PositionData struct {
 }
 
 type SonexTokenKlineRequest struct {
-	Address  string `path:"address"`
-	Interval string `path:"interval"`
+	Address  string `form:"address"`
+	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
 }
 
 type SonexTokenKlineResponse struct {
-	Message string `json:"message"`
+	Code    int                     `json:"code"`
+	Data    []SonexTokenPriceRecord `json:"data"`
+	Message string                  `json:"message"`
+}
+
+type SonexTokenPriceRecord struct {
+	Id           int64  `json:"id"`
+	TokenSymbol  string `json:"token_symbol"`
+	TokenAddress string `json:"token_address"`
+	Price        string `json:"price"`
+	CreatedAt    string `json:"created_at"`
 }
 
 type SonexTokenPricesRequest struct {

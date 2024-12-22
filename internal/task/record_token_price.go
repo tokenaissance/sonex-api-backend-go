@@ -19,7 +19,7 @@ func HandleRecordTokenPrice(config *config.Config) {
 	var tokens []repository.TokenData
 	_ = conn.QueryRowsCtx(context.Background(), &tokens, query)
 
-	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_prices (token_symbol, token_address,price, created_at) values (?, ?,?,?)")
+	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address,price, created_at) values (?, ?,?,?)")
 	if err != nil {
 		panic(err)
 	}
