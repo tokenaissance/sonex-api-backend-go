@@ -3,10 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ahmetb/go-linq/v3"
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
-	"github.com/zeromicro/go-zero/rest"
 	"net/http"
 	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
@@ -14,6 +10,12 @@ import (
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
+	"time"
+
+	"github.com/ahmetb/go-linq/v3"
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/rest"
 )
 
 var runLocally = flag.Bool("l", false, "running locally")
@@ -74,6 +76,10 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				// Swap callback demo
+				handler.AddPoolSwapCallback(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool string) {
+					fmt.Printf("%d %d  %d %s %s %s %s %s %s %s %s %s %s %s %s", chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool)
+				})
 				chainHandlerManager.AddHandler(1946, handler)
 			}
 		}
