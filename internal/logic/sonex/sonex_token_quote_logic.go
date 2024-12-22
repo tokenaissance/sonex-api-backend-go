@@ -69,10 +69,10 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			var routers []string
 			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&routers)
 			return types.TokenQuoteResponse_Price{
-				Target:  item.To,
-				Routers: routers,
-				Path:    base64.StdEncoding.EncodeToString(item.Path),
-				Value:   item.Value.String(),
+				Target: item.To,
+				Router: routers,
+				Path:   base64.StdEncoding.EncodeToString(item.Path),
+				Value:  item.Value.String(),
 			}
 		}).
 		ToSlice(&result)

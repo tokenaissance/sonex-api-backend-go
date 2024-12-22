@@ -66,7 +66,7 @@ func (l *SonexTokenPriceLogic) SonexTokenPrice(req *types.TokenPriceRequest) (re
 			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&routers)
 			return types.TokenPriceResponse_Price{
 				Stablecoin: item.To,
-				Routers:    routers,
+				Router:     routers,
 				Value:      item.Value.String(),
 			}
 		}).
