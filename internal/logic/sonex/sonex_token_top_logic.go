@@ -2,6 +2,8 @@ package sonex
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -25,6 +27,16 @@ func NewSonexTokenTopLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 }
 
 func (l *SonexTokenTopLogic) SonexTokenTop() (resp *types.TokenTopResponse, err error) {
+	const cacheKey = "sonex_dex:token_top"
+
+	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	if err == nil && len(cachedResponse) > 0 {
+		var cachedResp types.TokenTopResponse
+		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+			return &cachedResp, nil
+		}
+	}
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
 	result, err := model.GetTopTokenList(l.ctx, int(l.svcCtx.Config.Chains[0].ChainId), l.svcCtx.Config.Sonexes[0].PositionManager)
@@ -37,9 +49,16 @@ func (l *SonexTokenTopLogic) SonexTokenTop() (resp *types.TokenTopResponse, err 
 		}, nil
 	}
 
-	return &types.TokenTopResponse{
+	response := &types.TokenTopResponse{
 		Code:    200,
 		Data:    result,
 		Message: "success",
-	}, nil
+	}
+
+	responseBytes, err := json.Marshal(response)
+	if err == nil {
+		l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+	}
+
+	return response, nil
 }
