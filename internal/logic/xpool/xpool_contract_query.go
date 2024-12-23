@@ -150,22 +150,26 @@ func getPoolInfo(ctx context.Context, client *ethclient.Client, pool *xpoolContr
 }
 
 // getTokenPrices 获取代币价格
-func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
-	prices := &TokenPrices{}
+func getTokenPrices(ctx context.Context, chainId uint64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
+	prices := new(TokenPrices)
 
-	// 获取质押代币价格
-	stakingPrice, err := global.GetPrices([]quoter.Pool{}, chainId, stakingToken.Hex(), true) // TODO: 需要确认一下
+	stakingPrice, err := global.GetPrices([]quoter.Pool{}, int64(chainId), stakingToken.Hex(), true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staking token price: %v", err)
 	}
-	prices.StakingTokenPrice = stakingPrice[0].Value
+	prices.StakingTokenPrice = big.NewInt(0)
+	if stakingPrice != nil {
+		prices.StakingTokenPrice = stakingPrice[0].Value
+	}
 
-	// 获取奖励代币价格
-	rewardPrice, err := global.GetPrices([]quoter.Pool{}, chainId, rewardToken.Hex(), true) // TODO: 需要确认一下
+	rewardPrice, err := global.GetPrices([]quoter.Pool{}, int64(chainId), rewardToken.Hex(), true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reward token price: %v", err)
 	}
-	prices.RewardTokenPrice = rewardPrice[0].Value
+	prices.RewardTokenPrice = big.NewInt(0)
+	if rewardPrice != nil {
+		prices.RewardTokenPrice = rewardPrice[0].Value
+	}
 
 	return prices, nil
 }
