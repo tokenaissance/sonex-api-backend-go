@@ -16,6 +16,11 @@ type TokensKlineLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
+type PriceComparisonResult struct {
+	Comparison string  `json:"comparison"` // 比较结果：UP、DOWN、SAME
+	Percentage float64 `json:"percentage"` // 涨跌百分比
+}
+
 func NewTokensKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *TokensKlineLogic {
 	return &TokensKlineLogic{
 		Logger: logx.WithContext(ctx),
@@ -49,5 +54,45 @@ func getIntervalDuration(interval string) string {
 		return "1 year"
 	default:
 		return "1 day" // 默认按1天查询
+	}
+}
+
+func (l *TokensKlineLogic) ComparePriceHour(tokenAddress string) PriceComparisonResult {
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	model := repository.NewSonexTokenPriceRecordModel(conn)
+	currentPrice, _ := model.GetCurrentPrice(tokenAddress)
+	lastHourPrice, _ := model.GetLastHourPrice(tokenAddress)
+	lastHourComparison := comparePrices(currentPrice, lastHourPrice)
+
+	return lastHourComparison
+}
+func (l *TokensKlineLogic) ComparePriceDay(tokenAddress string) PriceComparisonResult {
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	model := repository.NewSonexTokenPriceRecordModel(conn)
+	currentPrice, _ := model.GetCurrentPrice(tokenAddress)
+	yesterdayPrice, _ := model.GetYesterdayPrice(tokenAddress)
+	yesterdayComparison := comparePrices(currentPrice, yesterdayPrice)
+
+	return yesterdayComparison
+}
+
+func comparePrices(currentPrice, comparePrice float64) PriceComparisonResult {
+	if currentPrice > comparePrice {
+		percentage := ((currentPrice - comparePrice) / comparePrice) * 100
+		return PriceComparisonResult{
+			Comparison: "UP",
+			Percentage: percentage,
+		}
+	} else if currentPrice < comparePrice {
+		percentage := ((comparePrice - currentPrice) / comparePrice) * 100
+		return PriceComparisonResult{
+			Comparison: "DOWN",
+			Percentage: percentage,
+		}
+	} else {
+		return PriceComparisonResult{
+			Comparison: "SAME",
+			Percentage: 0,
+		}
 	}
 }

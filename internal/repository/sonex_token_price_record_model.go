@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -15,6 +16,9 @@ type (
 		sonexTokenPriceRecordModel
 		withSession(session sqlx.Session) SonexTokenPriceRecordModel
 		Kline(address string, interval string) ([]*TokenPriceRecord, error)
+		GetCurrentPrice(tokenAddress string) (float64, error)
+		GetLastHourPrice(tokenAddress string) (float64, error)
+		GetYesterdayPrice(tokenAddress string) (float64, error)
 	}
 
 	customSonexTokenPriceRecordModel struct {
@@ -60,20 +64,50 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 	default:
 		return nil, err
 	}
-	//// 构造 SQL 查询
-	//query := fmt.Sprintf(`
-	//	SELECT id, token_symbol, token_address, price, created_at
-	//	FROM sonex_token_price_record
-	//	WHERE token_address = ? AND created_at >= NOW() - INTERVAL ?
-	//	ORDER BY created_at DESC;
-	//`)
-	//
-	//var records []SonexTokenPriceRecord
-	//err := m.conn.QueryRows(&records, query, tokenAddress, intervalDuration)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return records, nil
+}
+
+func (m *customSonexTokenPriceRecordModel) GetCurrentPrice(tokenAddress string) (float64, error) {
+	ctx := context.Background()
+	var price float64
+	query := `
+		SELECT price
+		FROM sonex_token_price_record
+		WHERE token_address = $1
+		ORDER BY created_at DESC
+		LIMIT 1;
+	`
+	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
+	return price, err
+}
+
+func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(tokenAddress string) (float64, error) {
+	ctx := context.Background()
+	var price float64
+	query := `
+		SELECT price
+		FROM sonex_token_price_record
+		WHERE token_address = $1
+		  AND created_at <= NOW() - INTERVAL '1 hour'
+		ORDER BY created_at DESC
+		LIMIT 1;
+	`
+	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
+	return price, err
+}
+
+func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(tokenAddress string) (float64, error) {
+	ctx := context.Background()
+	var price float64
+	query := `
+		SELECT price
+		FROM sonex_token_price_record
+		WHERE token_address = $1
+		  AND created_at <= NOW() - INTERVAL '1 day'
+		ORDER BY created_at DESC
+		LIMIT 1;
+	`
+	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
+	return price, err
 }
 
 // 根据 interval 获取查询条件的时间范围
