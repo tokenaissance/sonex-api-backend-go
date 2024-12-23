@@ -11,10 +11,3 @@ type Config struct {
 	Xpools     []XpoolConfig `json:",optional"`
 	Redis      RedisConfig   `json:","`
 }
-
-type RedisConfig struct {
-	Host     string
-	Port     int
-	Password string
-	DB       int
-}
