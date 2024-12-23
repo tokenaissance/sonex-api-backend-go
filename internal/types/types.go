@@ -9,6 +9,20 @@ type ChainSyncPrograss struct {
 	UpdatedAt string `json:"update_at"`
 }
 
+type Fees struct {
+	FeeAmount0 string `json:"feeAmount0"`
+	FeeAmount1 string `json:"feeAmount1"`
+}
+
+type GetNftDataRequest struct {
+	Id int64 `path:"id"`
+}
+
+type Invested struct {
+	InvestedAmount0 string `json:"investedAmount0"`
+	InvestedAmount1 string `json:"investedAmount1"`
+}
+
 type MetaRequest struct {
 }
 
@@ -25,6 +39,49 @@ type MyPositionResponse struct {
 	Code    int             `json:"code"`
 	Data    []*PositionData `json:"data"`
 	Message string          `json:"message"`
+}
+
+type NftDataResponse struct {
+	Code    int                   `json:"code"`
+	Data    *NftDataResponse_Data `json:"data"`
+	Message string                `json:"message"`
+}
+
+type NftDataResponse_Data struct {
+	Amount0         string           `json:"amount0"`
+	Amount1         string           `json:"amount1"`
+	Amount0Price    string           `json:"amount0Price"`
+	Amount1Price    string           `json:"amount1Price"`
+	TickUpper       string           `json:"tickUpper"`
+	TickLower       string           `json:"tickLower"`
+	NftId           int              `json:"nftId"`
+	UncollectedFees float64          `json:"uncollectedFees"`
+	Pnl30d          string           `json:"pnl30d"`
+	Owner           string           `json:"owner"`
+	Pool            Token_PoolDetail `json:"pool"`
+	PositionAge     int              `json:"positionAge"`
+	Invested        Invested         `json:"invested"`
+	Withdrawn       Withdrawn        `json:"withdrawn"`
+	Fees            Fees             `json:"fees"`
+	Origin          string           `json:"origin"`
+	Fee             int              `json:"fee"`
+	Token0          string           `json:"token0"`
+	Token1          string           `json:"token1"`
+	TokensOwed0     float64          `json:"tokensOwed0"`
+	TokensOwed1     float64          `json:"tokensOwed1"`
+	Liquidity       string           `json:"liquidity"`
+	Price           string           `json:"price"`
+	Token0Price     string           `json:"token0Price"`
+	Token1Price     string           `json:"token1Price"`
+	PoolAddress     string           `json:"poolAddress"`
+	IsNative        int              `json:"isNative"`
+	IsClosed        bool             `json:"isClosed"`
+	Decimals0       int              `json:"decimals0"`
+	Decimals1       int              `json:"decimals1"`
+	Ratio           int              `json:"ratio"`
+	IsNegative      bool             `json:"isNegative"`
+	AmountPrice0    string           `json:"amountPrice0"`
+	AmountPrice1    string           `json:"amountPrice1"`
 }
 
 type PaginationMeta struct {
@@ -115,6 +172,7 @@ type PositionData struct {
 	PNL30d        string           `json:"pnl30d"`
 	Ratio         float64          `json:"ratio"`
 	IsNegative    bool             `json:"isNegative"`
+	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 }
 
@@ -293,6 +351,11 @@ type TokensResponse struct {
 	Data    []*Token_TokenDetail `json:"data"`
 	Meta    *PaginationMeta      `json:"meta"`
 	Message string               `json:"message"`
+}
+
+type Withdrawn struct {
+	WithdrawnAmount0 string `json:"withdrawnAmount0"`
+	WithdrawnAmount1 string `json:"withdrawnAmount1"`
 }
 
 type XpoolPoolListRequest struct {

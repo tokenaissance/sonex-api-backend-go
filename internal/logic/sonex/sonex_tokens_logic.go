@@ -70,6 +70,7 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 					if err == nil && len(prices) > 0 {
 						price, _ = strconv.ParseFloat(prices[0].Value.String(), 64)
 					}
+
 					factor := math.Pow(10, float64(token.Decimals))
 					token.Volume = volume.Amounts / factor
 					token.Fdv = price * token.Volume
