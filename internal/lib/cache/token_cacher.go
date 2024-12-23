@@ -35,11 +35,14 @@ type Token struct {
 }
 
 type Price struct {
-	From  string
-	To    string
-	Pools []quoter.Pool
-	Path  []byte
-	Value *big.Int
+	From                        string
+	To                          string
+	Pools                       []quoter.Pool
+	Path                        []byte
+	Value                       *big.Int
+	SqrtPriceX96AfterList       []*big.Int
+	InitializedTicksCrossedList []uint32
+	GasEstimate                 *big.Int
 }
 
 type PriceCache struct {
@@ -239,11 +242,14 @@ func (cacher *TokenCacher) QuoteTo(pools []quoter.Pool, from string, to string, 
 				Price quoter.QuoteExactInputResult
 			}) Price {
 				return Price{
-					From:  fromToken.Address,
-					To:    toToken.Address,
-					Pools: item.Path.Pools,
-					Path:  item.Path.ToBytes(),
-					Value: item.Price.AmountOut,
+					From:                        fromToken.Address,
+					To:                          toToken.Address,
+					Pools:                       item.Path.Pools,
+					Path:                        item.Path.ToBytes(),
+					Value:                       item.Price.AmountOut,
+					SqrtPriceX96AfterList:       item.Price.SqrtPriceX96AfterList,
+					InitializedTicksCrossedList: item.Price.InitializedTicksCrossedList,
+					GasEstimate:                 item.Price.GasEstimate,
 				}
 			}).
 			ToSlice(&prices)

@@ -180,10 +180,13 @@ type TokenQuoteResponse struct {
 }
 
 type TokenQuoteResponse_Price struct {
-	Target string   `json:"target"`
-	Router []string `json:"router"`
-	Path   string   `json:"path"`
-	Value  string   `json:"value"`
+	Target                      string   `json:"target"`
+	Router                      []string `json:"router"`
+	Path                        string   `json:"path"`
+	Value                       string   `json:"value"`
+	SqrtPriceX96AfterList       []string `json:"sqrtPriceX96AfterList"`
+	InitializedTicksCrossedList []int64  `json:"initializedTicksCrossedList"`
+	GasEstimate                 string   `json:"gasEstimate"`
 }
 
 type TokenTopResponse struct {

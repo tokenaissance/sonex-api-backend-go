@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
@@ -66,13 +67,20 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	result := []types.TokenQuoteResponse_Price{}
 	linq.From(prices).
 		SelectT(func(item cache.Price) types.TokenQuoteResponse_Price {
-			var routers []string
-			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&routers)
+			var router []string
+			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+			var sqrtPriceX96AfterList []string
+			linq.From(item.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
+			var initializedTicksCrossedList []int64
+			linq.From(item.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
 			return types.TokenQuoteResponse_Price{
-				Target: item.To,
-				Router: routers,
-				Path:   base64.StdEncoding.EncodeToString(item.Path),
-				Value:  item.Value.String(),
+				Target:                      item.To,
+				Router:                      router,
+				Path:                        base64.StdEncoding.EncodeToString(item.Path),
+				Value:                       item.Value.String(),
+				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
+				InitializedTicksCrossedList: initializedTicksCrossedList,
+				GasEstimate:                 item.GasEstimate.String(),
 			}
 		}).
 		ToSlice(&result)
