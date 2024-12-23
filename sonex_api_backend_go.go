@@ -41,6 +41,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	global.AddCronJob("0/3 * * * * ?", func() {
+		fmt.Println("================> Cron task demo")
+	})
 
 	opts := []rest.RunOption{}
 	opts = append(opts, rest.WithCors(), rest.WithCorsHeaders())
