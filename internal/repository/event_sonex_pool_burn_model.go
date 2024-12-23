@@ -24,8 +24,13 @@ type (
 		*defaultEventSonexPoolBurnModel
 	}
 
-	EventSonexPoolBurnWithPool struct {
+	EventSonexPoolBurnWithTokenId struct {
 		EventSonexPoolBurn
+		TokenId int64 `db:"token_id"`
+	}
+
+	EventSonexPoolBurnWithPool struct {
+		EventSonexPoolBurnWithTokenId
 		Token0      string `db:"token0"`
 		Token1      string `db:"token1"`
 		Fee         string `db:"fee"`
@@ -51,15 +56,49 @@ func (m *customEventSonexPoolBurnModel) New(ctx context.Context, id int64, chain
 }
 
 func (m *customEventSonexPoolBurnModel) PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolBurnWithPool, int64, error) {
-	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(m.conn)
-	query := fmt.Sprintf("SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_owner, S.event_tick_lower, S.event_tick_upper, S.event_amount, S.event_amount0, S.event_amount1, S.extra_pool, C.event_token0 AS token0, C.event_token1 AS token1, C.event_fee AS fee, C.event_tick_spacing AS tick_spacing FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2", m.table, eventSonexFactoryPoolCreatedModel.TableName())
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	eventSonexPositionManagerTransferModel := newEventSonexPositionManagerTransferModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+			S.id, 
+			S.created_at, 
+			S.updated_at, 
+			S.chain_id, 
+			S.block_number, 
+			S.tx_index, 
+			S.tx_hash, 
+			S.tx_at, 
+			S.from_, 
+			S.to_, 
+			S.value, 
+			S.event_owner, 
+			S.event_tick_lower, 
+			S.event_tick_upper, 
+			S.event_amount, 
+			S.event_amount0, 
+			S.event_amount1, 
+			S.extra_pool, 
+			C.event_token0 AS token0, 
+			C.event_token1 AS token1, 
+			C.event_fee AS fee, 
+			C.event_tick_spacing AS tick_spacing,
+			T.event_token_id AS token_id
+		FROM %s S 
+		LEFT JOIN %s C ON S.extra_pool = C.event_pool 
+		LEFT JOIN %s T ON S.tx_hash = T.tx_hash 
+		ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), eventSonexPositionManagerTransferModel.tableName())
 	var resp []EventSonexPoolBurnWithPool
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
 	var total int64 = 0
-	query = fmt.Sprintf("SELECT COUNT(*) FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool", m.table, eventSonexFactoryPoolCreatedModel.TableName())
+	query = fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool LEFT JOIN %s T ON S.tx_hash = T.tx_hash ",
+		m.table,
+		eventSonexFactoryPoolCreatedModel.tableName(),
+		eventSonexPositionManagerTransferModel.tableName(),
+	)
 	err = m.conn.QueryRowCtx(ctx, &total, query)
 	if err != nil {
 		return nil, 0, err
