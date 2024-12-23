@@ -85,10 +85,10 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 		}
 
 		for _, pool := range pools {
-			if pool.Token0Address == token.Address || pool.Token1Address == token.Address {
+			if pool.Token0Address.String == token.Address || pool.Token1Address.String == token.Address {
 				var token0Additional, token1Additional map[string]interface{}
-				_ = json.Unmarshal([]byte(pool.Token0Additional), &token0Additional)
-				_ = json.Unmarshal([]byte(pool.Token1Additional), &token1Additional)
+				_ = json.Unmarshal([]byte(pool.Token0Additional.String), &token0Additional)
+				_ = json.Unmarshal([]byte(pool.Token1Additional.String), &token1Additional)
 
 				tokenDetail.Pools = append(tokenDetail.Pools, &types.Token_PoolDetail{
 					ID:        pool.ID,
@@ -96,17 +96,17 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 					FeeTier:   int(pool.EventFee),
 					Liquidity: "0",
 					Token0: types.Token_TokenInfo{
-						Address:    pool.Token0Address,
-						Symbol:     pool.Token0Symbol,
-						Name:       pool.Token0Name,
-						Logo:       pool.Token0Logo,
+						Address:    pool.Token0Address.String,
+						Symbol:     pool.Token0Symbol.String,
+						Name:       pool.Token0Name.String,
+						Logo:       pool.Token0Logo.String,
 						Additional: token0Additional,
 					},
 					Token1: types.Token_TokenInfo{
-						Address:    pool.Token1Address,
-						Symbol:     pool.Token1Symbol,
-						Name:       pool.Token1Name,
-						Logo:       pool.Token1Logo,
+						Address:    pool.Token1Address.String,
+						Symbol:     pool.Token1Symbol.String,
+						Name:       pool.Token1Name.String,
+						Logo:       pool.Token1Logo.String,
 						Additional: token1Additional,
 					},
 					Token0Price: "0",
@@ -177,10 +177,10 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 		}
 
 		for _, pool := range pools {
-			if pool.Token0Address == token.Address || pool.Token1Address == token.Address {
+			if pool.Token0Address.String == token.Address || pool.Token1Address.String == token.Address {
 				var token0Additional, token1Additional map[string]interface{}
-				_ = json.Unmarshal([]byte(pool.Token0Additional), &token0Additional)
-				_ = json.Unmarshal([]byte(pool.Token1Additional), &token1Additional)
+				_ = json.Unmarshal([]byte(pool.Token0Additional.String), &token0Additional)
+				_ = json.Unmarshal([]byte(pool.Token1Additional.String), &token1Additional)
 
 				tokenDetail.Pools = append(tokenDetail.Pools, &types.Token_PoolDetail{
 					ID:        pool.ID,
@@ -188,17 +188,17 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 					FeeTier:   int(pool.EventFee),
 					Liquidity: "0",
 					Token0: types.Token_TokenInfo{
-						Address:    pool.Token0Address,
-						Symbol:     pool.Token0Symbol,
-						Name:       pool.Token0Name,
-						Logo:       pool.Token0Logo,
+						Address:    pool.Token0Address.String,
+						Symbol:     pool.Token0Symbol.String,
+						Name:       pool.Token0Name.String,
+						Logo:       pool.Token0Logo.String,
 						Additional: token0Additional,
 					},
 					Token1: types.Token_TokenInfo{
-						Address:    pool.Token1Address,
-						Symbol:     pool.Token1Symbol,
-						Name:       pool.Token1Name,
-						Logo:       pool.Token1Logo,
+						Address:    pool.Token1Address.String,
+						Symbol:     pool.Token1Symbol.String,
+						Name:       pool.Token1Name.String,
+						Logo:       pool.Token1Logo.String,
 						Additional: token1Additional,
 					},
 					Token0Price: "0",

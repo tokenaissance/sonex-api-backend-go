@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"sonex_api_backend_go/internal/types"
@@ -73,21 +74,21 @@ func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdPositionManager(
 }
 
 type PoolData struct {
-	ID               int64  `json:"id"`
-	EventFee         int64  `db:"event_fee"`
-	EventPool        string `db:"event_pool"`
-	Token0Name       string `db:"token0_name"`
-	Token0Symbol     string `db:"token0_symbol"`
-	Token0Address    string `db:"token0_address"`
-	Token0Logo       string `db:"token0_logo"`
-	Token0Additional string `db:"token0_additional"`
-	Token0Decimals   int    `db:"token0_decimals"`
-	Token1Name       string `db:"token1_name"`
-	Token1Symbol     string `db:"token1_symbol"`
-	Token1Address    string `db:"token1_address"`
-	Token1Logo       string `db:"token1_logo"`
-	Token1Additional string `db:"token1_additional"`
-	Token1Decimals   int    `db:"token1_decimals"`
+	ID               int64          `json:"id"`
+	EventFee         int64          `db:"event_fee"`
+	EventPool        string         `db:"event_pool"`
+	Token0Name       sql.NullString `db:"token0_name"`
+	Token0Symbol     sql.NullString `db:"token0_symbol"`
+	Token0Address    sql.NullString `db:"token0_address"`
+	Token0Logo       sql.NullString `db:"token0_logo"`
+	Token0Additional sql.NullString `db:"token0_additional"`
+	Token0Decimals   sql.NullInt64  `db:"token0_decimals"`
+	Token1Name       sql.NullString `db:"token1_name"`
+	Token1Symbol     sql.NullString `db:"token1_symbol"`
+	Token1Address    sql.NullString `db:"token1_address"`
+	Token1Logo       sql.NullString `db:"token1_logo"`
+	Token1Additional sql.NullString `db:"token1_additional"`
+	Token1Decimals   sql.NullInt64  `db:"token1_decimals"`
 }
 
 func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error) {
@@ -152,27 +153,27 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	for _, pd := range poolData {
 		var token0Additional types.PoolsResponse_TokenAdditional
 		var token1Additional types.PoolsResponse_TokenAdditional
-		_ = json.Unmarshal([]byte(pd.Token0Additional), &token0Additional)
-		_ = json.Unmarshal([]byte(pd.Token1Additional), &token1Additional)
+		_ = json.Unmarshal([]byte(pd.Token0Additional.String), &token0Additional)
+		_ = json.Unmarshal([]byte(pd.Token1Additional.String), &token1Additional)
 
 		pool := &types.PoolsResponse_Pool{
 			Id:      pd.EventPool,
 			Address: pd.EventPool,
 			FeeTier: int(pd.EventFee),
 			Token0: types.PoolsResponse_Token{
-				Address:    pd.Token0Address,
-				Symbol:     pd.Token0Symbol,
-				Name:       pd.Token0Name,
-				Logo:       pd.Token0Logo,
-				Decimals:   pd.Token0Decimals,
+				Address:    pd.Token0Address.String,
+				Symbol:     pd.Token0Symbol.String,
+				Name:       pd.Token0Name.String,
+				Logo:       pd.Token0Logo.String,
+				Decimals:   int(pd.Token0Decimals.Int64),
 				Additional: token0Additional,
 			},
 			Token1: types.PoolsResponse_Token{
-				Address:    pd.Token1Address,
-				Symbol:     pd.Token1Symbol,
-				Name:       pd.Token1Name,
-				Logo:       pd.Token1Logo,
-				Decimals:   pd.Token1Decimals,
+				Address:    pd.Token1Address.String,
+				Symbol:     pd.Token1Symbol.String,
+				Name:       pd.Token1Name.String,
+				Logo:       pd.Token1Logo.String,
+				Decimals:   int(pd.Token1Decimals.Int64),
 				Additional: token1Additional,
 			},
 		}
