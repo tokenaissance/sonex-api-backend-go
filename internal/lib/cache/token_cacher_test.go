@@ -131,6 +131,12 @@ func TestTokenCacherGetPricesWithCache(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
+	cacher := NewTokenCacher(c.Chains[0])
+	_ = cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
+
+	start := time.Now()
+
+	fmt.Println("With cache ======>")
 	pools := []quoter.Pool{
 		{Address: common.HexToAddress("0x3737901eF7D29C51C00C3B897c24B6B65aFb42b2"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), Fee: 100},
 		{Address: common.HexToAddress("0x8168CdEE316Ef25508Ba6bB6e5196742c0eA58F3"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), Fee: 500},
@@ -152,11 +158,6 @@ func TestTokenCacherGetPricesWithCache(t *testing.T) {
 		{Address: common.HexToAddress("0x51B4C3556150c1A1f28705D89EB258E7796cfCDd"), Token0: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Token1: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Fee: 10000},
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
-	cacher := NewTokenCacher(c.Chains[0])
-	_ = cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
-
-	start := time.Now()
-
 	prices, err := cacher.Quote(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", true)
 	if err != nil {
 		t.Error(err)
@@ -170,9 +171,15 @@ func TestTokenCacherGetPricesWithCache(t *testing.T) {
 	}
 	end1 := time.Now()
 	fmt.Printf("Cost without cache: %ds\n", end1.Unix()-start.Unix())
+	fmt.Println("Without cache <======")
 
-	time.Sleep(time.Second * 10)
-
+	fmt.Println("With cache ======>")
+	pools = []quoter.Pool{
+		{Address: common.HexToAddress("0x78e503ac66ee685B7fb5184eD00AD40ff6B69939"), Token0: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Token1: common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), Fee: 100},
+		{Address: common.HexToAddress("0x93Fc81a9BC178C167f33919EE49c394fd2Be0E91"), Token0: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Token1: common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), Fee: 500},
+		{Address: common.HexToAddress("0x510240E861090cA994bf04891Ccf2C881113a2aA"), Token0: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Token1: common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), Fee: 3000},
+		{Address: common.HexToAddress("0xBb39F97BbaBFb460a77c9Be89F3e491353BAbE48"), Token0: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Token1: common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), Fee: 10000},
+	}
 	prices, err = cacher.Quote(pools, "0x8879309d4002b8c98163ece3f58653f774de8416", true)
 	if err != nil {
 		t.Error(err)
@@ -186,4 +193,5 @@ func TestTokenCacherGetPricesWithCache(t *testing.T) {
 	}
 	end2 := time.Now()
 	fmt.Printf("Cost with cache: %ds\n", end2.Unix()-end1.Unix())
+	fmt.Println("With cache <======")
 }

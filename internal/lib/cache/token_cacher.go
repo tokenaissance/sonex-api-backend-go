@@ -167,7 +167,26 @@ func (cacher *TokenCacher) QuoteTo(pools []quoter.Pool, from string, to string, 
 		cacher.pricesLock.RUnlock()
 	}
 
-	if prices == nil {
+	if prices != nil {
+		linq.From(prices).
+			WhereT(func(price Price) bool {
+				for _, pathPool := range price.Pools {
+					contains := func(ps []quoter.Pool, p string) bool {
+						for _, pool := range ps {
+							if pool.Address.Hex() == p {
+								return true
+							}
+						}
+						return false
+					}
+					if !contains(pools, pathPool.Address.Hex()) {
+						return false
+					}
+				}
+				return true
+			}).
+			ToSlice(&prices)
+	} else {
 		amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(fromToken.Decimals), nil))
 		q, err := quoter.NewQuoter(cacher.chain)
 		if err != nil {
