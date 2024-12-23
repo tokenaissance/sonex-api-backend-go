@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -206,4 +207,20 @@ func (nodeCaller *NodeCaller) GetTranscations(ctx context.Context, blockNumbers 
 	}
 
 	return transactions, nil
+}
+
+func (nodeCaller *NodeCaller) StaticCall(ctx context.Context, abi abi.ABI, name string, msg ethereum.CallMsg, result any) error {
+	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+	if err != nil {
+		return err
+	}
+	response, err := client.CallContract(ctx, msg, nil)
+	if err != nil {
+		return err
+	}
+	err = abi.UnpackIntoInterface(result, "aggregate", response)
+	if err != nil {
+		return err
+	}
+	return nil
 }
