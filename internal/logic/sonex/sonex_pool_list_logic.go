@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"strconv"
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/global"
 	lp "sonex_api_backend_go/internal/lib/pool"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -63,11 +65,26 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 
 			balance0, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token0.Address, int64(pool.Token0.Decimals))
 			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
+			price0 := float64(0)
+			price1 := float64(0)
+			prices0, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true)
+			if err == nil && len(prices0) > 0 {
+				price0, _ = strconv.ParseFloat(prices0[0].Value.String(), 64)
+			}
+
+			pool.Price0 = price0
+
+			prices1, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true)
+			if err == nil && len(prices1) > 0 {
+				price1, _ = strconv.ParseFloat(prices1[0].Value.String(), 64)
+			}
+
+			pool.Price1 = price1
 
 			mu.Lock()
-			pool.Token0Balance = balance0
-			pool.Token1Balance = balance1
-			pool.TvlUSD = balance0 + balance1
+			pool.Token0Balance = balance0 * price0
+			pool.Token1Balance = balance1 * price1
+			pool.TvlUSD = pool.Token0Balance + pool.Token1Balance
 			mu.Unlock()
 		}(data[i])
 	}

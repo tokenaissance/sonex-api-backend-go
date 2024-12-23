@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sonex_api_backend_go/internal/types"
 	"time"
 
@@ -168,46 +169,73 @@ func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts 
 	// Process the response to include pool and token information
 	data := make([]*types.SwapEvent, 0, len(resp))
 	for _, event := range resp {
-		item := &types.SwapEvent{
-			ID:        event.ID,
-			Address:   event.Address,
-			Hash:      event.Hash,
-			Amount0:   event.Amount0,
-			Amount1:   event.Amount1,
-			CreatedAt: event.CreatedAt,
-		}
-
-		// Convert token0Additional and token1Additional to map[string]interface{}
 		var token0Additional map[string]interface{}
 		var token1Additional map[string]interface{}
 		_ = json.Unmarshal([]byte(event.Token0Additional), &token0Additional)
 		_ = json.Unmarshal([]byte(event.Token1Additional), &token1Additional)
 
-		item.Token0 = types.Token_TokenInfo{
-			Address:    event.Token0Address,
-			Symbol:     event.Token0Symbol,
-			Name:       event.Token0Name,
-			Logo:       event.Token0Logo,
-			Decimals:   event.Token0Decimals,
-			Additional: token0Additional,
+		// Normalize amounts
+		amount0 := float64(event.Amount0) / math.Pow(10, float64(event.Token0Decimals))
+		amount1 := float64(event.Amount1) / math.Pow(10, float64(event.Token1Decimals))
+
+		// Determine which token is token0 and token1 based on the sign of the amounts
+		var token0, token1 types.Token_TokenInfo
+		if event.Amount0 > 0 {
+			token0 = types.Token_TokenInfo{
+				Address:    event.Token0Address,
+				Symbol:     event.Token0Symbol,
+				Name:       event.Token0Name,
+				Logo:       event.Token0Logo,
+				Decimals:   event.Token0Decimals,
+				Additional: token0Additional,
+			}
+			token1 = types.Token_TokenInfo{
+				Address:    event.Token1Address,
+				Symbol:     event.Token1Symbol,
+				Name:       event.Token1Name,
+				Logo:       event.Token1Logo,
+				Decimals:   event.Token1Decimals,
+				Additional: token1Additional,
+			}
+		} else {
+			// Swap token0 and token1 if amount0 is negative
+			token0 = types.Token_TokenInfo{
+				Address:    event.Token1Address,
+				Symbol:     event.Token1Symbol,
+				Name:       event.Token1Name,
+				Logo:       event.Token1Logo,
+				Decimals:   event.Token1Decimals,
+				Additional: token1Additional,
+			}
+			token1 = types.Token_TokenInfo{
+				Address:    event.Token0Address,
+				Symbol:     event.Token0Symbol,
+				Name:       event.Token0Name,
+				Logo:       event.Token0Logo,
+				Decimals:   event.Token0Decimals,
+				Additional: token0Additional,
+			}
+			// Swap amounts as well
+			amount0, amount1 = amount1, amount0
 		}
 
-		item.Token1 = types.Token_TokenInfo{
-			Address:    event.Token1Address,
-			Symbol:     event.Token1Symbol,
-			Name:       event.Token1Name,
-			Logo:       event.Token1Logo,
-			Decimals:   event.Token1Decimals,
-			Additional: token1Additional,
-		}
-
-		item.Pool = types.Token_PoolDetail{
-			ID:        event.PoolID,
-			Address:   event.Pool,
-			FeeTier:   int(event.PooFee),
-			Liquidity: "0", // Assuming liquidity is not available in the current query
-			Token0:    item.Token0,
-			Token1:    item.Token1,
+		item := &types.SwapEvent{
+			ID:        event.ID,
+			Address:   event.Address,
+			Hash:      event.Hash,
+			Amount0:   amount0,
+			Amount1:   amount1,
+			CreatedAt: event.CreatedAt,
+			Token0:    token0,
+			Token1:    token1,
+			Pool: types.Token_PoolDetail{
+				ID:        event.PoolID,
+				Address:   event.Pool,
+				FeeTier:   int(event.PooFee),
+				Liquidity: "0", // Assuming liquidity is not available in the current query
+				Token0:    token0,
+				Token1:    token1,
+			},
 		}
 
 		data = append(data, item)

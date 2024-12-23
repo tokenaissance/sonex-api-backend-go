@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"strconv"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -63,8 +65,14 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 				}
 
 				if address == volume.Address {
+					price := float64(0)
+					prices, err := global.GetPrices(l.ctx, nil, req.ChainId, address, true)
+					if err == nil && len(prices) > 0 {
+						price, _ = strconv.ParseFloat(prices[0].Value.String(), 64)
+					}
 					factor := math.Pow(10, float64(token.Decimals))
 					token.Volume = volume.Amounts / factor
+					token.Fdv = price * token.Volume
 					break
 				}
 			}

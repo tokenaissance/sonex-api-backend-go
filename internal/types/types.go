@@ -74,6 +74,8 @@ type PoolsResponse_Pool struct {
 	Token0Balance float64             `json:"token0Balance"`
 	Token1Balance float64             `json:"token1Balance"`
 	Yield24h      float64             `json:"yield24h"`
+	Price0        float64             `json:"price0"`
+	Price1        float64             `json:"price1"`
 }
 
 type PoolsResponse_Token struct {
@@ -152,6 +154,7 @@ type SwapEvent struct {
 	Hash      string           `json:"hash"`
 	Amount0   float64          `json:"amount0"`
 	Amount1   float64          `json:"amount1"`
+	Usd       float64          `json:"usd"`
 	CreatedAt string           `json:"created_at"`
 }
 
@@ -266,6 +269,7 @@ type Token_TokenDetail struct {
 	Logo     string              `json:"logo"`
 	Pools    []*Token_PoolDetail `json:"pools"`
 	Volume   float64             `json:"volume"`
+	Fdv      float64             `json:"fdv"`
 }
 
 type Token_TokenInfo struct {
