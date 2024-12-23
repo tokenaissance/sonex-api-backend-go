@@ -2,6 +2,7 @@ package sonex
 
 import (
 	"context"
+	"fmt"
 
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -27,6 +28,9 @@ func NewSonexPositionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *types.NftDataResponse, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
+	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
+	increaseModel := repository.NewEventSonexPositionManagerIncreaseLiquidityModel(conn)
+	decreaseModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn)
 	transferItem, err := transferModel.GetTransferEvent(l.ctx, req.Id)
 	if err != nil {
 		return &types.NftDataResponse{
@@ -34,6 +38,36 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 			Data:    &types.NftDataResponse_Data{},
 			Message: err.Error(),
 		}, nil
+	}
+
+	fees := types.Fees{
+		FeeAmount0: "0",
+		FeeAmount1: "0",
+	}
+	collectedItem, err := collectModel.AggregateAmounts(l.ctx, l.svcCtx.Config.Chains[0].ChainId, req.Id, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
+	if err == nil {
+		fees.FeeAmount0 = fmt.Sprintf("%f", collectedItem.TotalAmount0)
+		fees.FeeAmount1 = fmt.Sprintf("%f", collectedItem.TotalAmount1)
+	}
+
+	withdrawn := types.Withdrawn{
+		WithdrawnAmount0: "0",
+		WithdrawnAmount1: "0",
+	}
+	decreaseItem, err := decreaseModel.AggregateAmounts(l.ctx, l.svcCtx.Config.Chains[0].ChainId, req.Id, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
+	if err == nil {
+		withdrawn.WithdrawnAmount0 = fmt.Sprintf("%f", decreaseItem.TotalAmount0)
+		withdrawn.WithdrawnAmount1 = fmt.Sprintf("%f", decreaseItem.TotalAmount1)
+	}
+
+	invested := types.Invested{
+		InvestedAmount0: "0",
+		InvestedAmount1: "0",
+	}
+	increaseItem, err := increaseModel.AggregateAmounts(l.ctx, l.svcCtx.Config.Chains[0].ChainId, req.Id, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
+	if err == nil {
+		invested.InvestedAmount0 = fmt.Sprintf("%f", increaseItem.TotalAmount0)
+		invested.InvestedAmount1 = fmt.Sprintf("%f", increaseItem.TotalAmount1)
 	}
 
 	return &types.NftDataResponse{
@@ -51,9 +85,9 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 			Origin:          transferItem.Origin,
 			Pool:            transferItem.Pool,
 			PositionAge:     0,
-			Invested:        types.Invested{},
-			Withdrawn:       types.Withdrawn{},
-			Fees:            types.Fees{},
+			Invested:        invested,
+			Withdrawn:       withdrawn,
+			Fees:            fees,
 			Fee:             transferItem.Pool.FeeTier,
 			Token0:          transferItem.Pool.Token0.Address,
 			Token1:          transferItem.Pool.Token1.Address,

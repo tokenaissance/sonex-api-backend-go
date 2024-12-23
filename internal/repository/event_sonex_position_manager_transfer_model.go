@@ -122,6 +122,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 						Symbol:     item.Token0Symbol.String,
 						Name:       item.Token0Name.String,
 						Logo:       item.Token0Logo.String,
+						Decimals:   int(item.Token0Decimals.Int64),
 						Additional: token0Additional,
 					},
 					Token1: types.Token_TokenInfo{
@@ -129,6 +130,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 						Symbol:     item.Token1Symbol.String,
 						Name:       item.Token1Name.String,
 						Logo:       item.Token1Logo.String,
+						Decimals:   int(item.Token1Decimals.Int64),
 						Additional: token1Additional,
 					},
 					Token0Price: "0",
@@ -207,6 +209,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 				Symbol:     item.Token0Symbol.String,
 				Name:       item.Token0Name.String,
 				Logo:       item.Token0Logo.String,
+				Decimals:   int(item.Token0Decimals.Int64),
 				Additional: token0Additional,
 			},
 			Token1: types.Token_TokenInfo{
@@ -214,6 +217,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 				Symbol:     item.Token1Symbol.String,
 				Name:       item.Token1Name.String,
 				Logo:       item.Token1Logo.String,
+				Decimals:   int(item.Token1Decimals.Int64),
 				Additional: token1Additional,
 			},
 			Token0Price: "0",

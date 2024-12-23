@@ -3,6 +3,11 @@
 
 package types
 
+type AggregatedAmounts struct {
+	TotalAmount0 float64 `json:"total_amount0"`
+	TotalAmount1 float64 `json:"total_amount1"`
+}
+
 type ChainSyncPrograss struct {
 	ChainId   int64  `json:"chain_id"`
 	Height    int64  `json:"height"`

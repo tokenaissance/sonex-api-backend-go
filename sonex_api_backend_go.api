@@ -274,6 +274,11 @@ type Fees {
 	FeeAmount1 string `json:"feeAmount1"`
 }
 
+type AggregatedAmounts {
+	TotalAmount0 float64 `json:"total_amount0"`
+	TotalAmount1 float64 `json:"total_amount1"`
+}
+
 type GetNftDataRequest {
 	Id int64 `path:"id"`
 }
