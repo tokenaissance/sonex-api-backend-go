@@ -12,6 +12,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+var c config.Config
 var cronExecuter *cron.Cron
 var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
@@ -22,6 +23,26 @@ func init() {
 	tokenCachers = map[int64]*cache.TokenCacher{}
 
 	cronExecuter.Start()
+}
+
+func Initialize(config config.Config) error {
+	c = config
+
+	// Initialize token cacher
+	for _, chain := range c.Chains {
+		tokenCacher := cache.NewTokenCacher(chain)
+		tokenCachersLock.Lock()
+		tokenCachers[chain.ChainId] = tokenCacher
+		tokenCachersLock.Unlock()
+		for _, token := range chain.Tokens {
+			err := SetToken(chain.ChainId, token.Address, token.IsStablecoin)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func AddCronJob(cron string, job func()) (cron.EntryID, error) {
@@ -39,12 +60,6 @@ func InitIdGenerater(workerId int64) error {
 
 func NewId() (int64, error) {
 	return idGenerater.Generate()
-}
-
-func InitTokenCacher(chain config.ChainConfig) {
-	tokenCachersLock.Lock()
-	tokenCachers[chain.ChainId] = cache.NewTokenCacher(chain)
-	tokenCachersLock.Unlock()
 }
 
 func GetToken(chainId int64, address string) (cache.Token, error) {

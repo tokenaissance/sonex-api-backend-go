@@ -36,18 +36,10 @@ func main() {
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
 
+	global.Initialize(c)
 	err := global.InitIdGenerater(0)
 	if err != nil {
 		panic(err)
-	}
-	for _, chain := range c.Chains {
-		global.InitTokenCacher(chain)
-		for _, token := range chain.Tokens {
-			err = global.SetToken(chain.ChainId, token.Address, token.IsStablecoin)
-			if err != nil {
-				panic(err)
-			}
-		}
 	}
 
 	opts := []rest.RunOption{}

@@ -11,3 +11,12 @@ type Config struct {
 	Xpools     []XpoolConfig `json:",optional"`
 	Redis      RedisConfig   `json:","`
 }
+
+func (config *Config) GetChainConfig(chainId int64) *ChainConfig {
+	for _, c := range config.Chains {
+		if c.ChainId == chainId {
+			return &c
+		}
+	}
+	return nil
+}
