@@ -9,7 +9,6 @@ import (
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/quoter"
-	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -41,25 +40,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	fromToken := common.HexToAddress(req.From)
 	toToken := common.HexToAddress(req.To)
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(l.ctx, req.ChainId)
-	if err != nil {
-		return nil, err
-	}
-	pools := []quoter.Pool{}
-	linq.From(records).
-		SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
-			return quoter.Pool{
-				Address: common.HexToAddress(item.EventPool),
-				Token0:  common.HexToAddress(item.EventToken0),
-				Token1:  common.HexToAddress(item.EventToken1),
-				Fee:     item.EventFee,
-			}
-		}).
-		ToSlice(&pools)
-
-	prices, err := global.Quote(pools, req.ChainId, fromToken.Hex(), toToken.Hex(), req.IsCache)
+	prices, err := global.Quote(l.ctx, nil, req.ChainId, fromToken.Hex(), toToken.Hex(), req.IsCache)
 	if err != nil {
 		return nil, err
 	}
