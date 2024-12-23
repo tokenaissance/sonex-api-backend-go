@@ -11,5 +11,5 @@ type PgConfig struct {
 }
 
 func (config *PgConfig) DateSource() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", config.User, config.Password, config.Host, config.Port, config.DbName)
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&TimeZone=Asia/Shanghai", config.User, config.Password, config.Host, config.Port, config.DbName)
 }

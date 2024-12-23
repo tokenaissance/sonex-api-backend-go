@@ -419,3 +419,29 @@ ALTER TABLE "public"."event_sonex_position_manager_transfer" ADD CONSTRAINT "eve
 -- Initialize data
 -- ----------------------------
 INSERT INTO "public"."chain_scanner_prograss" ("id", "created_at", "updated_at", "chain_id", "height") VALUES (124502484323401728, '2024-12-10 08:32:30+00', '2024-12-13 02:40:50+00', 1946, 4800000);
+
+
+CREATE TABLE "public"."sonex_token_price_record" (
+                                                     "id" int8 NOT NULL DEFAULT nextval('sonex_token_price_record_id'::regclass),
+                                                     "token_symbol" varchar(255) COLLATE "pg_catalog"."default",
+                                                     "token_address" varchar(255) COLLATE "pg_catalog"."default",
+                                                     "price" varchar COLLATE "pg_catalog"."default",
+                                                     "created_at" timestamp(6),
+                                                     CONSTRAINT "sonex_token_price_record_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "public"."sonex_token_price_record"
+    OWNER TO "postgres";
+
+CREATE SEQUENCE "public"."sonex_token_price_record_id"
+    INCREMENT 1
+MINVALUE  1
+MAXVALUE 9223372036854775807
+START 1
+CACHE 1;
+
+ALTER SEQUENCE "public"."sonex_token_price_record_id" OWNER TO "postgres";
+
+CREATE INDEX "token_address_idx" ON "public"."sonex_token_price_record" USING btree (
+    "token_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );

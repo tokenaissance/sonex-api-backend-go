@@ -33,6 +33,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/pools/my_position",
+				Handler: sonex.SonexMyPositionHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/swaps",
 				Handler: sonex.SonexSwapHandler(serverCtx),
 			},
