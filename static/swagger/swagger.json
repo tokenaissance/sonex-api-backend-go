@@ -276,6 +276,61 @@
         ]
       }
     },
+    "/sonex/tokens": {
+      "get": {
+        "operationId": "SonexTokensHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TokensResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "order",
+            "description": " Sorting order, default is \"ASC\"",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "default": "ASC"
+          },
+          {
+            "name": "page",
+            "description": " Current page number, default is 1",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          },
+          {
+            "name": "take",
+            "description": " Number of items per page, default is 10",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "10"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/tokens/kline": {
       "get": {
         "operationId": "TokensKlineHandler",
@@ -429,6 +484,12 @@
             "type": "integer",
             "format": "int32",
             "default": "10"
+          },
+          {
+            "name": "-",
+            "in": "query",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -579,6 +640,28 @@
         "hasNextPage"
       ]
     },
+    "PoolVolume": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "amounts0": {
+          "type": "number",
+          "format": "double"
+        },
+        "amounts1": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PoolVolume",
+      "required": [
+        "address",
+        "amounts0",
+        "amounts1"
+      ]
+    },
     "PoolsRequest": {
       "type": "object",
       "properties": {
@@ -678,7 +761,8 @@
           "type": "string"
         },
         "volume": {
-          "$ref": "#/definitions/PoolsResponse_Volume"
+          "type": "number",
+          "format": "double"
         },
         "tvlUSD": {
           "type": "string"
@@ -1135,6 +1219,22 @@
         },
         "value": {
           "type": "string"
+        },
+        "sqrtPriceX96AfterList": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "initializedTicksCrossedList": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "gasEstimate": {
+          "type": "string"
         }
       },
       "title": "TokenQuoteResponse_Price",
@@ -1142,7 +1242,10 @@
         "target",
         "router",
         "path",
-        "value"
+        "value",
+        "sqrtPriceX96AfterList",
+        "initializedTicksCrossedList",
+        "gasEstimate"
       ]
     },
     "TokenTopResponse": {
@@ -1167,6 +1270,23 @@
         "code",
         "data",
         "message"
+      ]
+    },
+    "TokenVolume": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "amounts": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "TokenVolume",
+      "required": [
+        "address",
+        "amounts"
       ]
     },
     "Token_PoolDetail": {
@@ -1275,6 +1395,10 @@
           "items": {
             "$ref": "#/definitions/Token_PoolDetail"
           }
+        },
+        "volume": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "Token_TokenDetail",
@@ -1284,7 +1408,8 @@
         "name",
         "decimals",
         "logo",
-        "pools"
+        "pools",
+        "volume"
       ]
     },
     "Token_TokenInfo": {
@@ -1318,6 +1443,67 @@
         "decimals",
         "logo",
         "additional"
+      ]
+    },
+    "TokensRequest": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "type": "string",
+          "default": "ASC",
+          "description": " Sorting order, default is \"ASC\""
+        },
+        "page": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1",
+          "description": " Current page number, default is 1"
+        },
+        "take": {
+          "type": "integer",
+          "format": "int64",
+          "default": "10",
+          "description": " Number of items per page, default is 10"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "TokensRequest",
+      "required": [
+        "order",
+        "page",
+        "take"
+      ]
+    },
+    "TokensResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Token_TokenDetail"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "TokensResponse",
+      "required": [
+        "code",
+        "data",
+        "meta",
+        "message"
       ]
     },
     "XpoolPoolListRequest": {
@@ -1355,9 +1541,18 @@
           "type": "integer",
           "format": "int32",
           "default": "10"
+        },
+        "userPools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
-      "title": "XpoolPoolListRequest"
+      "title": "XpoolPoolListRequest",
+      "required": [
+        "-"
+      ]
     },
     "XpoolPoolListResponse": {
       "type": "object",

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/log"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
@@ -118,7 +119,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				_, err = eventSonexFactoryPoolCreatedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventSonexFactoryPoolCreatedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
 				if err != nil {
 					return err
 				}
@@ -282,7 +287,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolMintModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
+									id, err := global.NewId()
+									if err != nil {
+										return err
+									}
+									err = eventSonexPoolMintModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
 									if err != nil {
 										return err
 									}
@@ -322,7 +331,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolSwapModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
+									id, err := global.NewId()
+									if err != nil {
+										return err
+									}
+									err = eventSonexPoolSwapModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
 									if err != nil {
 										return err
 									}
@@ -362,7 +375,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolBurnModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
+									id, err := global.NewId()
+									if err != nil {
+										return err
+									}
+									err = eventSonexPoolBurnModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
 									if err != nil {
 										return err
 									}
@@ -522,7 +539,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerTransferModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
+					id, err := global.NewId()
+					if err != nil {
+						return err
+					}
+					err = eventSonexPositionManagerTransferModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
 					if err != nil {
 						return err
 					}
@@ -560,7 +581,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerIncreaseLiquidityModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+					id, err := global.NewId()
+					if err != nil {
+						return err
+					}
+					err = eventSonexPositionManagerIncreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 					if err != nil {
 						return err
 					}
@@ -598,7 +623,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerDecreaseLiquidityModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+					id, err := global.NewId()
+					if err != nil {
+						return err
+					}
+					err = eventSonexPositionManagerDecreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 					if err != nil {
 						return err
 					}
@@ -636,7 +665,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerCollectModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
+					id, err := global.NewId()
+					if err != nil {
+						return err
+					}
+					err = eventSonexPositionManagerCollectModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
 					if err != nil {
 						return err
 					}

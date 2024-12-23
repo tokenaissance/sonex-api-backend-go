@@ -10,7 +10,6 @@ import (
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
-	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/conf"
@@ -36,19 +35,14 @@ func main() {
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
 
+	global.Initialize(c)
 	err := global.InitIdGenerater(0)
 	if err != nil {
 		panic(err)
 	}
-	for _, chain := range c.Chains {
-		global.InitTokenCacher(chain)
-		for _, token := range chain.Tokens {
-			err = global.SetToken(chain.ChainId, token.Address, token.IsStablecoin)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
+	global.AddCronJob("0/3 * * * * ?", func() {
+		fmt.Println("================> Cron task demo")
+	})
 
 	opts := []rest.RunOption{}
 	opts = append(opts, rest.WithCors(), rest.WithCorsHeaders())
@@ -77,9 +71,7 @@ func main() {
 					panic(err)
 				}
 				// Swap callback demo
-				handler.AddPoolSwapCallback(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool string) {
-					fmt.Printf("%d %d  %d %s %s %s %s %s %s %s %s %s %s %s %s", chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool)
-				})
+				handler.AddPoolSwapCallback(chain_handler.SonexSwapCallback)
 				chainHandlerManager.AddHandler(1946, handler)
 			}
 		}

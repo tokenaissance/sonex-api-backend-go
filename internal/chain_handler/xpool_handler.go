@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/contract/xpool"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/log"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
@@ -110,7 +111,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				_, err = eventXpoolFactoryPoolCreatedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, stakingToken, rewardToken, rewardPreBlock)
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventXpoolFactoryPoolCreatedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, stakingToken, rewardToken, rewardPreBlock)
 				if err != nil {
 					return err
 				}
@@ -144,7 +149,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				_, err = eventXpoolFactoryPoolDestroiedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, ethBalance, stakingBalance, rewardBalance, recipient)
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventXpoolFactoryPoolDestroiedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, ethBalance, stakingBalance, rewardBalance, recipient)
 				if err != nil {
 					return err
 				}
@@ -293,7 +302,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventXpoolPoolClaimedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									id, err := global.NewId()
+									if err != nil {
+										return err
+									}
+									err = eventXpoolPoolClaimedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
 									if err != nil {
 										return err
 									}
@@ -325,7 +338,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventXpoolPoolWithdrawedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									id, err := global.NewId()
+									if err != nil {
+										return err
+									}
+									err = eventXpoolPoolWithdrawedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
 									if err != nil {
 										return err
 									}

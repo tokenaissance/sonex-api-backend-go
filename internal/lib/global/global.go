@@ -1,17 +1,22 @@
 package global
 
 import (
+	"context"
 	"fmt"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/id_generater"
 	"sonex_api_backend_go/internal/lib/quoter"
+	"sonex_api_backend_go/internal/repository"
 	"sync"
 	"time"
 
+	"github.com/ahmetb/go-linq/v3"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/robfig/cron/v3"
 )
 
+var c config.Config
 var cronExecuter *cron.Cron
 var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
@@ -22,6 +27,26 @@ func init() {
 	tokenCachers = map[int64]*cache.TokenCacher{}
 
 	cronExecuter.Start()
+}
+
+func Initialize(config config.Config) error {
+	c = config
+
+	// Initialize token cacher
+	for _, chain := range c.Chains {
+		tokenCacher := cache.NewTokenCacher(chain)
+		tokenCachersLock.Lock()
+		tokenCachers[chain.ChainId] = tokenCacher
+		tokenCachersLock.Unlock()
+		for _, token := range chain.Tokens {
+			err := SetToken(chain.ChainId, token.Address, token.IsStablecoin)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func AddCronJob(cron string, job func()) (cron.EntryID, error) {
@@ -39,12 +64,6 @@ func InitIdGenerater(workerId int64) error {
 
 func NewId() (int64, error) {
 	return idGenerater.Generate()
-}
-
-func InitTokenCacher(chain config.ChainConfig) {
-	tokenCachersLock.Lock()
-	tokenCachers[chain.ChainId] = cache.NewTokenCacher(chain)
-	tokenCachersLock.Unlock()
 }
 
 func GetToken(chainId int64, address string) (cache.Token, error) {
@@ -81,13 +100,33 @@ func GetStablecoin(chainId int64) []cache.Token {
 	return cacher.GetStablecoins()
 }
 
-func GetPrices(pools []quoter.Pool, chainId int64, token string, isCache bool) ([]cache.Price, error) {
+func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool) ([]cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
+
+	if pools == nil {
+		conn := repository.NewConn(c.PostgreSQL.DateSource())
+		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
+		if err != nil {
+			return nil, err
+		}
+		linq.From(records).
+			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
+				return quoter.Pool{
+					Address: common.HexToAddress(item.EventPool),
+					Token0:  common.HexToAddress(item.EventToken0),
+					Token1:  common.HexToAddress(item.EventToken1),
+					Fee:     item.EventFee,
+				}
+			}).
+			ToSlice(&pools)
+	}
+
 	prices, err := cacher.Quote(pools, token, isCache)
 	if err != nil {
 		return nil, err
@@ -95,13 +134,33 @@ func GetPrices(pools []quoter.Pool, chainId int64, token string, isCache bool) (
 	return prices, nil
 }
 
-func Quote(pools []quoter.Pool, chainId int64, from string, to string, isCache bool) ([]cache.Price, error) {
+func Quote(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, isCache bool) ([]cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
+
+	if pools == nil {
+		conn := repository.NewConn(c.PostgreSQL.DateSource())
+		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
+		if err != nil {
+			return nil, err
+		}
+		linq.From(records).
+			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
+				return quoter.Pool{
+					Address: common.HexToAddress(item.EventPool),
+					Token0:  common.HexToAddress(item.EventToken0),
+					Token1:  common.HexToAddress(item.EventToken1),
+					Fee:     item.EventFee,
+				}
+			}).
+			ToSlice(&pools)
+	}
+
 	prices, err := cacher.QuoteTo(pools, from, to, isCache)
 	if err != nil {
 		return nil, err
