@@ -7,7 +7,6 @@ import (
 	commonContract "sonex_api_backend_go/internal/lib/contract/common"
 	xpoolContract "sonex_api_backend_go/internal/lib/contract/xpool"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/lib/quoter"
 
 	// "sonex_api_backend_go/internal/module/xpool/utils"
 
@@ -154,14 +153,14 @@ func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToke
 	prices := &TokenPrices{}
 
 	// 获取质押代币价格
-	stakingPrice, err := global.GetPrices([]quoter.Pool{}, chainId, stakingToken.Hex(), true) // TODO: 需要确认一下
+	stakingPrice, err := global.GetPrices(ctx, nil, chainId, stakingToken.Hex(), true) // TODO: 需要确认一下
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staking token price: %v", err)
 	}
 	prices.StakingTokenPrice = stakingPrice[0].Value
 
 	// 获取奖励代币价格
-	rewardPrice, err := global.GetPrices([]quoter.Pool{}, chainId, rewardToken.Hex(), true) // TODO: 需要确认一下
+	rewardPrice, err := global.GetPrices(ctx, nil, chainId, rewardToken.Hex(), true) // TODO: 需要确认一下
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reward token price: %v", err)
 	}
