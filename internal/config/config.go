@@ -20,3 +20,12 @@ func (config *Config) GetChainConfig(chainId int64) *ChainConfig {
 	}
 	return nil
 }
+
+func (config *Config) GetSonexConfig(chainId int64) *SonexConfig {
+	for _, c := range config.Sonexes {
+		if c.ChainId == chainId {
+			return &c
+		}
+	}
+	return nil
+}
