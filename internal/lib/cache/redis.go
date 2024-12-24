@@ -16,6 +16,8 @@ type ICache interface {
 	HGet(key, field string) (string, error)
 	HGetAll(key string) (map[string]string, error)
 	Expire(key string, expiration time.Duration) error
+	SMembers(ctx context.Context, key string) *redis.StringSliceCmd
+	SAdd(ctx context.Context, key string, members ...interface{}) *redis.IntCmd
 }
 
 type RedisCache struct {
@@ -68,4 +70,12 @@ func (c *RedisCache) HGetAll(key string) (map[string]string, error) {
 
 func (c *RedisCache) Expire(key string, expiration time.Duration) error {
 	return c.client.Expire(context.Background(), key, expiration).Err()
+}
+
+func (c *RedisCache) SMembers(ctx context.Context, key string) *redis.StringSliceCmd {
+	return c.client.SMembers(ctx, key)
+}
+
+func (c *RedisCache) SAdd(ctx context.Context, key string, members ...interface{}) *redis.IntCmd {
+	return c.client.SAdd(ctx, key, members...)
 }

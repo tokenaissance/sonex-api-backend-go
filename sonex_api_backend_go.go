@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"sonex_api_backend_go/internal/chain_handler"
+	farmCbk "sonex_api_backend_go/internal/chain_handler/callback/farm"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/lib/global"
@@ -87,6 +88,23 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				chainHandlerManager.AddHandler(1946, handler)
+			}
+		}
+
+		// Farm handler
+		{
+			configA := linq.From(c.Farm).SingleWithT(func(item config.FarmConfig) bool { return item.ChainId == chain.ChainId })
+			if configA != nil {
+				config, _ := configA.(config.FarmConfig)
+				handler, err := chain_handler.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
+				if err != nil {
+					panic(err)
+				}
+
+				farmCallback := farmCbk.NewFarmCallback(ctx)
+				handler.RegisterCallback(farmCallback)
+
 				chainHandlerManager.AddHandler(1946, handler)
 			}
 		}

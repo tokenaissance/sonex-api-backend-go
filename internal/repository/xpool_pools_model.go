@@ -81,10 +81,10 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	case "apr":
 		query += " ORDER BY apr DESC, id DESC"
 	default:
-		query += " ORDER BY id DESC"
+		query += " ORDER BY created_at DESC, id DESC"
 	}
 
-	err := m.conn.QueryRow(&count, countQuery, args...)
+	err := m.conn.QueryRowCtx(ctx, &count, countQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -92,7 +92,7 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, opts.Limit, opts.Offset)
 
-	err = m.conn.QueryRows(&pools, query, args...)
+	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}

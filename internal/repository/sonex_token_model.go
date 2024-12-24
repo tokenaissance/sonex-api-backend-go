@@ -19,6 +19,7 @@ type (
 		withSession(session sqlx.Session) SonexTokenModel
 		GetTopTokenList(ctx context.Context, chainId int, positionManager string) ([]*types.Token_TokenDetail, error)
 		GetTokenList(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error)
+		FindAllToMap(ctx context.Context) (map[string]SonexToken, error)
 	}
 
 	customSonexTokenModel struct {
@@ -221,4 +222,19 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 	}
 
 	return tokenDetails, meta, nil
+}
+
+func (m *customSonexTokenModel) FindAllToMap(ctx context.Context) (map[string]SonexToken, error) {
+	query := fmt.Sprintf("select %s from %s", sonexTokenRows, m.table)
+	var resp []SonexToken
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenMap := make(map[string]SonexToken)
+	for _, token := range resp {
+		tokenMap[token.Address.String] = token
+	}
+	return tokenMap, nil
 }
