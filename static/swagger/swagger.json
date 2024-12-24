@@ -314,14 +314,6 @@
             "in": "query",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "is_cache",
-            "in": "query",
-            "required": false,
-            "type": "boolean",
-            "format": "boolean",
-            "default": "true"
           }
         ],
         "tags": [
@@ -1436,11 +1428,6 @@
         },
         "amount": {
           "type": "string"
-        },
-        "is_cache": {
-          "type": "boolean",
-          "format": "boolean",
-          "default": "true"
         }
       },
       "title": "TokenQuoteRequest",
@@ -1455,19 +1442,23 @@
     "TokenQuoteResponse": {
       "type": "object",
       "properties": {
-        "prices": {
+        "best_router": {
+          "$ref": "#/definitions/TokenQuoteResponse_Router"
+        },
+        "routers": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/TokenQuoteResponse_Price"
+            "$ref": "#/definitions/TokenQuoteResponse_Router"
           }
         }
       },
       "title": "TokenQuoteResponse",
       "required": [
-        "prices"
+        "best_router",
+        "routers"
       ]
     },
-    "TokenQuoteResponse_Price": {
+    "TokenQuoteResponse_Router": {
       "type": "object",
       "properties": {
         "target": {
@@ -1482,7 +1473,7 @@
         "path": {
           "type": "string"
         },
-        "value": {
+        "price": {
           "type": "string"
         },
         "sqrtPriceX96AfterList": {
@@ -1502,12 +1493,12 @@
           "type": "string"
         }
       },
-      "title": "TokenQuoteResponse_Price",
+      "title": "TokenQuoteResponse_Router",
       "required": [
         "target",
         "router",
         "path",
-        "value",
+        "price",
         "sqrtPriceX96AfterList",
         "initializedTicksCrossedList",
         "gasEstimate"

@@ -212,18 +212,18 @@ type TokenQuoteRequest struct {
 	To      string `form:"to"`
 	Type    string `form:"type,options=INPUT|OUTPUT"`
 	Amount  string `form:"amount"`
-	IsCache bool   `form:"is_cache,optional,default=true"`
 }
 
 type TokenQuoteResponse struct {
-	Prices []TokenQuoteResponse_Price `json:"prices"`
+	BestRouter *TokenQuoteResponse_Router  `json:"best_router"`
+	Routers    []TokenQuoteResponse_Router `json:"routers"`
 }
 
-type TokenQuoteResponse_Price struct {
+type TokenQuoteResponse_Router struct {
 	Target                      string   `json:"target"`
 	Router                      []string `json:"router"`
 	Path                        string   `json:"path"`
-	Value                       string   `json:"value"`
+	Price                       string   `json:"price"`
 	SqrtPriceX96AfterList       []string `json:"sqrtPriceX96AfterList"`
 	InitializedTicksCrossedList []int64  `json:"initializedTicksCrossedList"`
 	GasEstimate                 string   `json:"gasEstimate"`
