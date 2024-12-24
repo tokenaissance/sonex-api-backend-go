@@ -4,14 +4,14 @@ Port: 8888
 Log:
   Level: debug
 PostgreSQL:
-  Host: 10.1.84.8
+  Host: PG_HOST
   Port: 5432
-  User: apibackendgo
-  Password: cCdmZ2iRFFmB
-  DbName: sonex-api-backend-go
+  User: PG_USER
+  Password: PG_PWD
+  DbName: PG_DBNAME
 Redis:
-  Host: 127.0.0.1
-  Port: 6379
+  Host: REDIS_HOST
+  Port: REDIS_PORT
   Password: 
   Db: 0
 Chains:
