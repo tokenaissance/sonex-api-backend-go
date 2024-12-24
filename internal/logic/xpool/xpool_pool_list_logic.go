@@ -452,13 +452,13 @@ func (l *XpoolPoolListLogic) getTokenPrices(chainId uint64, stakingToken, reward
 	prices := &TokenPrices{}
 
 	// stakingPrice, err := global.GetPrice(int64(chainId), stakingToken.Hex())
-	stakingPrice, err := global.GetPrices(context.Background(), nil, int64(chainId), stakingToken.Hex(), true) // TODO: 需要确认一下
+	_, stakingPrice, err := global.GetPrices(context.Background(), nil, int64(chainId), stakingToken.Hex(), true, 2, nil) // TODO: 需要确认一下
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staking token price: %v", err)
 	}
 	prices.StakingTokenPrice = stakingPrice[0].Value
 
-	rewardPrice, err := global.GetPrices(context.Background(), nil, int64(chainId), rewardToken.Hex(), true)
+	_, rewardPrice, err := global.GetPrices(context.Background(), nil, int64(chainId), rewardToken.Hex(), true, 2, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reward token price: %v", err)
 	}

@@ -19,7 +19,6 @@ type (
 	EventSonexFactoryPoolCreatedModel interface {
 		eventSonexFactoryPoolCreatedModel
 		withSession(session sqlx.Session) EventSonexFactoryPoolCreatedModel
-		TableName() string
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) error
 		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
@@ -41,10 +40,6 @@ func NewEventSonexFactoryPoolCreatedModel(conn sqlx.SqlConn) EventSonexFactoryPo
 
 func (m *customEventSonexFactoryPoolCreatedModel) withSession(session sqlx.Session) EventSonexFactoryPoolCreatedModel {
 	return NewEventSonexFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(session))
-}
-
-func (m *customEventSonexFactoryPoolCreatedModel) TableName() string {
-	return m.table
 }
 
 func (m *customEventSonexFactoryPoolCreatedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) error {

@@ -256,13 +256,15 @@ type TokenListResponse struct {
 }
 
 type TokenPriceRequest struct {
-	ChainId int64  `form:"chain_id"`
-	Token   string `form:"token"`
-	IsCache bool   `form:"is_cache,optional,default=true"`
+	ChainId        int64   `form:"chain_id"`
+	Token          string  `form:"token"`
+	IsCache        bool    `form:"is_cache,optional,default=true"`
+	WantStablecoin *string `form:"want_stablecoin,optional"`
 }
 
 type TokenPriceResponse struct {
-	Prices []TokenPriceResponse_Price `json:"prices"`
+	BasePrice *TokenPriceResponse_Price  `json:"best_price"`
+	Prices    []TokenPriceResponse_Price `json:"prices"`
 }
 
 type TokenPriceResponse_Price struct {
@@ -275,18 +277,20 @@ type TokenQuoteRequest struct {
 	ChainId int64  `form:"chain_id"`
 	From    string `form:"from"`
 	To      string `form:"to"`
-	IsCache bool   `form:"is_cache,optional,default=true"`
+	Type    string `form:"type,options=INPUT|OUTPUT"`
+	Amount  string `form:"amount"`
 }
 
 type TokenQuoteResponse struct {
-	Prices []TokenQuoteResponse_Price `json:"prices"`
+	BestRouter *TokenQuoteResponse_Router  `json:"best_router"`
+	Routers    []TokenQuoteResponse_Router `json:"routers"`
 }
 
-type TokenQuoteResponse_Price struct {
+type TokenQuoteResponse_Router struct {
 	Target                      string   `json:"target"`
 	Router                      []string `json:"router"`
 	Path                        string   `json:"path"`
-	Value                       string   `json:"value"`
+	Price                       string   `json:"price"`
 	SqrtPriceX96AfterList       []string `json:"sqrtPriceX96AfterList"`
 	InitializedTicksCrossedList []int64  `json:"initializedTicksCrossedList"`
 	GasEstimate                 string   `json:"gasEstimate"`
