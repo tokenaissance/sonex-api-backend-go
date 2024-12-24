@@ -17,7 +17,7 @@ func TestGet(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(c.Chains[0])
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	token, _ := cacher.Get("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
 	fmt.Println(token)
 }
@@ -26,7 +26,7 @@ func TestSet(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(c.Chains[0])
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	err := cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
 	if err != nil {
 		t.Error(err)
@@ -40,7 +40,7 @@ func TestGetStablecoins(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(c.Chains[0])
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	err := cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
 	if err != nil {
 		t.Error(err)
@@ -75,7 +75,7 @@ func TestQuoteExactInput(t *testing.T) {
 		{Address: common.HexToAddress("0x51B4C3556150c1A1f28705D89EB258E7796cfCDd"), Token0: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Token1: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Fee: 10000},
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
-	cacher := NewTokenCacher(c.Chains[0])
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	prices, err := cacher.QuoteExactInput(
 		pools,
 		common.HexToAddress("0x8879309d4002b8c98163ece3f58653f774de8416"),
@@ -122,7 +122,7 @@ func TestQuoteExactOutput(t *testing.T) {
 		{Address: common.HexToAddress("0x51B4C3556150c1A1f28705D89EB258E7796cfCDd"), Token0: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Token1: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Fee: 10000},
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
-	cacher := NewTokenCacher(c.Chains[0])
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	prices, err := cacher.QuoteExactOutput(
 		pools,
 		common.HexToAddress("0x8879309d4002b8c98163ece3f58653f774de8416"),
@@ -169,7 +169,7 @@ func TestGetPrices(t *testing.T) {
 		{Address: common.HexToAddress("0x51B4C3556150c1A1f28705D89EB258E7796cfCDd"), Token0: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Token1: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Fee: 10000},
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
-	cacher := NewTokenCacher(c.Chains[0])
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	_ = cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
 
 	prices, err := cacher.GetPrices(pools, common.HexToAddress("0x8879309d4002b8c98163ece3f58653f774de8416"), false, 0, nil)
@@ -190,7 +190,7 @@ func TestGetPricesWithCache(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(c.Chains[0])
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	_ = cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
 
 	start := time.Now()

@@ -2,7 +2,6 @@ package sonex
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"math/big"
 
@@ -72,7 +71,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			bestRouterResult = &types.TokenQuoteResponse_Router{
 				Target:                      price.To,
 				Router:                      router,
-				Path:                        base64.StdEncoding.EncodeToString(price.Path),
+				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(price.Path)),
 				Price:                       price.Value.String(),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
@@ -93,7 +92,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			return types.TokenQuoteResponse_Router{
 				Target:                      item.To,
 				Router:                      router,
-				Path:                        base64.StdEncoding.EncodeToString(item.Path),
+				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path)),
 				Price:                       item.Value.String(),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
@@ -103,6 +102,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		ToSlice(&routerResult)
 
 	return &types.TokenQuoteResponse{
+		SwapRouter: l.svcCtx.Config.GetSonexConfig(req.ChainId).SwapRouter,
 		BestRouter: bestRouterResult,
 		Routers:    routerResult,
 	}, nil

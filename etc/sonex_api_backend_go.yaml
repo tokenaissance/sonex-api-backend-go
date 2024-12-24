@@ -12,7 +12,7 @@ PostgreSQL:
 Redis:
   Host: REDIS_HOST
   Port: REDIS_PORT
-  Password: 
+  Password:
   Db: 0
 Chains:
   - ChainId: 1946
@@ -28,12 +28,13 @@ Chains:
     Tokens:
       - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
         IsStableCoin: true
-    Quoter: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
     WETH: 0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C
 Sonexes:
   - ChainId: 1946
     Factory: 0x69196462dD5105B85dD2941B3e0e0Df083A69152
     PositionManager: 0xeC816FCdc262601C0E23902c679FDd87CFb24077
+    Quoter: 0x6A029a06EA1c40EdBd4d44dfd057b03262FF7db2
+    SwapRouter: 0x8281c39cDb041bef7F37DCa1841e1aD10B1c8e35
 Xpools:
   - ChainId: 1946
     Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531

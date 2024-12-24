@@ -18,7 +18,8 @@ import (
 const DEFAULT_PRICE_CACHE_EXPIRE_SECONDS int64 = 300
 
 type TokenCacher struct {
-	chain                   config.ChainConfig
+	chainConf               config.ChainConfig
+	sonexConf               config.SonexConfig
 	tokens                  map[string]Token
 	tokensLock              sync.RWMutex
 	prices                  map[string]map[string]PriceCache
@@ -50,9 +51,10 @@ type PriceCache struct {
 	UpdatedAt time.Time
 }
 
-func NewTokenCacher(chain config.ChainConfig) *TokenCacher {
+func NewTokenCacher(chainConf config.ChainConfig, sonexConf config.SonexConfig) *TokenCacher {
 	return &TokenCacher{
-		chain:                   chain,
+		chainConf:               chainConf,
+		sonexConf:               sonexConf,
 		tokens:                  map[string]Token{},
 		prices:                  map[string]map[string]PriceCache{},
 		priceCacheExpireSeconds: DEFAULT_PRICE_CACHE_EXPIRE_SECONDS,
@@ -64,7 +66,7 @@ func (cacher *TokenCacher) Get(address string) (Token, error) {
 	token, ok := cacher.tokens[address]
 	cacher.tokensLock.RUnlock()
 	if !ok {
-		client, err := ethclient.Dial(cacher.chain.GetNode())
+		client, err := ethclient.Dial(cacher.chainConf.GetNode())
 		if err != nil {
 			return Token{}, err
 		}
@@ -153,7 +155,7 @@ func (cacher *TokenCacher) QuoteExactInput(pools []quoter.Pool, from common.Addr
 		return nil, err
 	}
 
-	q, err := quoter.NewQuoter(cacher.chain)
+	q, err := quoter.NewQuoter(cacher.chainConf, cacher.sonexConf)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +253,7 @@ func (cacher *TokenCacher) QuoteExactOutput(pools []quoter.Pool, from common.Add
 		return nil, err
 	}
 
-	q, err := quoter.NewQuoter(cacher.chain)
+	q, err := quoter.NewQuoter(cacher.chainConf, cacher.sonexConf)
 	if err != nil {
 		return nil, err
 	}

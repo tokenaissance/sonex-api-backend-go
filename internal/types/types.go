@@ -304,6 +304,7 @@ type TokenQuoteRequest struct {
 }
 
 type TokenQuoteResponse struct {
+	SwapRouter string                      `json:"swap_router"`
 	BestRouter *TokenQuoteResponse_Router  `json:"best_router"`
 	Routers    []TokenQuoteResponse_Router `json:"routers"`
 }

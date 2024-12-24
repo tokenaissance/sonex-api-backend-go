@@ -3,7 +3,7 @@ package sonex
 import (
 	"context"
 	"math"
-	"strconv"
+	"math/big"
 
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
@@ -43,10 +43,12 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *types.Swa
 	for _, item := range data {
 		bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
 		if err == nil && bestPrice != nil {
-			priceFloat, _ := strconv.ParseFloat(bestPrice.Value.String(), 64)
-			amount1Positive := math.Abs(item.Amount1)
-			item.Usd = priceFloat * amount1Positive / math.Pow10(int(item.Token1.Decimals))
-			item.Amount1 = amount1Positive
+			priceFloat := new(big.Float).SetInt(bestPrice.Value)
+			amount1Positive := new(big.Float).SetFloat64(math.Abs(item.Amount1))
+			decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(item.Token1.Decimals)))
+			usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amount1Positive), decimalFactor)
+			item.Usd, _ = usdValue.Float64()
+			item.Amount1, _ = amount1Positive.Float64()
 		}
 
 	}
