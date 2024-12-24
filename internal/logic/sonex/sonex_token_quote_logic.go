@@ -68,11 +68,21 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			linq.From(price.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
 			var initializedTicksCrossedList []int64
 			linq.From(price.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
+			var amountIn *big.Int
+			var amountOut *big.Int
+			switch req.Type {
+			case "INPUT":
+				amountIn, amountOut = amount, price.Value
+			case "OUTPUT":
+				amountIn, amountOut = price.Value, amount
+			}
 			bestRouterResult = &types.TokenQuoteResponse_Router{
-				Target:                      price.To,
+				TokenIn:                     fromToken.Hex(),
+				TokenOut:                    price.To,
+				AmountIn:                    amountIn.String(),
+				AmountOut:                   amountOut.String(),
 				Router:                      router,
 				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(price.Path)),
-				Price:                       price.Value.String(),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 price.GasEstimate.String(),
@@ -89,11 +99,21 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			linq.From(item.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
 			var initializedTicksCrossedList []int64
 			linq.From(item.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
+			var amountIn *big.Int
+			var amountOut *big.Int
+			switch req.Type {
+			case "INPUT":
+				amountIn, amountOut = amount, item.Value
+			case "OUTPUT":
+				amountIn, amountOut = item.Value, amount
+			}
 			return types.TokenQuoteResponse_Router{
-				Target:                      item.To,
+				TokenIn:                     fromToken.Hex(),
+				TokenOut:                    item.To,
+				AmountIn:                    amountIn.String(),
+				AmountOut:                   amountOut.String(),
 				Router:                      router,
 				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path)),
-				Price:                       item.Value.String(),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),

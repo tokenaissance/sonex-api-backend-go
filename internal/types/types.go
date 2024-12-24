@@ -310,10 +310,12 @@ type TokenQuoteResponse struct {
 }
 
 type TokenQuoteResponse_Router struct {
-	Target                      string   `json:"target"`
+	TokenIn                     string   `json:"token_in"`
+	TokenOut                    string   `json:"token_out"`
+	AmountIn                    string   `json:"amount_in"`
+	AmountOut                   string   `json:"amount_out"`
 	Router                      []string `json:"router"`
 	Path                        string   `json:"path"`
-	Price                       string   `json:"price"`
 	SqrtPriceX96AfterList       []string `json:"sqrtPriceX96AfterList"`
 	InitializedTicksCrossedList []int64  `json:"initializedTicksCrossedList"`
 	GasEstimate                 string   `json:"gasEstimate"`
