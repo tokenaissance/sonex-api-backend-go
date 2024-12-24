@@ -209,16 +209,20 @@ func (nodeCaller *NodeCaller) GetTranscations(ctx context.Context, blockNumbers 
 	return transactions, nil
 }
 
-func (nodeCaller *NodeCaller) StaticCall(ctx context.Context, abi abi.ABI, name string, msg ethereum.CallMsg, result any) error {
+func (nodeCaller *NodeCaller) StaticCall(ctx context.Context, abi abi.ABI, contract common.Address, name string, data []byte, result any) error {
 	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
 	if err != nil {
 		return err
+	}
+	msg := ethereum.CallMsg{
+		To:   &contract,
+		Data: data,
 	}
 	response, err := client.CallContract(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
-	err = abi.UnpackIntoInterface(result, "aggregate", response)
+	err = abi.UnpackIntoInterface(result, name, response)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,6 @@ import (
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"strings"
 
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -92,7 +91,6 @@ func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength i
 	}
 	dfs(from, Path{Tokens: []common.Address{from}, Fees: []int64{}})
 
-	linq.From(paths).OrderByT(func(item Path) int { return len(item.Tokens) }).ToSlice(&paths)
 	return paths
 }
 

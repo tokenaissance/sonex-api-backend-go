@@ -189,13 +189,15 @@ type TokenListResponse struct {
 }
 
 type TokenPriceRequest struct {
-	ChainId int64  `form:"chain_id"`
-	Token   string `form:"token"`
-	IsCache bool   `form:"is_cache,optional,default=true"`
+	ChainId        int64   `form:"chain_id"`
+	Token          string  `form:"token"`
+	IsCache        bool    `form:"is_cache,optional,default=true"`
+	WantStablecoin *string `form:"want_stablecoin,optional"`
 }
 
 type TokenPriceResponse struct {
-	Prices []TokenPriceResponse_Price `json:"prices"`
+	BasePrice *TokenPriceResponse_Price  `json:"best_price"`
+	Prices    []TokenPriceResponse_Price `json:"prices"`
 }
 
 type TokenPriceResponse_Price struct {
@@ -208,6 +210,8 @@ type TokenQuoteRequest struct {
 	ChainId int64  `form:"chain_id"`
 	From    string `form:"from"`
 	To      string `form:"to"`
+	Type    string `form:"type,options=INPUT|OUTPUT"`
+	Amount  string `form:"amount"`
 	IsCache bool   `form:"is_cache,optional,default=true"`
 }
 

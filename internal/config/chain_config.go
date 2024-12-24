@@ -14,6 +14,7 @@ type ChainConfig struct {
 	MinConfirmations        int64            `json:",default=5"`
 	MinDelayWaitMillisecond int64            `json:",default=2000"`
 	MaxLogsNumber           int64            `json:",default=10000"`
+	Multicall               string           `json:",optional"`
 	Tokens                  []TokenConfig    `json:",optional"`
 	Quoter                  string           `json:",optional"`
 }

@@ -39,10 +39,22 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	}
 	fromToken := common.HexToAddress(req.From)
 	toToken := common.HexToAddress(req.To)
+	amount, _ := new(big.Int).SetString(req.Amount, 10)
+	var maxLength int64 = 3
 
-	prices, err := global.Quote(l.ctx, nil, req.ChainId, fromToken.Hex(), toToken.Hex(), req.IsCache)
-	if err != nil {
-		return nil, err
+	var prices []cache.Price
+	switch req.Type {
+	case "INPUT":
+		prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromToken.Hex(), toToken.Hex(), amount, maxLength)
+		if err != nil {
+			return nil, err
+		}
+	case "OUTPUT":
+		prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromToken.Hex(), toToken.Hex(), amount, maxLength)
+		if err != nil {
+			return nil, err
+		}
+	default:
 	}
 
 	result := []types.TokenQuoteResponse_Price{}
