@@ -2,7 +2,10 @@ package sonex
 
 import (
 	"context"
+	"math"
+	"math/big"
 
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -35,6 +38,19 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *types.Swa
 			Meta:    &types.PaginationMeta{},
 			Message: err.Error(),
 		}, nil
+	}
+
+	for _, item := range data {
+		bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
+		if err == nil && bestPrice != nil {
+			priceFloat := new(big.Float).SetInt(bestPrice.Value)
+			amount1Positive := new(big.Float).SetFloat64(math.Abs(item.Amount1))
+			decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(item.Token1.Decimals)))
+			usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amount1Positive), decimalFactor)
+			item.Usd, _ = usdValue.Float64()
+			item.Amount1, _ = amount1Positive.Float64()
+		}
+
 	}
 
 	return &types.SwapEventResponse{

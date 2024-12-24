@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"math/big"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -51,7 +53,7 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 		}, nil
 	}
 
-	wethAddress := "0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"
+	wethAddress := l.svcCtx.Config.Chains[0].WETH
 
 	tokenVolumes, err := model.GetTokenVolumes(l.ctx)
 	if err == nil {
@@ -63,8 +65,21 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 				}
 
 				if address == volume.Address {
-					factor := math.Pow(10, float64(token.Decimals))
-					token.Volume = volume.Amounts / factor
+					price := new(big.Float).SetFloat64(0) // Initialize price as a big.Float
+					bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, address, true, 2, nil)
+					if err == nil && bestPrice != nil {
+						price.SetInt(bestPrice.Value)
+					}
+
+					volumeAmounts := new(big.Float).SetFloat64(volume.Amounts)
+					factor := new(big.Float).SetFloat64(math.Pow10(int(token.Decimals)))
+
+					tokenVolume := new(big.Float).Quo(volumeAmounts, factor)
+					token.Volume, _ = tokenVolume.Float64()
+
+					fdv := new(big.Float).Quo(new(big.Float).Mul(price, tokenVolume), factor)
+					token.Fdv, _ = fdv.Float64()
+
 					break
 				}
 			}
