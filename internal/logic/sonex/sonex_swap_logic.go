@@ -43,9 +43,9 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *types.Swa
 	for _, item := range data {
 		bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
 		if err == nil && bestPrice != nil {
-			valueFloat, _ := strconv.ParseFloat(bestPrice.Value.String(), 64)
+			priceFloat, _ := strconv.ParseFloat(bestPrice.Value.String(), 64)
 			amount1Positive := math.Abs(item.Amount1)
-			item.Usd = valueFloat * amount1Positive
+			item.Usd = priceFloat * amount1Positive / math.Pow10(int(item.Token1.Decimals))
 			item.Amount1 = amount1Positive
 		}
 

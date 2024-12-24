@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"sync"
@@ -14,6 +15,7 @@ import (
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -67,19 +69,24 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
 			price0 := float64(0)
 			price1 := float64(0)
-			bestPrice0, _, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true, 2, nil)
+			bestPrice0, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, nil)
+			fmt.Println("bestPrice0", pool.Token0.Address, bestPrice0.Value.String())
 			if err == nil && bestPrice0 != nil {
 				price0, _ = strconv.ParseFloat(bestPrice0.Value.String(), 64)
 			}
 
-			pool.Price0 = price0
+			factor0 := math.Pow(10, float64(pool.Token0.Decimals))
+			factor1 := math.Pow(10, float64(pool.Token1.Decimals))
 
-			bestPrice1, _, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true, 2, nil)
+			pool.Price0 = price0 / factor0
+
+			bestPrice1, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, nil)
+			fmt.Println("bestPrice1", pool.Token1.Address, bestPrice1.Value.String())
 			if err == nil && bestPrice1 != nil {
 				price1, _ = strconv.ParseFloat(bestPrice1.Value.String(), 64)
 			}
 
-			pool.Price1 = price1
+			pool.Price1 = price1 / factor1
 
 			mu.Lock()
 			pool.Token0Balance = balance0 * price0
