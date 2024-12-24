@@ -50,10 +50,12 @@ type TokenQuoteRequest {
 }
 
 type TokenQuoteResponse_Router {
-	Target                      string   `json:"target"`
+	TokenIn                     string   `json:"token_in"`
+	TokenOut                    string   `json:"token_out"`
+	AmountIn                    string   `json:"amount_in"`
+	AmountOut                   string   `json:"amount_out"`
 	Router                      []string `json:"router"`
 	Path                        string   `json:"path"`
-	Price                       string   `json:"price"`
 	SqrtPriceX96AfterList       []string `json:"sqrtPriceX96AfterList"`
 	InitializedTicksCrossedList []int64  `json:"initializedTicksCrossedList"`
 	GasEstimate                 string   `json:"gasEstimate"`
@@ -171,8 +173,8 @@ type PoolsResponse_Pool {
 	Token0Balance float64             `json:"token0Balance"`
 	Token1Balance float64             `json:"token1Balance"`
 	Yield24h      float64             `json:"yield24h"`
-	price0        float64             `json:"price0"`
-	price1        float64             `json:"price1"`
+	Price0        float64             `json:"price0"`
+	Price1        float64             `json:"price1"`
 }
 
 type PoolsResponse {
