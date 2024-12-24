@@ -143,141 +143,224 @@ func (cacher *TokenCacher) SetPriceCacheExpireSeconds(duration int64) {
 	cacher.priceCacheExpireSeconds = duration
 }
 
-func (cacher *TokenCacher) QuoteTo(pools []quoter.Pool, from string, to string, isCache bool) ([]Price, error) {
-	fromToken, err := cacher.Get(from)
+func (cacher *TokenCacher) QuoteExactInput(pools []quoter.Pool, from common.Address, to common.Address, amountIn *big.Int, maxLength int64) ([]Price, error) {
+	fromToken, err := cacher.Get(from.Hex())
 	if err != nil {
 		return nil, err
 	}
-	toToken, err := cacher.Get(to)
+	toToken, err := cacher.Get(to.Hex())
 	if err != nil {
 		return nil, err
 	}
 
-	var prices []Price
-
-	if isCache {
-		cacher.pricesLock.RLock()
-		from, ok := cacher.prices[fromToken.Address]
-		if ok {
-			priceCache, ok := from[toToken.Address]
-			if ok && priceCache.UpdatedAt.Add(time.Second*time.Duration(cacher.priceCacheExpireSeconds)).Unix() > time.Now().UTC().Unix() {
-				prices = priceCache.Prices
-			}
-		}
-		cacher.pricesLock.RUnlock()
+	q, err := quoter.NewQuoter(cacher.chain)
+	if err != nil {
+		return nil, err
+	}
+	paths := quoter.FindPaths(pools, common.HexToAddress(from.Hex()), common.HexToAddress(to.Hex()), maxLength)
+	if len(paths) < 1 {
+		return nil, fmt.Errorf("%s", "No available path")
 	}
 
-	if prices == nil {
-		amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(fromToken.Decimals), nil))
-		q, err := quoter.NewQuoter(cacher.chain)
-		if err != nil {
-			return nil, err
-		}
-		paths := quoter.FindPaths(pools, common.HexToAddress(from), common.HexToAddress(to), 3)
-		if len(paths) < 1 {
-			return nil, fmt.Errorf("%s", "No available path")
-		}
+	var wg sync.WaitGroup
+	results := make(chan struct {
+		Path  quoter.Path
+		Err   error
+		Price quoter.QuoteExactInputResult
+	}, len(paths))
 
-		var wg sync.WaitGroup
-		results := make(chan struct {
+	for _, path := range paths {
+		wg.Add(1)
+
+		go func(ch chan struct {
 			Path  quoter.Path
 			Err   error
 			Price quoter.QuoteExactInputResult
-		}, len(paths))
-
-		for _, path := range paths {
-			wg.Add(1)
-
-			go func(ch chan struct {
-				Path  quoter.Path
-				Err   error
-				Price quoter.QuoteExactInputResult
-			}) {
-				defer wg.Done()
-				defer func() {
-					if err := recover(); err != nil {
-						ch <- struct {
-							Path  quoter.Path
-							Err   error
-							Price quoter.QuoteExactInputResult
-						}{
-							Path: path,
-							Err:  fmt.Errorf("%s", err),
-						}
+		}) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct {
+						Path  quoter.Path
+						Err   error
+						Price quoter.QuoteExactInputResult
+					}{
+						Path: path,
+						Err:  fmt.Errorf("%s", err),
 					}
-				}()
-
-				result, err := q.QuoteExactInput(context.Background(), path.ToBytes(), amountIn)
-				if err != nil {
-					panic(err)
 				}
+			}()
 
-				ch <- struct {
-					Path  quoter.Path
-					Err   error
-					Price quoter.QuoteExactInputResult
-				}{
-					Path:  path,
-					Price: *result,
-				}
-			}(results)
-		}
+			result, err := q.QuoteExactInput(context.Background(), path.ToBytes(), amountIn)
+			if err != nil {
+				panic(err)
+			}
 
-		wg.Wait()
-		close(results)
-
-		// Handle results
-		updatedAt := time.Now().UTC()
-		linq.From(results).
-			WhereT(func(item struct {
+			ch <- struct {
 				Path  quoter.Path
 				Err   error
 				Price quoter.QuoteExactInputResult
-			}) bool {
-				return item.Err == nil
-			}).
-			SelectT(func(item struct {
-				Path  quoter.Path
-				Err   error
-				Price quoter.QuoteExactInputResult
-			}) Price {
-				return Price{
-					From:                        fromToken.Address,
-					To:                          toToken.Address,
-					Pools:                       item.Path.Pools,
-					Path:                        item.Path.ToBytes(),
-					Value:                       item.Price.AmountOut,
-					SqrtPriceX96AfterList:       item.Price.SqrtPriceX96AfterList,
-					InitializedTicksCrossedList: item.Price.InitializedTicksCrossedList,
-					GasEstimate:                 item.Price.GasEstimate,
-				}
-			}).
-			ToSlice(&prices)
-
-		// Add cache
-		cacher.pricesLock.Lock()
-		cacher.prices[from] = map[string]PriceCache{}
-		cacher.prices[from][to] = PriceCache{
-			Prices:    prices,
-			UpdatedAt: updatedAt,
-		}
-		cacher.pricesLock.Unlock()
+			}{
+				Path:  path,
+				Price: *result,
+			}
+		}(results)
 	}
+
+	wg.Wait()
+	close(results)
+
+	// Handle results
+	var prices []Price
+	linq.From(results).
+		WhereT(func(item struct {
+			Path  quoter.Path
+			Err   error
+			Price quoter.QuoteExactInputResult
+		}) bool {
+			return item.Err == nil
+		}).
+		SelectT(func(item struct {
+			Path  quoter.Path
+			Err   error
+			Price quoter.QuoteExactInputResult
+		}) Price {
+			return Price{
+				From:                        fromToken.Address,
+				To:                          toToken.Address,
+				Pools:                       item.Path.Pools,
+				Path:                        item.Path.ToBytes(),
+				Value:                       item.Price.AmountOut,
+				SqrtPriceX96AfterList:       item.Price.SqrtPriceX96AfterList,
+				InitializedTicksCrossedList: item.Price.InitializedTicksCrossedList,
+				GasEstimate:                 item.Price.GasEstimate,
+			}
+		}).
+		ToSlice(&prices)
 
 	return prices, nil
 }
 
-func (cacher *TokenCacher) Quote(pools []quoter.Pool, token string, isCache bool) ([]Price, error) {
+func (cacher *TokenCacher) QuoteExactOutput(pools []quoter.Pool, from common.Address, to common.Address, amountOut *big.Int, maxLength int64) ([]Price, error) {
+	fromToken, err := cacher.Get(from.Hex())
+	if err != nil {
+		return nil, err
+	}
+	toToken, err := cacher.Get(to.Hex())
+	if err != nil {
+		return nil, err
+	}
+
+	q, err := quoter.NewQuoter(cacher.chain)
+	if err != nil {
+		return nil, err
+	}
+	paths := quoter.FindPaths(pools, common.HexToAddress(from.Hex()), common.HexToAddress(to.Hex()), maxLength)
+	if len(paths) < 1 {
+		return nil, fmt.Errorf("%s", "No available path")
+	}
+
+	var wg sync.WaitGroup
+	results := make(chan struct {
+		Path  quoter.Path
+		Err   error
+		Price quoter.QuoteExactOutputResult
+	}, len(paths))
+
+	for _, path := range paths {
+		wg.Add(1)
+
+		go func(ch chan struct {
+			Path  quoter.Path
+			Err   error
+			Price quoter.QuoteExactOutputResult
+		}) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct {
+						Path  quoter.Path
+						Err   error
+						Price quoter.QuoteExactOutputResult
+					}{
+						Path: path,
+						Err:  fmt.Errorf("%s", err),
+					}
+				}
+			}()
+
+			result, err := q.QuoteExactOutput(context.Background(), path.ToBytes(), amountOut)
+			if err != nil {
+				panic(err)
+			}
+
+			ch <- struct {
+				Path  quoter.Path
+				Err   error
+				Price quoter.QuoteExactOutputResult
+			}{
+				Path:  path,
+				Price: *result,
+			}
+		}(results)
+	}
+
+	wg.Wait()
+	close(results)
+
+	// Handle results
+	var prices []Price
+	linq.From(results).
+		WhereT(func(item struct {
+			Path  quoter.Path
+			Err   error
+			Price quoter.QuoteExactOutputResult
+		}) bool {
+			return item.Err == nil
+		}).
+		SelectT(func(item struct {
+			Path  quoter.Path
+			Err   error
+			Price quoter.QuoteExactOutputResult
+		}) Price {
+			return Price{
+				From:                        fromToken.Address,
+				To:                          toToken.Address,
+				Pools:                       item.Path.Pools,
+				Path:                        item.Path.ToBytes(),
+				Value:                       item.Price.AmountIn,
+				SqrtPriceX96AfterList:       item.Price.SqrtPriceX96AfterList,
+				InitializedTicksCrossedList: item.Price.InitializedTicksCrossedList,
+				GasEstimate:                 item.Price.GasEstimate,
+			}
+		}).
+		ToSlice(&prices)
+
+	return prices, nil
+}
+
+func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token common.Address, isCache bool, maxLength int64, wantStablecoin *common.Address) ([]Price, error) {
 	stablecoins := cacher.GetStablecoins()
 	if len(stablecoins) == 0 {
 		return nil, fmt.Errorf("%s", "No any stablecoins")
 	}
+	if wantStablecoin != nil {
+		linq.From(stablecoins).
+			WhereT(func(item Token) bool { return item.Address == wantStablecoin.Hex() }).
+			ToSlice(&stablecoins)
+	}
+	tokenI, err := cacher.Get(token.Hex())
+	if err != nil {
+		return nil, err
+	}
+	amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(tokenI.Decimals), nil))
 
 	var wg sync.WaitGroup
 	results := make(chan struct {
 		Err    error
 		Prices []Price
 	}, len(stablecoins))
+	sumPrices := []Price{}
 
 	for _, stablecoin := range stablecoins {
 		wg.Add(1)
@@ -297,9 +380,54 @@ func (cacher *TokenCacher) Quote(pools []quoter.Pool, token string, isCache bool
 				}
 			}()
 
-			prices, err := cacher.QuoteTo(pools, token, stablecoin.Address, isCache)
-			if err != nil {
-				panic(err)
+			var prices []Price
+
+			if isCache {
+				cacher.pricesLock.RLock()
+				from, ok := cacher.prices[tokenI.Address]
+				if ok {
+					priceCache, ok := from[stablecoin.Address]
+					if ok && priceCache.UpdatedAt.Add(time.Second*time.Duration(cacher.priceCacheExpireSeconds)).Unix() > time.Now().UTC().Unix() {
+						prices = priceCache.Prices
+					}
+				}
+				cacher.pricesLock.RUnlock()
+			}
+
+			if prices != nil {
+				linq.From(prices).
+					WhereT(func(price Price) bool {
+						for _, pathPool := range price.Pools {
+							contains := func(ps []quoter.Pool, p string) bool {
+								for _, pool := range ps {
+									if pool.Address.Hex() == p {
+										return true
+									}
+								}
+								return false
+							}
+							if !contains(pools, pathPool.Address.Hex()) {
+								return false
+							}
+						}
+						return true
+					}).
+					ToSlice(&prices)
+			} else {
+				prices, err = cacher.QuoteExactInput(pools, token, common.HexToAddress(stablecoin.Address), amountIn, maxLength)
+				if err != nil {
+					panic(err)
+				}
+
+				// Add cache
+				updatedAt := time.Now().UTC()
+				cacher.pricesLock.Lock()
+				cacher.prices[token.Hex()] = map[string]PriceCache{}
+				cacher.prices[token.Hex()][stablecoin.Address] = PriceCache{
+					Prices:    prices,
+					UpdatedAt: updatedAt,
+				}
+				cacher.pricesLock.Unlock()
 			}
 
 			ch <- struct {
@@ -315,12 +443,11 @@ func (cacher *TokenCacher) Quote(pools []quoter.Pool, token string, isCache bool
 	close(results)
 
 	// Handle results
-	prices := []Price{}
 	for result := range results {
 		if result.Err == nil {
-			prices = append(prices, result.Prices...)
+			sumPrices = append(sumPrices, result.Prices...)
 		}
 	}
 
-	return prices, nil
+	return sumPrices, nil
 }

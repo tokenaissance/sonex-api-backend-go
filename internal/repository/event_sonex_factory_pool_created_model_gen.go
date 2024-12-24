@@ -27,7 +27,7 @@ type (
 	eventSonexFactoryPoolCreatedModel interface {
 		Insert(ctx context.Context, data *EventSonexFactoryPoolCreated) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventSonexFactoryPoolCreated, error)
-		FindOneByChainId(ctx context.Context, chainId int64) (*EventSonexFactoryPoolCreated, error)
+		FindOneByChainIdEventPool(ctx context.Context, chainId int64, eventPool string) (*EventSonexFactoryPoolCreated, error)
 		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventSonexFactoryPoolCreated, error)
 		Update(ctx context.Context, data *EventSonexFactoryPoolCreated) error
 		Delete(ctx context.Context, id int64) error
@@ -85,10 +85,10 @@ func (m *defaultEventSonexFactoryPoolCreatedModel) FindOne(ctx context.Context, 
 	}
 }
 
-func (m *defaultEventSonexFactoryPoolCreatedModel) FindOneByChainId(ctx context.Context, chainId int64) (*EventSonexFactoryPoolCreated, error) {
+func (m *defaultEventSonexFactoryPoolCreatedModel) FindOneByChainIdEventPool(ctx context.Context, chainId int64, eventPool string) (*EventSonexFactoryPoolCreated, error) {
 	var resp EventSonexFactoryPoolCreated
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 limit 1", eventSonexFactoryPoolCreatedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and event_pool = $2 limit 1", eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, eventPool)
 	switch err {
 	case nil:
 		return &resp, nil

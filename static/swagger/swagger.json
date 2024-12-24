@@ -101,6 +101,40 @@
         ]
       }
     },
+    "/sonex/pools/my_position": {
+      "get": {
+        "operationId": "SonexMyPositionHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/MyPositionResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "filter_type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "default": "none"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/swaps": {
       "get": {
         "operationId": "SonexSwapHandler",
@@ -218,6 +252,12 @@
             "type": "boolean",
             "format": "boolean",
             "default": "true"
+          },
+          {
+            "name": "want_stablecoin",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -260,12 +300,20 @@
             "type": "string"
           },
           {
-            "name": "is_cache",
+            "name": "type",
             "in": "query",
-            "required": false,
-            "type": "boolean",
-            "format": "boolean",
-            "default": "true"
+            "required": true,
+            "type": "string",
+            "enum": [
+              "INPUT",
+              "OUTPUT"
+            ]
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -342,8 +390,32 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "1h",
+              "1d",
+              "1w",
+              "1m",
+              "1y"
+            ]
+          }
+        ],
         "tags": [
           "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
         ]
       }
     },
@@ -602,6 +674,46 @@
         "chain_sync_prograsses"
       ]
     },
+    "MyPositionRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "filter_type": {
+          "type": "string",
+          "default": "none"
+        }
+      },
+      "title": "MyPositionRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "MyPositionResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PositionData"
+          }
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "MyPositionResponse",
+      "required": [
+        "code",
+        "data",
+        "message"
+      ]
+    },
     "PaginationMeta": {
       "type": "object",
       "properties": {
@@ -765,10 +877,20 @@
           "format": "double"
         },
         "tvlUSD": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
+        },
+        "token0Balance": {
+          "type": "number",
+          "format": "double"
+        },
+        "token1Balance": {
+          "type": "number",
+          "format": "double"
         },
         "yield24h": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "PoolsResponse_Pool",
@@ -784,6 +906,8 @@
         "tick",
         "volume",
         "tvlUSD",
+        "token0Balance",
+        "token1Balance",
         "yield24h"
       ]
     },
@@ -885,20 +1009,134 @@
         "volume"
       ]
     },
+    "PositionData": {
+      "type": "object",
+      "properties": {
+        "tokenId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "balance": {
+          "type": "number",
+          "format": "double"
+        },
+        "claimableFees": {
+          "type": "number",
+          "format": "double"
+        },
+        "isClosed": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "tickUpper": {
+          "type": "string"
+        },
+        "tickLower": {
+          "type": "string"
+        },
+        "pnl30d": {
+          "type": "string"
+        },
+        "ratio": {
+          "type": "number",
+          "format": "double"
+        },
+        "isNegative": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "pool": {
+          "$ref": "#/definitions/Token_PoolDetail"
+        }
+      },
+      "title": "PositionData",
+      "required": [
+        "tokenId",
+        "balance",
+        "claimableFees",
+        "isClosed",
+        "tickUpper",
+        "tickLower",
+        "pnl30d",
+        "ratio",
+        "isNegative",
+        "pool"
+      ]
+    },
     "SonexTokenKlineRequest": {
       "type": "object",
-      "title": "SonexTokenKlineRequest"
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string",
+          "enum": [
+            "1h",
+            "1d",
+            "1w",
+            "1m",
+            "1y"
+          ]
+        }
+      },
+      "title": "SonexTokenKlineRequest",
+      "required": [
+        "address",
+        "interval"
+      ]
     },
     "SonexTokenKlineResponse": {
       "type": "object",
       "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SonexTokenPriceRecord"
+          }
+        },
         "message": {
           "type": "string"
         }
       },
       "title": "SonexTokenKlineResponse",
       "required": [
+        "code",
+        "data",
         "message"
+      ]
+    },
+    "SonexTokenPriceRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token_symbol": {
+          "type": "string"
+        },
+        "token_address": {
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "title": "SonexTokenPriceRecord",
+      "required": [
+        "id",
+        "token_symbol",
+        "token_address",
+        "price",
+        "created_at"
       ]
     },
     "SonexTokenPricesRequest": {
@@ -1115,6 +1353,9 @@
           "type": "boolean",
           "format": "boolean",
           "default": "true"
+        },
+        "want_stablecoin": {
+          "type": "string"
         }
       },
       "title": "TokenPriceRequest",
@@ -1126,6 +1367,9 @@
     "TokenPriceResponse": {
       "type": "object",
       "properties": {
+        "best_price": {
+          "$ref": "#/definitions/TokenPriceResponse_Price"
+        },
         "prices": {
           "type": "array",
           "items": {
@@ -1135,6 +1379,7 @@
       },
       "title": "TokenPriceResponse",
       "required": [
+        "best_price",
         "prices"
       ]
     },
@@ -1174,35 +1419,46 @@
         "to": {
           "type": "string"
         },
-        "is_cache": {
-          "type": "boolean",
-          "format": "boolean",
-          "default": "true"
+        "type": {
+          "type": "string",
+          "enum": [
+            "INPUT",
+            "OUTPUT"
+          ]
+        },
+        "amount": {
+          "type": "string"
         }
       },
       "title": "TokenQuoteRequest",
       "required": [
         "chain_id",
         "from",
-        "to"
+        "to",
+        "type",
+        "amount"
       ]
     },
     "TokenQuoteResponse": {
       "type": "object",
       "properties": {
-        "prices": {
+        "best_router": {
+          "$ref": "#/definitions/TokenQuoteResponse_Router"
+        },
+        "routers": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/TokenQuoteResponse_Price"
+            "$ref": "#/definitions/TokenQuoteResponse_Router"
           }
         }
       },
       "title": "TokenQuoteResponse",
       "required": [
-        "prices"
+        "best_router",
+        "routers"
       ]
     },
-    "TokenQuoteResponse_Price": {
+    "TokenQuoteResponse_Router": {
       "type": "object",
       "properties": {
         "target": {
@@ -1217,7 +1473,7 @@
         "path": {
           "type": "string"
         },
-        "value": {
+        "price": {
           "type": "string"
         },
         "sqrtPriceX96AfterList": {
@@ -1237,12 +1493,12 @@
           "type": "string"
         }
       },
-      "title": "TokenQuoteResponse_Price",
+      "title": "TokenQuoteResponse_Router",
       "required": [
         "target",
         "router",
         "path",
-        "value",
+        "price",
         "sqrtPriceX96AfterList",
         "initializedTicksCrossedList",
         "gasEstimate"

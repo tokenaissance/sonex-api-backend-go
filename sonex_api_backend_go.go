@@ -35,8 +35,11 @@ func main() {
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
 
-	global.Initialize(c)
-	err := global.InitIdGenerater(0)
+	err := global.Initialize(c)
+	if err != nil {
+		panic(err)
+	}
+	err = global.InitIdGenerater(0)
 	if err != nil {
 		panic(err)
 	}
