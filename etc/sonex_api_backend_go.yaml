@@ -5,7 +5,7 @@ Log:
   Level: debug
 PostgreSQL:
   Host: PG_HOST
-  Port: 5432
+  Port: PG_PORT
   User: PG_USER
   Password: PG_PWD
   DbName: PG_DBNAME
