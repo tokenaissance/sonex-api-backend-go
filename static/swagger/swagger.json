@@ -1442,6 +1442,9 @@
     "TokenQuoteResponse": {
       "type": "object",
       "properties": {
+        "swap_router": {
+          "type": "string"
+        },
         "best_router": {
           "$ref": "#/definitions/TokenQuoteResponse_Router"
         },
@@ -1454,6 +1457,7 @@
       },
       "title": "TokenQuoteResponse",
       "required": [
+        "swap_router",
         "best_router",
         "routers"
       ]
