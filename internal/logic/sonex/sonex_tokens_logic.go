@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"math"
-	"strconv"
+	"math/big"
 	"time"
 
 	"sonex_api_backend_go/internal/lib/global"
@@ -65,15 +65,21 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 				}
 
 				if address == volume.Address {
-					price := float64(0)
+					price := new(big.Float).SetFloat64(0) // Initialize price as a big.Float
 					bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, address, true, 2, nil)
 					if err == nil && bestPrice != nil {
-						price, _ = strconv.ParseFloat(bestPrice.Value.String(), 64)
+						price.SetInt(bestPrice.Value)
 					}
 
-					factor := math.Pow(10, float64(token.Decimals))
-					token.Volume = volume.Amounts / factor
-					token.Fdv = price * token.Volume / factor
+					volumeAmounts := new(big.Float).SetFloat64(volume.Amounts)
+					factor := new(big.Float).SetFloat64(math.Pow10(int(token.Decimals)))
+
+					tokenVolume := new(big.Float).Quo(volumeAmounts, factor)
+					token.Volume, _ = tokenVolume.Float64()
+
+					fdv := new(big.Float).Quo(new(big.Float).Mul(price, tokenVolume), factor)
+					token.Fdv, _ = fdv.Float64()
+
 					break
 				}
 			}

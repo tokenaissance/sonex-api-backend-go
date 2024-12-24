@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"strconv"
+	"math/big"
 	"sync"
 	"time"
 
@@ -67,31 +67,39 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 
 			balance0, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token0.Address, int64(pool.Token0.Decimals))
 			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
-			price0 := float64(0)
-			price1 := float64(0)
+
+			price0 := new(big.Float).SetFloat64(0)
+			price1 := new(big.Float).SetFloat64(0)
+
 			bestPrice0, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, nil)
 			fmt.Println("bestPrice0", pool.Token0.Address, bestPrice0.Value.String())
 			if err == nil && bestPrice0 != nil {
-				price0, _ = strconv.ParseFloat(bestPrice0.Value.String(), 64)
+				price0.SetInt(bestPrice0.Value)
 			}
 
-			factor0 := math.Pow(10, float64(pool.Token0.Decimals))
-			factor1 := math.Pow(10, float64(pool.Token1.Decimals))
+			factor0 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token0.Decimals)))
+			factor1 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals)))
 
-			pool.Price0 = price0 / factor0
+			poolPrice0 := new(big.Float).Quo(price0, factor0)
+			pool.Price0, _ = poolPrice0.Float64() // Convert to float64 for assignment
 
 			bestPrice1, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, nil)
 			fmt.Println("bestPrice1", pool.Token1.Address, bestPrice1.Value.String())
 			if err == nil && bestPrice1 != nil {
-				price1, _ = strconv.ParseFloat(bestPrice1.Value.String(), 64)
+				price1.SetInt(bestPrice1.Value)
 			}
 
-			pool.Price1 = price1 / factor1
+			poolPrice1 := new(big.Float).Quo(price1, factor1)
+			pool.Price1, _ = poolPrice1.Float64()
 
 			mu.Lock()
-			pool.Token0Balance = balance0 * price0
-			pool.Token1Balance = balance1 * price1
-			pool.TvlUSD = pool.Token0Balance + pool.Token1Balance
+			token0Balance := new(big.Float).Mul(new(big.Float).SetFloat64(balance0), price0)
+			token1Balance := new(big.Float).Mul(new(big.Float).SetFloat64(balance1), price1)
+			pool.Token0Balance, _ = token0Balance.Float64()
+			pool.Token1Balance, _ = token1Balance.Float64()
+			tvlUSD := new(big.Float).Add(token0Balance, token1Balance)
+			pool.TvlUSD, _ = tvlUSD.Float64()
+
 			mu.Unlock()
 		}(data[i])
 	}
