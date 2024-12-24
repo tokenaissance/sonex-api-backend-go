@@ -179,6 +179,7 @@ type PositionData struct {
 	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
+	PositionAge   int              `json:"positionAge"`
 }
 
 type SonexTokenKlineRequest struct {

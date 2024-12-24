@@ -67,6 +67,7 @@ type transferData struct {
 	EventFee         sql.NullInt64  `db:"event_fee"`
 	EventTickLower   sql.NullString `db:"event_tick_lower"`
 	EventTickUpper   sql.NullString `db:"event_tick_upper"`
+	TxAt             sql.NullTime   `db:"tx_at"`
 }
 
 func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string) ([]*types.PositionData, error) {
@@ -77,6 +78,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 			t.event_token_id,
 			t.event_from,
 			t.event_to,
+			t.tx_at,
 			m.extra_pool,
 			m.id as pool_id,
 			f.event_fee,
@@ -107,11 +109,18 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 			_ = json.Unmarshal([]byte(item.Token0Additional.String), &token0Additional)
 			_ = json.Unmarshal([]byte(item.Token1Additional.String), &token1Additional)
 
+			var positionAge int
+			if item.TxAt.Valid {
+				daysSinceTx := time.Since(item.TxAt.Time).Hours() / 24
+				positionAge = int(daysSinceTx)
+			}
+
 			positionData := &types.PositionData{
-				Origin:    item.EventFrom.String,
-				TokenID:   item.TokenId.Int64,
-				TickUpper: item.EventTickUpper.String,
-				TickLower: item.EventTickLower.String,
+				Origin:      item.EventFrom.String,
+				TokenID:     item.TokenId.Int64,
+				TickUpper:   item.EventTickUpper.String,
+				TickLower:   item.EventTickLower.String,
+				PositionAge: positionAge,
 				Pool: types.Token_PoolDetail{
 					ID:        item.PoolId.Int64,
 					Address:   item.Pool.String,
@@ -169,6 +178,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			t.event_token_id,
 			t.event_from,
 			t.event_to,
+			t.tx_at,
 			m.extra_pool,
 			m.id as pool_id,
 			f.event_fee,
@@ -194,11 +204,18 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 	_ = json.Unmarshal([]byte(item.Token0Additional.String), &token0Additional)
 	_ = json.Unmarshal([]byte(item.Token1Additional.String), &token1Additional)
 
+	var positionAge int
+	if item.TxAt.Valid {
+		daysSinceTx := time.Since(item.TxAt.Time).Hours() / 24
+		positionAge = int(daysSinceTx)
+	}
+
 	positionData := &types.PositionData{
-		TokenID:   item.TokenId.Int64,
-		TickUpper: item.EventTickUpper.String,
-		TickLower: item.EventTickLower.String,
-		Origin:    item.EventFrom.String,
+		TokenID:     item.TokenId.Int64,
+		TickUpper:   item.EventTickUpper.String,
+		TickLower:   item.EventTickLower.String,
+		Origin:      item.EventFrom.String,
+		PositionAge: positionAge,
 		Pool: types.Token_PoolDetail{
 			ID:        item.PoolId.Int64,
 			Address:   item.Pool.String,

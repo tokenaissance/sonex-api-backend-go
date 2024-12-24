@@ -84,7 +84,7 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 			Pnl30d:          "0",
 			Origin:          transferItem.Origin,
 			Pool:            transferItem.Pool,
-			PositionAge:     0,
+			PositionAge:     transferItem.PositionAge,
 			Invested:        invested,
 			Withdrawn:       withdrawn,
 			Fees:            fees,
