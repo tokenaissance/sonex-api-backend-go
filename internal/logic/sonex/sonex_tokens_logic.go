@@ -53,7 +53,7 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 		}, nil
 	}
 
-	wethAddress := "0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"
+	wethAddress := l.svcCtx.Config.Chains[0].WETH
 
 	tokenVolumes, err := model.GetTokenVolumes(l.ctx)
 	if err == nil {

@@ -16,6 +16,7 @@ type ChainConfig struct {
 	MaxLogsNumber           int64            `json:",default=10000"`
 	Tokens                  []TokenConfig    `json:",optional"`
 	Quoter                  string           `json:",optional"`
+	WETH                    string           `json:",optional"`
 }
 
 type TokenConfig struct {
