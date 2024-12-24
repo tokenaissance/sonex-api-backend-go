@@ -182,6 +182,28 @@ type PositionData struct {
 	PositionAge   int              `json:"positionAge"`
 }
 
+type PositionsRequest struct {
+	Address  string `form:"address"`
+	Interval string `form:"interval,optional,default=1d"`
+}
+
+type PositionsResponse struct {
+	Code          int                           `json:"code"`
+	GasCosts      float64                       `json:"gasCosts"`
+	IsNegative    bool                          `json:"isNegative"`
+	Pnl           float64                       `json:"pnl"`
+	Positions     []*PositionsResponse_Position `json:"positions"`
+	Ratio         float64                       `json:"ratio"`
+	TotalFees     float64                       `json:"totalFees"`
+	TotalBalances float64                       `json:"totalBalances"`
+	Message       string                        `json:"message"`
+}
+
+type PositionsResponse_Position struct {
+	Timestamp   int     `json:"timestamp"`
+	AmountPrice float64 `json:"amount_price"`
+}
+
 type SonexTokenKlineRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
