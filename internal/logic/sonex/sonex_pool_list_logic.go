@@ -67,16 +67,16 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
 			price0 := float64(0)
 			price1 := float64(0)
-			prices0, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true)
-			if err == nil && len(prices0) > 0 {
-				price0, _ = strconv.ParseFloat(prices0[0].Value.String(), 64)
+			bestPrice0, _, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true, 2, nil)
+			if err == nil && bestPrice0 != nil {
+				price0, _ = strconv.ParseFloat(bestPrice0.Value.String(), 64)
 			}
 
 			pool.Price0 = price0
 
-			prices1, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true)
-			if err == nil && len(prices1) > 0 {
-				price1, _ = strconv.ParseFloat(prices1[0].Value.String(), 64)
+			bestPrice1, _, err := global.GetPrices(l.ctx, nil, req.ChainId, pool.Token0.Address, true, 2, nil)
+			if err == nil && bestPrice1 != nil {
+				price1, _ = strconv.ParseFloat(bestPrice1.Value.String(), 64)
 			}
 
 			pool.Price1 = price1

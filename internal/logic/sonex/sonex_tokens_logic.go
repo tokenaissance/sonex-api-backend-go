@@ -66,9 +66,9 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 
 				if address == volume.Address {
 					price := float64(0)
-					prices, err := global.GetPrices(l.ctx, nil, req.ChainId, address, true)
-					if err == nil && len(prices) > 0 {
-						price, _ = strconv.ParseFloat(prices[0].Value.String(), 64)
+					bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, address, true, 2, nil)
+					if err == nil && bestPrice != nil {
+						price, _ = strconv.ParseFloat(bestPrice.Value.String(), 64)
 					}
 
 					factor := math.Pow(10, float64(token.Decimals))
