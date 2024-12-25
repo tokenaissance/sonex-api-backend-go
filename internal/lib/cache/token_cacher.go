@@ -6,13 +6,15 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/lib/quoter"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ahmetb/go-linq/v3"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const DEFAULT_PRICE_CACHE_EXPIRE_SECONDS int64 = 300
@@ -61,31 +63,80 @@ func NewTokenCacher(chainConf config.ChainConfig, sonexConf config.SonexConfig) 
 	}
 }
 
-func (cacher *TokenCacher) Get(address string) (Token, error) {
+func (cacher *TokenCacher) Get(address string) (*Token, error) {
 	cacher.tokensLock.RLock()
 	token, ok := cacher.tokens[address]
 	cacher.tokensLock.RUnlock()
 	if !ok {
-		client, err := ethclient.Dial(cacher.chainConf.GetNode())
-		if err != nil {
-			return Token{}, err
+		tokenAddress := common.HexToAddress(address)
+		if cacher.chainConf.Multicall == "" || !common.IsHexAddress(cacher.chainConf.Multicall) {
+			return nil, fmt.Errorf("%s", "Invalid multicall contract")
 		}
-		erc20, err := contract_common.NewErc20(common.HexToAddress(address), client)
+		nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf)
 		if err != nil {
-			return Token{}, err
+			return nil, err
 		}
-		name, err := erc20.Name(nil)
+		multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
 		if err != nil {
-			return Token{}, err
+			return nil, err
 		}
-		symbol, err := erc20.Symbol(nil)
+		erc20ABI, err := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
 		if err != nil {
-			return Token{}, err
+			return nil, err
 		}
-		decimals, err := erc20.Decimals(nil)
+		var multicallResult struct {
+			BlockNumber *big.Int `json:"blockNumber"`
+			ReturnData  [][]byte `json:"returnData"`
+		}
+		callDatas := []contract_common.Multicall3Call{}
+		data, err := erc20ABI.Pack("name")
 		if err != nil {
-			return Token{}, err
+			return nil, err
 		}
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   tokenAddress,
+			CallData: data,
+		})
+		data, err = erc20ABI.Pack("symbol")
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   tokenAddress,
+			CallData: data,
+		})
+		data, err = erc20ABI.Pack("decimals")
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   tokenAddress,
+			CallData: data,
+		})
+		data, err = multicallABI.Pack("aggregate", callDatas)
+		if err != nil {
+			return nil, err
+		}
+		err = nodeCaller.StaticCall(context.Background(), multicallABI, common.HexToAddress(cacher.chainConf.Multicall), "aggregate", data, &multicallResult)
+		if err != nil {
+			return nil, err
+		}
+		var name string
+		err = erc20ABI.UnpackIntoInterface(&name, "name", multicallResult.ReturnData[0])
+		if err != nil {
+			return nil, err
+		}
+		var symbol string
+		err = erc20ABI.UnpackIntoInterface(&symbol, "symbol", multicallResult.ReturnData[1])
+		if err != nil {
+			return nil, err
+		}
+		var decimals uint8
+		err = erc20ABI.UnpackIntoInterface(&decimals, "decimals", multicallResult.ReturnData[2])
+		if err != nil {
+			return nil, err
+		}
+
 		token = Token{
 			Address:      address,
 			Name:         name,
@@ -97,7 +148,7 @@ func (cacher *TokenCacher) Get(address string) (Token, error) {
 		cacher.tokens[address] = token
 		cacher.tokensLock.Unlock()
 	}
-	return token, nil
+	return &token, nil
 }
 
 func (c *TokenCacher) Set(address string, isStablecoin bool) error {
@@ -107,7 +158,7 @@ func (c *TokenCacher) Set(address string, isStablecoin bool) error {
 	}
 	token.IsStablecoin = isStablecoin
 	c.tokensLock.Lock()
-	c.tokens[address] = token
+	c.tokens[address] = *token
 	c.tokensLock.Unlock()
 	return nil
 }

@@ -1881,7 +1881,7 @@
         "router": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/TokenQuoteResponse_Router_Pool"
           }
         },
         "path": {
@@ -1915,6 +1915,31 @@
         "sqrtPriceX96AfterList",
         "initializedTicksCrossedList",
         "gasEstimate"
+      ]
+    },
+    "TokenQuoteResponse_Router_Pool": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "token0": {
+          "type": "string"
+        },
+        "token1": {
+          "type": "string"
+        },
+        "fee": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "TokenQuoteResponse_Router_Pool",
+      "required": [
+        "address",
+        "token0",
+        "token1",
+        "fee"
       ]
     },
     "TokenTopResponse": {

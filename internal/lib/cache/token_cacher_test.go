@@ -18,7 +18,11 @@ func TestGet(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	token, _ := cacher.Get("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
+	token, err := cacher.Get("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	fmt.Println(token)
 }
 
