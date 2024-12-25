@@ -76,20 +76,21 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		}
 	}
 
+	userPools := make([]string, 0)
 	if req.StakedOnly == "true" && req.UserAddress != "" {
 		// 从缓存中获取用户的质押池列表
 		poolListKey := fmt.Sprintf("sonex_dex:xpool:user_pools:%s", req.UserAddress)
 		cachedPoolAddresses, err := l.svcCtx.Cache.SMembers(l.ctx, poolListKey).Result()
 		if err == nil && len(cachedPoolAddresses) > 0 {
-			req.UserPools = cachedPoolAddresses
+			userPools = cachedPoolAddresses
 		} else {
-			req.UserPools = []string{}
+			userPools = []string{}
 		}
 	}
 
 	// 获取池子列表
 	model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
-	results, total, err := model.GetPoolList(l.ctx, req)
+	results, total, err := model.GetPoolList(l.ctx, req, userPools)
 	if err != nil {
 		return nil, 0, err
 	}

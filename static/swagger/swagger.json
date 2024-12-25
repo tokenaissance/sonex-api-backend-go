@@ -850,7 +850,7 @@
             "default": "10"
           },
           {
-            "name": "-",
+            "name": "true",
             "in": "query",
             "required": true,
             "type": "string"
@@ -2918,7 +2918,7 @@
       "title": "XpoolPoolListRequest",
       "required": [
         "user_pools",
-        "-"
+        "true"
       ]
     },
     "XpoolPoolListResponse": {

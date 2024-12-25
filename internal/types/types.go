@@ -493,14 +493,13 @@ type Withdrawn struct {
 }
 
 type XpoolPoolListRequest struct {
-	ChainId     int64    `form:"chain_id,optional"`
-	UserAddress string   `form:"user_address,optional"`
-	Keyword     string   `form:"keyword,optional"`
-	StakedOnly  string   `form:"staked_only,optional,options=true|false"`
-	OrderBy     string   `form:"order_by,optional,options=hot|apr"`
-	Offset      int      `form:"offset,optional"`
-	Limit       int      `form:"limit,optional,default=10"`
-	UserPools   []string `swagger:"-"`
+	ChainId     int64  `form:"chain_id,optional"`
+	UserAddress string `form:"user_address,optional"`
+	Keyword     string `form:"keyword,optional"`
+	StakedOnly  string `form:"staked_only,optional,options=true|false"`
+	OrderBy     string `form:"order_by,optional,options=hot|apr"`
+	Offset      int    `form:"offset,optional"`
+	Limit       int    `form:"limit,optional,default=10"`
 }
 
 type XpoolPoolListResponse struct {
