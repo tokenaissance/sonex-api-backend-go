@@ -11,3 +11,4 @@ sql/xpool
 !sql/xpool/*.sql
 sql/farm
 !sql/farm/*.sql
+logs/

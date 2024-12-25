@@ -58,3 +58,54 @@ CREATE INDEX idx_xpool_pools_addresses_chain_id ON xpool_pools(pool_address, sta
 CREATE INDEX idx_xpool_pools_status_tvl ON xpool_pools(status, tvl DESC);
 
 
+-- ----------------------------
+-- Table structure for xpool_user_action
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."xpool_user_action";
+CREATE TABLE "public"."xpool_user_action" (
+  "id" int4 NOT NULL DEFAULT nextval('xpool_user_action_id_seq'::regclass),
+  "chain_id" int8 NOT NULL DEFAULT 0,
+  "block_number" int8 NOT NULL DEFAULT 0,
+  "tx_hash" varchar(66) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "user_address" varchar(42) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "pool_id" int4 NOT NULL DEFAULT 0,
+  "pool_address" varchar(42) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "action" varchar(100) COLLATE "pg_catalog"."default",
+  "event_sign" varchar(100) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "log_index" int4 NOT NULL DEFAULT 0,
+  "amount" varchar(50) COLLATE "pg_catalog"."default" NOT NULL DEFAULT '0.000000000000000000'::character varying,
+  "is_user" bool NOT NULL DEFAULT false,
+  "tx_time" timestamp(6),
+  "created_at" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp(6),
+  CONSTRAINT "xpool_user_action_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "xpool_user_action_tx_hash_event_sign_log_index_key" UNIQUE ("tx_hash", "event_sign", "log_index"),
+  CONSTRAINT "xpool_user_action_action_check" CHECK (action = ANY (ARRAY['create_pool'::text, 'destroy_pool'::text, 'stake'::text, 'unstake'::text, 'harvest'::text, 'other'::text]))
+)
+;
+
+ALTER TABLE "public"."xpool_user_action" 
+  OWNER TO "postgres";
+
+CREATE INDEX "idx_xpool_user_action_user_address_log_index_tx_time" ON "public"."xpool_user_action" USING btree (
+  "user_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "log_index" "pg_catalog"."int4_ops" ASC NULLS LAST,
+  "tx_time" "pg_catalog"."timestamp_ops" ASC NULLS LAST
+);
+
+CREATE INDEX "idx_xpool_user_action_pool_id_is_user" ON "public"."xpool_user_action" USING btree (
+  "pool_id" "pg_catalog"."int4_ops" ASC NULLS LAST,
+  "is_user" "pg_catalog"."bool_ops" ASC NULLS LAST
+);
+
+COMMENT ON COLUMN "public"."xpool_user_action"."tx_hash" IS '交易哈希';
+COMMENT ON COLUMN "public"."xpool_user_action"."user_address" IS '用户地址';
+COMMENT ON COLUMN "public"."xpool_user_action"."pool_id" IS '质押池ID';
+COMMENT ON COLUMN "public"."xpool_user_action"."pool_address" IS '质押池合约地址';
+COMMENT ON COLUMN "public"."xpool_user_action"."action" IS '行为';
+COMMENT ON COLUMN "public"."xpool_user_action"."event_sign" IS '事件签名';
+COMMENT ON COLUMN "public"."xpool_user_action"."amount" IS '交易数量';
+COMMENT ON COLUMN "public"."xpool_user_action"."is_user" IS '是否为用户操作（TRUE-是，FALSE-否）';
+COMMENT ON COLUMN "public"."xpool_user_action"."tx_time" IS '成交时间';
+COMMENT ON COLUMN "public"."xpool_user_action"."created_at" IS '创建时间';
+COMMENT ON COLUMN "public"."xpool_user_action"."updated_at" IS '更新时间';

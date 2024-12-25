@@ -148,7 +148,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			value := tx.Tx.Value().String()
 
 			// If handled, ignore
-			_, err := eventFarmIncentiveCreatedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+			_, err := eventFarmIncentiveCreatedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
 			switch err {
 			case repository.ErrNotFound:
 			case nil:
@@ -196,7 +196,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			value := tx.Tx.Value().String()
 
 			// If handled, ignore
-			_, err := eventFarmTokenStakedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+			_, err := eventFarmTokenStakedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
 			switch err {
 			case repository.ErrNotFound:
 			case nil:
@@ -240,7 +240,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			value := tx.Tx.Value().String()
 
 			// If handled, ignore
-			_, err := eventFarmTokenUnstakedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+			_, err := eventFarmTokenUnstakedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
 			switch err {
 			case repository.ErrNotFound:
 			case nil:
@@ -283,7 +283,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			value := tx.Tx.Value().String()
 
 			// If handled, ignore
-			_, err := eventFarmRewardClaimedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+			_, err := eventFarmRewardClaimedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
 			switch err {
 			case repository.ErrNotFound:
 			case nil:

@@ -14,7 +14,10 @@ require (
 	github.com/zeromicro/go-zero v1.7.4
 )
 
-require github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+require (
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/lib/pq v1.10.9 // indirect
+)
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

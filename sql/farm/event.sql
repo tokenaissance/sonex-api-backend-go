@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS "public"."event_farm_incentive_created";
 CREATE TABLE "public"."event_farm_incentive_created" (
-  "id" int8 NOT NULL PRIMARY KEY,
+  "id" SERIAL PRIMARY KEY,
   "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "chain_id" int8 NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE "public"."event_farm_incentive_created" (
   "event_refundee" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_incentive_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("chain_id", "tx_hash")
+  UNIQUE ("tx_hash","chain_id")
 );
 
 COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_reward_token" IS '奖励代币地址';
@@ -32,7 +32,7 @@ COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_incentive_id" I
 
 DROP TABLE IF EXISTS "public"."event_farm_token_staked";
 CREATE TABLE "public"."event_farm_token_staked" (
-  "id" int8 NOT NULL PRIMARY KEY,
+  "id" SERIAL PRIMARY KEY,
   "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "chain_id" int8 NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE "public"."event_farm_token_staked" (
   "event_token_id" int8 NOT NULL,
   "event_incentive_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_liquidity" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("chain_id", "tx_hash")
+  UNIQUE ("tx_hash","chain_id")
 );
 
 COMMENT ON COLUMN "public"."event_farm_token_staked"."event_token_id" IS '质押的LP Token ID';
@@ -54,7 +54,7 @@ COMMENT ON COLUMN "public"."event_farm_token_staked"."event_liquidity" IS '质�
 
 DROP TABLE IF EXISTS "public"."event_farm_token_unstaked";
 CREATE TABLE "public"."event_farm_token_unstaked" (
-  "id" int8 NOT NULL PRIMARY KEY,
+  "id" SERIAL PRIMARY KEY,
   "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "chain_id" int8 NOT NULL,
@@ -67,14 +67,14 @@ CREATE TABLE "public"."event_farm_token_unstaked" (
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_token_id" int8 NOT NULL,
   "event_incentive_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("chain_id", "tx_hash")
+  UNIQUE ("tx_hash","chain_id")
 );
 
 COMMENT ON COLUMN "public"."event_farm_token_unstaked"."event_token_id" IS '解除质押的LP Token ID';
 
 DROP TABLE IF EXISTS "public"."event_farm_reward_claimed";
 CREATE TABLE "public"."event_farm_reward_claimed" (
-  "id" int8 NOT NULL PRIMARY KEY,
+  "id" SERIAL PRIMARY KEY,
   "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "chain_id" int8 NOT NULL,
@@ -87,7 +87,7 @@ CREATE TABLE "public"."event_farm_reward_claimed" (
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_to" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("chain_id", "tx_hash")
+  UNIQUE ("tx_hash","chain_id")
 );
 
 COMMENT ON COLUMN "public"."event_farm_reward_claimed"."event_to" IS '接收奖励的地址';
