@@ -1,6 +1,8 @@
 .vscode/
 
 sonex_api_backend_go_local.yaml
+sonex_api_backend_go.yaml
+
 .idea
 .air.conf
 air_errors.log

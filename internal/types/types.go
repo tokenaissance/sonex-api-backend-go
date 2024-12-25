@@ -406,9 +406,10 @@ type TokenQuoteResponse_Router struct {
 	AmountOut                   string                           `json:"amount_out"`
 	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
 	Path                        string                           `json:"path"`
-	SqrtPriceX96AfterList       []string                         `json:"sqrtPriceX96AfterList"`
-	InitializedTicksCrossedList []int64                          `json:"initializedTicksCrossedList"`
-	GasEstimate                 string                           `json:"gasEstimate"`
+	SqrtPriceX96AfterList       []string                         `json:"sqrt_price_x96_after_list"`
+	InitializedTicksCrossedList []int64                          `json:"initialized_ticks_crossed_list"`
+	GasEstimate                 string                           `json:"gas_estimate"`
+	PriceImpact                 string                           `json:"price_impact"`
 }
 
 type TokenQuoteResponse_Router_Pool struct {

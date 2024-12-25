@@ -95,6 +95,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 price.GasEstimate.String(),
+				PriceImpact:                 fmt.Sprintf("%f%%", price.PriceImpact*100),
 			}
 		}
 	}
@@ -135,6 +136,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),
+				PriceImpact:                 fmt.Sprintf("%f%%", item.PriceImpact*100),
 			}
 		}).
 		ToSlice(&routerResult)
