@@ -16,6 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+var provider = "http://10.1.30.101:8545"
+var blockTime int64 = 2 // 出块速度
 var ZeroAddress = common.Address{}
 
 type PoolInfo struct {
@@ -150,7 +152,7 @@ func getPoolInfo(ctx context.Context, client *ethclient.Client, pool *xpoolContr
 }
 
 // getTokenPrices 获取代币价格
-func getTokenPrices(ctx context.Context, chainId uint64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
+func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
 	prices := new(TokenPrices)
 
 	stakingPrice, err := global.GetPrices([]quoter.Pool{}, int64(chainId), stakingToken.Hex(), true)

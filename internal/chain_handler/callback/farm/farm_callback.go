@@ -23,6 +23,8 @@ type FarmCallback struct {
 	chainId int64
 }
 
+var initStakedLiquidityUsd string = "100000000000000000000" // 100 * 10^18
+
 func NewFarmCallback(ctx *svc.ServiceContext) *FarmCallback {
 	return &FarmCallback{
 		ctx:     ctx,
@@ -31,11 +33,22 @@ func NewFarmCallback(ctx *svc.ServiceContext) *FarmCallback {
 }
 
 func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerIncentiveCreated, data *repository.EventFarmIncentiveCreated) {
+	logx.Info("enter OnIncentiveCreated")
+
+	if event == nil || data == nil {
+		logx.Error("event or data is nil")
+		return
+	}
+
 	// 获取pool基本信息
 	v3PoolModel := repository.NewEventSonexFactoryPoolCreatedModel(c.ctx.DB)
 	poolInfo, err := v3PoolModel.FindByPoolAddress(context.Background(), event.Pool.String())
 	if err != nil {
 		logx.Errorf("Failed to get v3 pool info: %v", err)
+		return
+	}
+	if poolInfo == nil {
+		logx.Error("pool info not found")
 		return
 	}
 
@@ -47,39 +60,74 @@ func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerInc
 		return
 	}
 
+	isVaildRewardToken := true
+	if _, ok := tokenMap[event.RewardToken.String()]; !ok {
+		isVaildRewardToken = false
+		logx.Errorf("reward token not found: %s", event.RewardToken.String())
+	}
+
+	isVaildToken0 := true
+	if _, ok := tokenMap[poolInfo.EventToken0]; !ok {
+		isVaildToken0 = false
+		logx.Errorf("token0 not found: %s", poolInfo.EventToken0)
+	}
+
+	isVaildToken1 := true
+	if _, ok := tokenMap[poolInfo.EventToken1]; !ok {
+		isVaildToken1 = false
+		logx.Errorf("token1 not found: %s", poolInfo.EventToken1)
+	}
+
 	// 获取token价格
+	var rewardPriceValue *big.Int
 	rewardPrice, err := global.GetPrices([]quoter.Pool{}, c.chainId, event.RewardToken.String(), true)
 	if err != nil {
 		logx.Errorf("Failed to get reward token price: %v", err)
+		rewardPriceValue = big.NewInt(0)
+	} else {
+		rewardPriceValue = rewardPrice[0].Value
 	}
 
-	// 获取质押池中的token数量
-	// incentiveKey := farmContract.IUniswapV3StakerIncentiveKey{
-	// 	RewardToken: event.RewardToken,
-	// 	Pool:        event.Pool,
-	// 	StartTime:   event.StartTime,
-	// 	EndTime:     event.EndTime,
-	// 	Refundee:    event.Refundee,
-	// }
-
 	// 计算APR
-	rewardAmount := new(big.Float).SetInt(event.Reward)
-	tmp, _ := rewardPrice[0].Value.Float64()
-	rewardTokenPrice := new(big.Float).SetFloat64(tmp)
-	rewardValue := new(big.Float).Mul(rewardAmount, rewardTokenPrice)
+	var annualRewardValue *big.Int
+	duration := event.EndTime.Int64() - event.StartTime.Int64()
+	if duration <= 0 {
+		logx.Error("invalid duration, apr will be set to 0")
+		annualRewardValue = big.NewInt(0)
+	} else {
+		rewardValue := new(big.Int).Mul(event.Reward, rewardPriceValue)
+		daysInYear := big.NewInt(365)
+		durationDays := big.NewInt(duration / (24 * 60 * 60))
 
-	durationInDays := new(big.Float).SetFloat64(float64(event.EndTime.Int64()-event.StartTime.Int64()) / (24 * 60 * 60))
-	annualRewardValue := new(big.Float).Mul(rewardValue, new(big.Float).SetFloat64(365))
-	annualRewardValue = new(big.Float).Quo(annualRewardValue, durationInDays)
+		if durationDays.Sign() <= 0 {
+			logx.Error("duration days is zero or negative, apr will be set to 0")
+			annualRewardValue = big.NewInt(0)
+		} else {
+			annualRewardValue = new(big.Int).Mul(rewardValue, daysInYear)
+			annualRewardValue = annualRewardValue.Div(annualRewardValue, durationDays)
+		}
+	}
 
 	// 保存
 	tokenOSymbol := ""
 	token1Symbol := ""
-	if tokenMap[poolInfo.EventToken0].Symbol.Valid {
+	if isVaildToken0 && tokenMap[poolInfo.EventToken0].Symbol.Valid {
 		tokenOSymbol = tokenMap[poolInfo.EventToken0].Symbol.String
 	}
-	if tokenMap[poolInfo.EventToken1].Symbol.Valid {
+	if isVaildToken1 && tokenMap[poolInfo.EventToken1].Symbol.Valid {
 		token1Symbol = tokenMap[poolInfo.EventToken1].Symbol.String
+	}
+	rewardTokenDecimals := int64(0)
+	if isVaildRewardToken {
+		rewardTokenDecimals = int64(tokenMap[event.RewardToken.String()].Decimals)
+	}
+	token0Decimals := int64(0)
+	if isVaildToken0 {
+		token0Decimals = int64(tokenMap[poolInfo.EventToken0].Decimals)
+	}
+	token1Decimals := int64(0)
+	if isVaildToken0 {
+		token1Decimals = int64(tokenMap[poolInfo.EventToken1].Decimals)
 	}
 	farmPoolsModel := repository.NewFarmPoolsModel(c.ctx.DB)
 	pool := &repository.FarmPools{
@@ -88,19 +136,19 @@ func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerInc
 		StartTime:           sql.NullTime{Time: time.Unix(event.StartTime.Int64(), 0), Valid: true},
 		EndTime:             sql.NullTime{Time: time.Unix(event.EndTime.Int64(), 0), Valid: true},
 		RewardTokenAddress:  event.RewardToken.String(),
-		RewardTokenDecimals: int64(tokenMap[event.RewardToken.String()].Decimals),
+		RewardTokenDecimals: rewardTokenDecimals,
 		RewardTokenAmount:   event.Reward.String(),
-		RewardTokenPrice:    rewardPrice[0].Value.String(), //
+		RewardTokenPrice:    rewardPriceValue.String(),
 		RefundeeAddress:     event.Refundee.String(),
 		PoolAddress:         event.Pool.String(),
 		FeeRatio:            strconv.Itoa(int(poolInfo.EventFee)),
 		Token0Address:       poolInfo.EventToken0,
 		Token0Symbol:        tokenOSymbol,
-		Token0Decimals:      int64(tokenMap[poolInfo.EventToken0].Decimals),
+		Token0Decimals:      token0Decimals,
 		Token1Address:       poolInfo.EventToken1,
 		Token1Symbol:        token1Symbol,
-		Token1Decimals:      int64(tokenMap[poolInfo.EventToken1].Decimals),
-		StakedLiquidityUsd:  "100000000000000000000",    // 100 * 10^18
+		Token1Decimals:      token1Decimals,
+		StakedLiquidityUsd:  initStakedLiquidityUsd,     // 100 * 10^18
 		TotalToken0Amount:   "0",                        //
 		TotalToken1Amount:   "0",                        //
 		Apr:                 annualRewardValue.String(), //
@@ -114,10 +162,18 @@ func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerInc
 		logx.Errorf("Failed to upsert farm pool: %v", err)
 		return
 	}
+
+	logx.Infof("[OnIncentiveCreated] OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 质押
 func (c *FarmCallback) OnTokenStaked(event *farmContract.UniswapV3StakerTokenStaked, data *repository.EventFarmTokenStaked) {
+	logx.Info("enter OnTokenStaked")
+
+	if event == nil || data == nil {
+		logx.Error("event or data is nil")
+		return
+	}
 
 	// 创建用户质押记录
 	farmUserPoolModel := repository.NewFarmUserPoolsModel(c.ctx.DB)
@@ -158,10 +214,18 @@ func (c *FarmCallback) OnTokenStaked(event *farmContract.UniswapV3StakerTokenSta
 		logx.Errorf("Failed to increment join num: %v", err)
 		return
 	}
+
+	logx.Infof("[OnTokenStaked] OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 解除质押
 func (c *FarmCallback) OnTokenUnstaked(event *farmContract.UniswapV3StakerTokenUnstaked, data *repository.EventFarmTokenUnstaked) {
+	logx.Info("enter OnTokenUnstaked")
+
+	if event == nil || data == nil {
+		logx.Error("event or data is nil")
+		return
+	}
 
 	// 更新用户质押状态
 	farmUserPoolModel := repository.NewFarmUserPoolsModel(c.ctx.DB)
@@ -197,6 +261,7 @@ func (c *FarmCallback) OnTokenUnstaked(event *farmContract.UniswapV3StakerTokenU
 		logx.Errorf("Failed to decrement join num: %v", err)
 		return
 	}
+	logx.Infof("[OnTokenUnstaked] OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 奖励领取
@@ -206,7 +271,8 @@ func (c *FarmCallback) OnRewardClaimed(event *farmContract.UniswapV3StakerReward
 
 // 更新质押池实时数据
 func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
-	// 获取farm pool数据
+	logx.Info("enter UpdateFarmPoolData")
+
 	farmPoolModel := repository.NewFarmPoolsModel(c.ctx.DB)
 	pool, err := farmPoolModel.FindByIncentiveId(context.Background(), c.chainId, incentiveId)
 	if err != nil {
@@ -230,33 +296,30 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 		return fmt.Errorf("failed to get token1 price: %v", err)
 	}
 
-	token0Amount, _ := new(big.Float).SetString(pool.TotalToken0Amount)
-	token1Amount, _ := new(big.Float).SetString(pool.TotalToken1Amount)
-	tmp, _ := token0Price[0].Value.Float64()
-	token0Value := new(big.Float).Mul(token0Amount, new(big.Float).SetFloat64(tmp))
-	tmp, _ = token1Price[0].Value.Float64()
-	token1Value := new(big.Float).Mul(token1Amount, new(big.Float).SetFloat64(tmp))
-	totalValue := new(big.Float).Add(token0Value, token1Value)
+	token0Amount, _ := new(big.Int).SetString(pool.TotalToken0Amount, 10)
+	token1Amount, _ := new(big.Int).SetString(pool.TotalToken1Amount, 10)
+
+	token0Value := new(big.Int).Mul(token0Amount, token0Price[0].Value)
+	token1Value := new(big.Int).Mul(token1Amount, token1Price[0].Value)
+	totalValue := new(big.Int).Add(token0Value, token1Value)
 
 	// 计算APR
-	// APR = 年化奖励价值 / staked liquidity * 100
-	// 年化奖励价值 = 奖励总金额 / 奖励持续时间 * 365
-	// 奖励总金额 = event.Reward * token的价格
-	// 奖励持续时间（天数）= (EndTime - StartTime) / (60 * 60 * 24)
-	rewardAmount, _ := new(big.Float).SetString(pool.RewardTokenAmount)
-	tmp, _ = rewardPrice[0].Value.Float64()
-	rewardTokenPrice := new(big.Float).SetFloat64(tmp)
-	rewardValue := new(big.Float).Mul(rewardAmount, rewardTokenPrice)
+	rewardAmount, _ := new(big.Int).SetString(pool.RewardTokenAmount, 10)
+	rewardValue := new(big.Int).Mul(rewardAmount, rewardPrice[0].Value)
 
 	duration := pool.EndTime.Time.Sub(pool.StartTime.Time)
-	durationInDays := new(big.Float).SetFloat64(duration.Hours() / 24)
-	annualRewardValue := new(big.Float).Mul(rewardValue, new(big.Float).SetFloat64(365))
-	annualRewardValue = new(big.Float).Quo(annualRewardValue, durationInDays)
+	daysInYear := big.NewInt(365)
+	durationDays := big.NewInt(int64(duration.Hours() / 24))
 
-	apr := new(big.Float).Quo(annualRewardValue, totalValue)
-	apr = new(big.Float).Mul(apr, new(big.Float).SetInt64(100)) // 转换为百分比
+	// annualRewardValue = rewardValue * 365 / durationDays
+	annualRewardValue := new(big.Int).Mul(rewardValue, daysInYear)
+	annualRewardValue = annualRewardValue.Div(annualRewardValue, durationDays)
 
-	// 更新数据
+	// apr = (annualRewardValue / totalValue) * 100
+	apr := new(big.Int).Mul(annualRewardValue, big.NewInt(100))
+	apr = apr.Div(apr, totalValue)
+
+	// 保存
 	err = farmPoolModel.Update(context.Background(), &repository.FarmPools{
 		ChainId:            c.chainId,
 		IncentiveId:        incentiveId,
@@ -264,6 +327,8 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 		StakedLiquidityUsd: totalValue.String(),
 		Apr:                apr.String(),
 	})
+
+	logx.Info("UpdateFarmPoolData OK")
 
 	return err
 }

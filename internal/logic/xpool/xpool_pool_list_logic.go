@@ -20,14 +20,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var provider = "http://10.1.30.101:8545"
-var blockTime int64 = 2 // 出块速度
-
 type XpoolPoolListLogic struct {
 	logx.Logger
 	ctx            context.Context
 	svcCtx         *svc.ServiceContext
-	chainId        uint64
+	chainId        int64
 	factoryAddress common.Address
 	ethClient      *ethclient.Client
 }
@@ -42,7 +39,7 @@ func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xpo
 		Logger:         logx.WithContext(ctx),
 		ctx:            ctx,
 		svcCtx:         svcCtx,
-		chainId:        uint64(svcCtx.Config.Xpools[0].ChainId),
+		chainId:        svcCtx.Config.Xpools[0].ChainId,
 		factoryAddress: common.HexToAddress(svcCtx.Config.Xpools[0].Factory),
 		ethClient:      client,
 	}
@@ -79,7 +76,6 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		}
 	}
 
-	model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
 	if req.StakedOnly == "true" && req.UserAddress != "" {
 		// 从缓存中获取用户的质押池列表
 		poolListKey := fmt.Sprintf("sonex_dex:xpool:user_pools:%s", req.UserAddress)
@@ -90,7 +86,10 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			req.UserPools = []string{}
 		}
 	}
-	results, total, err := model.GetPoolList(context.Background(), req)
+
+	// 获取池子列表
+	model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
+	results, total, err := model.GetPoolList(l.ctx, req)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -426,22 +426,23 @@ type FarmUserAssetDetailResponse {
 	LPStakedNum           int64  `json:"lp_staked_num"` // 用户参与质押的LP token ID数量
 }
 
-type FarmPoolStatsRequest {
+type FarmPoolRoiRequest {
 	ChainId     int64  `form:"chain_id,optional"` // 链ID
-	PoolAddress string `form:"pool_address"` // 流动性池地址
-	Amount      string `form:"amount,optional"` // 金额（USD）
-	Duration    int    `form:"duration,optional,options=1|7|30|365|1825"` // 质押时长（单位：天）
+	IncentiveId string `form:"incentive_id"` // 质押池ID
+	Amount      string `form:"amount"` // 金额（USD）
+	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
 }
 
-type FarmPoolStatsResponse {
-	PoolAddress          string `json:"pool_address"` // 流动性池合约地址
-	Liquidity            string `json:"liquidity"` // 池子的流动性
-	PoolTotalFees        string `json:"pool_total_fees"` // 池子的总手续费
-	FeeGrowthGlobal0X128 string `json:"fee_growth_global0_x128"` // token0的全局手续费增长率
-	FeeGrowthGlobal1X128 string `json:"fee_growth_global1_x128"` // token1的全局手续费增长率
-	APR                  string `json:"APR"` // 年化收益率
-	ROI                  string `json:"ROI"` // 投资回报率
-	Profit               string `json:"profit"` // 投资回报金额（USD）
+type FarmPoolRoiResponse {
+	APR                 string `json:"APR"` // 年化收益率
+	ROI                 string `json:"ROI"` // 投资回报率
+	Profit              string `json:"profit"` // 投资回报金额（USD）
+	PoolAddress         string `json:"pool_address"` // 流动性池合约地址
+	RewardTokenAmount   string `json:"reward_token_amount"` // 质押池的奖励代币总量
+	RewardTokenPrice    string `json:"reward_token_price"` // 奖励代币价格（USD）
+	RewardTokenDecimals int64  `json:"reward_token_decimals"` // 奖励代币的精度
+	StartTime           string `json:"start_time"` // 质押池开放时间
+	EndTime             string `json:"end_time"` // 质押池结束时间
 }
 
 @server (
@@ -461,8 +462,8 @@ service sonex_api_backend_go {
 	@handler FarmUserAssetDetailHandler
 	get /farm/user/asset/detail (FarmUserAssetDetailRequest) returns (FarmUserAssetDetailResponse)
 
-	@doc "Farm pool stats"
-	@handler FarmPoolStatsHandler
-	get /farm/pool/stats (FarmPoolStatsRequest) returns (FarmPoolStatsResponse)
+	@doc "Farm pool roi"
+	@handler FarmPoolRoiHandler
+	get /farm/pool/roi (FarmPoolRoiRequest) returns (FarmPoolRoiResponse)
 }
 

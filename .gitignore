@@ -5,3 +5,8 @@ sonex_api_backend_go_local.yaml
 .air.conf
 air_errors.log
 main.exe
+
+sql/xpool
+!sql/xpool/*.sql
+sql/farm
+!sql/farm/*.sql

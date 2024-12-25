@@ -2,11 +2,20 @@ package farm
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"math/big"
 
+	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/lib/quoter"
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	farmContract "sonex_api_backend_go/internal/lib/contract/farm"
+	v3Contract "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -16,9 +25,9 @@ type FarmUserAssetListLogic struct {
 	logx.Logger
 	ctx             context.Context
 	svcCtx          *svc.ServiceContext
-	chainId         uint64
+	chainId         int64
 	ethClient       *ethclient.Client
-	factoryAddress  common.Address // UniswapV3Factory
+	farmAddress     common.Address // UniswapV3Staker
 	positionAddress common.Address // NonfungiblePositionManager
 }
 
@@ -26,7 +35,7 @@ type FarmUserAssetListLogic struct {
 func NewFarmUserAssetListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmUserAssetListLogic {
 	client, err := ethclient.DialContext(ctx, provider)
 	if err != nil {
-		logx.Errorf("[Xpool] failed to connect to the Ethereum client: %v", err)
+		logx.Errorf("[Farm] failed to connect to the Ethereum client: %v", err)
 		return nil
 	}
 	defer client.Close()
@@ -34,59 +43,182 @@ func NewFarmUserAssetListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 		Logger:          logx.WithContext(ctx),
 		ctx:             ctx,
 		svcCtx:          svcCtx,
-		chainId:         uint64(svcCtx.Config.Xpools[0].ChainId),
+		chainId:         svcCtx.Config.Farm[0].ChainId,
 		ethClient:       client,
-		factoryAddress:  common.HexToAddress(svcCtx.Config.Sonexes[0].Factory),
+		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
 }
 
 func (l *FarmUserAssetListLogic) FarmUserAssetList(req *types.FarmUserAssetListRequest) (resp *types.FarmUserAssetListResponse, err error) {
-	// 简略逻辑
-	userAssets, err := l.getUserAssets(req.UserAddress)
+	if req.ChainId == 0 {
+		req.ChainId = l.chainId
+	}
+
+	farmContract, err := getFarmContract(l.ethClient, l.farmAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	resp = &types.FarmUserAssetListResponse{
+	positionManager, err := getPositionContract(l.ethClient, l.positionAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取所有活跃池子
+	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
+	pools, err := farmPoolModel.FindActivePools(l.ctx, req.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取每个池子的用户资产数据
+	userAssets := make(map[string]types.UserAssetData)
+	for _, pool := range pools {
+		assetData, err := l.getUserAssetsData(l.ctx, farmContract, positionManager, req.UserAddress, pool)
+		if err != nil {
+			logx.Errorf("Failed to get user pool data: %v", err)
+			continue
+		}
+
+		if assetData.LPBalance > 0 || assetData.LPStakedNum > 0 {
+			userAssets[pool.PoolAddress] = *assetData
+		}
+	}
+
+	return &types.FarmUserAssetListResponse{
 		UserAssets: userAssets,
-	}
-
-	return resp, nil
+	}, nil
 }
 
-// getUserAssets 获取用户资产数据的简略逻辑
-func (l *FarmUserAssetListLogic) getUserAssets(userAddress string) (map[string]types.UserAssetData, error) {
-	// 简略逻辑，假设我们从数据库或缓存中获取用户资产数据
-	// 这里返回一个空的map作为示例
-	return map[string]types.UserAssetData{}, nil
+func (l *FarmUserAssetListLogic) FarmUserAssetDetail(req *types.FarmUserAssetDetailRequest) (resp *types.FarmUserAssetDetailResponse, err error) {
+	if req.ChainId == 0 {
+		req.ChainId = l.chainId
+	}
+	if !common.IsHexAddress(req.UserAddress) {
+		return nil, fmt.Errorf("invalid parameter: user_address")
+	}
+
+	// 获取池子信息
+	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
+	poolData, err := farmPoolModel.FindByIncentiveId(l.ctx, req.ChainId, req.IncentiveId)
+	if err != nil {
+		return nil, err
+	}
+
+	farm, err := farmContract.NewUniswapV3Staker(common.HexToAddress(l.svcCtx.Config.Farm[0].Staker), l.ethClient)
+	if err != nil {
+		return nil, err
+	}
+
+	positionManager, err := v3Contract.NewNonfungiblePositionManager(common.HexToAddress(l.svcCtx.Config.Sonexes[0].PositionManager), l.ethClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// 查询用户资产数据
+	assetData, err := l.getUserAssetsData(l.ctx, farm, positionManager, req.UserAddress, poolData)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.FarmUserAssetDetailResponse{
+		TotalClaimableFees:    assetData.TotalClaimableFees,
+		TotalClaimableFeesUSD: assetData.TotalClaimableFeesUSD,
+		Decimals:              assetData.Decimals,
+		LPBalance:             assetData.LPBalance,
+		LPStakedNum:           assetData.LPStakedNum,
+	}, nil
 }
 
-func (l *FarmUserAssetListLogic) calculateClaimableFees(poolAddress, userAddress string) (string, error) {
-
-	pool, err := getPoolContract(l.ethClient, common.HexToAddress(poolAddress))
+// 获取用户在某个池子的资产数据
+func (l *FarmUserAssetListLogic) getUserAssetsData(ctx context.Context, farmContract *farmContract.UniswapV3Staker, positionManager *v3Contract.NonfungiblePositionManager, userAddress string, poolData *repository.FarmPools) (*types.UserAssetData, error) {
+	// 获取用户LP Token余额
+	balance, err := positionManager.BalanceOf(&bind.CallOpts{
+		Context: ctx,
+	}, common.HexToAddress(userAddress))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	positionKey := getPositionKey(common.HexToAddress(userAddress), 0, 0)
-	position, err := pool.Positions(nil, positionKey)
+	// 查询已质押的token数量
+	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.svcCtx.DB)
+	stakedTokens, err := farmUserPoolModel.FindByUserAddressIncentiveIdStatus(ctx, userAddress, poolData.IncentiveId, "stake")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	feeGrowthGlobal0X128, err := pool.FeeGrowthGlobal0X128(nil)
-	if err != nil {
-		return "", err
+	// 计算总奖励
+	totalReward := big.NewInt(0)
+	for _, token := range stakedTokens {
+		reward, err := l.getRewardInfo(ctx, farmContract, poolData, big.NewInt(token.TokenId))
+		if err != nil {
+			logx.Errorf("Failed to get reward info for token %d: %v", token.TokenId, err)
+			continue
+		}
+		totalReward.Add(totalReward, reward)
 	}
 
-	feeGrowthGlobal1X128, err := pool.FeeGrowthGlobal1X128(nil)
+	// 计算奖励token的USD价值
+	rewardUSD, err := l.calculateFeesUSD(totalReward, poolData)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	claimableFees := new(big.Float).Add(new(big.Float).SetInt(position.TokensOwed0), new(big.Float).SetInt(position.TokensOwed1))
-	claimableFees = new(big.Float).Add(claimableFees, new(big.Float).Mul(new(big.Float).SetInt(position.Liquidity), new(big.Float).Add(new(big.Float).SetInt(feeGrowthGlobal0X128), new(big.Float).SetInt(feeGrowthGlobal1X128))))
+	return &types.UserAssetData{
+		TotalClaimableFees:    totalReward.String(),
+		TotalClaimableFeesUSD: rewardUSD.String(),
+		Decimals:              int64(poolData.RewardTokenDecimals),
+		LPBalance:             balance.Int64(),
+		LPStakedNum:           int64(len(stakedTokens)),
+	}, nil
+}
 
-	return claimableFees.String(), nil
+func (l *FarmUserAssetListLogic) getStakedTokenNum(ctx context.Context, farmContract *farmContract.UniswapV3Staker, userAddress string, incentiveId string) (int64, error) {
+	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.svcCtx.DB)
+	count, err := farmUserPoolModel.CountByUserAddressIncentiveIdStatus(ctx, userAddress, incentiveId, "stake")
+	if err != nil {
+		return 0, fmt.Errorf("failed to get staked token num: %v", err)
+	}
+	return count, nil
+}
+
+func (l *FarmUserAssetListLogic) getRewardInfo(ctx context.Context, farm *farmContract.UniswapV3Staker, poolData *repository.FarmPools, tokenId *big.Int) (*big.Int, error) {
+	incentiveKey := farmContract.IUniswapV3StakerIncentiveKey{
+		RewardToken: common.HexToAddress(poolData.RewardTokenAddress),
+		Pool:        common.HexToAddress(poolData.PoolAddress),
+		StartTime:   big.NewInt(poolData.StartTime.Time.Unix()),
+		EndTime:     big.NewInt(poolData.EndTime.Time.Unix()),
+		Refundee:    common.HexToAddress(poolData.RefundeeAddress),
+	}
+
+	rewardInfo, err := farm.GetRewardInfo(&bind.CallOpts{
+		Context: ctx,
+	}, incentiveKey, tokenId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rewardInfo.Reward, nil
+}
+
+func (l *FarmUserAssetListLogic) calculateFeesUSD(fees *big.Int, poolData *repository.FarmPools) (*big.Float, error) {
+	if fees.Sign() == 0 {
+		return big.NewFloat(0), nil
+	}
+
+	rewardPrice, err := global.GetPrices([]quoter.Pool{}, poolData.ChainId, poolData.RewardTokenAddress, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reward token price: %v", err)
+	}
+
+	// 计算USD价值
+	feesBigFloat := new(big.Float).SetInt(fees)
+	decimals := math.Pow10(int(poolData.RewardTokenDecimals))
+	feesBigFloat.Quo(feesBigFloat, big.NewFloat(decimals))
+
+	tmp, _ := rewardPrice[0].Value.Float64()
+	feesUSD := new(big.Float).Mul(feesBigFloat, big.NewFloat(tmp))
+	return feesUSD, nil
 }

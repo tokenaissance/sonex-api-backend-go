@@ -34,10 +34,10 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: farm.FarmPoolListHandler(serverCtx),
 			},
 			{
-				// Farm pool stats
+				// Farm pool roi
 				Method:  http.MethodGet,
-				Path:    "/farm/pool/stats",
-				Handler: farm.FarmPoolStatsHandler(serverCtx),
+				Path:    "/farm/pool/roi",
+				Handler: farm.FarmPoolRoiHandler(serverCtx),
 			},
 			{
 				// Farm user's asset detail in pool
