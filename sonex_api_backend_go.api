@@ -30,10 +30,17 @@ type TokenPriceRequest {
 	WantStablecoin *string `form:"want_stablecoin,optional"`
 }
 
+type TokenPriceResponse_Price_Pool {
+	Address string `json:"address"`
+	Token0  string `json:"token0"`
+	Token1  string `json:"token1"`
+	Fee     int64  `json:"fee"`
+}
+
 type TokenPriceResponse_Price {
-	Stablecoin string   `json:"stablecoin"`
-	Router     []string `json:"router"`
-	Value      string   `json:"value"`
+	Stablecoin string                          `json:"stablecoin"`
+	Router     []TokenPriceResponse_Price_Pool `json:"router"`
+	Value      string                          `json:"value"`
 }
 
 type TokenPriceResponse {

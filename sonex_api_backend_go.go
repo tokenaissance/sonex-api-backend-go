@@ -30,8 +30,7 @@ func main() {
 	} else {
 		conf.MustLoad(*configFile, &c)
 	}
-	task.Config = &c
-	task.Boot()
+
 	// Global configure
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
@@ -44,12 +43,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	global.AddCronJob("0/3 * * * * ?", func() {
-		fmt.Println("================> Cron task demo")
+	global.AddCronJob("@every 1m", func() {
+		task.HandleRecordTokenPrice(&c)
 	})
 
 	opts := []rest.RunOption{}
-	opts = append(opts, rest.WithCors(), rest.WithCorsHeaders())
+	opts = append(opts, rest.WithCors(c.Demains...), rest.WithCorsHeaders())
 	if c.Debug {
 		opts = append(opts, rest.WithFileServer("/swagger", http.Dir("./static/swagger")))
 	}

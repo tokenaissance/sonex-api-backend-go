@@ -3,14 +3,17 @@ package task
 import (
 	"context"
 	"fmt"
-	"github.com/gogf/gf/v2/util/grand"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/repository"
 	"time"
+
+	"github.com/gogf/gf/v2/util/grand"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 func HandleRecordTokenPrice(config *config.Config) {
+	fmt.Println("开始执行token价格记录任务")
+
 	conn := repository.NewConn(config.PostgreSQL.DateSource())
 	//model := repository.NewSonexTokenModel(conn)
 	//results, total, err := model.GetTokenList(context.Background(), req)
