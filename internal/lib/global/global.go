@@ -77,12 +77,12 @@ func NewId() (int64, error) {
 	return idGenerater.Generate()
 }
 
-func GetToken(chainId int64, address string) (cache.Token, error) {
+func GetToken(chainId int64, address string) (*cache.Token, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
-		return cache.Token{}, fmt.Errorf("%s", "Miss token cacher")
+		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
 	return cacher.Get(address)
 }
