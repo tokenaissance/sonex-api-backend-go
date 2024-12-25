@@ -42,8 +42,17 @@ func (l *SonexTokenPriceLogic) SonexTokenPrice(req *types.TokenPriceRequest) (re
 
 	var bestPriceResult *types.TokenPriceResponse_Price
 	if bestPrice != nil {
-		var router []string
-		linq.From(bestPrice.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+		var router []types.TokenPriceResponse_Price_Pool
+		linq.From(bestPrice.Pools).
+			SelectT(func(pool quoter.Pool) types.TokenPriceResponse_Price_Pool {
+				return types.TokenPriceResponse_Price_Pool{
+					Address: pool.Address.Hex(),
+					Token0:  pool.Token0.Hex(),
+					Token1:  pool.Token1.Hex(),
+					Fee:     pool.Fee,
+				}
+			}).
+			ToSlice(&router)
 		bestPriceResult = &types.TokenPriceResponse_Price{
 			Stablecoin: bestPrice.To,
 			Router:     router,
@@ -54,8 +63,17 @@ func (l *SonexTokenPriceLogic) SonexTokenPrice(req *types.TokenPriceRequest) (re
 	pricesResult := []types.TokenPriceResponse_Price{}
 	linq.From(prices).
 		SelectT(func(item cache.Price) types.TokenPriceResponse_Price {
-			var router []string
-			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+			var router []types.TokenPriceResponse_Price_Pool
+			linq.From(item.Pools).
+				SelectT(func(pool quoter.Pool) types.TokenPriceResponse_Price_Pool {
+					return types.TokenPriceResponse_Price_Pool{
+						Address: pool.Address.Hex(),
+						Token0:  pool.Token0.Hex(),
+						Token1:  pool.Token1.Hex(),
+						Fee:     pool.Fee,
+					}
+				}).
+				ToSlice(&router)
 			return types.TokenPriceResponse_Price{
 				Stablecoin: item.To,
 				Router:     router,

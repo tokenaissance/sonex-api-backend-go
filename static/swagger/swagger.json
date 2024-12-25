@@ -1793,7 +1793,7 @@
         "router": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/TokenPriceResponse_Price_Pool"
           }
         },
         "value": {
@@ -1805,6 +1805,31 @@
         "stablecoin",
         "router",
         "value"
+      ]
+    },
+    "TokenPriceResponse_Price_Pool": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "token0": {
+          "type": "string"
+        },
+        "token1": {
+          "type": "string"
+        },
+        "fee": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "TokenPriceResponse_Price_Pool",
+      "required": [
+        "address",
+        "token0",
+        "token1",
+        "fee"
       ]
     },
     "TokenQuoteRequest": {

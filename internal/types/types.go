@@ -290,9 +290,16 @@ type TokenPriceResponse struct {
 }
 
 type TokenPriceResponse_Price struct {
-	Stablecoin string   `json:"stablecoin"`
-	Router     []string `json:"router"`
-	Value      string   `json:"value"`
+	Stablecoin string                          `json:"stablecoin"`
+	Router     []TokenPriceResponse_Price_Pool `json:"router"`
+	Value      string                          `json:"value"`
+}
+
+type TokenPriceResponse_Price_Pool struct {
+	Address string `json:"address"`
+	Token0  string `json:"token0"`
+	Token1  string `json:"token1"`
+	Fee     int64  `json:"fee"`
 }
 
 type TokenQuoteRequest struct {
