@@ -4,13 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-
 	"sonex_api_backend_go/internal/chain_handler"
 	farmCbk "sonex_api_backend_go/internal/chain_handler/callback/farm"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/svc"
+	"sonex_api_backend_go/internal/task"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/conf"
@@ -30,24 +30,23 @@ func main() {
 	} else {
 		conf.MustLoad(*configFile, &c)
 	}
-
+	task.Config = &c
+	task.Boot()
 	// Global configure
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
 
-	err := global.InitIdGenerater(0)
+	err := global.Initialize(c)
 	if err != nil {
 		panic(err)
 	}
-	for _, chain := range c.Chains {
-		global.InitTokenCacher(chain)
-		for _, token := range chain.Tokens {
-			err = global.SetToken(chain.ChainId, token.Address, token.IsStablecoin)
-			if err != nil {
-				panic(err)
-			}
-		}
+	err = global.InitIdGenerater(0)
+	if err != nil {
+		panic(err)
 	}
+	global.AddCronJob("0/3 * * * * ?", func() {
+		fmt.Println("================> Cron task demo")
+	})
 
 	opts := []rest.RunOption{}
 	opts = append(opts, rest.WithCors(), rest.WithCorsHeaders())
@@ -75,6 +74,8 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				// Swap callback demo
+				handler.AddPoolSwapCallback(chain_handler.SonexSwapCallback)
 				chainHandlerManager.AddHandler(1946, handler)
 			}
 		}

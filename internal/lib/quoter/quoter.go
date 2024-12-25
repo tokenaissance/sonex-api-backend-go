@@ -8,7 +8,6 @@ import (
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"strings"
 
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,16 +15,18 @@ import (
 )
 
 type Quoter struct {
-	chain config.ChainConfig
+	chainConf config.ChainConfig
+	sonexConf config.SonexConfig
 }
 
-func NewQuoter(chain config.ChainConfig) (*Quoter, error) {
-	if chain.Quoter == "" || !common.IsHexAddress(chain.Quoter) {
+func NewQuoter(chainConf config.ChainConfig, sonexConf config.SonexConfig) (*Quoter, error) {
+	if sonexConf.Quoter == "" || !common.IsHexAddress(sonexConf.Quoter) {
 		return nil, fmt.Errorf("%s", "Invalid quoter address")
 	}
 
 	return &Quoter{
-		chain: chain,
+		chainConf: chainConf,
+		sonexConf: sonexConf,
 	}, nil
 }
 
@@ -92,12 +93,11 @@ func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength i
 	}
 	dfs(from, Path{Tokens: []common.Address{from}, Fees: []int64{}})
 
-	linq.From(paths).OrderByT(func(item Path) int { return len(item.Tokens) }).ToSlice(&paths)
 	return paths
 }
 
 func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn *big.Int) (*QuoteExactInputResult, error) {
-	quoterAddress := common.HexToAddress(quoter.chain.Quoter)
+	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
 	abi, err := abi.JSON(strings.NewReader(uniswap_v3.IquoterV2MetaData.ABI))
 	if err != nil {
@@ -111,7 +111,7 @@ func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn
 		To:   &quoterAddress,
 		Data: data,
 	}
-	client, err := ethclient.DialContext(ctx, quoter.chain.GetNode())
+	client, err := ethclient.DialContext(ctx, quoter.chainConf.GetNode())
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn
 }
 
 func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountOut *big.Int) (*QuoteExactOutputResult, error) {
-	quoterAddress := common.HexToAddress(quoter.chain.Quoter)
+	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
 	abi, err := abi.JSON(strings.NewReader(uniswap_v3.IquoterV2MetaData.ABI))
 	if err != nil {
@@ -143,7 +143,7 @@ func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountO
 		To:   &quoterAddress,
 		Data: data,
 	}
-	client, err := ethclient.DialContext(ctx, quoter.chain.GetNode())
+	client, err := ethclient.DialContext(ctx, quoter.chainConf.GetNode())
 	if err != nil {
 		return nil, err
 	}

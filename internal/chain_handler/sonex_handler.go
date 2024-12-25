@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/log"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
@@ -21,9 +22,17 @@ import (
 )
 
 type SonexHandler struct {
-	dataSource string
-	chain      config.ChainConfig
-	config     config.SonexConfig
+	dataSource                                string
+	chain                                     config.ChainConfig
+	config                                    config.SonexConfig
+	factoryPoolCreatedCallbacks               []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string)
+	poolMintCallbacks                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, owner string, tickLower string, tickUpper string, amount0 string, amount1 string, pool string)
+	poolSwapCallbacks                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string)
+	poolBurnCallbacks                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, owner string, tickLower string, tickUpper string, amount string, amount0 string, amount1 string, pool string)
+	positionManagerTransferCallbacks          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64)
+	positionManagerIncreaseLiquidityCallbacks []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)
+	positionManagerDecreaseLiquidityCallbacks []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)
+	positionManagerCollectCallbacks           []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, recipient string, amount0 string, amount1 string)
 }
 
 func NewSonexHandler(dataSource string, chain config.ChainConfig, config config.SonexConfig) (*SonexHandler, error) {
@@ -110,9 +119,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				_, err = eventSonexFactoryPoolCreatedModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
+				id, err := global.NewId()
 				if err != nil {
 					return err
+				}
+				err = eventSonexFactoryPoolCreatedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
+				if err != nil {
+					return err
+				}
+
+				// Callback
+				for _, callback := range handler.factoryPoolCreatedCallbacks {
+					go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
 				}
 			}
 
@@ -269,9 +287,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolMintModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
+									id, err := global.NewId()
 									if err != nil {
 										return err
+									}
+									err = eventSonexPoolMintModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
+									if err != nil {
+										return err
+									}
+
+									// Callback
+									for _, callback := range handler.poolMintCallbacks {
+										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
 									}
 								}
 							}
@@ -304,9 +331,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolSwapModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
+									id, err := global.NewId()
 									if err != nil {
 										return err
+									}
+									err = eventSonexPoolSwapModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
+									if err != nil {
+										return err
+									}
+
+									// Callback
+									for _, callback := range handler.poolSwapCallbacks {
+										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
 									}
 								}
 							}
@@ -339,9 +375,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 										return err
 									}
 
-									_, err = eventSonexPoolBurnModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
+									id, err := global.NewId()
 									if err != nil {
 										return err
+									}
+									err = eventSonexPoolBurnModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
+									if err != nil {
+										return err
+									}
+
+									// Callback
+									for _, callback := range handler.poolBurnCallbacks {
+										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
 									}
 								}
 							}
@@ -494,9 +539,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerTransferModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
+					id, err := global.NewId()
 					if err != nil {
 						return err
+					}
+					err = eventSonexPositionManagerTransferModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
+					if err != nil {
+						return err
+					}
+
+					// Callback
+					for _, callback := range handler.positionManagerTransferCallbacks {
+						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
 					}
 				}
 			}
@@ -527,9 +581,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerIncreaseLiquidityModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+					id, err := global.NewId()
 					if err != nil {
 						return err
+					}
+					err = eventSonexPositionManagerIncreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+					if err != nil {
+						return err
+					}
+
+					// Callback
+					for _, callback := range handler.positionManagerIncreaseLiquidityCallbacks {
+						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 					}
 				}
 			}
@@ -560,9 +623,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerDecreaseLiquidityModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+					id, err := global.NewId()
 					if err != nil {
 						return err
+					}
+					err = eventSonexPositionManagerDecreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+					if err != nil {
+						return err
+					}
+
+					// Callback
+					for _, callback := range handler.positionManagerDecreaseLiquidityCallbacks {
+						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 					}
 				}
 			}
@@ -593,9 +665,18 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						return err
 					}
 
-					_, err = eventSonexPositionManagerCollectModel.New(ctx, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
+					id, err := global.NewId()
 					if err != nil {
 						return err
+					}
+					err = eventSonexPositionManagerCollectModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
+					if err != nil {
+						return err
+					}
+
+					// Callback
+					for _, callback := range handler.positionManagerCollectCallbacks {
+						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
 					}
 				}
 			}
@@ -614,4 +695,36 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 	}
 
 	return nil, false
+}
+
+func (handler *SonexHandler) AddFactoryPoolCreatedCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string)) {
+	handler.factoryPoolCreatedCallbacks = append(handler.factoryPoolCreatedCallbacks, callback)
+}
+
+func (handler *SonexHandler) AddPoolMintCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string)) {
+	handler.poolMintCallbacks = append(handler.poolMintCallbacks, callback)
+}
+
+func (handler *SonexHandler) AddPoolSwapCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, owner string, tickLower string, tickUpper string, amount0 string, amount1 string, pool string)) {
+	handler.poolSwapCallbacks = append(handler.poolSwapCallbacks, callback)
+}
+
+func (handler *SonexHandler) AddPoolBurnCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, owner string, tickLower string, tickUpper string, amount string, amount0 string, amount1 string, pool string)) {
+	handler.poolBurnCallbacks = append(handler.poolBurnCallbacks, callback)
+}
+
+func (handler *SonexHandler) AddPositionManagerTransferCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64)) {
+	handler.positionManagerTransferCallbacks = append(handler.positionManagerTransferCallbacks, callback)
+}
+
+func (handler *SonexHandler) AddPositionManagerIncreaseLiquidityCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)) {
+	handler.positionManagerIncreaseLiquidityCallbacks = append(handler.positionManagerIncreaseLiquidityCallbacks, callback)
+}
+
+func (handler *SonexHandler) AddPositionManagerDecreaseLiquidityCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)) {
+	handler.positionManagerDecreaseLiquidityCallbacks = append(handler.positionManagerDecreaseLiquidityCallbacks, callback)
+}
+
+func (handler *SonexHandler) AddPositionManagerCollectCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, recipient string, amount0 string, amount1 string)) {
+	handler.positionManagerCollectCallbacks = append(handler.positionManagerCollectCallbacks, callback)
 }

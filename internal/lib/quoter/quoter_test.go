@@ -31,7 +31,7 @@ func TestQuoteExactInput(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	quoter, err := NewQuoter(c.Chains[0])
+	quoter, err := NewQuoter(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	if err != nil {
 		t.Errorf("%s\n", err.Error())
 		return
@@ -60,7 +60,7 @@ func TestQuoteExactOutput(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	quoter, err := NewQuoter(c.Chains[0])
+	quoter, err := NewQuoter(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	if err != nil {
 		t.Errorf("%s\n", err.Error())
 		return

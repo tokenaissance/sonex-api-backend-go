@@ -3,6 +3,11 @@
 
 package types
 
+type AggregatedAmounts struct {
+	TotalAmount0 float64 `json:"total_amount0"`
+	TotalAmount1 float64 `json:"total_amount1"`
+}
+
 type ChainSyncPrograss struct {
 	ChainId   int64  `json:"chain_id"`
 	Height    int64  `json:"height"`
@@ -91,11 +96,79 @@ type FarmUserAssetListResponse struct {
 	UserAssets map[string]UserAssetData `json:"user_assets"` // pool_address => UserAsset
 }
 
+type Fees struct {
+	FeeAmount0 string `json:"feeAmount0"`
+	FeeAmount1 string `json:"feeAmount1"`
+}
+
+type GetNftDataRequest struct {
+	Id int64 `path:"id"`
+}
+
+type Invested struct {
+	InvestedAmount0 string `json:"investedAmount0"`
+	InvestedAmount1 string `json:"investedAmount1"`
+}
+
 type MetaRequest struct {
 }
 
 type MetaResponse struct {
 	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
+}
+
+type MyPositionRequest struct {
+	Address    string `form:"address"`
+	FilterType string `form:"filter_type,optional,default=none"`
+}
+
+type MyPositionResponse struct {
+	Code    int             `json:"code"`
+	Data    []*PositionData `json:"data"`
+	Message string          `json:"message"`
+}
+
+type NftDataResponse struct {
+	Code    int                   `json:"code"`
+	Data    *NftDataResponse_Data `json:"data"`
+	Message string                `json:"message"`
+}
+
+type NftDataResponse_Data struct {
+	Amount0         string           `json:"amount0"`
+	Amount1         string           `json:"amount1"`
+	Amount0Price    string           `json:"amount0Price"`
+	Amount1Price    string           `json:"amount1Price"`
+	TickUpper       string           `json:"tickUpper"`
+	TickLower       string           `json:"tickLower"`
+	NftId           int              `json:"nftId"`
+	UncollectedFees float64          `json:"uncollectedFees"`
+	Pnl30d          string           `json:"pnl30d"`
+	Owner           string           `json:"owner"`
+	Pool            Token_PoolDetail `json:"pool"`
+	PositionAge     int              `json:"positionAge"`
+	Invested        Invested         `json:"invested"`
+	Withdrawn       Withdrawn        `json:"withdrawn"`
+	Fees            Fees             `json:"fees"`
+	Origin          string           `json:"origin"`
+	Fee             int              `json:"fee"`
+	Token0          string           `json:"token0"`
+	Token1          string           `json:"token1"`
+	TokensOwed0     float64          `json:"tokensOwed0"`
+	TokensOwed1     float64          `json:"tokensOwed1"`
+	Liquidity       string           `json:"liquidity"`
+	Price           string           `json:"price"`
+	Token0Price     string           `json:"token0Price"`
+	Token1Price     string           `json:"token1Price"`
+	PoolAddress     string           `json:"poolAddress"`
+	IsNative        int              `json:"isNative"`
+	IsClosed        bool             `json:"isClosed"`
+	Decimals0       int              `json:"decimals0"`
+	Decimals1       int              `json:"decimals1"`
+	Ratio           int              `json:"ratio"`
+	IsNegative      bool             `json:"isNegative"`
+	AmountPrice0    string           `json:"amountPrice0"`
+	AmountPrice1    string           `json:"amountPrice1"`
 }
 
 type PaginationMeta struct {
@@ -105,6 +178,12 @@ type PaginationMeta struct {
 	PageCount       int  `json:"pageCount"`
 	HasPreviousPage bool `json:"hasPreviousPage"`
 	HasNextPage     bool `json:"hasNextPage"`
+}
+
+type PoolVolume struct {
+	Address  string  `json:"address"`
+	Amounts0 float64 `json:"amounts0"`
+	Amounts1 float64 `json:"amounts1"`
 }
 
 type PoolsRequest struct {
@@ -125,18 +204,22 @@ type PoolsResponse struct {
 }
 
 type PoolsResponse_Pool struct {
-	Id          string               `json:"id"`
-	Address     string               `json:"address"`
-	FeeTier     int                  `json:"feeTier"`
-	Liquidity   string               `json:"liquidity"`
-	Token0      PoolsResponse_Token  `json:"token0"`
-	Token1      PoolsResponse_Token  `json:"token1"`
-	Token0Price string               `json:"token0Price"`
-	Token1Price string               `json:"token1Price"`
-	Tick        string               `json:"tick"`
-	Volume      PoolsResponse_Volume `json:"volume"`
-	TvlUSD      string               `json:"tvlUSD"`
-	Yield24h    string               `json:"yield24h"`
+	Id            string              `json:"id"`
+	Address       string              `json:"address"`
+	FeeTier       int                 `json:"feeTier"`
+	Liquidity     string              `json:"liquidity"`
+	Token0        PoolsResponse_Token `json:"token0"`
+	Token1        PoolsResponse_Token `json:"token1"`
+	Token0Price   string              `json:"token0Price"`
+	Token1Price   string              `json:"token1Price"`
+	Tick          string              `json:"tick"`
+	Volume        float64             `json:"volume"`
+	TvlUSD        float64             `json:"tvlUSD"`
+	Token0Balance float64             `json:"token0Balance"`
+	Token1Balance float64             `json:"token1Balance"`
+	Yield24h      float64             `json:"yield24h"`
+	Price0        float64             `json:"price0"`
+	Price1        float64             `json:"price1"`
 }
 
 type PoolsResponse_Token struct {
@@ -166,13 +249,60 @@ type PoolsResponse_Volume struct {
 	Volume       string `json:"volume"`
 }
 
+type PositionData struct {
+	TokenID       int64            `json:"tokenId"`
+	Balance       float64          `json:"balance"`
+	ClaimableFees float64          `json:"claimableFees"`
+	IsClosed      bool             `json:"isClosed"`
+	TickUpper     string           `json:"tickUpper"`
+	TickLower     string           `json:"tickLower"`
+	PNL30d        string           `json:"pnl30d"`
+	Ratio         float64          `json:"ratio"`
+	IsNegative    bool             `json:"isNegative"`
+	Origin        string           `json:"origin"`
+	Pool          Token_PoolDetail `json:"pool"`
+	PositionAge   int              `json:"positionAge"`
+}
+
+type PositionsRequest struct {
+	Address  string `form:"address"`
+	Interval string `form:"interval,optional,default=1d"`
+}
+
+type PositionsResponse struct {
+	Code          int                           `json:"code"`
+	GasCosts      float64                       `json:"gasCosts"`
+	IsNegative    bool                          `json:"isNegative"`
+	Pnl           float64                       `json:"pnl"`
+	Positions     []*PositionsResponse_Position `json:"positions"`
+	Ratio         float64                       `json:"ratio"`
+	TotalFees     float64                       `json:"totalFees"`
+	TotalBalances float64                       `json:"totalBalances"`
+	Message       string                        `json:"message"`
+}
+
+type PositionsResponse_Position struct {
+	Timestamp   int     `json:"timestamp"`
+	AmountPrice float64 `json:"amount_price"`
+}
+
 type SonexTokenKlineRequest struct {
-	Address  string `path:"address"`
-	Interval string `path:"interval"`
+	Address  string `form:"address"`
+	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
 }
 
 type SonexTokenKlineResponse struct {
-	Message string `json:"message"`
+	Code    int                     `json:"code"`
+	Data    []SonexTokenPriceRecord `json:"data"`
+	Message string                  `json:"message"`
+}
+
+type SonexTokenPriceRecord struct {
+	Id           int64  `json:"id"`
+	TokenSymbol  string `json:"token_symbol"`
+	TokenAddress string `json:"token_address"`
+	Price        string `json:"price"`
+	CreatedAt    string `json:"created_at"`
 }
 
 type SonexTokenPricesRequest struct {
@@ -192,6 +322,7 @@ type SwapEvent struct {
 	Hash      string           `json:"hash"`
 	Amount0   float64          `json:"amount0"`
 	Amount1   float64          `json:"amount1"`
+	Usd       float64          `json:"usd"`
 	CreatedAt string           `json:"created_at"`
 }
 
@@ -229,13 +360,15 @@ type TokenListResponse struct {
 }
 
 type TokenPriceRequest struct {
-	ChainId int64  `form:"chain_id"`
-	Token   string `form:"token"`
-	IsCache bool   `form:"is_cache,optional,default=true"`
+	ChainId        int64   `form:"chain_id"`
+	Token          string  `form:"token"`
+	IsCache        bool    `form:"is_cache,optional,default=true"`
+	WantStablecoin *string `form:"want_stablecoin,optional"`
 }
 
 type TokenPriceResponse struct {
-	Prices []TokenPriceResponse_Price `json:"prices"`
+	BasePrice *TokenPriceResponse_Price  `json:"best_price"`
+	Prices    []TokenPriceResponse_Price `json:"prices"`
 }
 
 type TokenPriceResponse_Price struct {
@@ -248,24 +381,35 @@ type TokenQuoteRequest struct {
 	ChainId int64  `form:"chain_id"`
 	From    string `form:"from"`
 	To      string `form:"to"`
-	IsCache bool   `form:"is_cache,optional,default=true"`
+	Type    string `form:"type,options=INPUT|OUTPUT"`
+	Amount  string `form:"amount"`
 }
 
 type TokenQuoteResponse struct {
-	Prices []TokenQuoteResponse_Price `json:"prices"`
+	SwapRouter string                      `json:"swap_router"`
+	BestRouter *TokenQuoteResponse_Router  `json:"best_router"`
+	Routers    []TokenQuoteResponse_Router `json:"routers"`
 }
 
-type TokenQuoteResponse_Price struct {
-	Target string   `json:"target"`
-	Router []string `json:"router"`
-	Path   string   `json:"path"`
-	Value  string   `json:"value"`
+type TokenQuoteResponse_Router struct {
+	Target                      string   `json:"target"`
+	Router                      []string `json:"router"`
+	Path                        string   `json:"path"`
+	Price                       string   `json:"price"`
+	SqrtPriceX96AfterList       []string `json:"sqrtPriceX96AfterList"`
+	InitializedTicksCrossedList []int64  `json:"initializedTicksCrossedList"`
+	GasEstimate                 string   `json:"gasEstimate"`
 }
 
 type TokenTopResponse struct {
 	Code    int                  `json:"code"`
 	Data    []*Token_TokenDetail `json:"data"`
 	Message string               `json:"message"`
+}
+
+type TokenVolume struct {
+	Address string  `json:"address"`
+	Amounts float64 `json:"amounts"`
 }
 
 type Token_PoolDetail struct {
@@ -297,6 +441,8 @@ type Token_TokenDetail struct {
 	Decimals int                 `json:"decimals"`
 	Logo     string              `json:"logo"`
 	Pools    []*Token_PoolDetail `json:"pools"`
+	Volume   float64             `json:"volume"`
+	Fdv      float64             `json:"fdv"`
 }
 
 type Token_TokenInfo struct {
@@ -308,12 +454,31 @@ type Token_TokenInfo struct {
 	Additional interface{} `json:"additional"`
 }
 
+type TokensRequest struct {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type TokensResponse struct {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
 type UserAssetData struct {
 	TotalClaimableFees    string `json:"total_claimable_fees"`     // 用户总可领取的手续费
 	TotalClaimableFeesUSD string `json:"total_claimable_fees_usd"` // 用户总可领取的手续费的价值
 	Decimals              int64  `json:"decimals"`                 // ClaimableFees的精度
 	LPBalance             int64  `json:"lp_balance"`               // 用户的LP token ID余额
 	LPStakedNum           int64  `json:"lp_staked_num"`            // 用户质押的LP token ID数量
+}
+
+type Withdrawn struct {
+	WithdrawnAmount0 string `json:"withdrawnAmount0"`
+	WithdrawnAmount1 string `json:"withdrawnAmount1"`
 }
 
 type XpoolPoolListRequest struct {

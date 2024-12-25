@@ -7,7 +7,6 @@ import (
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/quoter"
-	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -36,43 +35,37 @@ func (l *SonexTokenPriceLogic) SonexTokenPrice(req *types.TokenPriceRequest) (re
 	}
 	token := common.HexToAddress(req.Token)
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(l.ctx, req.ChainId)
-	if err != nil {
-		return nil, err
-	}
-	pools := []quoter.Pool{}
-	linq.From(records).
-		SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
-			return quoter.Pool{
-				Address: common.HexToAddress(item.EventPool),
-				Token0:  common.HexToAddress(item.EventToken0),
-				Token1:  common.HexToAddress(item.EventToken1),
-				Fee:     item.EventFee,
-			}
-		}).
-		ToSlice(&pools)
-
-	prices, err := global.GetPrices(pools, req.ChainId, token.Hex(), req.IsCache)
+	bestPrice, prices, err := global.GetPrices(l.ctx, nil, req.ChainId, token.Hex(), req.IsCache, 3, req.WantStablecoin)
 	if err != nil {
 		return nil, err
 	}
 
-	result := []types.TokenPriceResponse_Price{}
+	var bestPriceResult *types.TokenPriceResponse_Price
+	if bestPrice != nil {
+		var router []string
+		linq.From(bestPrice.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+		bestPriceResult = &types.TokenPriceResponse_Price{
+			Stablecoin: bestPrice.To,
+			Router:     router,
+			Value:      bestPrice.Value.String(),
+		}
+	}
+
+	pricesResult := []types.TokenPriceResponse_Price{}
 	linq.From(prices).
 		SelectT(func(item cache.Price) types.TokenPriceResponse_Price {
-			var routers []string
-			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&routers)
+			var router []string
+			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
 			return types.TokenPriceResponse_Price{
 				Stablecoin: item.To,
-				Router:     routers,
+				Router:     router,
 				Value:      item.Value.String(),
 			}
 		}).
-		ToSlice(&result)
+		ToSlice(&pricesResult)
 
 	return &types.TokenPriceResponse{
-		Prices: result,
+		BasePrice: bestPriceResult,
+		Prices:    pricesResult,
 	}, nil
 }

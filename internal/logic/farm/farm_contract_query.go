@@ -1,17 +1,17 @@
 package farm
 
 import (
-	"fmt"
+	"context"
 	"math/big"
 
 	commonContract "sonex_api_backend_go/internal/lib/contract/common"
 	farmContract "sonex_api_backend_go/internal/lib/contract/farm"
 	v3Contract "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/lib/quoter"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var provider = "http://10.1.30.101:8545"
@@ -54,12 +54,16 @@ func getErc20Contract(client *ethclient.Client, addr string) (*commonContract.Er
 
 // 获取token价格
 func getTokenPrice(chainId int64, tokenAddress string) (*big.Int, error) {
-	price, err := global.GetPrices([]quoter.Pool{}, chainId, tokenAddress, true)
+
+	var priceValue *big.Int
+	_, price, err := global.GetPrices(context.Background(), nil, chainId, tokenAddress, true, 2, nil)
 	if err != nil {
-		return nil, fmt.Errorf("[farm] failed to get token price: %v", err)
+		logx.Errorf("[farm] failed to get token price: %v", err)
+		priceValue = big.NewInt(0)
 	}
-	if price == nil {
-		return big.NewInt(0), nil
+	if price != nil {
+		priceValue = price[0].Value
 	}
-	return price[0].Value, nil
+
+	return priceValue, nil
 }

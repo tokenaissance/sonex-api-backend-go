@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sonex_api_backend_go/internal/lib/global"
+	"math"
 	"sonex_api_backend_go/internal/types"
 	"time"
 
@@ -19,7 +19,7 @@ type (
 	EventSonexPoolSwapModel interface {
 		eventSonexPoolSwapModel
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
-		New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) (int64, error)
+		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
 		PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error)
 		GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error)
 	}
@@ -48,26 +48,22 @@ func (m *customEventSonexPoolSwapModel) withSession(session sqlx.Session) EventS
 	return NewEventSonexPoolSwapModel(sqlx.NewSqlConnFromSession(session))
 }
 
-func (m *customEventSonexPoolSwapModel) New(ctx context.Context, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) (int64, error) {
-	id, err := global.NewId()
-	if err != nil {
-		return 0, err
-	}
+func (m *customEventSonexPoolSwapModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error {
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)", m.table, eventSonexPoolSwapRows)
-	_, err = m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, pool)
-	return id, err
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, pool)
+	return err
 }
 
 func (m *defaultEventSonexPoolSwapModel) PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error) {
-	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(m.conn)
-	query := fmt.Sprintf("SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, S.extra_pool, C.event_token0 AS token0, C.event_token1 AS token1, C.event_fee AS fee, C.event_tick_spacing AS tick_spacing FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2", m.table, eventSonexFactoryPoolCreatedModel.TableName())
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf("SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, S.extra_pool, C.event_token0 AS token0, C.event_token1 AS token1, C.event_fee AS fee, C.event_tick_spacing AS tick_spacing FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2", m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	var resp []EventSonexPoolSwapWithPool
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
 	var total int64 = 0
-	query = fmt.Sprintf("SELECT COUNT(*) FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool", m.table, eventSonexFactoryPoolCreatedModel.TableName())
+	query = fmt.Sprintf("SELECT COUNT(*) FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool", m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	err = m.conn.QueryRowCtx(ctx, &total, query)
 	if err != nil {
 		return nil, 0, err
@@ -173,46 +169,73 @@ func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts 
 	// Process the response to include pool and token information
 	data := make([]*types.SwapEvent, 0, len(resp))
 	for _, event := range resp {
-		item := &types.SwapEvent{
-			ID:        event.ID,
-			Address:   event.Address,
-			Hash:      event.Hash,
-			Amount0:   event.Amount0,
-			Amount1:   event.Amount1,
-			CreatedAt: event.CreatedAt,
-		}
-
-		// Convert token0Additional and token1Additional to map[string]interface{}
 		var token0Additional map[string]interface{}
 		var token1Additional map[string]interface{}
 		_ = json.Unmarshal([]byte(event.Token0Additional), &token0Additional)
 		_ = json.Unmarshal([]byte(event.Token1Additional), &token1Additional)
 
-		item.Token0 = types.Token_TokenInfo{
-			Address:    event.Token0Address,
-			Symbol:     event.Token0Symbol,
-			Name:       event.Token0Name,
-			Logo:       event.Token0Logo,
-			Decimals:   event.Token0Decimals,
-			Additional: token0Additional,
+		// Normalize amounts
+		amount0 := float64(event.Amount0) / math.Pow(10, float64(event.Token0Decimals))
+		amount1 := float64(event.Amount1) / math.Pow(10, float64(event.Token1Decimals))
+
+		// Determine which token is token0 and token1 based on the sign of the amounts
+		var token0, token1 types.Token_TokenInfo
+		if event.Amount0 > 0 {
+			token0 = types.Token_TokenInfo{
+				Address:    event.Token0Address,
+				Symbol:     event.Token0Symbol,
+				Name:       event.Token0Name,
+				Logo:       event.Token0Logo,
+				Decimals:   event.Token0Decimals,
+				Additional: token0Additional,
+			}
+			token1 = types.Token_TokenInfo{
+				Address:    event.Token1Address,
+				Symbol:     event.Token1Symbol,
+				Name:       event.Token1Name,
+				Logo:       event.Token1Logo,
+				Decimals:   event.Token1Decimals,
+				Additional: token1Additional,
+			}
+		} else {
+			// Swap token0 and token1 if amount0 is negative
+			token0 = types.Token_TokenInfo{
+				Address:    event.Token1Address,
+				Symbol:     event.Token1Symbol,
+				Name:       event.Token1Name,
+				Logo:       event.Token1Logo,
+				Decimals:   event.Token1Decimals,
+				Additional: token1Additional,
+			}
+			token1 = types.Token_TokenInfo{
+				Address:    event.Token0Address,
+				Symbol:     event.Token0Symbol,
+				Name:       event.Token0Name,
+				Logo:       event.Token0Logo,
+				Decimals:   event.Token0Decimals,
+				Additional: token0Additional,
+			}
+			// Swap amounts as well
+			amount0, amount1 = amount1, amount0
 		}
 
-		item.Token1 = types.Token_TokenInfo{
-			Address:    event.Token1Address,
-			Symbol:     event.Token1Symbol,
-			Name:       event.Token1Name,
-			Logo:       event.Token1Logo,
-			Decimals:   event.Token1Decimals,
-			Additional: token1Additional,
-		}
-
-		item.Pool = types.Token_PoolDetail{
-			ID:        event.PoolID,
-			Address:   event.Pool,
-			FeeTier:   int(event.PooFee),
-			Liquidity: "0", // Assuming liquidity is not available in the current query
-			Token0:    item.Token0,
-			Token1:    item.Token1,
+		item := &types.SwapEvent{
+			ID:        event.ID,
+			Address:   event.Address,
+			Hash:      event.Hash,
+			Amount0:   amount0,
+			Amount1:   amount1,
+			CreatedAt: event.CreatedAt,
+			Token0:    token0,
+			Token1:    token1,
+			Pool: types.Token_PoolDetail{
+				ID:        event.PoolID,
+				Address:   event.Pool,
+				FeeTier:   int(event.PooFee),
+				Liquidity: "0", // Assuming liquidity is not available in the current query
+				Token0:    token0,
+				Token1:    token1,
+			},
 		}
 
 		data = append(data, item)

@@ -3,30 +3,100 @@ name: Build and Push to GCP Artifact Registry
 on:
   push:
     branches:
-      - dev 
+      - main
+      - testnet
+      - develop
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref_name == 'main' && 'main' || github.ref_name == 'testnet' && 'testnet' || github.ref_name == 'develop' && 'develop' }}
+    env:
+      REPO_NAME: 'sonex-api-backend-go'
+      APP_NAME: 'sonex-api-backend-go'
+      REPO_LOCATION: 'asia-southeast1'
+      NETWORK: 'sonex-vpc'
+      APP_PORT: '8888'
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Set up Docker
-      uses: docker/setup-buildx-action@v2
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
 
-    - name: Authenticate with GCP
-      env:
-        GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-      run: |
-        echo "${GCP_SERVICE_ACCOUNT_KEY}" > gcp-key.json
-        gcloud auth activate-service-account --key-file=gcp-key.json
-        gcloud config set project arched-logic-440921-h3
-        gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+      - name: replace secrets
+        run: |
+          echo "replace secrets"
+          sed -i "s/PG_USER/${{secrets.PG_USER}}/g" etc/sonex_api_backend_go.yaml
+          sed -i "s/PG_PWD/${{secrets.PG_PWD}}/g" etc/sonex_api_backend_go.yaml
+          sed -i "s/PG_DBNAME/${{vars.PG_DBNAME}}/g" etc/sonex_api_backend_go.yaml
+          sed -i "s/PG_HOST/${{vars.PG_HOST}}/g" etc/sonex_api_backend_go.yaml
+          sed -i "s/PG_PORT/${{vars.PG_PORT}}/g" etc/sonex_api_backend_go.yaml
+          sed -i "s/REDIS_HOST/${{vars.REDIS_HOST}}/g" etc/sonex_api_backend_go.yaml
+          sed -i "s/REDIS_PORT/${{vars.REDIS_PORT}}/g" etc/sonex_api_backend_go.yaml
+          cat etc/sonex_api_backend_go.yaml
 
-    - name: Build and Push Docker Image
-      run: |
-        IMAGE_NAME=asia-southeast1-docker.pkg.dev/arched-logic-440921-h3/sonex-api-backend-go/sonex-api-backend-go:latest
-        docker build -t $IMAGE_NAME .
-        docker push $IMAGE_NAME
+      - name: Authenticate with GCP
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        run: |
+          echo "${GCP_SERVICE_ACCOUNT_KEY}" > gcp-key.json
+          gcloud auth activate-service-account --key-file=gcp-key.json
+          gcloud config set project arched-logic-440921-h3
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        run: |
+          case "${{ github.ref_name }}" in
+            main)
+              IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-main:latest"
+            ;;
+            testnet)
+              IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-testnet:latest"
+            ;;
+            develop)
+              IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-develop:latest"
+            ;;
+            *)
+              IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-none:latest"
+            ;;
+          esac
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
+
+      - name: Execute branch-specific commands
+        run: |
+          case "${{ github.ref_name }}" in
+            main)
+              echo "打包上传成功，但请使用sonex-deploy来部署main到mainnet环境"
+              ;;
+            testnet)
+              echo "Executing commands for the testnet branch"
+              CLOUDRUN_NAME="sonex-testnet-cloudrun-${REPO_NAME}"
+              SUBNET="sonex-testnet-vpc-public-asia-southeast1"
+              IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-testnet:latest"
+              gcloud run deploy ${CLOUDRUN_NAME}  --image=${IMAGE_NAME} --cpu 1 --memory 2Gi --network=${NETWORK} --subnet=${SUBNET} --allow-unauthenticated --vpc-egress all-traffic --no-cpu-throttling --min-instances 1 --max-instances 1 --port ${APP_PORT} --platform managed --region=${REPO_LOCATION} 
+              echo "Deploy is done"
+              echo "Waiting for 20 seconds..."
+              sleep 20
+              echo "Check Log"
+              gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=${CLOUDRUN_NAME}" --limit=200 --order=desc --format="table(timestamp, textPayload)"
+              ;;
+            develop)
+              echo "Executing commands for the develop branch"
+              CLOUDRUN_NAME="sonex-devnet-cloudrun-${REPO_NAME}"
+              SUBNET="sonex-devnet-vpc-public-asia-southeast1"
+              IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-develop:latest"
+              gcloud run deploy ${CLOUDRUN_NAME}  --image=${IMAGE_NAME} --cpu 1 --memory 2Gi --network=${NETWORK} --subnet=${SUBNET} --allow-unauthenticated --vpc-egress all-traffic --no-cpu-throttling --min-instances 1 --max-instances 1 --port ${APP_PORT} --platform managed --region=${REPO_LOCATION} --set-env-vars "DEBUG=true"
+              echo "Deploy is done"
+              echo "Waiting for 20 seconds..."
+              sleep 20
+              echo "Check Log"
+              gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=${CLOUDRUN_NAME}" --limit=200 --order=desc --format="table(timestamp, textPayload)"
+              ;;
+            *)
+              echo "No matching branch found. Skipping tasks."
+              ;;
+          esac

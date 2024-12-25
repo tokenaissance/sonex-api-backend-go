@@ -13,7 +13,6 @@ import (
 	"sonex_api_backend_go/internal/svc"
 
 	"context"
-	"sonex_api_backend_go/internal/lib/quoter"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -80,11 +79,12 @@ func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerInc
 
 	// 获取token价格
 	var rewardPriceValue *big.Int
-	rewardPrice, err := global.GetPrices([]quoter.Pool{}, c.chainId, event.RewardToken.String(), true)
+	_, rewardPrice, err := global.GetPrices(context.Background(), nil, c.chainId, event.RewardToken.Hex(), true, 2, nil)
 	if err != nil {
 		logx.Errorf("Failed to get reward token price: %v", err)
 		rewardPriceValue = big.NewInt(0)
-	} else {
+	}
+	if rewardPrice != nil {
 		rewardPriceValue = rewardPrice[0].Value
 	}
 
@@ -280,32 +280,47 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 	}
 
 	// 获取token价格
-	rewardPrice, err := global.GetPrices([]quoter.Pool{}, c.chainId, pool.RewardTokenAddress, true)
+	var rewardPriceValue *big.Int
+	_, rewardPrice, err := global.GetPrices(context.Background(), nil, c.chainId, pool.RewardTokenAddress, true, 2, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get reward token price: %v", err)
+		rewardPriceValue = big.NewInt(0)
+		logx.Errorf("failed to get reward token price: %v", err)
+	}
+	if rewardPrice != nil {
+		rewardPriceValue = rewardPrice[0].Value
 	}
 
 	// 计算质押的流动性价值
-	token0Price, err := global.GetPrices([]quoter.Pool{}, c.chainId, pool.Token0Address, true)
+	var token0PriceValue *big.Int
+	_, token0Price, err := global.GetPrices(context.Background(), nil, c.chainId, pool.Token0Address, true, 2, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get token0 price: %v", err)
+		logx.Errorf("failed to get token0 price: %v", err)
+		token0PriceValue = big.NewInt(0)
+	}
+	if token0Price != nil {
+		token0PriceValue = token0Price[0].Value
 	}
 
-	token1Price, err := global.GetPrices([]quoter.Pool{}, c.chainId, pool.Token1Address, true)
+	var token1PriceValue *big.Int
+	_, token1Price, err := global.GetPrices(context.Background(), nil, c.chainId, pool.Token1Address, true, 2, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get token1 price: %v", err)
+		logx.Errorf("failed to get token1 price: %v", err)
+		token1PriceValue = big.NewInt(0)
+	}
+	if token1Price != nil {
+		token1PriceValue = token1Price[0].Value
 	}
 
 	token0Amount, _ := new(big.Int).SetString(pool.TotalToken0Amount, 10)
 	token1Amount, _ := new(big.Int).SetString(pool.TotalToken1Amount, 10)
 
-	token0Value := new(big.Int).Mul(token0Amount, token0Price[0].Value)
-	token1Value := new(big.Int).Mul(token1Amount, token1Price[0].Value)
+	token0Value := new(big.Int).Mul(token0Amount, token0PriceValue)
+	token1Value := new(big.Int).Mul(token1Amount, token1PriceValue)
 	totalValue := new(big.Int).Add(token0Value, token1Value)
 
 	// 计算APR
 	rewardAmount, _ := new(big.Int).SetString(pool.RewardTokenAmount, 10)
-	rewardValue := new(big.Int).Mul(rewardAmount, rewardPrice[0].Value)
+	rewardValue := new(big.Int).Mul(rewardAmount, rewardPriceValue)
 
 	duration := pool.EndTime.Time.Sub(pool.StartTime.Time)
 	daysInYear := big.NewInt(365)
@@ -323,7 +338,7 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 	err = farmPoolModel.Update(context.Background(), &repository.FarmPools{
 		ChainId:            c.chainId,
 		IncentiveId:        incentiveId,
-		RewardTokenPrice:   rewardPrice[0].Value.String(),
+		RewardTokenPrice:   rewardPriceValue.String(),
 		StakedLiquidityUsd: totalValue.String(),
 		Apr:                apr.String(),
 	})

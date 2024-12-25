@@ -7,7 +7,6 @@ import (
 	commonContract "sonex_api_backend_go/internal/lib/contract/common"
 	xpoolContract "sonex_api_backend_go/internal/lib/contract/xpool"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/lib/quoter"
 
 	// "sonex_api_backend_go/internal/module/xpool/utils"
 
@@ -155,7 +154,8 @@ func getPoolInfo(ctx context.Context, client *ethclient.Client, pool *xpoolContr
 func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
 	prices := new(TokenPrices)
 
-	stakingPrice, err := global.GetPrices([]quoter.Pool{}, int64(chainId), stakingToken.Hex(), true)
+	// 获取质押代币价格
+	_, stakingPrice, err := global.GetPrices(ctx, nil, chainId, stakingToken.Hex(), true, 2, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staking token price: %v", err)
 	}
@@ -164,7 +164,8 @@ func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToke
 		prices.StakingTokenPrice = stakingPrice[0].Value
 	}
 
-	rewardPrice, err := global.GetPrices([]quoter.Pool{}, int64(chainId), rewardToken.Hex(), true)
+	// 获取奖励代币价格
+	_, rewardPrice, err := global.GetPrices(ctx, nil, chainId, rewardToken.Hex(), true, 2, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reward token price: %v", err)
 	}

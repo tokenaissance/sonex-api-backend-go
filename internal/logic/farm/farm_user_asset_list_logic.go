@@ -3,11 +3,9 @@ package farm
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/big"
 
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/lib/quoter"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -203,22 +201,28 @@ func (l *FarmUserAssetListLogic) getRewardInfo(ctx context.Context, farm *farmCo
 	return rewardInfo.Reward, nil
 }
 
-func (l *FarmUserAssetListLogic) calculateFeesUSD(fees *big.Int, poolData *repository.FarmPools) (*big.Float, error) {
-	if fees.Sign() == 0 {
-		return big.NewFloat(0), nil
+func (l *FarmUserAssetListLogic) calculateFeesUSD(fees *big.Int, poolData *repository.FarmPools) (*big.Int, error) {
+	if fees == nil || poolData == nil {
+		return big.NewInt(0), fmt.Errorf("invalid parameters")
 	}
 
-	rewardPrice, err := global.GetPrices([]quoter.Pool{}, poolData.ChainId, poolData.RewardTokenAddress, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get reward token price: %v", err)
+	if fees.Sign() == 0 {
+		return big.NewInt(0), nil
 	}
+
+	// 获取价格
+	var rewardPriceValue *big.Int
+	_, rewardPrice, err := global.GetPrices(context.Background(), nil, poolData.ChainId, poolData.RewardTokenAddress, true, 2, nil)
+	if err != nil {
+		logx.Errorf("[farm] failed to get reward token price: %v", err)
+		return big.NewInt(0), nil
+	}
+	if rewardPrice == nil || len(rewardPrice) == 0 || rewardPrice[0].Value == nil {
+		return big.NewInt(0), nil
+	}
+	rewardPriceValue = rewardPrice[0].Value
 
 	// 计算USD价值
-	feesBigFloat := new(big.Float).SetInt(fees)
-	decimals := math.Pow10(int(poolData.RewardTokenDecimals))
-	feesBigFloat.Quo(feesBigFloat, big.NewFloat(decimals))
-
-	tmp, _ := rewardPrice[0].Value.Float64()
-	feesUSD := new(big.Float).Mul(feesBigFloat, big.NewFloat(tmp))
+	feesUSD := new(big.Int).Mul(fees, rewardPriceValue)
 	return feesUSD, nil
 }
