@@ -2908,7 +2908,7 @@
           "format": "int32",
           "default": "10"
         },
-        "UserPools": {
+        "user_pools": {
           "type": "array",
           "items": {
             "type": "string"
@@ -2917,6 +2917,7 @@
       },
       "title": "XpoolPoolListRequest",
       "required": [
+        "user_pools",
         "-"
       ]
     },
