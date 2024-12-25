@@ -40,7 +40,12 @@ func Initialize(config config.Config) error {
 
 	// Initialize token cacher
 	for _, chain := range c.Chains {
-		tokenCacher := cache.NewTokenCacher(chain, *c.GetSonexConfig(chain.ChainId))
+		sonexConf := c.GetSonexConfig(chain.ChainId)
+		if sonexConf == nil {
+			return fmt.Errorf("%s", "Miss sonex configure")
+		}
+
+		tokenCacher := cache.NewTokenCacher(chain, *sonexConf)
 		tokenCachersLock.Lock()
 		tokenCachers[chain.ChainId] = tokenCacher
 		tokenCachersLock.Unlock()
