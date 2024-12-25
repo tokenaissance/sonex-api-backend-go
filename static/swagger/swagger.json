@@ -15,6 +15,240 @@
     "application/json"
   ],
   "paths": {
+    "/farm/farm/pool/list": {
+      "get": {
+        "summary": "Farm pool list",
+        "operationId": "FarmPoolListHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmPoolListResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "description": " 链ID",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "user_address",
+            "description": " 用户地址",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "keyword",
+            "description": " 搜索关键字",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "staked_only",
+            "description": " 是否只显示用户参与的池子",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          {
+            "name": "status",
+            "description": " 运行状态",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "active",
+              "closed"
+            ]
+          },
+          {
+            "name": "order_by",
+            "description": " 排序字段",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "hot",
+              "apr"
+            ]
+          },
+          {
+            "name": "offset",
+            "description": " 偏移量",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limit",
+            "description": " 每页数量",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "10"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/farm/farm/pool/roi": {
+      "get": {
+        "summary": "Farm pool roi",
+        "operationId": "FarmPoolRoiHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmPoolRoiResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "description": " 链ID",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "incentive_id",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "description": " 金额（USD）",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "duration",
+            "description": " 质押时长（单位：天）",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+              "1",
+              "7",
+              "30",
+              "365",
+              "1825"
+            ]
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/farm/farm/user/asset/detail": {
+      "get": {
+        "summary": "Farm user's asset detail in pool",
+        "operationId": "FarmUserAssetDetailHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmUserAssetDetailResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "description": " 链ID",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "incentive_id",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "user_address",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/farm/farm/user/asset/list": {
+      "get": {
+        "summary": "Farm user's asset list in pools",
+        "operationId": "FarmUserAssetListHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmUserAssetListResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "description": " 链ID",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "user_address",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/meta": {
       "get": {
         "operationId": "MetaHandler",
@@ -125,6 +359,64 @@
             "required": false,
             "type": "string",
             "default": "none"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/pools/position/{id}": {
+      "get": {
+        "operationId": "SonexPositionHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/NftDataResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ]
+      }
+    },
+    "/sonex/pools/positions": {
+      "get": {
+        "operationId": "SonexPositionsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PositionsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "default": "1d"
           }
         ],
         "tags": [
@@ -560,7 +852,7 @@
           {
             "name": "-",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "string"
           }
         ],
@@ -633,6 +925,24 @@
     }
   },
   "definitions": {
+    "AggregatedAmounts": {
+      "type": "object",
+      "properties": {
+        "total_amount0": {
+          "type": "number",
+          "format": "double"
+        },
+        "total_amount1": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "AggregatedAmounts",
+      "required": [
+        "total_amount0",
+        "total_amount1"
+      ]
+    },
     "ChainSyncPrograss": {
       "type": "object",
       "properties": {
@@ -653,6 +963,418 @@
         "chain_id",
         "height",
         "update_at"
+      ]
+    },
+    "FarmPoolData": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "pool_address": {
+          "type": "string",
+          "description": " 池子合约地址"
+        },
+        "fee_ratio": {
+          "type": "string",
+          "description": " 池子手续费率"
+        },
+        "token0_address": {
+          "type": "string",
+          "description": " token0合约地址"
+        },
+        "token0_symbol": {
+          "type": "string",
+          "description": " token0代币符号"
+        },
+        "token0_decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " token0精度"
+        },
+        "token0_price": {
+          "type": "string",
+          "description": " token0价格"
+        },
+        "token1_address": {
+          "type": "string",
+          "description": " token1合约地址"
+        },
+        "token1_symbol": {
+          "type": "string",
+          "description": " token1代币符号"
+        },
+        "token1_decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " token1精度"
+        },
+        "token1_price": {
+          "type": "string",
+          "description": " token1价格"
+        },
+        "liquidity": {
+          "type": "string",
+          "description": " 池子的流动性"
+        },
+        "liquidity_usd": {
+          "type": "string",
+          "description": " 池子的流动性价值（USD）"
+        },
+        "APR": {
+          "type": "string",
+          "description": " 年化收益率"
+        },
+        "join_num": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 参与人数"
+        },
+        "status": {
+          "type": "string",
+          "description": " 运行状态（active or closed）"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "title": "FarmPoolData",
+      "required": [
+        "id",
+        "chain_id",
+        "pool_address",
+        "fee_ratio",
+        "token0_address",
+        "token0_symbol",
+        "token0_decimals",
+        "token0_price",
+        "token1_address",
+        "token1_symbol",
+        "token1_decimals",
+        "token1_price",
+        "liquidity",
+        "liquidity_usd",
+        "APR",
+        "join_num",
+        "status",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "FarmPoolListRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "user_address": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "keyword": {
+          "type": "string",
+          "description": " 搜索关键字"
+        },
+        "staked_only": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": " 是否只显示用户参与的池子"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "closed"
+          ],
+          "description": " 运行状态"
+        },
+        "order_by": {
+          "type": "string",
+          "enum": [
+            "hot",
+            "apr"
+          ],
+          "description": " 排序字段"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32",
+          "description": " 偏移量"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32",
+          "default": "10",
+          "description": " 每页数量"
+        }
+      },
+      "title": "FarmPoolListRequest"
+    },
+    "FarmPoolListResponse": {
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FarmPoolData"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "FarmPoolListResponse",
+      "required": [
+        "list",
+        "total",
+        "offset",
+        "limit"
+      ]
+    },
+    "FarmPoolRoiRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "incentive_id": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "amount": {
+          "type": "string",
+          "description": " 金额（USD）"
+        },
+        "duration": {
+          "type": "integer",
+          "format": "int32",
+          "enum": [
+            "1",
+            "7",
+            "30",
+            "365",
+            "1825"
+          ],
+          "description": " 质押时长（单位：天）"
+        }
+      },
+      "title": "FarmPoolRoiRequest",
+      "required": [
+        "incentive_id",
+        "amount",
+        "duration"
+      ]
+    },
+    "FarmPoolRoiResponse": {
+      "type": "object",
+      "properties": {
+        "APR": {
+          "type": "string",
+          "description": " 年化收益率"
+        },
+        "ROI": {
+          "type": "string",
+          "description": " 投资回报率"
+        },
+        "profit": {
+          "type": "string",
+          "description": " 投资回报金额（USD）"
+        },
+        "pool_address": {
+          "type": "string",
+          "description": " 流动性池合约地址"
+        },
+        "reward_token_amount": {
+          "type": "string",
+          "description": " 质押池的奖励代币总量"
+        },
+        "reward_token_price": {
+          "type": "string",
+          "description": " 奖励代币价格（USD）"
+        },
+        "reward_token_decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 奖励代币的精度"
+        },
+        "start_time": {
+          "type": "string",
+          "description": " 质押池开放时间"
+        },
+        "end_time": {
+          "type": "string",
+          "description": " 质押池结束时间"
+        }
+      },
+      "title": "FarmPoolRoiResponse",
+      "required": [
+        "APR",
+        "ROI",
+        "profit",
+        "pool_address",
+        "reward_token_amount",
+        "reward_token_price",
+        "reward_token_decimals",
+        "start_time",
+        "end_time"
+      ]
+    },
+    "FarmUserAssetDetailRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "incentive_id": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "user_address": {
+          "type": "string",
+          "description": " 用户地址"
+        }
+      },
+      "title": "FarmUserAssetDetailRequest",
+      "required": [
+        "incentive_id",
+        "user_address"
+      ]
+    },
+    "FarmUserAssetDetailResponse": {
+      "type": "object",
+      "properties": {
+        "incentive_id": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "total_claimable_fees": {
+          "type": "string",
+          "description": " 用户总可领取的手续费"
+        },
+        "total_claimable_fees_usd": {
+          "type": "string",
+          "description": " 用户总可领取的手续费的价值"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 手续费token的精度"
+        },
+        "lp_balance": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 用户的LP token ID余额"
+        },
+        "lp_staked_num": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 用户参与质押的LP token ID数量"
+        }
+      },
+      "title": "FarmUserAssetDetailResponse",
+      "required": [
+        "incentive_id",
+        "total_claimable_fees",
+        "total_claimable_fees_usd",
+        "decimals",
+        "lp_balance",
+        "lp_staked_num"
+      ]
+    },
+    "FarmUserAssetListRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "user_address": {
+          "type": "string",
+          "description": " 用户地址"
+        }
+      },
+      "title": "FarmUserAssetListRequest",
+      "required": [
+        "user_address"
+      ]
+    },
+    "FarmUserAssetListResponse": {
+      "type": "object",
+      "properties": {
+        "user_assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserAssetData"
+          }
+        }
+      },
+      "title": "FarmUserAssetListResponse",
+      "required": [
+        "user_assets"
+      ]
+    },
+    "Fees": {
+      "type": "object",
+      "properties": {
+        "feeAmount0": {
+          "type": "string"
+        },
+        "feeAmount1": {
+          "type": "string"
+        }
+      },
+      "title": "Fees",
+      "required": [
+        "feeAmount0",
+        "feeAmount1"
+      ]
+    },
+    "GetNftDataRequest": {
+      "type": "object",
+      "title": "GetNftDataRequest"
+    },
+    "Invested": {
+      "type": "object",
+      "properties": {
+        "investedAmount0": {
+          "type": "string"
+        },
+        "investedAmount1": {
+          "type": "string"
+        }
+      },
+      "title": "Invested",
+      "required": [
+        "investedAmount0",
+        "investedAmount1"
       ]
     },
     "MetaRequest": {
@@ -712,6 +1434,183 @@
         "code",
         "data",
         "message"
+      ]
+    },
+    "NftDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "$ref": "#/definitions/NftDataResponse_Data"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "NftDataResponse",
+      "required": [
+        "code",
+        "data",
+        "message"
+      ]
+    },
+    "NftDataResponse_Data": {
+      "type": "object",
+      "properties": {
+        "amount0": {
+          "type": "string"
+        },
+        "amount1": {
+          "type": "string"
+        },
+        "amount0Price": {
+          "type": "string"
+        },
+        "amount1Price": {
+          "type": "string"
+        },
+        "tickUpper": {
+          "type": "string"
+        },
+        "tickLower": {
+          "type": "string"
+        },
+        "nftId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "uncollectedFees": {
+          "type": "number",
+          "format": "double"
+        },
+        "pnl30d": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "pool": {
+          "$ref": "#/definitions/Token_PoolDetail"
+        },
+        "positionAge": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "invested": {
+          "$ref": "#/definitions/Invested"
+        },
+        "withdrawn": {
+          "$ref": "#/definitions/Withdrawn"
+        },
+        "fees": {
+          "$ref": "#/definitions/Fees"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "fee": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "token0": {
+          "type": "string"
+        },
+        "token1": {
+          "type": "string"
+        },
+        "tokensOwed0": {
+          "type": "number",
+          "format": "double"
+        },
+        "tokensOwed1": {
+          "type": "number",
+          "format": "double"
+        },
+        "liquidity": {
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
+        },
+        "token0Price": {
+          "type": "string"
+        },
+        "token1Price": {
+          "type": "string"
+        },
+        "poolAddress": {
+          "type": "string"
+        },
+        "isNative": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isClosed": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "decimals0": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "decimals1": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ratio": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isNegative": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "amountPrice0": {
+          "type": "string"
+        },
+        "amountPrice1": {
+          "type": "string"
+        }
+      },
+      "title": "NftDataResponse_Data",
+      "required": [
+        "amount0",
+        "amount1",
+        "amount0Price",
+        "amount1Price",
+        "tickUpper",
+        "tickLower",
+        "nftId",
+        "uncollectedFees",
+        "pnl30d",
+        "owner",
+        "pool",
+        "positionAge",
+        "invested",
+        "withdrawn",
+        "fees",
+        "origin",
+        "fee",
+        "token0",
+        "token1",
+        "tokensOwed0",
+        "tokensOwed1",
+        "liquidity",
+        "price",
+        "token0Price",
+        "token1Price",
+        "poolAddress",
+        "isNative",
+        "isClosed",
+        "decimals0",
+        "decimals1",
+        "ratio",
+        "isNegative",
+        "amountPrice0",
+        "amountPrice1"
       ]
     },
     "PaginationMeta": {
@@ -891,6 +1790,14 @@
         "yield24h": {
           "type": "number",
           "format": "double"
+        },
+        "price0": {
+          "type": "number",
+          "format": "double"
+        },
+        "price1": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "PoolsResponse_Pool",
@@ -908,7 +1815,9 @@
         "tvlUSD",
         "token0Balance",
         "token1Balance",
-        "yield24h"
+        "yield24h",
+        "price0",
+        "price1"
       ]
     },
     "PoolsResponse_Token": {
@@ -1045,8 +1954,15 @@
           "type": "boolean",
           "format": "boolean"
         },
+        "origin": {
+          "type": "string"
+        },
         "pool": {
           "$ref": "#/definitions/Token_PoolDetail"
+        },
+        "positionAge": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "PositionData",
@@ -1060,7 +1976,97 @@
         "pnl30d",
         "ratio",
         "isNegative",
-        "pool"
+        "origin",
+        "pool",
+        "positionAge"
+      ]
+    },
+    "PositionsRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string",
+          "default": "1d"
+        }
+      },
+      "title": "PositionsRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "PositionsResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gasCosts": {
+          "type": "number",
+          "format": "double"
+        },
+        "isNegative": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "pnl": {
+          "type": "number",
+          "format": "double"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PositionsResponse_Position"
+          }
+        },
+        "ratio": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalFees": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalBalances": {
+          "type": "number",
+          "format": "double"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "PositionsResponse",
+      "required": [
+        "code",
+        "gasCosts",
+        "isNegative",
+        "pnl",
+        "positions",
+        "ratio",
+        "totalFees",
+        "totalBalances",
+        "message"
+      ]
+    },
+    "PositionsResponse_Position": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "amount_price": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PositionsResponse_Position",
+      "required": [
+        "timestamp",
+        "amount_price"
       ]
     },
     "SonexTokenKlineRequest": {
@@ -1185,6 +2191,10 @@
           "type": "number",
           "format": "double"
         },
+        "usd": {
+          "type": "number",
+          "format": "double"
+        },
         "created_at": {
           "type": "string"
         }
@@ -1199,6 +2209,7 @@
         "hash",
         "amount0",
         "amount1",
+        "usd",
         "created_at"
       ]
     },
@@ -1659,6 +2670,10 @@
         "volume": {
           "type": "number",
           "format": "double"
+        },
+        "fdv": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "Token_TokenDetail",
@@ -1669,7 +2684,8 @@
         "decimals",
         "logo",
         "pools",
-        "volume"
+        "volume",
+        "fdv"
       ]
     },
     "Token_TokenInfo": {
@@ -1766,6 +2782,63 @@
         "message"
       ]
     },
+    "UserAssetData": {
+      "type": "object",
+      "properties": {
+        "incentive_id": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "total_claimable_fees": {
+          "type": "string",
+          "description": " 用户总可领取的手续费"
+        },
+        "total_claimable_fees_usd": {
+          "type": "string",
+          "description": " 用户总可领取的手续费的价值"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " ClaimableFees的精度"
+        },
+        "lp_balance": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 用户的LP token ID余额"
+        },
+        "lp_staked_num": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 用户质押的LP token ID数量"
+        }
+      },
+      "title": "UserAssetData",
+      "required": [
+        "incentive_id",
+        "total_claimable_fees",
+        "total_claimable_fees_usd",
+        "decimals",
+        "lp_balance",
+        "lp_staked_num"
+      ]
+    },
+    "Withdrawn": {
+      "type": "object",
+      "properties": {
+        "withdrawnAmount0": {
+          "type": "string"
+        },
+        "withdrawnAmount1": {
+          "type": "string"
+        }
+      },
+      "title": "Withdrawn",
+      "required": [
+        "withdrawnAmount0",
+        "withdrawnAmount1"
+      ]
+    },
     "XpoolPoolListRequest": {
       "type": "object",
       "properties": {
@@ -1809,10 +2882,7 @@
           }
         }
       },
-      "title": "XpoolPoolListRequest",
-      "required": [
-        "-"
-      ]
+      "title": "XpoolPoolListRequest"
     },
     "XpoolPoolListResponse": {
       "type": "object",

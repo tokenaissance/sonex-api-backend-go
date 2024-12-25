@@ -47,7 +47,6 @@ func NewFarmUserAssetListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
 }
-
 func (l *FarmUserAssetListLogic) FarmUserAssetList(req *types.FarmUserAssetListRequest) (resp *types.FarmUserAssetListResponse, err error) {
 	if req.ChainId == 0 {
 		req.ChainId = l.chainId
@@ -70,8 +69,8 @@ func (l *FarmUserAssetListLogic) FarmUserAssetList(req *types.FarmUserAssetListR
 		return nil, err
 	}
 
-	// 获取每个池子的用户资产数据
-	userAssets := make(map[string]types.UserAssetData)
+	userAssets := make([]types.UserAssetData, 0)
+
 	for _, pool := range pools {
 		assetData, err := l.getUserAssetsData(l.ctx, farmContract, positionManager, req.UserAddress, pool)
 		if err != nil {
@@ -79,8 +78,10 @@ func (l *FarmUserAssetListLogic) FarmUserAssetList(req *types.FarmUserAssetListR
 			continue
 		}
 
+		// 只添加有余额或质押的资产
 		if assetData.LPBalance > 0 || assetData.LPStakedNum > 0 {
-			userAssets[pool.PoolAddress] = *assetData
+			assetData.IncentiveId = pool.IncentiveId
+			userAssets = append(userAssets, *assetData)
 		}
 	}
 

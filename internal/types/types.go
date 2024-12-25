@@ -80,6 +80,7 @@ type FarmUserAssetDetailRequest struct {
 }
 
 type FarmUserAssetDetailResponse struct {
+	IncentiveId           string `form:"incentive_id"`             // 质押池ID
 	TotalClaimableFees    string `json:"total_claimable_fees"`     // 用户总可领取的手续费
 	TotalClaimableFeesUSD string `json:"total_claimable_fees_usd"` // 用户总可领取的手续费的价值
 	Decimals              int64  `json:"decimals"`                 // 手续费token的精度
@@ -93,7 +94,7 @@ type FarmUserAssetListRequest struct {
 }
 
 type FarmUserAssetListResponse struct {
-	UserAssets map[string]UserAssetData `json:"user_assets"` // pool_address => UserAsset
+	UserAssets []UserAssetData `json:"user_assets"`
 }
 
 type Fees struct {
@@ -469,6 +470,7 @@ type TokensResponse struct {
 }
 
 type UserAssetData struct {
+	IncentiveId           string `form:"incentive_id"`             // 质押池ID
 	TotalClaimableFees    string `json:"total_claimable_fees"`     // 用户总可领取的手续费
 	TotalClaimableFeesUSD string `json:"total_claimable_fees_usd"` // 用户总可领取的手续费的价值
 	Decimals              int64  `json:"decimals"`                 // ClaimableFees的精度
