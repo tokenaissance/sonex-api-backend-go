@@ -30,25 +30,25 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				// Farm pool list
 				Method:  http.MethodGet,
-				Path:    "/farm/pool/list",
+				Path:    "/pool/list",
 				Handler: farm.FarmPoolListHandler(serverCtx),
 			},
 			{
 				// Farm pool roi
 				Method:  http.MethodGet,
-				Path:    "/farm/pool/roi",
+				Path:    "/pool/roi",
 				Handler: farm.FarmPoolRoiHandler(serverCtx),
 			},
 			{
 				// Farm user's asset detail in pool
 				Method:  http.MethodGet,
-				Path:    "/farm/user/asset/detail",
+				Path:    "/user/asset/detail",
 				Handler: farm.FarmUserAssetDetailHandler(serverCtx),
 			},
 			{
 				// Farm user's asset list in pools
 				Method:  http.MethodGet,
-				Path:    "/farm/user/asset/list",
+				Path:    "/user/asset/list",
 				Handler: farm.FarmUserAssetListHandler(serverCtx),
 			},
 		},

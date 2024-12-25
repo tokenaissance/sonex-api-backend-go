@@ -852,7 +852,7 @@
           {
             "name": "-",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "string"
           }
         ],
@@ -2908,14 +2908,17 @@
           "format": "int32",
           "default": "10"
         },
-        "userPools": {
+        "UserPools": {
           "type": "array",
           "items": {
             "type": "string"
           }
         }
       },
-      "title": "XpoolPoolListRequest"
+      "title": "XpoolPoolListRequest",
+      "required": [
+        "-"
+      ]
     },
     "XpoolPoolListResponse": {
       "type": "object",
