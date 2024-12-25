@@ -62,17 +62,36 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	for _, price := range prices {
 		if maxValue.Cmp(price.Value) < 0 {
 			maxValue = price.Value
-			var router []string
-			linq.From(price.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+			var router []types.TokenQuoteResponse_Router_Pool
+			linq.From(price.Pools).
+				SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
+					return types.TokenQuoteResponse_Router_Pool{
+						Address: pool.Address.Hex(),
+						Token0:  pool.Token0.Hex(),
+						Token1:  pool.Token1.Hex(),
+						Fee:     pool.Fee,
+					}
+				}).
+				ToSlice(&router)
 			var sqrtPriceX96AfterList []string
 			linq.From(price.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
 			var initializedTicksCrossedList []int64
 			linq.From(price.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
+			var amountIn *big.Int
+			var amountOut *big.Int
+			switch req.Type {
+			case "INPUT":
+				amountIn, amountOut = amount, price.Value
+			case "OUTPUT":
+				amountIn, amountOut = price.Value, amount
+			}
 			bestRouterResult = &types.TokenQuoteResponse_Router{
-				Target:                      price.To,
+				TokenIn:                     fromToken.Hex(),
+				TokenOut:                    price.To,
+				AmountIn:                    amountIn.String(),
+				AmountOut:                   amountOut.String(),
 				Router:                      router,
 				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(price.Path)),
-				Price:                       price.Value.String(),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 price.GasEstimate.String(),
@@ -83,17 +102,36 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	routerResult := []types.TokenQuoteResponse_Router{}
 	linq.From(prices).
 		SelectT(func(item cache.Price) types.TokenQuoteResponse_Router {
-			var router []string
-			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+			var router []types.TokenQuoteResponse_Router_Pool
+			linq.From(item.Pools).
+				SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
+					return types.TokenQuoteResponse_Router_Pool{
+						Address: pool.Address.Hex(),
+						Token0:  pool.Token0.Hex(),
+						Token1:  pool.Token1.Hex(),
+						Fee:     pool.Fee,
+					}
+				}).
+				ToSlice(&router)
 			var sqrtPriceX96AfterList []string
 			linq.From(item.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
 			var initializedTicksCrossedList []int64
 			linq.From(item.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
+			var amountIn *big.Int
+			var amountOut *big.Int
+			switch req.Type {
+			case "INPUT":
+				amountIn, amountOut = amount, item.Value
+			case "OUTPUT":
+				amountIn, amountOut = item.Value, amount
+			}
 			return types.TokenQuoteResponse_Router{
-				Target:                      item.To,
+				TokenIn:                     fromToken.Hex(),
+				TokenOut:                    item.To,
+				AmountIn:                    amountIn.String(),
+				AmountOut:                   amountOut.String(),
 				Router:                      router,
 				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path)),
-				Price:                       item.Value.String(),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),

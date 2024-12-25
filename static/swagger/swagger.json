@@ -135,6 +135,64 @@
         ]
       }
     },
+    "/sonex/pools/position/{id}": {
+      "get": {
+        "operationId": "SonexPositionHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/NftDataResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ]
+      }
+    },
+    "/sonex/pools/positions": {
+      "get": {
+        "operationId": "SonexPositionsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PositionsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "default": "1d"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/swaps": {
       "get": {
         "operationId": "SonexSwapHandler",
@@ -633,6 +691,24 @@
     }
   },
   "definitions": {
+    "AggregatedAmounts": {
+      "type": "object",
+      "properties": {
+        "total_amount0": {
+          "type": "number",
+          "format": "double"
+        },
+        "total_amount1": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "AggregatedAmounts",
+      "required": [
+        "total_amount0",
+        "total_amount1"
+      ]
+    },
     "ChainSyncPrograss": {
       "type": "object",
       "properties": {
@@ -653,6 +729,42 @@
         "chain_id",
         "height",
         "update_at"
+      ]
+    },
+    "Fees": {
+      "type": "object",
+      "properties": {
+        "feeAmount0": {
+          "type": "string"
+        },
+        "feeAmount1": {
+          "type": "string"
+        }
+      },
+      "title": "Fees",
+      "required": [
+        "feeAmount0",
+        "feeAmount1"
+      ]
+    },
+    "GetNftDataRequest": {
+      "type": "object",
+      "title": "GetNftDataRequest"
+    },
+    "Invested": {
+      "type": "object",
+      "properties": {
+        "investedAmount0": {
+          "type": "string"
+        },
+        "investedAmount1": {
+          "type": "string"
+        }
+      },
+      "title": "Invested",
+      "required": [
+        "investedAmount0",
+        "investedAmount1"
       ]
     },
     "MetaRequest": {
@@ -712,6 +824,183 @@
         "code",
         "data",
         "message"
+      ]
+    },
+    "NftDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "$ref": "#/definitions/NftDataResponse_Data"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "NftDataResponse",
+      "required": [
+        "code",
+        "data",
+        "message"
+      ]
+    },
+    "NftDataResponse_Data": {
+      "type": "object",
+      "properties": {
+        "amount0": {
+          "type": "string"
+        },
+        "amount1": {
+          "type": "string"
+        },
+        "amount0Price": {
+          "type": "string"
+        },
+        "amount1Price": {
+          "type": "string"
+        },
+        "tickUpper": {
+          "type": "string"
+        },
+        "tickLower": {
+          "type": "string"
+        },
+        "nftId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "uncollectedFees": {
+          "type": "number",
+          "format": "double"
+        },
+        "pnl30d": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "pool": {
+          "$ref": "#/definitions/Token_PoolDetail"
+        },
+        "positionAge": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "invested": {
+          "$ref": "#/definitions/Invested"
+        },
+        "withdrawn": {
+          "$ref": "#/definitions/Withdrawn"
+        },
+        "fees": {
+          "$ref": "#/definitions/Fees"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "fee": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "token0": {
+          "type": "string"
+        },
+        "token1": {
+          "type": "string"
+        },
+        "tokensOwed0": {
+          "type": "number",
+          "format": "double"
+        },
+        "tokensOwed1": {
+          "type": "number",
+          "format": "double"
+        },
+        "liquidity": {
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
+        },
+        "token0Price": {
+          "type": "string"
+        },
+        "token1Price": {
+          "type": "string"
+        },
+        "poolAddress": {
+          "type": "string"
+        },
+        "isNative": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isClosed": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "decimals0": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "decimals1": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ratio": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isNegative": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "amountPrice0": {
+          "type": "string"
+        },
+        "amountPrice1": {
+          "type": "string"
+        }
+      },
+      "title": "NftDataResponse_Data",
+      "required": [
+        "amount0",
+        "amount1",
+        "amount0Price",
+        "amount1Price",
+        "tickUpper",
+        "tickLower",
+        "nftId",
+        "uncollectedFees",
+        "pnl30d",
+        "owner",
+        "pool",
+        "positionAge",
+        "invested",
+        "withdrawn",
+        "fees",
+        "origin",
+        "fee",
+        "token0",
+        "token1",
+        "tokensOwed0",
+        "tokensOwed1",
+        "liquidity",
+        "price",
+        "token0Price",
+        "token1Price",
+        "poolAddress",
+        "isNative",
+        "isClosed",
+        "decimals0",
+        "decimals1",
+        "ratio",
+        "isNegative",
+        "amountPrice0",
+        "amountPrice1"
       ]
     },
     "PaginationMeta": {
@@ -891,6 +1180,14 @@
         "yield24h": {
           "type": "number",
           "format": "double"
+        },
+        "price0": {
+          "type": "number",
+          "format": "double"
+        },
+        "price1": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "PoolsResponse_Pool",
@@ -908,7 +1205,9 @@
         "tvlUSD",
         "token0Balance",
         "token1Balance",
-        "yield24h"
+        "yield24h",
+        "price0",
+        "price1"
       ]
     },
     "PoolsResponse_Token": {
@@ -1045,8 +1344,15 @@
           "type": "boolean",
           "format": "boolean"
         },
+        "origin": {
+          "type": "string"
+        },
         "pool": {
           "$ref": "#/definitions/Token_PoolDetail"
+        },
+        "positionAge": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "PositionData",
@@ -1060,7 +1366,97 @@
         "pnl30d",
         "ratio",
         "isNegative",
-        "pool"
+        "origin",
+        "pool",
+        "positionAge"
+      ]
+    },
+    "PositionsRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string",
+          "default": "1d"
+        }
+      },
+      "title": "PositionsRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "PositionsResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gasCosts": {
+          "type": "number",
+          "format": "double"
+        },
+        "isNegative": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "pnl": {
+          "type": "number",
+          "format": "double"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PositionsResponse_Position"
+          }
+        },
+        "ratio": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalFees": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalBalances": {
+          "type": "number",
+          "format": "double"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "PositionsResponse",
+      "required": [
+        "code",
+        "gasCosts",
+        "isNegative",
+        "pnl",
+        "positions",
+        "ratio",
+        "totalFees",
+        "totalBalances",
+        "message"
+      ]
+    },
+    "PositionsResponse_Position": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "amount_price": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PositionsResponse_Position",
+      "required": [
+        "timestamp",
+        "amount_price"
       ]
     },
     "SonexTokenKlineRequest": {
@@ -1185,6 +1581,10 @@
           "type": "number",
           "format": "double"
         },
+        "usd": {
+          "type": "number",
+          "format": "double"
+        },
         "created_at": {
           "type": "string"
         }
@@ -1199,6 +1599,7 @@
         "hash",
         "amount0",
         "amount1",
+        "usd",
         "created_at"
       ]
     },
@@ -1465,19 +1866,25 @@
     "TokenQuoteResponse_Router": {
       "type": "object",
       "properties": {
-        "target": {
+        "token_in": {
+          "type": "string"
+        },
+        "token_out": {
+          "type": "string"
+        },
+        "amount_in": {
+          "type": "string"
+        },
+        "amount_out": {
           "type": "string"
         },
         "router": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/TokenQuoteResponse_Router_Pool"
           }
         },
         "path": {
-          "type": "string"
-        },
-        "price": {
           "type": "string"
         },
         "sqrtPriceX96AfterList": {
@@ -1499,13 +1906,40 @@
       },
       "title": "TokenQuoteResponse_Router",
       "required": [
-        "target",
+        "token_in",
+        "token_out",
+        "amount_in",
+        "amount_out",
         "router",
         "path",
-        "price",
         "sqrtPriceX96AfterList",
         "initializedTicksCrossedList",
         "gasEstimate"
+      ]
+    },
+    "TokenQuoteResponse_Router_Pool": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "token0": {
+          "type": "string"
+        },
+        "token1": {
+          "type": "string"
+        },
+        "fee": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "TokenQuoteResponse_Router_Pool",
+      "required": [
+        "address",
+        "token0",
+        "token1",
+        "fee"
       ]
     },
     "TokenTopResponse": {
@@ -1659,6 +2093,10 @@
         "volume": {
           "type": "number",
           "format": "double"
+        },
+        "fdv": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "Token_TokenDetail",
@@ -1669,7 +2107,8 @@
         "decimals",
         "logo",
         "pools",
-        "volume"
+        "volume",
+        "fdv"
       ]
     },
     "Token_TokenInfo": {
@@ -1764,6 +2203,22 @@
         "data",
         "meta",
         "message"
+      ]
+    },
+    "Withdrawn": {
+      "type": "object",
+      "properties": {
+        "withdrawnAmount0": {
+          "type": "string"
+        },
+        "withdrawnAmount1": {
+          "type": "string"
+        }
+      },
+      "title": "Withdrawn",
+      "required": [
+        "withdrawnAmount0",
+        "withdrawnAmount1"
       ]
     },
     "XpoolPoolListRequest": {
