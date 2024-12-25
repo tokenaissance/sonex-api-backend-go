@@ -116,7 +116,6 @@ CREATE TABLE "public"."farm_user_action" (
   "tx_time" timestamp(6),
   "created_at" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" timestamp(6),
-  CONSTRAINT "farm_user_action_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "farm_user_action_tx_hash_event_sign_log_index_key" UNIQUE ("tx_hash", "event_sign", "log_index"),
   CONSTRAINT "farm_user_action_action_check" CHECK (action = ANY (ARRAY['create_pool'::text, 'destroy_pool'::text, 'stake'::text, 'unstake'::text, 'harvest'::text, 'other'::text]))
 );
