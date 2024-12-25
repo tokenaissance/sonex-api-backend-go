@@ -29,14 +29,15 @@ jobs:
       - name: replace secrets
         run: |
           echo "replace secrets"
-          sed -i "s/PG_USER/${{secrets.PG_USER}}/g" etc/sonex_api_backend_go.yaml
-          sed -i "s/PG_PWD/${{secrets.PG_PWD}}/g" etc/sonex_api_backend_go.yaml
-          sed -i "s/PG_DBNAME/${{vars.PG_DBNAME}}/g" etc/sonex_api_backend_go.yaml
-          sed -i "s/PG_HOST/${{vars.PG_HOST}}/g" etc/sonex_api_backend_go.yaml
-          sed -i "s/PG_PORT/${{vars.PG_PORT}}/g" etc/sonex_api_backend_go.yaml
-          sed -i "s/REDIS_HOST/${{vars.REDIS_HOST}}/g" etc/sonex_api_backend_go.yaml
-          sed -i "s/REDIS_PORT/${{vars.REDIS_PORT}}/g" etc/sonex_api_backend_go.yaml
-          cat etc/sonex_api_backend_go.yaml
+          sed -i "s/PG_USER/${{secrets.PG_USER}}/g" etc/sonex_api_backend_go_dev.yaml
+          sed -i "s/PG_PWD/${{secrets.PG_PWD}}/g" etc/sonex_api_backend_go_dev.yaml
+          sed -i "s/PG_DBNAME/${{vars.PG_DBNAME}}/g" etc/sonex_api_backend_go_dev.yaml
+          sed -i "s/PG_HOST/${{vars.PG_HOST}}/g" etc/sonex_api_backend_go_dev.yaml
+          sed -i "s/PG_PORT/${{vars.PG_PORT}}/g" etc/sonex_api_backend_go_dev.yaml
+          sed -i "s/REDIS_HOST/${{vars.REDIS_HOST}}/g" etc/sonex_api_backend_go_dev.yaml
+          sed -i "s/REDIS_PORT/${{vars.REDIS_PORT}}/g" etc/sonex_api_backend_go_dev.yaml
+          cat etc/sonex_api_backend_go_dev.yaml
+          cp etc/sonex_api_backend_go_dev.yaml etc/sonex_api_backend_go.yaml
 
       - name: Authenticate with GCP
         env:
