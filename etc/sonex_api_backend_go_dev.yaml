@@ -38,4 +38,8 @@ Sonexes:
     SwapRouter: 0x8281c39cDb041bef7F37DCa1841e1aD10B1c8e35
 Xpools:
   - ChainId: 1946
-    Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531
+    Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531 # testnet
+Farm:
+  - ChainId: 1946
+    Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322 # testnet
+

@@ -6,6 +6,7 @@ package handler
 import (
 	"net/http"
 
+	farm "sonex_api_backend_go/internal/handler/farm"
 	sonex "sonex_api_backend_go/internal/handler/sonex"
 	xpool "sonex_api_backend_go/internal/handler/xpool"
 	"sonex_api_backend_go/internal/svc"
@@ -22,6 +23,36 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: MetaHandler(serverCtx),
 			},
 		},
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// Farm pool list
+				Method:  http.MethodGet,
+				Path:    "/pool/list",
+				Handler: farm.FarmPoolListHandler(serverCtx),
+			},
+			{
+				// Farm pool roi
+				Method:  http.MethodGet,
+				Path:    "/pool/roi",
+				Handler: farm.FarmPoolRoiHandler(serverCtx),
+			},
+			{
+				// Farm user's asset detail in pool
+				Method:  http.MethodGet,
+				Path:    "/user/asset/detail",
+				Handler: farm.FarmUserAssetDetailHandler(serverCtx),
+			},
+			{
+				// Farm user's asset list in pools
+				Method:  http.MethodGet,
+				Path:    "/user/asset/list",
+				Handler: farm.FarmUserAssetListHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/farm"),
 	)
 
 	server.AddRoutes(

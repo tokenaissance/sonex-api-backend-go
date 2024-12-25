@@ -10,6 +10,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shopspring/decimal v1.4.0
+	github.com/spf13/cast v1.7.1
 	github.com/zeromicro/go-zero v1.7.4
 )
 

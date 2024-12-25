@@ -24,6 +24,8 @@ type (
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
 		GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error)
 		GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error)
+		FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error)
+		FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -218,4 +220,32 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolVolumes(ctx context.Con
 	}
 
 	return poolVolumes, nil
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error) {
+	query := fmt.Sprintf("select %s from %s", eventSonexFactoryPoolCreatedRows, m.table)
+	var resp []EventSonexFactoryPoolCreated
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	switch err {
+	case nil:
+		return resp, nil
+	case sqlx.ErrNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error) {
+	var resp EventSonexFactoryPoolCreated
+	query := fmt.Sprintf("select %s from %s where event_pool = $1 limit 1", eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, poolAddress)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }

@@ -38,6 +38,7 @@ const (
 	// liquidity 3
 
 	// farm 4
+	FarmError = 40101
 
 	// xpool 5
 	XpoolError = 50101

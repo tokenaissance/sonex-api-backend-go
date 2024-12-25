@@ -6,3 +6,8 @@ sonex_api_backend_go_local.yaml
 air_errors.log
 main.exe
 MYREADME
+
+sql/xpool
+!sql/xpool/*.sql
+sql/farm
+!sql/farm/*.sql

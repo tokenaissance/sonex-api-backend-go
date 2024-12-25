@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+var provider = "http://10.1.30.101:8545"
+var blockTime int64 = 2 // 出块速度
 var ZeroAddress = common.Address{}
 
 type PoolInfo struct {
@@ -150,21 +152,27 @@ func getPoolInfo(ctx context.Context, client *ethclient.Client, pool *xpoolContr
 
 // getTokenPrices 获取代币价格
 func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
-	prices := &TokenPrices{}
+	prices := new(TokenPrices)
 
 	// 获取质押代币价格
-	_, stakingPrice, err := global.GetPrices(ctx, nil, chainId, stakingToken.Hex(), true, 2, nil) // TODO: 需要确认一下
+	_, stakingPrice, err := global.GetPrices(ctx, nil, chainId, stakingToken.Hex(), true, 2, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staking token price: %v", err)
 	}
-	prices.StakingTokenPrice = stakingPrice[0].Value
+	prices.StakingTokenPrice = big.NewInt(0)
+	if stakingPrice != nil {
+		prices.StakingTokenPrice = stakingPrice[0].Value
+	}
 
 	// 获取奖励代币价格
-	_, rewardPrice, err := global.GetPrices(ctx, nil, chainId, rewardToken.Hex(), true, 2, nil) // TODO: 需要确认一下
+	_, rewardPrice, err := global.GetPrices(ctx, nil, chainId, rewardToken.Hex(), true, 2, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reward token price: %v", err)
 	}
-	prices.RewardTokenPrice = rewardPrice[0].Value
+	prices.RewardTokenPrice = big.NewInt(0)
+	if rewardPrice != nil {
+		prices.RewardTokenPrice = rewardPrice[0].Value
+	}
 
 	return prices, nil
 }

@@ -21,6 +21,7 @@ type (
 		GetTokenList(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error)
 		GetTokens(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error)
 		GetTokenVolumes(ctx context.Context) ([]types.TokenVolume, error)
+		FindAllToMap(ctx context.Context) (map[string]SonexToken, error)
 	}
 
 	customSonexTokenModel struct {
@@ -311,4 +312,19 @@ func (m *customSonexTokenModel) GetTokenVolumes(ctx context.Context) ([]types.To
 	}
 
 	return tokenVolumes, nil
+}
+
+func (m *customSonexTokenModel) FindAllToMap(ctx context.Context) (map[string]SonexToken, error) {
+	query := fmt.Sprintf("select %s from %s", sonexTokenRows, m.table)
+	var resp []SonexToken
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenMap := make(map[string]SonexToken)
+	for _, token := range resp {
+		tokenMap[token.Address.String] = token
+	}
+	return tokenMap, nil
 }

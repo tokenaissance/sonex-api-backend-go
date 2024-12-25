@@ -10,6 +10,7 @@ type Config struct {
 	Chains     []ChainConfig `json:","`
 	Sonexes    []SonexConfig `json:",optional"`
 	Xpools     []XpoolConfig `json:",optional"`
+	Farm       []FarmConfig  `json:",optional"`
 	Redis      RedisConfig   `json:","`
 }
 

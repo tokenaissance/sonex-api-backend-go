@@ -14,6 +14,89 @@ type ChainSyncPrograss struct {
 	UpdatedAt string `json:"update_at"`
 }
 
+type FarmPoolData struct {
+	Id             int64  `json:"id"`
+	ChainId        int64  `json:"chain_id"`        // 链ID
+	PoolAddress    string `json:"pool_address"`    // 池子合约地址
+	FeeRatio       string `json:"fee_ratio"`       // 池子手续费率
+	Token0Address  string `json:"token0_address"`  // token0合约地址
+	Token0Symbol   string `json:"token0_symbol"`   // token0代币符号
+	Token0Decimals int64  `json:"token0_decimals"` // token0精度
+	Token0Price    string `json:"token0_price"`    // token0价格
+	Token1Address  string `json:"token1_address"`  // token1合约地址
+	Token1Symbol   string `json:"token1_symbol"`   // token1代币符号
+	Token1Decimals int64  `json:"token1_decimals"` // token1精度
+	Token1Price    string `json:"token1_price"`    // token1价格
+	Liquidity      string `json:"liquidity"`       // 池子的流动性
+	LiquidityUSD   string `json:"liquidity_usd"`   // 池子的流动性价值（USD）
+	APR            string `json:"APR"`             // 年化收益率
+	JoinNum        int64  `json:"join_num"`        // 参与人数
+	Status         string `json:"status"`          // 运行状态（active or closed）
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
+}
+
+type FarmPoolListRequest struct {
+	ChainId     int64  `form:"chain_id,optional"`                       // 链ID
+	UserAddress string `form:"user_address,optional"`                   // 用户地址
+	Keyword     string `form:"keyword,optional"`                        // 搜索关键字
+	StakedOnly  string `form:"staked_only,optional,options=true|false"` // 是否只显示用户参与的池子
+	Status      string `form:"status,optional,options=active|closed"`   // 运行状态
+	OrderBy     string `form:"order_by,optional,options=hot|apr"`       // 排序字段
+	Offset      int    `form:"offset,optional"`                         // 偏移量
+	Limit       int    `form:"limit,optional,default=10"`               // 每页数量
+}
+
+type FarmPoolListResponse struct {
+	List   []FarmPoolData `json:"list"`
+	Total  int64          `json:"total"`
+	Offset int            `json:"offset"`
+	Limit  int            `json:"limit"`
+}
+
+type FarmPoolRoiRequest struct {
+	ChainId     int64  `form:"chain_id,optional"`                // 链ID
+	IncentiveId string `form:"incentive_id"`                     // 质押池ID
+	Amount      string `form:"amount"`                           // 金额（USD）
+	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
+}
+
+type FarmPoolRoiResponse struct {
+	APR                 string `json:"APR"`                   // 年化收益率
+	ROI                 string `json:"ROI"`                   // 投资回报率
+	Profit              string `json:"profit"`                // 投资回报金额（USD）
+	PoolAddress         string `json:"pool_address"`          // 流动性池合约地址
+	RewardTokenAmount   string `json:"reward_token_amount"`   // 质押池的奖励代币总量
+	RewardTokenPrice    string `json:"reward_token_price"`    // 奖励代币价格（USD）
+	RewardTokenDecimals int64  `json:"reward_token_decimals"` // 奖励代币的精度
+	StartTime           string `json:"start_time"`            // 质押池开放时间
+	EndTime             string `json:"end_time"`              // 质押池结束时间
+}
+
+type FarmUserAssetDetailRequest struct {
+	ChainId     int64  `form:"chain_id,optional"` // 链ID
+	IncentiveId string `form:"incentive_id"`      // 质押池ID
+	UserAddress string `form:"user_address"`      // 用户地址
+}
+
+type FarmUserAssetDetailResponse struct {
+	IncentiveId           string `form:"incentive_id"`             // 质押池ID
+	TotalClaimableFees    string `json:"total_claimable_fees"`     // 用户总可领取的手续费
+	TotalClaimableFeesUSD string `json:"total_claimable_fees_usd"` // 用户总可领取的手续费的价值
+	Decimals              int64  `json:"decimals"`                 // 手续费token的精度
+	LPBalance             int64  `json:"lp_balance"`               // 用户的LP token ID余额
+	LPStakedNum           int64  `json:"lp_staked_num"`            // 用户参与质押的LP token ID数量
+}
+
+type FarmUserAssetListRequest struct {
+	ChainId     int64  `form:"chain_id,optional"` // 链ID
+	UserAddress string `form:"user_address"`      // 用户地址
+}
+
+type FarmUserAssetListResponse struct {
+	UserAssets []UserAssetData `json:"user_assets"`
+}
+
 type Fees struct {
 	FeeAmount0 string `json:"feeAmount0"`
 	FeeAmount1 string `json:"feeAmount1"`
@@ -402,20 +485,28 @@ type TokensResponse struct {
 	Message string               `json:"message"`
 }
 
+type UserAssetData struct {
+	IncentiveId           string `form:"incentive_id"`             // 质押池ID
+	TotalClaimableFees    string `json:"total_claimable_fees"`     // 用户总可领取的手续费
+	TotalClaimableFeesUSD string `json:"total_claimable_fees_usd"` // 用户总可领取的手续费的价值
+	Decimals              int64  `json:"decimals"`                 // ClaimableFees的精度
+	LPBalance             int64  `json:"lp_balance"`               // 用户的LP token ID余额
+	LPStakedNum           int64  `json:"lp_staked_num"`            // 用户质押的LP token ID数量
+}
+
 type Withdrawn struct {
 	WithdrawnAmount0 string `json:"withdrawnAmount0"`
 	WithdrawnAmount1 string `json:"withdrawnAmount1"`
 }
 
 type XpoolPoolListRequest struct {
-	ChainId     uint64   `form:"chain_id,optional"`
-	UserAddress string   `form:"user_address,optional"`
-	Keyword     string   `form:"keyword,optional"`
-	StakedOnly  string   `form:"staked_only,optional,options=true|false"`
-	OrderBy     string   `form:"order_by,optional,options=hot|apr"`
-	Offset      int      `form:"offset,optional"`
-	Limit       int      `form:"limit,optional,default=10"`
-	UserPools   []string `json:"-"`
+	ChainId     int64  `form:"chain_id,optional"`
+	UserAddress string `form:"user_address,optional"`
+	Keyword     string `form:"keyword,optional"`
+	StakedOnly  string `form:"staked_only,optional,options=true|false"`
+	OrderBy     string `form:"order_by,optional,options=hot|apr"`
+	Offset      int    `form:"offset,optional"`
+	Limit       int    `form:"limit,optional,default=10"`
 }
 
 type XpoolPoolListResponse struct {
@@ -444,7 +535,7 @@ type XpoolPoolListResponse struct {
 }
 
 type XpoolPoolStatsRequest struct {
-	ChainId     uint64  `form:"chain_id,optional"`
+	ChainId     int64   `form:"chain_id,optional"`
 	PoolAddress string  `form:"pool_address"`                              // 质押池地址
 	Amount      float64 `form:"amount,optional"`                           // 金额（USD）
 	Duration    int     `form:"duration,optional,options=1|7|30|365|1825"` // 质押时长（单位：天）

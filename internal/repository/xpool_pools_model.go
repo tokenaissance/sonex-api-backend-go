@@ -20,7 +20,7 @@ type (
 		xpoolPoolsModel
 		withSession(session sqlx.Session) XpoolPoolsModel
 
-		GetPoolList(ctx context.Context, opts *types.XpoolPoolListRequest) ([]*XpoolPools, int64, error)
+		GetPoolList(ctx context.Context, opts *types.XpoolPoolListRequest, userPools []string) ([]*XpoolPools, int64, error)
 		GetPoolStats(ctx context.Context, opts *types.XpoolPoolStatsRequest) (*PoolStatsData, error)
 
 		BatchUpdatePools(ctx context.Context, pools []*XpoolPools) error
@@ -55,7 +55,7 @@ type PoolParams struct {
 }
 
 // 获取质押池列表
-func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.XpoolPoolListRequest) ([]*XpoolPools, int64, error) {
+func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.XpoolPoolListRequest, userPools []string) ([]*XpoolPools, int64, error) {
 	var pools []*XpoolPools
 	var count int64
 
@@ -63,8 +63,8 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE chain_id = $1 AND status = 'active'", m.table)
 	args := []interface{}{opts.ChainId}
 
-	if strings.EqualFold(opts.StakedOnly, "true") && len(opts.UserPools) > 0 {
-		subQuery := fmt.Sprintf("'%s'", strings.Join(opts.UserPools, "','"))
+	if strings.EqualFold(opts.StakedOnly, "true") && len(userPools) > 0 {
+		subQuery := fmt.Sprintf("'%s'", strings.Join(userPools, "','"))
 		query += fmt.Sprintf(" AND pool_address IN (%s)", subQuery)
 		countQuery += fmt.Sprintf(" AND pool_address IN (%s)", subQuery)
 	}
@@ -81,10 +81,10 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	case "apr":
 		query += " ORDER BY apr DESC, id DESC"
 	default:
-		query += " ORDER BY id DESC"
+		query += " ORDER BY created_at DESC, id DESC"
 	}
 
-	err := m.conn.QueryRow(&count, countQuery, args...)
+	err := m.conn.QueryRowCtx(ctx, &count, countQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -92,7 +92,7 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, opts.Limit, opts.Offset)
 
-	err = m.conn.QueryRows(&pools, query, args...)
+	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
