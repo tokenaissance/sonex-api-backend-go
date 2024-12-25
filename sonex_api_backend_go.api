@@ -640,18 +640,18 @@ type FarmPoolRoiResponse {
 service sonex_api_backend_go {
 	@doc "Farm pool list"
 	@handler FarmPoolListHandler
-	get /farm/pool/list (FarmPoolListRequest) returns (FarmPoolListResponse)
+	get /pool/list (FarmPoolListRequest) returns (FarmPoolListResponse)
 
 	@doc "Farm user's asset list in pools"
 	@handler FarmUserAssetListHandler
-	get /farm/user/asset/list (FarmUserAssetListRequest) returns (FarmUserAssetListResponse)
+	get /user/asset/list (FarmUserAssetListRequest) returns (FarmUserAssetListResponse)
 
 	@doc "Farm user's asset detail in pool"
 	@handler FarmUserAssetDetailHandler
-	get /farm/user/asset/detail (FarmUserAssetDetailRequest) returns (FarmUserAssetDetailResponse)
+	get /user/asset/detail (FarmUserAssetDetailRequest) returns (FarmUserAssetDetailResponse)
 
 	@doc "Farm pool roi"
 	@handler FarmPoolRoiHandler
-	get /farm/pool/roi (FarmPoolRoiRequest) returns (FarmPoolRoiResponse)
+	get /pool/roi (FarmPoolRoiRequest) returns (FarmPoolRoiResponse)
 }
 

@@ -15,7 +15,7 @@
     "application/json"
   ],
   "paths": {
-    "/farm/farm/pool/list": {
+    "/farm/pool/list": {
       "get": {
         "summary": "Farm pool list",
         "operationId": "FarmPoolListHandler",
@@ -109,7 +109,7 @@
         ]
       }
     },
-    "/farm/farm/pool/roi": {
+    "/farm/pool/roi": {
       "get": {
         "summary": "Farm pool roi",
         "operationId": "FarmPoolRoiHandler",
@@ -168,7 +168,7 @@
         ]
       }
     },
-    "/farm/farm/user/asset/detail": {
+    "/farm/user/asset/detail": {
       "get": {
         "summary": "Farm user's asset detail in pool",
         "operationId": "FarmUserAssetDetailHandler",
@@ -212,7 +212,7 @@
         ]
       }
     },
-    "/farm/farm/user/asset/list": {
+    "/farm/user/asset/list": {
       "get": {
         "summary": "Farm user's asset list in pools",
         "operationId": "FarmUserAssetListHandler",
