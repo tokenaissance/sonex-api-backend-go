@@ -310,15 +310,22 @@ type TokenQuoteResponse struct {
 }
 
 type TokenQuoteResponse_Router struct {
-	TokenIn                     string   `json:"token_in"`
-	TokenOut                    string   `json:"token_out"`
-	AmountIn                    string   `json:"amount_in"`
-	AmountOut                   string   `json:"amount_out"`
-	Router                      []string `json:"router"`
-	Path                        string   `json:"path"`
-	SqrtPriceX96AfterList       []string `json:"sqrtPriceX96AfterList"`
-	InitializedTicksCrossedList []int64  `json:"initializedTicksCrossedList"`
-	GasEstimate                 string   `json:"gasEstimate"`
+	TokenIn                     string                           `json:"token_in"`
+	TokenOut                    string                           `json:"token_out"`
+	AmountIn                    string                           `json:"amount_in"`
+	AmountOut                   string                           `json:"amount_out"`
+	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
+	Path                        string                           `json:"path"`
+	SqrtPriceX96AfterList       []string                         `json:"sqrtPriceX96AfterList"`
+	InitializedTicksCrossedList []int64                          `json:"initializedTicksCrossedList"`
+	GasEstimate                 string                           `json:"gasEstimate"`
+}
+
+type TokenQuoteResponse_Router_Pool struct {
+	Address string `json:"address"`
+	Token0  string `json:"token0"`
+	Token1  string `json:"token1"`
+	Fee     int64  `json:"fee"`
 }
 
 type TokenTopResponse struct {

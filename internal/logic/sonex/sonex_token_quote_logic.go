@@ -62,8 +62,17 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	for _, price := range prices {
 		if maxValue.Cmp(price.Value) < 0 {
 			maxValue = price.Value
-			var router []string
-			linq.From(price.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+			var router []types.TokenQuoteResponse_Router_Pool
+			linq.From(price.Pools).
+				SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
+					return types.TokenQuoteResponse_Router_Pool{
+						Address: pool.Address.Hex(),
+						Token0:  pool.Token0.Hex(),
+						Token1:  pool.Token1.Hex(),
+						Fee:     pool.Fee,
+					}
+				}).
+				ToSlice(&router)
 			var sqrtPriceX96AfterList []string
 			linq.From(price.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
 			var initializedTicksCrossedList []int64
@@ -93,8 +102,17 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	routerResult := []types.TokenQuoteResponse_Router{}
 	linq.From(prices).
 		SelectT(func(item cache.Price) types.TokenQuoteResponse_Router {
-			var router []string
-			linq.From(item.Pools).SelectT(func(pool quoter.Pool) string { return pool.Address.Hex() }).ToSlice(&router)
+			var router []types.TokenQuoteResponse_Router_Pool
+			linq.From(item.Pools).
+				SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
+					return types.TokenQuoteResponse_Router_Pool{
+						Address: pool.Address.Hex(),
+						Token0:  pool.Token0.Hex(),
+						Token1:  pool.Token1.Hex(),
+						Fee:     pool.Fee,
+					}
+				}).
+				ToSlice(&router)
 			var sqrtPriceX96AfterList []string
 			linq.From(item.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
 			var initializedTicksCrossedList []int64
