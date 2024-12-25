@@ -24,7 +24,7 @@ func NewStaticCaller(config config.Config) (*StaticCaller, error) {
 	}, nil
 }
 
-func (staticCaller *StaticCaller) BatchGetSlot0s(ctx context.Context, chainId int64, pools []common.Address) ([]*Slot0, error) {
+func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int64, pools []common.Address) ([]*Pool, error) {
 	chain := staticCaller.c.GetChainConfig(chainId)
 	if chain == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
@@ -51,17 +51,33 @@ func (staticCaller *StaticCaller) BatchGetSlot0s(ctx context.Context, chainId in
 	}
 
 	callDatas := []contract_common.Multicall3Call{}
-	data, err := uniswapV3PoolABI.Pack("slot0")
+	slot0Data, err := uniswapV3PoolABI.Pack("slot0")
+	if err != nil {
+		return nil, err
+	}
+	feeGrowthGlobal0X128Data, err := uniswapV3PoolABI.Pack("feeGrowthGlobal0X128")
+	if err != nil {
+		return nil, err
+	}
+	feeGrowthGlobal1X128Data, err := uniswapV3PoolABI.Pack("feeGrowthGlobal1X128")
 	if err != nil {
 		return nil, err
 	}
 	for _, pool := range pools {
 		callDatas = append(callDatas, contract_common.Multicall3Call{
 			Target:   pool,
-			CallData: data,
+			CallData: slot0Data,
+		})
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   pool,
+			CallData: feeGrowthGlobal0X128Data,
+		})
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   pool,
+			CallData: feeGrowthGlobal1X128Data,
 		})
 	}
-	data, err = multicallABI.Pack("aggregate", callDatas)
+	data, err := multicallABI.Pack("aggregate", callDatas)
 	if err != nil {
 		return nil, err
 	}
@@ -69,18 +85,33 @@ func (staticCaller *StaticCaller) BatchGetSlot0s(ctx context.Context, chainId in
 	if err != nil {
 		return nil, err
 	}
-	slot0s := []*Slot0{}
-	for i, pool := range pools {
+	result := []*Pool{}
+	for i, addr := range pools {
 		var slot0 Slot0
-		err = uniswapV3PoolABI.UnpackIntoInterface(&slot0, "slot0", multicallResult.ReturnData[i])
+		err = uniswapV3PoolABI.UnpackIntoInterface(&slot0, "slot0", multicallResult.ReturnData[i*3])
 		if err != nil {
 			return nil, err
 		}
-		slot0.Pool = pool
-		slot0s = append(slot0s, &slot0)
+		var feeGrowthGlobal0X128 *big.Int
+		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal0X128, "feeGrowthGlobal0X128", multicallResult.ReturnData[i*3+1])
+		if err != nil {
+			return nil, err
+		}
+		var feeGrowthGlobal1X128 *big.Int
+		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal1X128, "feeGrowthGlobal1X128", multicallResult.ReturnData[i*3+2])
+		if err != nil {
+			return nil, err
+		}
+		pool := &Pool{
+			Address:              addr,
+			Slot0:                &slot0,
+			FeeGrowthGlobal0X128: feeGrowthGlobal0X128,
+			FeeGrowthGlobal1X128: feeGrowthGlobal1X128,
+		}
+		result = append(result, pool)
 	}
 
-	return slot0s, nil
+	return result, nil
 }
 
 func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId int64, positionManager common.Address, tokenIds []*big.Int) ([]*Position, error) {
@@ -104,6 +135,10 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 	if err != nil {
 		return nil, err
 	}
+	uniswapV3PoolABI, err := abi.JSON(strings.NewReader(uniswap_v3.UniswapV3PoolABI))
+	if err != nil {
+		return nil, err
+	}
 	var multicallResult struct {
 		BlockNumber *big.Int `json:"blockNumber"`
 		ReturnData  [][]byte `json:"returnData"`
@@ -120,13 +155,13 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 		CallData: data,
 	})
 	for _, tokenId := range tokenIds {
-		data, err = positionManagerABI.Pack("positions", tokenId)
+		positionsData, err := positionManagerABI.Pack("positions", tokenId)
 		if err != nil {
 			return nil, err
 		}
 		callDatas = append(callDatas, contract_common.Multicall3Call{
 			Target:   positionManager,
-			CallData: data,
+			CallData: positionsData,
 		})
 	}
 	data, err = multicallABI.Pack("aggregate", callDatas)
@@ -154,24 +189,68 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 		positions = append(positions, &position)
 	}
 
-	// Get slot0
-	poolMap := map[string]*Slot0{}
+	// Get pool
+	poolMap := map[string]*Pool{}
+	callDatas = []contract_common.Multicall3Call{}
 	for _, position := range positions {
-		poolMap[position.Pool().Hex()] = nil
+		poolAddress := ComputePoolAddress(position.Factory, position.Token0, position.Token1, position.Fee)
+		poolMap[poolAddress.Hex()] = nil
+
+		ticksData, err := uniswapV3PoolABI.Pack("ticks", position.TickLower)
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   poolAddress,
+			CallData: ticksData,
+		})
+
+		ticksData, err = uniswapV3PoolABI.Pack("ticks", position.TickUpper)
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   poolAddress,
+			CallData: ticksData,
+		})
 	}
-	pools := []common.Address{}
+	data, err = multicallABI.Pack("aggregate", callDatas)
+	if err != nil {
+		return nil, err
+	}
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate", data, &multicallResult)
+	if err != nil {
+		return nil, err
+	}
+
+	poolAddresses := []common.Address{}
 	for key := range poolMap {
-		pools = append(pools, common.HexToAddress(key))
+		poolAddresses = append(poolAddresses, common.HexToAddress(key))
 	}
-	slot0s, err := staticCaller.BatchGetSlot0s(ctx, chainId, pools)
+	pools, err := staticCaller.BatchGetPools(ctx, chainId, poolAddresses)
 	if err != nil {
 		return nil, err
 	}
 	for i, pool := range pools {
-		poolMap[pool.Hex()] = slot0s[i]
+		poolMap[pool.Address.Hex()] = pools[i]
 	}
-	for _, position := range positions {
-		position.Slot0 = poolMap[position.Pool().Hex()]
+	for i, position := range positions {
+		poolAddress := ComputePoolAddress(position.Factory, position.Token0, position.Token1, position.Fee)
+		position.Pool = poolMap[poolAddress.Hex()]
+
+		var lowerTick Tick
+		err = uniswapV3PoolABI.UnpackIntoInterface(&lowerTick, "ticks", multicallResult.ReturnData[i*2])
+		if err != nil {
+			return nil, err
+		}
+		position.LowerTick = &lowerTick
+
+		var upperTick Tick
+		err = uniswapV3PoolABI.UnpackIntoInterface(&upperTick, "ticks", multicallResult.ReturnData[i*2+1])
+		if err != nil {
+			return nil, err
+		}
+		position.UpperTick = &upperTick
 	}
 
 	return positions, nil

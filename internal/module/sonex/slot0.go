@@ -2,12 +2,9 @@ package sonex
 
 import (
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type Slot0 struct {
-	Pool                       common.Address
 	SqrtPriceX96               *big.Int `json:"sqrtPriceX96"`
 	Tick                       *big.Int `json:"tick"`
 	ObservationIndex           uint16   `json:"observationIndex"`

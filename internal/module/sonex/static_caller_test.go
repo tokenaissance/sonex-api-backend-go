@@ -11,22 +11,23 @@ import (
 	"github.com/zeromicro/go-zero/core/conf"
 )
 
-func TestBatchGetSlot0s(t *testing.T) {
+func TestBatchGetPools(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	caller, _ := NewStaticCaller(c)
-	slot0s, err := caller.BatchGetSlot0s(
+	pools, err := caller.BatchGetPools(
 		context.Background(), 1946,
-		[]common.Address{common.HexToAddress("0x24521335F1b6320Ffca8C4350304695934DE61A7")},
+		[]common.Address{common.HexToAddress("0x3737901eF7D29C51C00C3B897c24B6B65aFb42b2")},
 	)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	for _, slot0 := range slot0s {
-		fmt.Printf("%+v\n", slot0)
+	for _, pool := range pools {
+		fmt.Printf("%+v\n", pool)
+		fmt.Printf("%+v\n", pool.Slot0)
 	}
 }
 
@@ -38,7 +39,7 @@ func TestBatchGetPositions(t *testing.T) {
 	positions, err := caller.BatchGetPositions(
 		context.Background(), 1946,
 		common.HexToAddress("0xeC816FCdc262601C0E23902c679FDd87CFb24077"),
-		[]*big.Int{big.NewInt(1)},
+		[]*big.Int{big.NewInt(1), big.NewInt(69), big.NewInt(63), big.NewInt(100), big.NewInt(135)},
 	)
 	if err != nil {
 		t.Error(err)
@@ -47,11 +48,13 @@ func TestBatchGetPositions(t *testing.T) {
 
 	for _, position := range positions {
 		amount0, amount1 := position.Amounts()
+		unclaimedFee0, unclaimedFee1 := position.UnclaimedFees()
 		fmt.Printf(
-			"Token ID: %s\nToken0: %s Amount0: %s\nToken1: %s Amount1: %s\n",
+			"Token ID: %s\nTickLower: %s TickUpper:%s CurrentTick: %s\nToken0: %s Amount0: %s UnclaimedFee0: %s\nToken1: %s Amount1: %s UnclaimedFee1: %s\n",
 			position.TokenId.String(),
-			position.Token0.Hex(), amount0.String(),
-			position.Token1.Hex(), amount1.String(),
+			position.TickLower.String(), position.TickUpper.String(), position.Pool.Slot0.Tick.String(),
+			position.Token0.Hex(), amount0.String(), unclaimedFee0.String(),
+			position.Token1.Hex(), amount1.String(), unclaimedFee1.String(),
 		)
 	}
 }

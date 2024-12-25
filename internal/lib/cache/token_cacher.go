@@ -46,6 +46,7 @@ type Price struct {
 	SqrtPriceX96AfterList       []*big.Int
 	InitializedTicksCrossedList []uint32
 	GasEstimate                 *big.Int
+	PriceImpact                 float64
 }
 
 type PriceCache struct {
