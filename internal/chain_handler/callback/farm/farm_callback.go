@@ -311,6 +311,8 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 		token1PriceValue = token1Price[0].Value
 	}
 
+	// TODO: getTotalTokensInPool(IncentiveKey memory key) external view returns (uint256 totalToken0, uint256 totalToken1)
+
 	token0Amount, _ := new(big.Int).SetString(pool.TotalToken0Amount, 10)
 	token1Amount, _ := new(big.Int).SetString(pool.TotalToken1Amount, 10)
 
@@ -339,6 +341,8 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 		ChainId:            c.chainId,
 		IncentiveId:        incentiveId,
 		RewardTokenPrice:   rewardPriceValue.String(),
+		TotalToken0Amount:  "0",
+		TotalToken1Amount:  "0",
 		StakedLiquidityUsd: totalValue.String(),
 		Apr:                apr.String(),
 	})
