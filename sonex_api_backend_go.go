@@ -61,11 +61,38 @@ func main() {
 	defer server.Stop()
 	// Standrad response
 	httpx.SetOkHandler(func(ctx context.Context, a any) any {
-		return response.ApiResponse{
-			Code: 200,
-			Data: a,
+		var data interface{}
+		var meta interface{}
+		code := 200
+
+		if responseWithFields, ok := a.(interface {
+			GetData() interface{}
+			GetCode() interface{}
+		}); ok {
+			data = responseWithFields.GetData()
+			code = responseWithFields.GetCode().(int)
+
+			if metaProvider, ok := a.(interface {
+				GetMeta() interface{}
+			}); ok {
+				meta = metaProvider.GetMeta()
+			}
+		} else {
+			data = a
 		}
+
+		apiResponse := response.ApiResponse{
+			Code: code,
+			Data: data,
+		}
+
+		if meta != nil {
+			apiResponse.Meta = meta
+		}
+
+		return apiResponse
 	})
+
 	httpx.SetErrorHandlerCtx(func(ctx context.Context, err error) (int, any) {
 		var resp response.ApiResponse
 		switch standardErr := err.(type) {

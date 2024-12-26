@@ -24,6 +24,22 @@ type SonexPoolListLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
+type PoolsResponseWrapper struct {
+	*types.PoolsResponse
+}
+
+func (p *PoolsResponseWrapper) GetData() interface{} {
+	return p.Data
+}
+
+func (p *PoolsResponseWrapper) GetMeta() interface{} {
+	return p.Meta
+}
+
+func (p *PoolsResponseWrapper) GetCode() interface{} {
+	return p.Code
+}
+
 func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPoolListLogic {
 	return &SonexPoolListLogic{
 		Logger: logx.WithContext(ctx),
@@ -32,12 +48,12 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 	}
 }
 
-func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types.PoolsResponse, err error) {
+func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *PoolsResponseWrapper, err error) {
 	const cacheKey = "sonex_dex:uniswap:pool_list"
 
 	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp types.PoolsResponse
+		var cachedResp PoolsResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			return &cachedResp, nil
 		}
@@ -47,11 +63,13 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	data, meta, err := model.GetPoolList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 	if err != nil {
-		return &types.PoolsResponse{
-			Code:    400,
-			Data:    []*types.PoolsResponse_Pool{},
-			Meta:    &types.PaginationMeta{},
-			Message: err.Error(),
+		return &PoolsResponseWrapper{
+			PoolsResponse: &types.PoolsResponse{
+				Code:    400,
+				Data:    []*types.PoolsResponse_Pool{},
+				Meta:    &types.PaginationMeta{},
+				Message: err.Error(),
+			},
 		}, nil
 	}
 
@@ -119,16 +137,21 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 		}
 	}
 
-	response := &types.PoolsResponse{
-		Code:    200,
-		Data:    data,
-		Meta:    meta,
-		Message: "success",
+	response := &PoolsResponseWrapper{
+		PoolsResponse: &types.PoolsResponse{
+			Code:    200,
+			Data:    data,
+			Meta:    meta,
+			Message: "success",
+		},
 	}
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		if err != nil {
+			l.Error("Failed to cache response", err)
+		}
 	}
 
 	return response, nil
