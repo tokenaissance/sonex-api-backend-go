@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"sonex_api_backend_go/internal/handler/response"
-	"sonex_api_backend_go/internal/handler/response/code"
 	"sonex_api_backend_go/internal/logic/xpool"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -28,18 +27,19 @@ func XpoolPoolListHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := xpool.NewXpoolPoolListLogic(r.Context(), svcCtx)
-		result, total, err := l.XpoolPoolList(&req)
-		var resp response.ApiResponse
+		resp, total, err := l.XpoolPoolList(&req)
 		if err != nil {
-			resp = response.Error(code.XpoolError, err.Error())
+			httpx.ErrorCtx(r.Context(), w, response.BaseError{
+				Code: response.XpoolErrorCode,
+				Err:  err,
+			})
 		} else {
-			resp = response.Success(PoolListResponse{
-				List:   result,
+			httpx.OkJsonCtx(r.Context(), w, PoolListResponse{
+				List:   resp,
 				Limit:  req.Limit,
 				Offset: req.Offset,
 				Total:  total,
 			})
-
 		}
 		httpx.OkJson(w, resp)
 	}
