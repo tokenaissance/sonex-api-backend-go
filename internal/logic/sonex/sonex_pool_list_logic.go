@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -51,17 +52,28 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *PoolsResponseWrapper, err error) {
 	const cacheKey = "sonex_dex:uniswap:pool_list"
 
+	// Attempt to get the cached response
 	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp PoolsResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+			// Launch a goroutine to refresh the cache in the background
+			go l.refreshCache(req, cacheKey)
+			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
+	// If no valid cache, proceed to refresh and return the new response
+	return l.refreshCache(req, cacheKey)
+}
+
+func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey string) (*PoolsResponseWrapper, error) {
+	fmt.Println("refresh cache")
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	data, meta, err := model.GetPoolList(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
+	ctx := context.Background()
+	data, meta, err := model.GetPoolList(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 	if err != nil {
 		return &PoolsResponseWrapper{
 			PoolsResponse: &types.PoolsResponse{
@@ -88,8 +100,7 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 			price0 := new(big.Float).SetFloat64(0)
 			price1 := new(big.Float).SetFloat64(0)
 
-			bestPrice0, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, nil)
-			//			fmt.Println("bestPrice0", pool.Token0.Address, bestPrice0.Value.String())
+			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, nil)
 			if err == nil && bestPrice0 != nil {
 				price0.SetInt(bestPrice0.Value)
 			}
@@ -98,10 +109,9 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 			factor1 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals)))
 
 			poolPrice0 := new(big.Float).Quo(price0, factor0)
-			pool.Price0, _ = poolPrice0.Float64() // Convert to float64 for assignment
+			pool.Price0, _ = poolPrice0.Float64()
 
-			bestPrice1, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, nil)
-			//fmt.Println("bestPrice1", pool.Token1.Address, bestPrice1.Value.String())
+			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, nil)
 			if err == nil && bestPrice1 != nil {
 				price1.SetInt(bestPrice1.Value)
 			}
@@ -116,14 +126,13 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 			pool.Token1Balance, _ = token1Balance.Float64()
 			tvlUSD := new(big.Float).Add(token0Balance, token1Balance)
 			pool.TvlUSD, _ = tvlUSD.Float64()
-
 			mu.Unlock()
 		}(data[i])
 	}
 
 	wg.Wait()
 
-	poolVolumes, err := model.GetPoolVolumes(l.ctx, l.svcCtx.Config.Sonexes[0].ChainId, true)
+	poolVolumes, err := model.GetPoolVolumes(ctx, l.svcCtx.Config.Sonexes[0].ChainId, true)
 	if err == nil {
 		for _, pool := range data {
 			for _, volume := range poolVolumes {
