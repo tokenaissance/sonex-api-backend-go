@@ -33,23 +33,64 @@ func NewSonexTokenQuoteLogic(ctx context.Context, svcCtx *svc.ServiceContext) *S
 func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (resp *types.TokenQuoteResponse, err error) {
 	if req.ChainId == 0 ||
 		req.From == "" || !common.IsHexAddress(req.From) ||
-		req.To == "" || !common.IsHexAddress(req.To) {
+		req.To == "" || !common.IsHexAddress(req.To) ||
+		req.Amount == "" ||
+		req.Stablecoin == "" || !common.IsHexAddress(req.Stablecoin) {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
-	fromToken := common.HexToAddress(req.From)
-	toToken := common.HexToAddress(req.To)
 	amount, _ := new(big.Int).SetString(req.Amount, 10)
+	if amount.Cmp(big.NewInt(0)) <= 0 {
+		return nil, fmt.Errorf("%s", "Invalid parameter")
+	}
+
+	fromAddress := common.HexToAddress(req.From)
+	toAddress := common.HexToAddress(req.To)
+	stablecoinAddress := common.HexToAddress(req.Stablecoin)
 	var maxLength int64 = 3
+
+	fromPriceUSD := big.NewInt(0)
+	if fromAddress.Hex() == stablecoinAddress.Hex() {
+		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
+		if err != nil {
+			return nil, err
+		}
+		fromPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
+	} else {
+		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.From, true, 3, &req.Stablecoin)
+		if err != nil {
+			return nil, err
+		}
+		if price != nil {
+			fromPriceUSD = price.Value
+		}
+	}
+
+	toPriceUSD := big.NewInt(0)
+	if toAddress.Hex() == stablecoinAddress.Hex() {
+		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
+		if err != nil {
+			return nil, err
+		}
+		toPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
+	} else {
+		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.To, true, 3, &req.Stablecoin)
+		if err != nil {
+			return nil, err
+		}
+		if price != nil {
+			toPriceUSD = price.Value
+		}
+	}
 
 	var prices []cache.Price
 	switch req.Type {
 	case "INPUT":
-		prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromToken.Hex(), toToken.Hex(), amount, maxLength)
+		prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
 		if err != nil {
 			return nil, err
 		}
 	case "OUTPUT":
-		prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromToken.Hex(), toToken.Hex(), amount, maxLength)
+		prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
 		if err != nil {
 			return nil, err
 		}
@@ -86,10 +127,13 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				amountIn, amountOut = price.Value, amount
 			}
 			bestRouterResult = &types.TokenQuoteResponse_Router{
-				TokenIn:                     fromToken.Hex(),
-				TokenOut:                    price.To,
+				TokenIn:                     fromAddress.Hex(),
+				TokenOut:                    toAddress.Hex(),
 				AmountIn:                    amountIn.String(),
 				AmountOut:                   amountOut.String(),
+				Stablecoin:                  stablecoinAddress.Hex(),
+				PriceUSDIn:                  fromPriceUSD.String(),
+				PriceUSDOut:                 toPriceUSD.String(),
 				Router:                      router,
 				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(price.Path)),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
@@ -127,10 +171,13 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				amountIn, amountOut = item.Value, amount
 			}
 			return types.TokenQuoteResponse_Router{
-				TokenIn:                     fromToken.Hex(),
-				TokenOut:                    item.To,
+				TokenIn:                     fromAddress.Hex(),
+				TokenOut:                    toAddress.Hex(),
 				AmountIn:                    amountIn.String(),
 				AmountOut:                   amountOut.String(),
+				Stablecoin:                  stablecoinAddress.Hex(),
+				PriceUSDIn:                  fromPriceUSD.String(),
+				PriceUSDOut:                 toPriceUSD.String(),
 				Router:                      router,
 				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path)),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,

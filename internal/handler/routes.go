@@ -28,6 +28,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// Farm pool liquidity
+				Method:  http.MethodGet,
+				Path:    "/pool/liquidity",
+				Handler: farm.FarmPoolLiquidityHandler(serverCtx),
+			},
+			{
 				// Farm pool list
 				Method:  http.MethodGet,
 				Path:    "/pool/list",

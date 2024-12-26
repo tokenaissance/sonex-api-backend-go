@@ -36,6 +36,25 @@ type FarmPoolData struct {
 	UpdatedAt      string `json:"updated_at"`
 }
 
+type FarmPoolLiquidityRequest struct {
+	ChainId     int64  `form:"chain_id,optional"` // 链ID
+	IncentiveId string `form:"incentive_id"`      // 质押池ID
+}
+
+type FarmPoolLiquidityResponse struct {
+	PoolAddress            string `json:"pool_address"`            // v3流动性池合约地址
+	PositionManagerAddress string `json:"postion_manager_address"` // LP Token ID合约地址
+	LiquidityUSD           string `json:"liquidity_usd"`           // 流动性池的流动性价值（USD）
+	TotalToken0Amount      string `json:"total_token0_amount"`     // token0总量
+	TotalToken1Amount      string `json:"total_token1_amount"`     // token1总量
+	Token0Price            string `json:"token0_price"`            // token0价格
+	Token1Price            string `json:"token1_price"`            // token1价格
+	Token0Decimals         int64  `json:"token0_decimals"`         // token0精度
+	Token1Decimals         int64  `json:"token1_decimals"`         // token1精度
+	Token0Symbol           string `json:"token0_symbol"`           // token0符号
+	Token1Symbol           string `json:"token1_symbol"`           // token0符号
+}
+
 type FarmPoolListRequest struct {
 	ChainId     int64  `form:"chain_id,optional"`                       // 链ID
 	UserAddress string `form:"user_address,optional"`                   // 用户地址
@@ -386,11 +405,12 @@ type TokenPriceResponse_Price_Pool struct {
 }
 
 type TokenQuoteRequest struct {
-	ChainId int64  `form:"chain_id"`
-	From    string `form:"from"`
-	To      string `form:"to"`
-	Type    string `form:"type,options=INPUT|OUTPUT"`
-	Amount  string `form:"amount"`
+	ChainId    int64  `form:"chain_id"`
+	From       string `form:"from"`
+	To         string `form:"to"`
+	Type       string `form:"type,options=INPUT|OUTPUT"`
+	Amount     string `form:"amount"`
+	Stablecoin string `form:"stablecoin"`
 }
 
 type TokenQuoteResponse struct {
@@ -404,6 +424,9 @@ type TokenQuoteResponse_Router struct {
 	TokenOut                    string                           `json:"token_out"`
 	AmountIn                    string                           `json:"amount_in"`
 	AmountOut                   string                           `json:"amount_out"`
+	Stablecoin                  string                           `form:"stablecoin"`
+	PriceUSDIn                  string                           `json:"price_usd_in"`
+	PriceUSDOut                 string                           `json:"price_usd_out"`
 	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
 	Path                        string                           `json:"path"`
 	SqrtPriceX96AfterList       []string                         `json:"sqrt_price_x96_after_list"`
@@ -530,7 +553,7 @@ type XpoolPoolListResponse struct {
 	TVL                  string `json:"tvl"`                    // 质押池的质押总价值（USD）
 	APR                  string `json:"apr"`                    // 年化收益率
 	JoinNum              int64  `json:"join_num"`               // 参与人数
-	Status               string `json:"status"`                 // 运行状态（1-正常，2-已撤销）
+	Status               string `json:"status"`                 // 运行状态
 	CreatedAt            string `json:"created_at"`
 	UpdatedAt            string `json:"updated_at"`
 }

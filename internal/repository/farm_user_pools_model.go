@@ -17,6 +17,8 @@ type (
 		withSession(session sqlx.Session) FarmUserPoolsModel
 		CountByUserAddressIncentiveIdStatus(ctx context.Context, userAddress, incentiveId, status string) (int64, error)
 		FindByUserAddressIncentiveIdStatus(ctx context.Context, userAddress, incentiveId, status string) ([]*FarmUserPools, error)
+		TransferOwnerOfTokenId(ctx context.Context, chainId int64, oldOwner, newOwner string) error
+		FindTokenIdsByIncentiveId(ctx context.Context, incentiveId string, chainId int64) ([]int64, error)
 	}
 
 	customFarmUserPoolsModel struct {
@@ -68,6 +70,38 @@ func (m *customFarmUserPoolsModel) FindByUserAddressIncentiveIdStatus(ctx contex
 	switch err {
 	case nil:
 		return resp, nil
+	default:
+		return nil, err
+	}
+}
+
+func (m *customFarmUserPoolsModel) TransferOwnerOfTokenId(ctx context.Context, chainId int64, oldOwner, newOwner string) error {
+	query := fmt.Sprintf(`
+        UPDATE %s 
+        SET user_address = $1, 
+            updated_at = CURRENT_TIMESTAMP 
+        WHERE chain_id = $2 
+        AND user_address = $3
+    `, m.table)
+
+	_, err := m.conn.ExecCtx(ctx, query, newOwner, chainId, oldOwner)
+	return err
+}
+
+func (m *customFarmUserPoolsModel) FindTokenIdsByIncentiveId(ctx context.Context, incentiveId string, chainId int64) ([]int64, error) {
+	query := fmt.Sprintf(`
+        SELECT DISTINCT token_id 
+        FROM %s 
+        WHERE incentive_id = $1 
+        AND chain_id = $2 
+        AND status = 'stake'
+    `, m.table)
+
+	var tokenIds []int64
+	err := m.conn.QueryRowsCtx(ctx, &tokenIds, query, incentiveId, chainId)
+	switch err {
+	case nil:
+		return tokenIds, nil
 	default:
 		return nil, err
 	}
