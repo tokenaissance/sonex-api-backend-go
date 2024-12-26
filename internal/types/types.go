@@ -294,7 +294,7 @@ type PositionsResponse struct {
 	GasCosts      float64                       `json:"gasCosts"`
 	IsNegative    bool                          `json:"isNegative"`
 	Pnl           float64                       `json:"pnl"`
-	Positions     []*PositionsResponse_Position `json:"positions"`
+	Data          []*PositionsResponse_Position `json:"positions"`
 	Ratio         float64                       `json:"ratio"`
 	TotalFees     float64                       `json:"totalFees"`
 	TotalBalances float64                       `json:"totalBalances"`

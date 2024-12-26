@@ -29,12 +29,28 @@ func NewSonexTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Sonex
 	}
 }
 
-func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types.TokensResponse, err error) {
+type TokensResponseWrapper struct {
+	*types.TokensResponse
+}
+
+func (p *TokensResponseWrapper) GetData() interface{} {
+	return p.Data
+}
+
+func (p *TokensResponseWrapper) GetMeta() interface{} {
+	return p.Meta
+}
+
+func (p *TokensResponseWrapper) GetCode() interface{} {
+	return p.Code
+}
+
+func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *TokensResponseWrapper, err error) {
 	const cacheKey = "sonex_dex:uniswap:tokens"
 
 	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp types.TokensResponse
+		var cachedResp TokensResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			return &cachedResp, nil
 		}
@@ -45,11 +61,13 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 	data, meta, err := model.GetTokens(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 
 	if err != nil {
-		return &types.TokensResponse{
-			Code:    400,
-			Data:    []*types.Token_TokenDetail{},
-			Meta:    &types.PaginationMeta{},
-			Message: err.Error(),
+		return &TokensResponseWrapper{
+			&types.TokensResponse{
+				Code:    400,
+				Data:    []*types.Token_TokenDetail{},
+				Meta:    &types.PaginationMeta{},
+				Message: err.Error(),
+			},
 		}, nil
 	}
 
@@ -86,11 +104,13 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *types
 		}
 	}
 
-	response := &types.TokensResponse{
-		Code:    200,
-		Data:    data,
-		Meta:    meta,
-		Message: "success",
+	response := &TokensResponseWrapper{
+		&types.TokensResponse{
+			Code:    200,
+			Data:    data,
+			Meta:    meta,
+			Message: "success",
+		},
 	}
 
 	responseBytes, err := json.Marshal(response)

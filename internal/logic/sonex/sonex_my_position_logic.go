@@ -27,13 +27,25 @@ func NewSonexMyPositionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *S
 	}
 }
 
-func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (resp *types.MyPositionResponse, err error) {
+type MyPositionResponseWrapper struct {
+	*types.MyPositionResponse
+}
+
+func (p *MyPositionResponseWrapper) GetData() interface{} {
+	return p.Data
+}
+
+func (p *MyPositionResponseWrapper) GetCode() interface{} {
+	return p.Code
+}
+
+func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (resp *MyPositionResponseWrapper, err error) {
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:my-position:%s:%s", req.Address, req.FilterType)
 
 	// Check cache
 	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp types.MyPositionResponse
+		var cachedResp MyPositionResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			return &cachedResp, nil
 		}
@@ -44,9 +56,11 @@ func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (re
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	items, err := model.GetTransferEvents(l.ctx, req.Address)
 	if err != nil {
-		return &types.MyPositionResponse{
-			Code:    400,
-			Message: err.Error(),
+		return &MyPositionResponseWrapper{
+			&types.MyPositionResponse{
+				Code:    400,
+				Message: err.Error(),
+			},
 		}, nil
 	}
 
@@ -69,10 +83,12 @@ func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (re
 		filteredItems = items
 	}
 
-	response := &types.MyPositionResponse{
-		Code:    200,
-		Message: "success",
-		Data:    filteredItems,
+	response := &MyPositionResponseWrapper{
+		&types.MyPositionResponse{
+			Code:    200,
+			Message: "success",
+			Data:    filteredItems,
+		},
 	}
 
 	responseBytes, err := json.Marshal(response)

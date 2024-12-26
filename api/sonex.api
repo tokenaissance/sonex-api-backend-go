@@ -1,0 +1,435 @@
+syntax = "v1"
+
+/*
+Sonex Module
+*/
+type TokenPriceRequest {
+	ChainId        int64   `form:"chain_id"`
+	Token          string  `form:"token"`
+	IsCache        bool    `form:"is_cache,optional,default=true"`
+	WantStablecoin *string `form:"want_stablecoin,optional"`
+}
+
+type TokenPriceResponse_Price_Pool {
+	Address string `json:"address"`
+	Token0  string `json:"token0"`
+	Token1  string `json:"token1"`
+	Fee     int64  `json:"fee"`
+}
+
+type TokenPriceResponse_Price {
+	Stablecoin string                          `json:"stablecoin"`
+	Router     []TokenPriceResponse_Price_Pool `json:"router"`
+	Value      string                          `json:"value"`
+}
+
+type TokenPriceResponse {
+	BasePrice *TokenPriceResponse_Price  `json:"best_price"`
+	Prices    []TokenPriceResponse_Price `json:"prices"`
+}
+
+type TokenQuoteRequest {
+	ChainId int64  `form:"chain_id"`
+	From    string `form:"from"`
+	To      string `form:"to"`
+	Type    string `form:"type,options=INPUT|OUTPUT"`
+	Amount  string `form:"amount"`
+}
+
+type TokenQuoteResponse_Router_Pool {
+	Address string `json:"address"`
+	Token0  string `json:"token0"`
+	Token1  string `json:"token1"`
+	Fee     int64  `json:"fee"`
+}
+
+type TokenQuoteResponse_Router {
+	TokenIn                     string                           `json:"token_in"`
+	TokenOut                    string                           `json:"token_out"`
+	AmountIn                    string                           `json:"amount_in"`
+	AmountOut                   string                           `json:"amount_out"`
+	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
+	Path                        string                           `json:"path"`
+	SqrtPriceX96AfterList       []string                         `json:"sqrt_price_x96_after_list"`
+	InitializedTicksCrossedList []int64                          `json:"initialized_ticks_crossed_list"`
+	GasEstimate                 string                           `json:"gas_estimate"`
+	PriceImpact                 string                           `json:"price_impact"`
+}
+
+type TokenQuoteResponse {
+	SwapRouter string                      `json:"swap_router"`
+	BestRouter *TokenQuoteResponse_Router  `json:"best_router"`
+	Routers    []TokenQuoteResponse_Router `json:"routers"`
+}
+
+type TokenListRequest {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type PaginationMeta {
+	Page            int  `json:"page"`
+	Take            int  `json:"take"`
+	ItemCount       int  `json:"itemCount"`
+	PageCount       int  `json:"pageCount"`
+	HasPreviousPage bool `json:"hasPreviousPage"`
+	HasNextPage     bool `json:"hasNextPage"`
+}
+
+type TokenListResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
+type TokensRequest {
+	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type TokensResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Meta    *PaginationMeta      `json:"meta"`
+	Message string               `json:"message"`
+}
+
+type SonexTokenPricesRequest {
+	Name string `path:"name,options=you|me"`
+}
+
+type SonexTokenPricesResponse {
+	Message string `json:"message"`
+}
+
+type PoolsRequest {
+	Order         string `form:"order,default=ASC"`
+	Page          int64  `form:"page,default=1"`
+	Take          int64  `form:"take,default=10"`
+	ChainId       int64  `form:"chainId,default=1946,optional"`
+	Keywords      string `form:"keywords,optional"`
+	Token0Address string `form:"token0Address,optional"`
+	Token1Address string `form:"token1Address,optional"`
+}
+
+type Token_Social {
+	Github   string `json:"github"`
+	Reddit   string `json:"reddit"`
+	Discord  string `json:"discord"`
+	Twitter  string `json:"twitter"`
+	Bitclout string `json:"bitclout"`
+	Telegram string `json:"telegram"`
+}
+
+type PoolsResponse_TokenAdditional {
+	Audits      string       `json:"audits"`
+	Social      Token_Social `json:"social"`
+	Website     string       `json:"website"`
+	Whitepaper  string       `json:"whitepaper"`
+	Description string       `json:"description"`
+}
+
+type PoolsResponse_Token {
+	Address    string                        `json:"address"`
+	Symbol     string                        `json:"symbol"`
+	Name       string                        `json:"name"`
+	Decimals   int                           `json:"decimals"`
+	Logo       string                        `json:"logo"`
+	Additional PoolsResponse_TokenAdditional `json:"additional"`
+}
+
+type PoolsResponse_Volume {
+	Date         int64  `json:"date"`
+	Address      string `json:"address"`
+	Token0Price  string `json:"token0Price"`
+	Token1Price  string `json:"token1Price"`
+	VolumeToken0 string `json:"volumeToken0"`
+	VolumeToken1 string `json:"volumeToken1"`
+	Volume       string `json:"volume"`
+}
+
+type PoolsResponse_Pool {
+	Id            string              `json:"id"`
+	Address       string              `json:"address"`
+	FeeTier       int                 `json:"feeTier"`
+	Liquidity     string              `json:"liquidity"`
+	Token0        PoolsResponse_Token `json:"token0"`
+	Token1        PoolsResponse_Token `json:"token1"`
+	Token0Price   string              `json:"token0Price"`
+	Token1Price   string              `json:"token1Price"`
+	Tick          string              `json:"tick"`
+	Volume        float64             `json:"volume"`
+	TvlUSD        float64             `json:"tvlUSD"`
+	Token0Balance float64             `json:"token0Balance"`
+	Token1Balance float64             `json:"token1Balance"`
+	Yield24h      float64             `json:"yield24h"`
+	Price0        float64             `json:"price0"`
+	Price1        float64             `json:"price1"`
+}
+
+type PoolsResponse {
+	Code    int                   `json:"code"`
+	Data    []*PoolsResponse_Pool `json:"data"`
+	Meta    *PaginationMeta       `json:"meta"`
+	Message string                `json:"message"`
+}
+
+type TokenTopResponse {
+	Code    int                  `json:"code"`
+	Data    []*Token_TokenDetail `json:"data"`
+	Message string               `json:"message"`
+}
+
+type Token_TokenDetail {
+	Address  string              `json:"address"`
+	Symbol   string              `json:"symbol"`
+	Name     string              `json:"name"`
+	Decimals int                 `json:"decimals"`
+	Logo     string              `json:"logo"`
+	Pools    []*Token_PoolDetail `json:"pools"`
+	Volume   float64             `json:"volume"`
+	Fdv      float64             `json:"fdv"`
+}
+
+type Token_PoolDetail {
+	ID          int64           `json:"id"`
+	Address     string          `json:"address"`
+	FeeTier     int             `json:"feeTier"`
+	Liquidity   string          `json:"liquidity"`
+	Token0      Token_TokenInfo `json:"token0"`
+	Token1      Token_TokenInfo `json:"token1"`
+	Token0Price string          `json:"token0Price"`
+	Token1Price string          `json:"token1Price"`
+	Tick        string          `json:"tick"`
+	Volume      interface{}     `json:"volume"`
+}
+
+type Token_TokenInfo {
+	Address    string      `json:"address"`
+	Symbol     string      `json:"symbol"`
+	Name       string      `json:"name"`
+	Decimals   int         `json:"decimals"`
+	Logo       string      `json:"logo"`
+	Additional interface{} `json:"additional"`
+}
+
+type NftDataResponse {
+	Code    int                   `json:"code"`
+	Data    *NftDataResponse_Data `json:"data"`
+	Message string                `json:"message"`
+}
+
+type NftDataResponse_Data {
+	Amount0         string           `json:"amount0"`
+	Amount1         string           `json:"amount1"`
+	Amount0Price    string           `json:"amount0Price"`
+	Amount1Price    string           `json:"amount1Price"`
+	TickUpper       string           `json:"tickUpper"`
+	TickLower       string           `json:"tickLower"`
+	NftId           int              `json:"nftId"`
+	UncollectedFees float64          `json:"uncollectedFees"`
+	Pnl30d          string           `json:"pnl30d"`
+	Owner           string           `json:"owner"`
+	Pool            Token_PoolDetail `json:"pool"`
+	PositionAge     int              `json:"positionAge"`
+	Invested        Invested         `json:"invested"`
+	Withdrawn       Withdrawn        `json:"withdrawn"`
+	Fees            Fees             `json:"fees"`
+	Origin          string           `json:"origin"`
+	Fee             int              `json:"fee"`
+	Token0          string           `json:"token0"`
+	Token1          string           `json:"token1"`
+	TokensOwed0     float64          `json:"tokensOwed0"`
+	TokensOwed1     float64          `json:"tokensOwed1"`
+	Liquidity       string           `json:"liquidity"`
+	Price           string           `json:"price"`
+	Token0Price     string           `json:"token0Price"`
+	Token1Price     string           `json:"token1Price"`
+	PoolAddress     string           `json:"poolAddress"`
+	IsNative        int              `json:"isNative"`
+	IsClosed        bool             `json:"isClosed"`
+	Decimals0       int              `json:"decimals0"`
+	Decimals1       int              `json:"decimals1"`
+	Ratio           int              `json:"ratio"`
+	IsNegative      bool             `json:"isNegative"`
+	AmountPrice0    string           `json:"amountPrice0"`
+	AmountPrice1    string           `json:"amountPrice1"`
+}
+
+type Invested {
+	InvestedAmount0 string `json:"investedAmount0"`
+	InvestedAmount1 string `json:"investedAmount1"`
+}
+
+type Withdrawn {
+	WithdrawnAmount0 string `json:"withdrawnAmount0"`
+	WithdrawnAmount1 string `json:"withdrawnAmount1"`
+}
+
+type Fees {
+	FeeAmount0 string `json:"feeAmount0"`
+	FeeAmount1 string `json:"feeAmount1"`
+}
+
+type AggregatedAmounts {
+	TotalAmount0 float64 `json:"total_amount0"`
+	TotalAmount1 float64 `json:"total_amount1"`
+}
+
+type GetNftDataRequest {
+	Id int64 `path:"id"`
+}
+
+type SwapEventRequest {
+	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	Address     string `form:"address,optional"`
+	PoolAddress string `form:"poolAddress,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapEvent {
+	ID        int64            `json:"id"`
+	Address   string           `json:"address"`
+	Token0    Token_TokenInfo  `json:"token0"`
+	Token1    Token_TokenInfo  `json:"token1"`
+	Pool      Token_PoolDetail `json:"pool"`
+	Hash      string           `json:"hash"`
+	Amount0   float64          `json:"amount0"`
+	Amount1   float64          `json:"amount1"`
+	Usd       float64          `json:"usd"`
+	CreatedAt string           `json:"created_at"`
+}
+
+type SwapEventResponse {
+	Code    int             `json:"code"`
+	Data    []*SwapEvent    `json:"data"`
+	Meta    *PaginationMeta `json:"meta"`
+	Message string          `json:"message"`
+}
+
+type TokenVolume {
+	Address string  `json:"address"`
+	Amounts float64 `json:"amounts"`
+}
+
+type PoolVolume {
+	Address  string  `json:"address"`
+	Amounts0 float64 `json:"amounts0"`
+	Amounts1 float64 `json:"amounts1"`
+}
+
+type PositionsRequest {
+	Address  string `form:"address"`
+	Interval string `form:"interval,optional,default=1d"`
+}
+
+type PositionsResponse_Position {
+	Timestamp   int     `json:"timestamp"`
+	AmountPrice float64 `json:"amount_price"`
+}
+
+type PositionsResponse {
+	Code          int                           `json:"code"`
+	GasCosts      float64                       `json:"gasCosts"`
+	IsNegative    bool                          `json:"isNegative"`
+	Pnl           float64                       `json:"pnl"`
+	Data     []*PositionsResponse_Position `json:"positions"`
+	Ratio         float64                       `json:"ratio"`
+	TotalFees     float64                       `json:"totalFees"`
+	TotalBalances float64                       `json:"totalBalances"`
+	Message       string                        `json:"message"`
+}
+
+type MyPositionRequest {
+	Address    string `form:"address"`
+	FilterType string `form:"filter_type,optional,default=none"`
+}
+
+type PositionData {
+	TokenID       int64            `json:"tokenId"`
+	Balance       float64          `json:"balance"`
+	ClaimableFees float64          `json:"claimableFees"`
+	IsClosed      bool             `json:"isClosed"`
+	TickUpper     string           `json:"tickUpper"`
+	TickLower     string           `json:"tickLower"`
+	PNL30d        string           `json:"pnl30d"`
+	Ratio         float64          `json:"ratio"`
+	IsNegative    bool             `json:"isNegative"`
+	Origin        string           `json:"origin"`
+	Pool          Token_PoolDetail `json:"pool"`
+	PositionAge   int              `json:"positionAge"`
+}
+
+type MyPositionResponse {
+	Code    int             `json:"code"`
+	Data    []*PositionData `json:"data"`
+	Message string          `json:"message"`
+}
+
+type SonexTokenKlineRequest {
+	Address  string `form:"address"`
+	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
+}
+
+type SonexTokenPriceRecord {
+	Id           int64  `json:"id"`
+	TokenSymbol  string `json:"token_symbol"`
+	TokenAddress string `json:"token_address"`
+	Price        string `json:"price"`
+	CreatedAt    string `json:"created_at"`
+}
+
+type SonexTokenKlineResponse {
+	Code    int                     `json:"code"`
+	Data    []SonexTokenPriceRecord `json:"data"`
+	Message string                  `json:"message"`
+}
+
+@server (
+	prefix: /sonex
+	group:  sonex
+)
+service sonex_api_backend_go {
+	@handler SonexTokenPriceHandler
+	get /token/price (TokenPriceRequest) returns (TokenPriceResponse)
+
+	@handler SonexTokenQuoteHandler
+	get /token/quote (TokenQuoteRequest) returns (TokenQuoteResponse)
+
+	@handler SonexTokenListHandler
+	get /tokens/list (TokenListRequest) returns (TokenListResponse)
+
+	@handler SonexTokensHandler
+	get /tokens (TokenListRequest) returns (TokensResponse)
+
+	@handler SonexTokenTopHandler
+	get /tokens/top returns (TokenTopResponse)
+
+	@handler SonexPoolListHandler
+	get /pools (PoolsRequest) returns (PoolsResponse)
+
+	@handler SonexMyPositionHandler
+	get /pools/my_position (MyPositionRequest) returns (MyPositionResponse)
+
+	@handler SonexPositionHandler
+	get /pools/position/:id (GetNftDataRequest) returns (NftDataResponse)
+
+	@handler SonexPositionsHandler
+	get /pools/positions (PositionsRequest) returns (PositionsResponse)
+
+	@handler SonexSwapHandler
+	get /swaps (SwapEventRequest) returns (SwapEventResponse)
+
+	@handler TokensKlineHandler
+	get /tokens/kline (SonexTokenKlineRequest) returns (SonexTokenKlineResponse)
+}

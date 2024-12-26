@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	farmCbk "sonex_api_backend_go/internal/chain_handler/callback/farm"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
+	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
@@ -17,6 +19,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/rest"
+	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 var runLocally = flag.Bool("l", false, "running locally")
@@ -56,6 +59,55 @@ func main() {
 	}
 	server := rest.MustNewServer(c.RestConf, opts...)
 	defer server.Stop()
+	// Standrad response
+	httpx.SetOkHandler(func(ctx context.Context, a any) any {
+		var data interface{}
+		var meta interface{}
+		code := 200
+
+		if responseWithFields, ok := a.(interface {
+			GetData() interface{}
+			GetCode() interface{}
+		}); ok {
+			data = responseWithFields.GetData()
+			code = responseWithFields.GetCode().(int)
+
+			if metaProvider, ok := a.(interface {
+				GetMeta() interface{}
+			}); ok {
+				meta = metaProvider.GetMeta()
+			}
+		} else {
+			data = a
+		}
+
+		apiResponse := response.ApiResponse{
+			Code: code,
+			Data: data,
+		}
+
+		if meta != nil {
+			apiResponse.Meta = meta
+		}
+
+		return apiResponse
+	})
+
+	httpx.SetErrorHandlerCtx(func(ctx context.Context, err error) (int, any) {
+		var resp response.ApiResponse
+		switch standardErr := err.(type) {
+		case response.BaseError:
+			baseErr, _ := err.(response.BaseError)
+			resp.Code = baseErr.Code
+			resp.Message = fmt.Sprintf("%s: %s", response.Text(baseErr.Code), baseErr.Error())
+			resp.Data = baseErr.Data
+		default:
+			_ = standardErr
+			resp.Code = response.ServerErrorCode
+			resp.Message = fmt.Sprintf("%s: %s", response.Text(response.ServerErrorCode), err.Error())
+		}
+		return http.StatusOK, resp
+	})
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)

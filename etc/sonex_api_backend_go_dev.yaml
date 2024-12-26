@@ -6,6 +6,9 @@ Log:
   Path: ./logs
   Mode: file
   MaxContentLength: 1024
+Demains:
+  - sonex-devnet-v2.vercel.app
+  - devnet.sonex.so
 PostgreSQL:
   Host: PG_HOST
   Port: PG_PORT

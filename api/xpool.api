@@ -1,0 +1,75 @@
+syntax = "v1"
+
+/*
+Xpool Module
+*/
+type XpoolPoolListRequest {
+	ChainId     int64  `form:"chain_id,optional"`
+	UserAddress string `form:"user_address,optional"`
+	Keyword     string `form:"keyword,optional"`
+	StakedOnly  string `form:"staked_only,optional,options=true|false"`
+	OrderBy     string `form:"order_by,optional,options=hot|apr"`
+	Offset      int    `form:"offset,optional"`
+	Limit       int    `form:"limit,optional,default=10"`
+}
+
+type XpoolPoolListResponse {
+	Id                   int64  `json:"id"`
+	ChainId              int64  `json:"chain_id"`               // 链ID
+	StakingTokenName     string `json:"staking_token_name"`     // 质押的代币名称
+	StakingTokenSymbol   string `json:"staking_token_symbol"`   // 质押的代币符号
+	StakingTokenAddress  string `json:"staking_token_address"`  // 质押的代币合约地址
+	StakingTokenDecimals int64  `json:"staking_token_decimals"` // 质押的代币合约精度
+	StakingTokenPrice    string `json:"staking_token_price"`    // 质押的代币价格
+	RewardTokenName      string `json:"reward_token_name"`      // 奖励的代币名称
+	RewardTokenSymbol    string `json:"reward_token_symbol"`    // 奖励的代币符号
+	RewardTokenAddress   string `json:"reward_token_address"`   // 奖励的代币合约地址
+	RewardTokenDecimals  int64  `json:"reward_token_decimals"`  // 奖励的代币合约精度
+	RewardTokenPrice     string `json:"reward_token_price"`     // 奖励的代币价格
+	PoolAddress          string `json:"pool_address"`           // 质押池合约地址
+	RewardPerBlock       string `json:"reward_per_block"`       // 出块奖励
+	TotalStaked          string `json:"total_staked"`           // 质押池的质押币总数量
+	BlockTime            int64  `json:"block_time"`             // 出块时长 单位s
+	TVL                  string `json:"tvl"`                    // 质押池的质押总价值（USD）
+	APR                  string `json:"apr"`                    // 年化收益率
+	JoinNum              int64  `json:"join_num"`               // 参与人数
+	Status               string `json:"status"`                 // 运行状态 
+	CreatedAt            string `json:"created_at"`
+	UpdatedAt            string `json:"updated_at"`
+}
+
+type XpoolPoolStatsRequest {
+	ChainId     int64   `form:"chain_id,optional"`
+	PoolAddress string  `form:"pool_address"`                              // 质押池地址
+	Amount      float64 `form:"amount,optional"`                           // 金额（USD）
+	Duration    int     `form:"duration,optional,options=1|7|30|365|1825"` // 质押时长（单位：天）
+}
+
+type XpoolPoolStatsResponse {
+	PoolAddress       string `json:"pool_address"`        // 质押池合约地址
+	TotalStaked       string `json:"total_staked"`        // 质押池总质押代币数量
+	JoinNum           int64  `json:"join_num"`            // 参与质押人数
+	RewardPerBlock    string `json:"reward_per_block"`    // 每块奖励数量
+	BlockTime         int64  `json:"block_time"`          // 出块秒数
+	EveryDayYield     string `json:"every_day_yield"`     // 每日产量
+	RewardTokenPrice  string `json:"reward_token_price"`  // 奖励币价（USD）
+	StakingTokenPrice string `json:"staking_token_price"` // 质押币价（USD）
+	TVL               string `json:"TVL"`                 // 质押池当前总质押价值（USD）
+	APR               string `json:"APR"`                 // 年化收益率
+	ROI               string `json:"ROI"`                 // 投资回报率
+	Profit            string `json:"profit"`              // 投资回报金额（USD）
+}
+
+@server (
+	prefix: /xpool
+	group:  xpool
+)
+service sonex_api_backend_go {
+	@doc "Xpool list"
+	@handler XpoolPoolListHandler
+	get /pool/list (XpoolPoolListRequest) returns (XpoolPoolListResponse)
+
+	@doc "Xpool stats"
+	@handler XpoolPoolStatsHandler
+	get /pool/stats (XpoolPoolStatsRequest) returns (XpoolPoolStatsResponse)
+}

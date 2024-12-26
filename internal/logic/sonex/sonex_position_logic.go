@@ -25,7 +25,18 @@ func NewSonexPositionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 	}
 }
 
-func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *types.NftDataResponse, err error) {
+type NftDataResponseWrapper struct {
+	*types.NftDataResponse
+}
+
+func (p *NftDataResponseWrapper) GetData() interface{} {
+	return p.Data
+}
+func (p *NftDataResponseWrapper) GetCode() interface{} {
+	return p.Code
+}
+
+func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *NftDataResponseWrapper, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
@@ -33,10 +44,12 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 	decreaseModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn)
 	transferItem, err := transferModel.GetTransferEvent(l.ctx, req.Id)
 	if err != nil {
-		return &types.NftDataResponse{
-			Code:    400,
-			Data:    &types.NftDataResponse_Data{},
-			Message: err.Error(),
+		return &NftDataResponseWrapper{
+			&types.NftDataResponse{
+				Code:    400,
+				Data:    &types.NftDataResponse_Data{},
+				Message: err.Error(),
+			},
 		}, nil
 	}
 
@@ -70,43 +83,45 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 		invested.InvestedAmount1 = fmt.Sprintf("%f", increaseItem.TotalAmount1)
 	}
 
-	return &types.NftDataResponse{
-		Code: 200,
-		Data: &types.NftDataResponse_Data{
-			Amount0:         "0",
-			Amount1:         "0",
-			Amount0Price:    "0",
-			Amount1Price:    "0",
-			TickUpper:       transferItem.TickUpper,
-			TickLower:       transferItem.TickLower,
-			NftId:           int(req.Id),
-			UncollectedFees: 0.0,
-			Pnl30d:          "0",
-			Origin:          transferItem.Origin,
-			Pool:            transferItem.Pool,
-			PositionAge:     transferItem.PositionAge,
-			Invested:        invested,
-			Withdrawn:       withdrawn,
-			Fees:            fees,
-			Fee:             transferItem.Pool.FeeTier,
-			Token0:          transferItem.Pool.Token0.Address,
-			Token1:          transferItem.Pool.Token1.Address,
-			TokensOwed0:     0,
-			TokensOwed1:     0,
-			Liquidity:       "0.0",
-			Price:           "",
-			Token0Price:     "",
-			Token1Price:     "",
-			PoolAddress:     transferItem.Pool.Address,
-			IsNative:        0,
-			IsClosed:        false,
-			Decimals0:       transferItem.Pool.Token0.Decimals,
-			Decimals1:       transferItem.Pool.Token1.Decimals,
-			Ratio:           0,
-			IsNegative:      false,
-			AmountPrice0:    "0",
-			AmountPrice1:    "0",
+	return &NftDataResponseWrapper{
+		&types.NftDataResponse{
+			Code: 200,
+			Data: &types.NftDataResponse_Data{
+				Amount0:         "0",
+				Amount1:         "0",
+				Amount0Price:    "0",
+				Amount1Price:    "0",
+				TickUpper:       transferItem.TickUpper,
+				TickLower:       transferItem.TickLower,
+				NftId:           int(req.Id),
+				UncollectedFees: 0.0,
+				Pnl30d:          "0",
+				Origin:          transferItem.Origin,
+				Pool:            transferItem.Pool,
+				PositionAge:     transferItem.PositionAge,
+				Invested:        invested,
+				Withdrawn:       withdrawn,
+				Fees:            fees,
+				Fee:             transferItem.Pool.FeeTier,
+				Token0:          transferItem.Pool.Token0.Address,
+				Token1:          transferItem.Pool.Token1.Address,
+				TokensOwed0:     0,
+				TokensOwed1:     0,
+				Liquidity:       "0.0",
+				Price:           "",
+				Token0Price:     "",
+				Token1Price:     "",
+				PoolAddress:     transferItem.Pool.Address,
+				IsNative:        0,
+				IsClosed:        false,
+				Decimals0:       transferItem.Pool.Token0.Decimals,
+				Decimals1:       transferItem.Pool.Token1.Decimals,
+				Ratio:           0,
+				IsNegative:      false,
+				AmountPrice0:    "0",
+				AmountPrice1:    "0",
+			},
+			Message: "success",
 		},
-		Message: "success",
 	}, nil
 }

@@ -3,7 +3,6 @@ package farm
 import (
 	"net/http"
 	"sonex_api_backend_go/internal/handler/response"
-	"sonex_api_backend_go/internal/handler/response/code"
 	"sonex_api_backend_go/internal/logic/farm"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -21,13 +20,14 @@ func FarmPoolRoiHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := farm.NewFarmPoolRoiLogic(r.Context(), svcCtx)
-		result, err := l.FarmPoolRoi(&req)
-		var resp response.ApiResponse
-
+		resp, err := l.FarmPoolRoi(&req)
 		if err != nil {
-			resp = response.Error(code.FarmError, err.Error())
+			httpx.ErrorCtx(r.Context(), w, response.BaseError{
+				Code: response.FarmErrorCode,
+				Err:  err,
+			})
 		} else {
-			resp = response.Success(result)
+			httpx.OkJsonCtx(r.Context(), w, resp)
 		}
 		httpx.OkJson(w, resp)
 	}

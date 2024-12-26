@@ -26,12 +26,24 @@ func NewSonexTokenTopLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 	}
 }
 
-func (l *SonexTokenTopLogic) SonexTokenTop() (resp *types.TokenTopResponse, err error) {
+type TokenTopResponseWrapper struct {
+	*types.TokenTopResponse
+}
+
+func (p *TokenTopResponseWrapper) GetData() interface{} {
+	return p.Data
+}
+
+func (p *TokenTopResponseWrapper) GetCode() interface{} {
+	return p.Code
+}
+
+func (l *SonexTokenTopLogic) SonexTokenTop() (resp *TokenTopResponseWrapper, err error) {
 	const cacheKey = "sonex_dex:token_top"
 
 	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp types.TokenTopResponse
+		var cachedResp TokenTopResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			return &cachedResp, nil
 		}
@@ -42,17 +54,21 @@ func (l *SonexTokenTopLogic) SonexTokenTop() (resp *types.TokenTopResponse, err 
 	result, err := model.GetTopTokenList(l.ctx, int(l.svcCtx.Config.Chains[0].ChainId), l.svcCtx.Config.Sonexes[0].PositionManager)
 
 	if err != nil {
-		return &types.TokenTopResponse{
-			Code:    400,
-			Data:    []*types.Token_TokenDetail{},
-			Message: err.Error(),
+		return &TokenTopResponseWrapper{
+			&types.TokenTopResponse{
+				Code:    400,
+				Data:    []*types.Token_TokenDetail{},
+				Message: err.Error(),
+			},
 		}, nil
 	}
 
-	response := &types.TokenTopResponse{
-		Code:    200,
-		Data:    result,
-		Message: "success",
+	response := &TokenTopResponseWrapper{
+		&types.TokenTopResponse{
+			Code:    200,
+			Data:    result,
+			Message: "success",
+		},
 	}
 
 	responseBytes, err := json.Marshal(response)
