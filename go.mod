@@ -7,6 +7,7 @@ require (
 	github.com/ethereum/go-ethereum v1.14.12
 	github.com/gogf/gf/v2 v2.8.3
 	github.com/jackc/pgx/v5 v5.6.0
+	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shopspring/decimal v1.4.0
@@ -14,10 +15,7 @@ require (
 	github.com/zeromicro/go-zero v1.7.4
 )
 
-require (
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/lib/pq v1.10.9 // indirect
-)
+require github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

@@ -349,6 +349,18 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 			}
 		}
 
+		// Filter price if has zero liquidity pool
+		linq.From(prices).WhereT(func(item cache.Price) bool {
+			for _, pool := range item.Pools {
+				info := poolMap[pool.Address.Hex()]
+				if info.Liquidity.Cmp(big.NewInt(0)) <= 0 {
+					return false
+				}
+			}
+			return true
+		}).ToSlice(&prices)
+
+		// Calculate price impact
 		Q192 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 192))
 		for i, price := range prices {
 			totalPriceImpact := big.NewFloat(0)
@@ -488,6 +500,18 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 			}
 		}
 
+		// Filter price if has zero liquidity pool
+		linq.From(prices).WhereT(func(item cache.Price) bool {
+			for _, pool := range item.Pools {
+				info := poolMap[pool.Address.Hex()]
+				if info.Liquidity.Cmp(big.NewInt(0)) <= 0 {
+					return false
+				}
+			}
+			return true
+		}).ToSlice(&prices)
+
+		// Calculate price impact
 		Q192 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 192))
 		for i, price := range prices {
 			totalPriceImpact := big.NewFloat(0)
