@@ -21,6 +21,7 @@ type (
 		withSession(session sqlx.Session) FarmPoolsModel
 		FindAll(ctx context.Context, limit, offset int) ([]*FarmPools, error)
 		FindActivePools(ctx context.Context, chainId int64) ([]*FarmPools, error)
+		IsExistsByIncentiveIdAndChainId(ctx context.Context, incentiveId string, chainId int64) (bool, error)
 		Count(ctx context.Context) (int64, error)
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*FarmPools, error)
 		FindByChainId(ctx context.Context, chainId int64, limit, offset int) ([]*FarmPools, error)
@@ -259,5 +260,26 @@ func (m *customFarmPoolsModel) FindActivePools(ctx context.Context, chainId int6
 		return resp, nil
 	default:
 		return nil, err
+	}
+}
+
+func (m *customFarmPoolsModel) IsExistsByIncentiveIdAndChainId(ctx context.Context, incentiveId string, chainId int64) (bool, error) {
+	query := fmt.Sprintf(`
+        SELECT 1 
+        FROM %s 
+        WHERE incentive_id = $1 
+        AND chain_id = $2 
+        LIMIT 1
+    `, m.table)
+
+	var exists int
+	err := m.conn.QueryRowCtx(ctx, &exists, query, incentiveId, chainId)
+	switch err {
+	case nil:
+		return true, nil
+	case sqlx.ErrNotFound:
+		return false, nil
+	default:
+		return false, err
 	}
 }

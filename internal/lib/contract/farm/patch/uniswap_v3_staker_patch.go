@@ -10,10 +10,17 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // ComputeTotalTokensInPool calculates total amount of token0 and token1 in the incentive pool
 func GetTotalTokensInPool(ctx context.Context, ethClient *ethclient.Client, positionManagerAddress, poolAddress common.Address, tokenIds []int64) (*big.Int, *big.Int, error) {
+
+	// tokenIds
+	logx.Info("tokenIds: ", tokenIds)
+	logx.Info("positionManagerAddress: ", positionManagerAddress)
+	logx.Info("poolAddress: ", poolAddress)
+
 	totalToken0 := big.NewInt(0)
 	totalToken1 := big.NewInt(0)
 
