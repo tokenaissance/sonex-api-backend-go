@@ -405,7 +405,7 @@ type TokenQuoteResponse_Router struct {
 	TokenOut                    string                           `json:"token_out"`
 	AmountIn                    string                           `json:"amount_in"`
 	AmountOut                   string                           `json:"amount_out"`
-	Stablecoin                  string                           `form:"stablecoin"`
+	Stablecoin                  string                           `json:"stablecoin"`
 	PriceUSDIn                  string                           `json:"price_usd_in"`
 	PriceUSDOut                 string                           `json:"price_usd_out"`
 	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
