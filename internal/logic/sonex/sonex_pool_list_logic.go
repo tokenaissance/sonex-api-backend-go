@@ -3,7 +3,6 @@ package sonex
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -72,7 +71,7 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 			price1 := new(big.Float).SetFloat64(0)
 
 			bestPrice0, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, nil)
-			fmt.Println("bestPrice0", pool.Token0.Address, bestPrice0.Value.String())
+			//			fmt.Println("bestPrice0", pool.Token0.Address, bestPrice0.Value.String())
 			if err == nil && bestPrice0 != nil {
 				price0.SetInt(bestPrice0.Value)
 			}
@@ -84,7 +83,7 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *types
 			pool.Price0, _ = poolPrice0.Float64() // Convert to float64 for assignment
 
 			bestPrice1, _, err := global.GetPrices(l.ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, nil)
-			fmt.Println("bestPrice1", pool.Token1.Address, bestPrice1.Value.String())
+			//fmt.Println("bestPrice1", pool.Token1.Address, bestPrice1.Value.String())
 			if err == nil && bestPrice1 != nil {
 				price1.SetInt(bestPrice1.Value)
 			}

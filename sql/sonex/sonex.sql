@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS public.sonex_token;
 CREATE TABLE public.sonex_token (
-    "id" int8 NOT NULL,
+    id                            BIGSERIAL      PRIMARY KEY,
     created_at timestamp with time zone DEFAULT ('now'::text)::timestamp(6) with time zone NOT NULL,
     updated_at timestamp with time zone DEFAULT ('now'::text)::timestamp(6) with time zone NOT NULL,
     deleted_at timestamp without time zone,
