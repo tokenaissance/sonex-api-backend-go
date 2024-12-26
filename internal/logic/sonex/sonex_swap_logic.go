@@ -27,16 +27,34 @@ func NewSonexSwapLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexSw
 	}
 }
 
-func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *types.SwapEventResponse, err error) {
+type SwapEventResponseWrapper struct {
+	*types.SwapEventResponse
+}
+
+func (p *SwapEventResponseWrapper) GetData() interface{} {
+	return p.Data
+}
+
+func (p *SwapEventResponseWrapper) GetMeta() interface{} {
+	return p.Meta
+}
+
+func (p *SwapEventResponseWrapper) GetCode() interface{} {
+	return p.Code
+}
+
+func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *SwapEventResponseWrapper, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPoolSwapModel(conn)
 	data, meta, err := model.GetSwapEvents(l.ctx, req)
 	if err != nil {
-		return &types.SwapEventResponse{
-			Code:    400,
-			Data:    []*types.SwapEvent{},
-			Meta:    &types.PaginationMeta{},
-			Message: err.Error(),
+		return &SwapEventResponseWrapper{
+			&types.SwapEventResponse{
+				Code:    400,
+				Data:    []*types.SwapEvent{},
+				Meta:    &types.PaginationMeta{},
+				Message: err.Error(),
+			},
 		}, nil
 	}
 
@@ -53,10 +71,12 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *types.Swa
 
 	}
 
-	return &types.SwapEventResponse{
-		Code:    200,
-		Data:    data,
-		Meta:    meta,
-		Message: "success",
+	return &SwapEventResponseWrapper{
+		&types.SwapEventResponse{
+			Code:    200,
+			Data:    data,
+			Meta:    meta,
+			Message: "success",
+		},
 	}, nil
 }
