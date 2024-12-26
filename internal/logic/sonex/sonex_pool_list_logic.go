@@ -3,7 +3,6 @@ package sonex
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -69,7 +68,6 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 }
 
 func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey string) (*PoolsResponseWrapper, error) {
-	fmt.Println("refresh cache")
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	ctx := context.Background()

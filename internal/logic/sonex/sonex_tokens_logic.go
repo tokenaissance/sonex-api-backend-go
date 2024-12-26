@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"math/big"
 	"time"
@@ -52,13 +53,21 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *Token
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp TokensResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+			// Launch a goroutine to refresh the cache in the background
+			go l.refreshCache(req, cacheKey)
+			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
+	return l.refreshCache(req, cacheKey)
+}
+
+func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey string) (*TokensResponseWrapper, error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
-	data, meta, err := model.GetTokens(l.ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
+	ctx := context.Background()
+	data, meta, err := model.GetTokens(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 
 	if err != nil {
 		return &TokensResponseWrapper{
@@ -71,9 +80,11 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *Token
 		}, nil
 	}
 
+	fmt.Println("update cache")
+
 	wethAddress := l.svcCtx.Config.Chains[0].WETH
 
-	tokenVolumes, err := model.GetTokenVolumes(l.ctx)
+	tokenVolumes, err := model.GetTokenVolumes(ctx)
 	if err == nil {
 		for _, token := range data {
 			for _, volume := range tokenVolumes {
@@ -84,7 +95,7 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *Token
 
 				if address == volume.Address {
 					price := new(big.Float).SetFloat64(0) // Initialize price as a big.Float
-					bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, address, true, 2, nil)
+					bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, nil)
 					if err == nil && bestPrice != nil {
 						price.SetInt(bestPrice.Value)
 					}
