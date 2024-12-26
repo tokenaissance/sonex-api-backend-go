@@ -3162,7 +3162,7 @@
         },
         "status": {
           "type": "string",
-          "description": " 运行状态（1-正常，2-已撤销）"
+          "description": " 运行状态"
         },
         "created_at": {
           "type": "string"
