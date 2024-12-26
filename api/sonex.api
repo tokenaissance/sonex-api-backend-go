@@ -372,6 +372,12 @@ type PositionData {
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 	PositionAge   int              `json:"positionAge"`
+	Amount0       float64          `json:"amount0"`
+	Amount1       float64          `json:"amount1"`
+	Price0        float64          `json:"price0"`
+	Price1        float64          `json:"price1"`
+	UnclaimedFee0 float64          `json:"unclaimedFee0"`
+	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 }
 
 type MyPositionResponse {
