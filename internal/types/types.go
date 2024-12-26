@@ -386,11 +386,12 @@ type TokenPriceResponse_Price_Pool struct {
 }
 
 type TokenQuoteRequest struct {
-	ChainId int64  `form:"chain_id"`
-	From    string `form:"from"`
-	To      string `form:"to"`
-	Type    string `form:"type,options=INPUT|OUTPUT"`
-	Amount  string `form:"amount"`
+	ChainId    int64  `form:"chain_id"`
+	From       string `form:"from"`
+	To         string `form:"to"`
+	Type       string `form:"type,options=INPUT|OUTPUT"`
+	Amount     string `form:"amount"`
+	Stablecoin string `form:"stablecoin"`
 }
 
 type TokenQuoteResponse struct {
@@ -404,6 +405,9 @@ type TokenQuoteResponse_Router struct {
 	TokenOut                    string                           `json:"token_out"`
 	AmountIn                    string                           `json:"amount_in"`
 	AmountOut                   string                           `json:"amount_out"`
+	Stablecoin                  string                           `form:"stablecoin"`
+	PriceUSDIn                  string                           `json:"price_usd_in"`
+	PriceUSDOut                 string                           `json:"price_usd_out"`
 	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
 	Path                        string                           `json:"path"`
 	SqrtPriceX96AfterList       []string                         `json:"sqrt_price_x96_after_list"`
