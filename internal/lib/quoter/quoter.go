@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
+	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -128,6 +130,65 @@ func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn
 	return &output, nil
 }
 
+func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte, amountIn *big.Int) ([]*QuoteExactInputResult, error) {
+	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
+
+	quoterABI, err := abi.JSON(strings.NewReader(uniswap_v3.IquoterV2MetaData.ABI))
+	if err != nil {
+		return nil, err
+	}
+	multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+	if err != nil {
+		return nil, err
+	}
+	nodeCaller, err := node_caller.NewNodeCaller(quoter.chainConf)
+	if err != nil {
+		return nil, err
+	}
+	var multicallResult struct {
+		ReturnData []struct {
+			Success    bool   `json:"success"`
+			ReturnData []byte `json:"returnData"`
+		} `json:"returnData"`
+	}
+
+	multicallData := []contract_common.Multicall3Call3{}
+	for _, path := range paths {
+		data, err := quoterABI.Pack("quoteExactInput", path, amountIn)
+		if err != nil {
+			return nil, err
+		}
+		multicallData = append(multicallData, contract_common.Multicall3Call3{
+			Target:       quoterAddress,
+			AllowFailure: true,
+			CallData:     data,
+		})
+	}
+	data, err := multicallABI.Pack("aggregate3", multicallData)
+	if err != nil {
+		return nil, err
+	}
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(quoter.chainConf.Multicall), "aggregate3", data, &multicallResult)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []*QuoteExactInputResult{}
+	for i := range paths {
+		var output QuoteExactInputResult
+		returnData := multicallResult.ReturnData[i]
+		if returnData.Success {
+			err = quoterABI.UnpackIntoInterface(&output, "quoteExactInput", returnData.ReturnData)
+			if err != nil {
+				return nil, err
+			}
+		}
+		result = append(result, &output)
+	}
+
+	return result, nil
+}
+
 func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountOut *big.Int) (*QuoteExactOutputResult, error) {
 	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
@@ -158,4 +219,63 @@ func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountO
 		return nil, err
 	}
 	return &output, nil
+}
+
+func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte, amountIn *big.Int) ([]*QuoteExactOutputResult, error) {
+	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
+
+	quoterABI, err := abi.JSON(strings.NewReader(uniswap_v3.IquoterV2MetaData.ABI))
+	if err != nil {
+		return nil, err
+	}
+	multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+	if err != nil {
+		return nil, err
+	}
+	nodeCaller, err := node_caller.NewNodeCaller(quoter.chainConf)
+	if err != nil {
+		return nil, err
+	}
+	var multicallResult struct {
+		ReturnData []struct {
+			Success    bool   `json:"success"`
+			ReturnData []byte `json:"returnData"`
+		} `json:"returnData"`
+	}
+
+	multicallData := []contract_common.Multicall3Call3{}
+	for _, path := range paths {
+		data, err := quoterABI.Pack("quoteExactOutput", path, amountIn)
+		if err != nil {
+			return nil, err
+		}
+		multicallData = append(multicallData, contract_common.Multicall3Call3{
+			Target:       quoterAddress,
+			AllowFailure: true,
+			CallData:     data,
+		})
+	}
+	data, err := multicallABI.Pack("aggregate3", multicallData)
+	if err != nil {
+		return nil, err
+	}
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(quoter.chainConf.Multicall), "aggregate3", data, &multicallResult)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []*QuoteExactOutputResult{}
+	for i := range paths {
+		var output QuoteExactOutputResult
+		returnData := multicallResult.ReturnData[i]
+		if returnData.Success {
+			err = quoterABI.UnpackIntoInterface(&output, "quoteExactOutput", returnData.ReturnData)
+			if err != nil {
+				return nil, err
+			}
+		}
+		result = append(result, &output)
+	}
+
+	return result, nil
 }
