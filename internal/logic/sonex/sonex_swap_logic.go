@@ -2,8 +2,10 @@ package sonex
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"math/big"
+	"time"
 
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
@@ -44,9 +46,25 @@ func (p *SwapEventResponseWrapper) GetCode() interface{} {
 }
 
 func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *SwapEventResponseWrapper, err error) {
+	cacheKey := "sonex_dex:uniswap:swap"
+
+	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	if err == nil && len(cachedResponse) > 0 {
+		var cachedResp SwapEventResponseWrapper
+		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+			go l.refreshCache(req, cacheKey)
+			return &cachedResp, nil
+		}
+	}
+
+	return l.refreshCache(req, cacheKey)
+}
+
+func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey string) (resp *SwapEventResponseWrapper, err error) {
+	ctx := context.Background()
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPoolSwapModel(conn)
-	data, meta, err := model.GetSwapEvents(l.ctx, req)
+	data, meta, err := model.GetSwapEvents(ctx, req)
 	if err != nil {
 		return &SwapEventResponseWrapper{
 			&types.SwapEventResponse{
@@ -59,7 +77,7 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *SwapEvent
 	}
 
 	for _, item := range data {
-		bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
+		bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
 		if err == nil && bestPrice != nil {
 			priceFloat := new(big.Float).SetInt(bestPrice.Value)
 			amount1Positive := new(big.Float).SetFloat64(math.Abs(item.Amount1))
@@ -71,12 +89,22 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *SwapEvent
 
 	}
 
-	return &SwapEventResponseWrapper{
+	response := &SwapEventResponseWrapper{
 		&types.SwapEventResponse{
 			Code:    200,
 			Data:    data,
 			Meta:    meta,
 			Message: "success",
 		},
-	}, nil
+	}
+
+	responseBytes, err := json.Marshal(response)
+	if err == nil {
+		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		if err != nil {
+			l.Error("Failed to cache response", err)
+		}
+	}
+
+	return response, nil
 }

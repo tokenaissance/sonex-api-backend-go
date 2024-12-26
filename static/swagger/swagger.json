@@ -643,6 +643,12 @@
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2578,6 +2584,9 @@
         },
         "amount": {
           "type": "string"
+        },
+        "stablecoin": {
+          "type": "string"
         }
       },
       "title": "TokenQuoteRequest",
@@ -2586,7 +2595,8 @@
         "from",
         "to",
         "type",
-        "amount"
+        "amount",
+        "stablecoin"
       ]
     },
     "TokenQuoteResponse": {
@@ -2627,6 +2637,15 @@
         "amount_out": {
           "type": "string"
         },
+        "stablecoin": {
+          "type": "string"
+        },
+        "price_usd_in": {
+          "type": "string"
+        },
+        "price_usd_out": {
+          "type": "string"
+        },
         "router": {
           "type": "array",
           "items": {
@@ -2662,6 +2681,9 @@
         "token_out",
         "amount_in",
         "amount_out",
+        "stablecoin",
+        "price_usd_in",
+        "price_usd_out",
         "router",
         "path",
         "sqrt_price_x96_after_list",

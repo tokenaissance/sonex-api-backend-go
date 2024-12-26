@@ -155,10 +155,10 @@ type NftDataResponse struct {
 }
 
 type NftDataResponse_Data struct {
-	Amount0         string           `json:"amount0"`
-	Amount1         string           `json:"amount1"`
-	Amount0Price    string           `json:"amount0Price"`
-	Amount1Price    string           `json:"amount1Price"`
+	Amount0         float64          `json:"amount0"`
+	Amount1         float64          `json:"amount1"`
+	Amount0Price    float64          `json:"amount0Price"`
+	Amount1Price    float64          `json:"amount1Price"`
 	TickUpper       string           `json:"tickUpper"`
 	TickLower       string           `json:"tickLower"`
 	NftId           int              `json:"nftId"`
@@ -282,6 +282,12 @@ type PositionData struct {
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 	PositionAge   int              `json:"positionAge"`
+	Amount0       float64          `json:"amount0"`
+	Amount1       float64          `json:"amount1"`
+	Price0        float64          `json:"price0"`
+	Price1        float64          `json:"price1"`
+	UnclaimedFee0 float64          `json:"unclaimedFee0"`
+	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 }
 
 type PositionsRequest struct {
@@ -405,11 +411,12 @@ type TokenPriceResponse_Price_Pool struct {
 }
 
 type TokenQuoteRequest struct {
-	ChainId int64  `form:"chain_id"`
-	From    string `form:"from"`
-	To      string `form:"to"`
-	Type    string `form:"type,options=INPUT|OUTPUT"`
-	Amount  string `form:"amount"`
+	ChainId    int64  `form:"chain_id"`
+	From       string `form:"from"`
+	To         string `form:"to"`
+	Type       string `form:"type,options=INPUT|OUTPUT"`
+	Amount     string `form:"amount"`
+	Stablecoin string `form:"stablecoin"`
 }
 
 type TokenQuoteResponse struct {
@@ -423,6 +430,9 @@ type TokenQuoteResponse_Router struct {
 	TokenOut                    string                           `json:"token_out"`
 	AmountIn                    string                           `json:"amount_in"`
 	AmountOut                   string                           `json:"amount_out"`
+	Stablecoin                  string                           `json:"stablecoin"`
+	PriceUSDIn                  string                           `json:"price_usd_in"`
+	PriceUSDOut                 string                           `json:"price_usd_out"`
 	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
 	Path                        string                           `json:"path"`
 	SqrtPriceX96AfterList       []string                         `json:"sqrt_price_x96_after_list"`
