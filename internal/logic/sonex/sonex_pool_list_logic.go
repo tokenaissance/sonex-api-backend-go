@@ -68,9 +68,9 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 }
 
 func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey string) (*PoolsResponseWrapper, error) {
+	ctx := context.Background()
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	ctx := context.Background()
 	data, meta, err := model.GetPoolList(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 	if err != nil {
 		return &PoolsResponseWrapper{

@@ -155,10 +155,10 @@ type NftDataResponse struct {
 }
 
 type NftDataResponse_Data struct {
-	Amount0         string           `json:"amount0"`
-	Amount1         string           `json:"amount1"`
-	Amount0Price    string           `json:"amount0Price"`
-	Amount1Price    string           `json:"amount1Price"`
+	Amount0         float64          `json:"amount0"`
+	Amount1         float64          `json:"amount1"`
+	Amount0Price    float64          `json:"amount0Price"`
+	Amount1Price    float64          `json:"amount1Price"`
 	TickUpper       string           `json:"tickUpper"`
 	TickLower       string           `json:"tickLower"`
 	NftId           int              `json:"nftId"`
