@@ -217,6 +217,7 @@ func (nodeCaller *NodeCaller) StaticCall(ctx context.Context, abi abi.ABI, contr
 	msg := ethereum.CallMsg{
 		To:   &contract,
 		Data: data,
+		Gas:  uint64(18446744073709551615),
 	}
 	response, err := client.CallContract(ctx, msg, nil)
 	if err != nil {
