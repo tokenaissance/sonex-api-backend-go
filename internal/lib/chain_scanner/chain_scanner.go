@@ -74,6 +74,12 @@ func (chainScanner *ChainScanner) Start() {
 	chainScanner.cancel = cancel
 
 	go func(ctx context.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				logx.Errorf("ChainScanner: ChainId[%d] stopped\nError: %s", chainScanner.config.ChainId, err)
+			}
+		}()
+
 		initEnd := uint64(0)
 		opt := &bind.FilterOpts{
 			Start: 0,
