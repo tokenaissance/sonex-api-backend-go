@@ -15,6 +15,43 @@
     "application/json"
   ],
   "paths": {
+    "/farm/pool/liquidity": {
+      "get": {
+        "summary": "Farm pool liquidity",
+        "operationId": "FarmPoolLiquidity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmPoolLiquidityResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chain_id",
+            "description": " 链ID",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "incentive_id",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/farm/pool/list": {
       "get": {
         "summary": "Farm pool list",
@@ -1062,6 +1099,89 @@
         "status",
         "created_at",
         "updated_at"
+      ]
+    },
+    "FarmPoolLiquidityRequest": {
+      "type": "object",
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "incentive_id": {
+          "type": "string",
+          "description": " 质押池ID"
+        }
+      },
+      "title": "FarmPoolLiquidityRequest",
+      "required": [
+        "incentive_id"
+      ]
+    },
+    "FarmPoolLiquidityResponse": {
+      "type": "object",
+      "properties": {
+        "pool_address": {
+          "type": "string",
+          "description": " v3流动性池合约地址"
+        },
+        "postion_manager_address": {
+          "type": "string",
+          "description": " LP Token ID合约地址"
+        },
+        "liquidity_usd": {
+          "type": "string",
+          "description": " 流动性池的流动性价值（USD）"
+        },
+        "total_token0_amount": {
+          "type": "string",
+          "description": " token0总量"
+        },
+        "total_token1_amount": {
+          "type": "string",
+          "description": " token1总量"
+        },
+        "token0_price": {
+          "type": "string",
+          "description": " token0价格"
+        },
+        "token1_price": {
+          "type": "string",
+          "description": " token1价格"
+        },
+        "token0_decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " token0精度"
+        },
+        "token1_decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " token1精度"
+        },
+        "token0_symbol": {
+          "type": "string",
+          "description": " token0符号"
+        },
+        "token1_symbol": {
+          "type": "string",
+          "description": " token0符号"
+        }
+      },
+      "title": "FarmPoolLiquidityResponse",
+      "required": [
+        "pool_address",
+        "postion_manager_address",
+        "liquidity_usd",
+        "total_token0_amount",
+        "total_token1_amount",
+        "token0_price",
+        "token1_price",
+        "token0_decimals",
+        "token1_decimals",
+        "token0_symbol",
+        "token1_symbol"
       ]
     },
     "FarmPoolListRequest": {

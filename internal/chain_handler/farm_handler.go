@@ -16,10 +16,12 @@ import (
 )
 
 type eventCallback interface {
-	OnIncentiveCreated(*farm.UniswapV3StakerIncentiveCreated, *repository.EventFarmIncentiveCreated)
-	OnTokenStaked(*farm.UniswapV3StakerTokenStaked, *repository.EventFarmTokenStaked)
-	OnTokenUnstaked(*farm.UniswapV3StakerTokenUnstaked, *repository.EventFarmTokenUnstaked)
-	OnRewardClaimed(*farm.UniswapV3StakerRewardClaimed, *repository.EventFarmRewardClaimed)
+	OnIncentiveCreated(*ethclient.Client, *farm.UniswapV3StakerIncentiveCreated, *repository.EventFarmIncentiveCreated)
+	OnTokenStaked(*ethclient.Client, *farm.UniswapV3StakerTokenStaked, *repository.EventFarmTokenStaked)
+	OnTokenUnstaked(*ethclient.Client, *farm.UniswapV3StakerTokenUnstaked, *repository.EventFarmTokenUnstaked)
+	OnRewardClaimed(*ethclient.Client, *farm.UniswapV3StakerRewardClaimed, *repository.EventFarmRewardClaimed)
+	OnDepositTransferred(*ethclient.Client, *farm.UniswapV3StakerDepositTransferred, *repository.EventFarmDepositTransferred)
+	OnIncentiveEnded(*ethclient.Client, *farm.UniswapV3StakerIncentiveEnded, *repository.EventFarmIncentiveEnded)
 }
 
 type FarmHandler struct {
@@ -121,6 +123,34 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 		rewardClaimedEvents = append(rewardClaimedEvents, rewardClaimedLogs.Event)
 	}
 
+	// 获取DepositTransferred事件
+	depositTransferredLogs, err := farmContract.FilterDepositTransferred(opt, nil, nil, nil)
+	if err != nil {
+		return err, false
+	}
+	depositTransferredEvents := []*farm.UniswapV3StakerDepositTransferred{}
+	for depositTransferredLogs.Next() {
+		if err = depositTransferredLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(depositTransferredLogs.Event.Raw.BlockNumber)] = struct{}{}
+		depositTransferredEvents = append(depositTransferredEvents, depositTransferredLogs.Event)
+	}
+
+	// 获取IncentiveEnded事件
+	incentiveEndedLogs, err := farmContract.FilterIncentiveEnded(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	incentiveEndedEvents := []*farm.UniswapV3StakerIncentiveEnded{}
+	for incentiveEndedLogs.Next() {
+		if err = incentiveEndedLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(incentiveEndedLogs.Event.Raw.BlockNumber)] = struct{}{}
+		incentiveEndedEvents = append(incentiveEndedEvents, incentiveEndedLogs.Event)
+	}
+
 	// 获取区块交易信息
 	var numbers []int64
 	linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
@@ -135,6 +165,8 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmRewardClaimedModel := repository.NewEventFarmRewardClaimedModel(sqlx.NewSqlConnFromSession(s))
+		eventFarmDepositTransferredModel := repository.NewEventFarmDepositTransferredModel(sqlx.NewSqlConnFromSession(s))
+		eventFarmIncentiveEndedModel := repository.NewEventFarmIncentiveEndedModel(sqlx.NewSqlConnFromSession(s))
 
 		// IncentiveCreated Event
 		for _, event := range incentiveCreatedEvents {
@@ -179,7 +211,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 				return err
 			} else {
 				handler.triggerCallback(ctx, func(cb eventCallback) {
-					cb.OnIncentiveCreated(event, eventData)
+					cb.OnIncentiveCreated(client, event, eventData)
 				})
 			}
 		}
@@ -223,7 +255,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 				return err
 			} else {
 				handler.triggerCallback(ctx, func(cb eventCallback) {
-					cb.OnTokenStaked(event, eventData)
+					cb.OnTokenStaked(client, event, eventData)
 				})
 			}
 		}
@@ -266,11 +298,10 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 				return err
 			} else {
 				handler.triggerCallback(ctx, func(cb eventCallback) {
-					cb.OnTokenUnstaked(event, eventData)
+					cb.OnTokenUnstaked(client, event, eventData)
 				})
 			}
 		}
-
 		// RewardClaimed Event
 		for _, event := range rewardClaimedEvents {
 			blockNumber := int64(event.Raw.BlockNumber)
@@ -309,9 +340,98 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 				return err
 			} else {
 				handler.triggerCallback(ctx, func(cb eventCallback) {
-					cb.OnRewardClaimed(event, eventData)
+					cb.OnRewardClaimed(client, event, eventData)
 				})
 			}
+		}
+
+		// DepositTransferred Event
+		for _, event := range depositTransferredEvents {
+			blockNumber := int64(event.Raw.BlockNumber)
+			tx := transactions[event.Raw.TxHash.Hex()]
+			txIndex := int64(event.Raw.Index)
+			txHash := tx.Tx.Hash().Hex()
+			txAt := tx.Time
+			from := tx.From.Hex()
+			to := tx.Tx.To().Hex()
+			value := tx.Tx.Value().String()
+
+			// If handled, ignore
+			_, err := eventFarmDepositTransferredModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				continue
+			default:
+				return err
+			}
+
+			eventData := &repository.EventFarmDepositTransferred{
+				ChainId:       handler.chain.ChainId,
+				BlockNumber:   blockNumber,
+				TxIndex:       txIndex,
+				TxHash:        txHash,
+				TxAt:          txAt,
+				From:          from,
+				To:            to,
+				Value:         value,
+				EventTokenId:  event.TokenId.Int64(),
+				EventOldOwner: event.OldOwner.Hex(),
+				EventNewOwner: event.NewOwner.Hex(),
+			}
+			_, err = eventFarmDepositTransferredModel.Insert(ctx, eventData)
+			if err != nil {
+				return err
+			} else {
+				handler.triggerCallback(ctx, func(cb eventCallback) {
+					cb.OnDepositTransferred(client, event, eventData)
+				})
+			}
+
+		}
+
+		// IncentiveEnded Event
+		for _, event := range incentiveEndedEvents {
+			blockNumber := int64(event.Raw.BlockNumber)
+			tx := transactions[event.Raw.TxHash.Hex()]
+			txIndex := int64(event.Raw.Index)
+			txHash := tx.Tx.Hash().Hex()
+			txAt := tx.Time
+			from := tx.From.Hex()
+			to := tx.Tx.To().Hex()
+			value := tx.Tx.Value().String()
+
+			// If handled, ignore
+			_, err := eventFarmIncentiveEndedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				continue
+			default:
+				return err
+			}
+
+			eventData := &repository.EventFarmIncentiveEnded{
+				ChainId:          handler.chain.ChainId,
+				BlockNumber:      blockNumber,
+				TxIndex:          txIndex,
+				TxHash:           txHash,
+				TxAt:             txAt,
+				From:             from,
+				To:               to,
+				Value:            value,
+				EventIncentiveId: common.BytesToHash(event.IncentiveId[:]).Hex(),
+				EventRefund:      event.Refund.String(),
+			}
+			_, err = eventFarmIncentiveEndedModel.Insert(ctx, eventData)
+			if err != nil {
+				return err
+			} else {
+				handler.triggerCallback(ctx, func(cb eventCallback) {
+					cb.OnIncentiveEnded(client, event, eventData)
+				})
+			}
+
 		}
 
 		return nil

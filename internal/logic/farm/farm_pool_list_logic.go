@@ -104,7 +104,7 @@ func (l *FarmPoolListLogic) checkAndRefreshPools(req *types.FarmPoolListRequest)
 			if len(outdatedPools) > 0 {
 				farmCallback := farmCbk.NewFarmCallback(l.svcCtx)
 				for _, pool := range outdatedPools {
-					if err := farmCallback.UpdateFarmPoolData(pool.IncentiveId); err != nil {
+					if err := farmCallback.UpdateFarmPoolData(l.ethClient, pool.IncentiveId); err != nil {
 						logx.Errorf("Failed to update pool %s data: %v", pool.IncentiveId, err)
 					}
 				}

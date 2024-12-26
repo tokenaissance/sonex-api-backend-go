@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	farmContract "sonex_api_backend_go/internal/lib/contract/farm"
+	"sonex_api_backend_go/internal/lib/contract/farm/patch"
 	"sonex_api_backend_go/internal/repository"
 	"strconv"
 	"time"
@@ -14,7 +15,10 @@ import (
 
 	"context"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmCallback struct {
@@ -23,6 +27,7 @@ type FarmCallback struct {
 }
 
 var initStakedLiquidityUsd string = "100000000000000000000" // 100 * 10^18
+var defaultDecimals uint8 = 18
 
 func NewFarmCallback(ctx *svc.ServiceContext) *FarmCallback {
 	return &FarmCallback{
@@ -31,7 +36,7 @@ func NewFarmCallback(ctx *svc.ServiceContext) *FarmCallback {
 	}
 }
 
-func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerIncentiveCreated, data *repository.EventFarmIncentiveCreated) {
+func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmContract.UniswapV3StakerIncentiveCreated, data *repository.EventFarmIncentiveCreated) {
 	logx.Info("enter OnIncentiveCreated")
 
 	if event == nil || data == nil {
@@ -117,19 +122,18 @@ func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerInc
 	if isVaildToken1 && tokenMap[poolInfo.EventToken1].Symbol.Valid {
 		token1Symbol = tokenMap[poolInfo.EventToken1].Symbol.String
 	}
-	rewardTokenDecimals := int64(0)
+	rewardTokenDecimals := int64(defaultDecimals)
 	if isVaildRewardToken {
 		rewardTokenDecimals = int64(tokenMap[event.RewardToken.String()].Decimals)
 	}
-	token0Decimals := int64(0)
+	token0Decimals := int64(defaultDecimals)
 	if isVaildToken0 {
 		token0Decimals = int64(tokenMap[poolInfo.EventToken0].Decimals)
 	}
-	token1Decimals := int64(0)
+	token1Decimals := int64(defaultDecimals)
 	if isVaildToken0 {
 		token1Decimals = int64(tokenMap[poolInfo.EventToken1].Decimals)
 	}
-	farmPoolsModel := repository.NewFarmPoolsModel(c.ctx.DB)
 	pool := &repository.FarmPools{
 		ChainId:             c.chainId,
 		IncentiveId:         data.EventIncentiveId,
@@ -157,9 +161,39 @@ func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerInc
 		CreatedAt:           data.TxAt,
 	}
 
-	err = farmPoolsModel.Upsert(context.Background(), pool)
+	err = c.ctx.DB.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
+		farmPoolsModel := repository.NewFarmPoolsModel(sqlx.NewSqlConnFromSession(session))
+		err := farmPoolsModel.Upsert(ctx, pool)
+		if err != nil {
+			return fmt.Errorf("failed to upsert farm pool: %v", err)
+		}
+
+		farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+		actionData := &repository.FarmUserAction{
+			ChainId:     c.chainId,
+			BlockNumber: data.BlockNumber,
+			TxHash:      data.TxHash,
+			UserAddress: data.From,
+			ToAddress:   data.To,
+			IncentiveId: data.EventIncentiveId,
+			Action:      sql.NullString{String: "create_pool", Valid: true},
+			EventSign:   "IncentiveCreated",
+			LogIndex:    data.TxIndex,
+			Amount:      event.Reward.String(),
+			IsUser:      false,
+			TxTime:      sql.NullTime{Time: data.TxAt, Valid: true},
+		}
+
+		_, err = farmUserActionModel.Insert(ctx, actionData)
+		if err != nil {
+			return fmt.Errorf("failed to insert farm user action: %v", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		logx.Errorf("Failed to upsert farm pool: %v", err)
+		logx.Errorf("Failed to process IncentiveCreated: %v", err)
 		return
 	}
 
@@ -167,7 +201,7 @@ func (c *FarmCallback) OnIncentiveCreated(event *farmContract.UniswapV3StakerInc
 }
 
 // 质押
-func (c *FarmCallback) OnTokenStaked(event *farmContract.UniswapV3StakerTokenStaked, data *repository.EventFarmTokenStaked) {
+func (c *FarmCallback) OnTokenStaked(client *ethclient.Client, event *farmContract.UniswapV3StakerTokenStaked, data *repository.EventFarmTokenStaked) {
 	logx.Info("enter OnTokenStaked")
 
 	if event == nil || data == nil {
@@ -175,19 +209,32 @@ func (c *FarmCallback) OnTokenStaked(event *farmContract.UniswapV3StakerTokenSta
 		return
 	}
 
-	// 创建用户质押记录
-	farmUserPoolModel := repository.NewFarmUserPoolsModel(c.ctx.DB)
-	_, err := farmUserPoolModel.FindOneByUserAddressIncentiveIdTokenIdChainIdStatus(
-		context.Background(),
-		data.From,
-		data.EventIncentiveId,
-		event.TokenId.Int64(),
-		c.chainId,
-		"stake",
-	)
+	err := c.ctx.DB.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
+		// 保存用户操作记录
+		farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+		actionData := &repository.FarmUserAction{
+			ChainId:     c.chainId,
+			BlockNumber: data.BlockNumber,
+			TxHash:      data.TxHash,
+			UserAddress: data.From,
+			ToAddress:   data.To,
+			IncentiveId: data.EventIncentiveId,
+			TokenId:     event.TokenId.Int64(),
+			Action:      sql.NullString{String: "stake", Valid: true},
+			EventSign:   "TokenStaked", // TODO
+			LogIndex:    data.TxIndex,  // TODO
+			IsUser:      true,
+			TxTime:      sql.NullTime{Time: data.TxAt, Valid: true},
+		}
 
-	if err == repository.ErrNotFound {
-		_, err = farmUserPoolModel.Insert(context.Background(), &repository.FarmUserPools{
+		_, err := farmUserActionModel.Insert(ctx, actionData)
+		if err != nil {
+			return fmt.Errorf("failed to insert farm user action: %v", err)
+		}
+
+		// 创建用户质押记录
+		farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
+		_, err = farmUserPoolModel.Insert(ctx, &repository.FarmUserPools{
 			IncentiveId: data.EventIncentiveId,
 			TokenId:     event.TokenId.Int64(),
 			UserAddress: data.From,
@@ -195,23 +242,28 @@ func (c *FarmCallback) OnTokenStaked(event *farmContract.UniswapV3StakerTokenSta
 			Status:      "stake",
 		})
 		if err != nil {
-			logx.Errorf("Failed to insert farm user pool: %v", err)
-			return
+			return fmt.Errorf("failed to insert farm user pool: %v", err)
 		}
-	}
 
-	// 更新实时数据
-	err = c.UpdateFarmPoolData(data.EventIncentiveId)
+		// 更新参与人数
+		farmPoolModel := repository.NewFarmPoolsModel(sqlx.NewSqlConnFromSession(session))
+		err = farmPoolModel.IncJoinNum(ctx, c.chainId, data.EventIncentiveId)
+		if err != nil {
+			return fmt.Errorf("failed to increment join num: %v", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		logx.Errorf("Failed to update pool data: %v", err)
+		logx.Errorf("Failed to process TokenStaked: %v", err)
 		return
 	}
 
-	// 更新参与人数
-	farmPoolModel := repository.NewFarmPoolsModel(c.ctx.DB)
-	err = farmPoolModel.IncJoinNum(context.Background(), c.chainId, data.EventIncentiveId)
+	// 更新实时数据
+	err = c.UpdateFarmPoolData(client, data.EventIncentiveId)
 	if err != nil {
-		logx.Errorf("Failed to increment join num: %v", err)
+		logx.Errorf("Failed to update pool data: %v", err)
 		return
 	}
 
@@ -219,7 +271,7 @@ func (c *FarmCallback) OnTokenStaked(event *farmContract.UniswapV3StakerTokenSta
 }
 
 // 解除质押
-func (c *FarmCallback) OnTokenUnstaked(event *farmContract.UniswapV3StakerTokenUnstaked, data *repository.EventFarmTokenUnstaked) {
+func (c *FarmCallback) OnTokenUnstaked(client *ethclient.Client, event *farmContract.UniswapV3StakerTokenUnstaked, data *repository.EventFarmTokenUnstaked) {
 	logx.Info("enter OnTokenUnstaked")
 
 	if event == nil || data == nil {
@@ -227,50 +279,195 @@ func (c *FarmCallback) OnTokenUnstaked(event *farmContract.UniswapV3StakerTokenU
 		return
 	}
 
-	// 更新用户质押状态
-	farmUserPoolModel := repository.NewFarmUserPoolsModel(c.ctx.DB)
-	userPool, err := farmUserPoolModel.FindOneByUserAddressIncentiveIdTokenIdChainIdStatus(
-		context.Background(),
-		data.From,
-		data.EventIncentiveId,
-		event.TokenId.Int64(),
-		c.chainId,
-		"stake",
-	)
-
-	if err == nil && userPool != nil {
-		userPool.Status = "unstake"
-		err = farmUserPoolModel.Update(context.Background(), userPool)
-		if err != nil {
-			logx.Errorf("Failed to update farm user pool status: %v", err)
-			return
+	err := c.ctx.DB.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
+		// 保存用户操作记录
+		farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+		actionData := &repository.FarmUserAction{
+			ChainId:     c.chainId,
+			BlockNumber: data.BlockNumber,
+			TxHash:      data.TxHash,
+			UserAddress: data.From,
+			ToAddress:   data.To,
+			IncentiveId: data.EventIncentiveId,
+			TokenId:     event.TokenId.Int64(),
+			Action:      sql.NullString{String: "unstake", Valid: true},
+			EventSign:   "TokenUnstaked", // TODO
+			LogIndex:    data.TxIndex,    // TODO
+			IsUser:      true,
+			TxTime:      sql.NullTime{Time: data.TxAt, Valid: true},
 		}
+
+		_, err := farmUserActionModel.Insert(ctx, actionData)
+		if err != nil {
+			return fmt.Errorf("failed to insert farm user action: %v", err)
+		}
+
+		// 更新用户质押状态
+		farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
+		userPool, err := farmUserPoolModel.FindOneByUserAddressIncentiveIdTokenIdChainIdStatus(
+			ctx,
+			data.From,
+			data.EventIncentiveId,
+			event.TokenId.Int64(),
+			c.chainId,
+			"stake",
+		)
+
+		if err == nil && userPool != nil {
+			userPool.Status = "unstake"
+			err = farmUserPoolModel.Update(ctx, userPool)
+			if err != nil {
+				return fmt.Errorf("failed to update farm user pool status: %v", err)
+			}
+		}
+
+		// 更新参与人数
+		farmPoolModel := repository.NewFarmPoolsModel(sqlx.NewSqlConnFromSession(session))
+		err = farmPoolModel.DecJoinNum(ctx, c.chainId, data.EventIncentiveId)
+		if err != nil {
+			return fmt.Errorf("failed to decrement join num: %v", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logx.Errorf("Failed to process TokenUnstaked: %v", err)
+		return
 	}
 
 	// 更新实时数据
-	err = c.UpdateFarmPoolData(data.EventIncentiveId)
+	err = c.UpdateFarmPoolData(client, data.EventIncentiveId)
 	if err != nil {
 		logx.Errorf("Failed to update pool data: %v", err)
 		return
 	}
 
-	// 更新参与人数
-	farmPoolModel := repository.NewFarmPoolsModel(c.ctx.DB)
-	err = farmPoolModel.DecJoinNum(context.Background(), c.chainId, data.EventIncentiveId)
-	if err != nil {
-		logx.Errorf("Failed to decrement join num: %v", err)
-		return
-	}
 	logx.Infof("[OnTokenUnstaked] OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 奖励领取
-func (c *FarmCallback) OnRewardClaimed(event *farmContract.UniswapV3StakerRewardClaimed, data *repository.EventFarmRewardClaimed) {
+func (c *FarmCallback) OnRewardClaimed(client *ethclient.Client, event *farmContract.UniswapV3StakerRewardClaimed, data *repository.EventFarmRewardClaimed) {
+	if event == nil || data == nil {
+		logx.Error("event or data is nil")
+		return
+	}
 
+	// 保存用户操作记录
+	farmUserActionModel := repository.NewFarmUserActionModel(c.ctx.DB)
+	actionData := &repository.FarmUserAction{
+		ChainId:     c.chainId,
+		BlockNumber: data.BlockNumber,
+		TxHash:      data.TxHash,
+		UserAddress: data.From,
+		ToAddress:   data.EventTo,
+		Action:      sql.NullString{String: "harvest", Valid: true},
+		EventSign:   "RewardClaimed",
+		LogIndex:    data.TxIndex,
+		Amount:      data.EventReward,
+		IsUser:      true,
+		TxTime:      sql.NullTime{Time: data.TxAt, Valid: true},
+	}
+
+	_, err := farmUserActionModel.Insert(context.Background(), actionData)
+	if err != nil {
+		logx.Errorf("Failed to insert farm user action: %v", err)
+		return
+	}
+
+	logx.Infof("[OnRewardClaimed] OK, TxHash: %v", data.TxHash)
+}
+
+// LP Token所有权转移
+func (c *FarmCallback) OnDepositTransferred(client *ethclient.Client, event *farmContract.UniswapV3StakerDepositTransferred, data *repository.EventFarmDepositTransferred) {
+	if event == nil || data == nil {
+		logx.Error("event or data is nil")
+		return
+	}
+
+	err := c.ctx.DB.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
+		// 保存用户操作记录
+		farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+		actionData := &repository.FarmUserAction{
+			ChainId:     c.chainId,
+			BlockNumber: data.BlockNumber,
+			TxHash:      data.TxHash,
+			UserAddress: data.From,
+			ToAddress:   data.EventNewOwner,
+			TokenId:     data.EventTokenId,
+			Action:      sql.NullString{String: "transfer", Valid: true},
+			EventSign:   "DepositTransferred",
+			LogIndex:    data.TxIndex,
+			IsUser:      true,
+			TxTime:      sql.NullTime{Time: data.TxAt, Valid: true},
+		}
+
+		_, err := farmUserActionModel.Insert(ctx, actionData)
+		if err != nil {
+			return fmt.Errorf("failed to insert farm user action: %v", err)
+		}
+
+		// 转移TokenId的所有权
+		farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
+		err = farmUserPoolModel.TransferOwnerOfTokenId(ctx, c.chainId, data.EventOldOwner, data.EventNewOwner)
+		if err != nil {
+			return fmt.Errorf("failed to update farm user pools: %v", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logx.Errorf("Failed to process DepositTransferred: %v", err)
+		return
+	}
+
+	logx.Infof("[OnDepositTransferred] OK, TokenId: %v", data.EventTokenId)
+}
+
+// 质押池结束
+func (c *FarmCallback) OnIncentiveEnded(client *ethclient.Client, event *farmContract.UniswapV3StakerIncentiveEnded, data *repository.EventFarmIncentiveEnded) {
+	if event == nil || data == nil {
+		logx.Error("event or data is nil")
+		return
+	}
+
+	err := c.ctx.DB.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
+		// 1. 插入用户操作记录
+		farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+		actionData := &repository.FarmUserAction{
+			ChainId:     c.chainId,
+			BlockNumber: data.BlockNumber,
+			TxHash:      data.TxHash,
+			UserAddress: data.From,
+			ToAddress:   data.To,
+			IncentiveId: data.EventIncentiveId,
+			Action:      sql.NullString{String: "destroy_pool", Valid: true},
+			EventSign:   "IncentiveEnded",
+			LogIndex:    data.TxIndex,
+			Amount:      data.EventRefund,
+			IsUser:      false,
+			TxTime:      sql.NullTime{Time: data.TxAt, Valid: true},
+		}
+
+		_, err := farmUserActionModel.Insert(ctx, actionData)
+		if err != nil {
+			return fmt.Errorf("failed to insert farm user action: %v", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logx.Errorf("Failed to process IncentiveEnded: %v", err)
+		return
+	}
+
+	logx.Infof("[OnIncentiveEnded] OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 更新质押池实时数据
-func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
+func (c *FarmCallback) UpdateFarmPoolData(client *ethclient.Client, incentiveId string) error {
 	logx.Info("enter UpdateFarmPoolData")
 
 	farmPoolModel := repository.NewFarmPoolsModel(c.ctx.DB)
@@ -311,14 +508,28 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 		token1PriceValue = token1Price[0].Value
 	}
 
-	// TODO: getTotalTokensInPool(IncentiveKey memory key) external view returns (uint256 totalToken0, uint256 totalToken1)
+	// 获取质押池中的tokenIds
+	farmUserPoolModel := repository.NewFarmUserPoolsModel(c.ctx.DB)
+	tokenIds, err := farmUserPoolModel.FindTokenIdsByIncentiveId(context.Background(), incentiveId, c.chainId)
+	if err != nil {
+		return fmt.Errorf("failed to get token ids: %v", err)
+	}
 
-	token0Amount, _ := new(big.Int).SetString(pool.TotalToken0Amount, 10)
-	token1Amount, _ := new(big.Int).SetString(pool.TotalToken1Amount, 10)
+	// 计算质押池的代币总量
+	totalToken0Amount, totalToken1Amount, err := patch.GetTotalTokensInPool(
+		context.Background(),
+		client,
+		common.HexToAddress(c.ctx.Config.Sonexes[0].PositionManager),
+		common.HexToAddress(pool.PoolAddress),
+		tokenIds,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to compute total tokens: %v", err)
+	}
 
-	token0Value := new(big.Int).Mul(token0Amount, token0PriceValue)
-	token1Value := new(big.Int).Mul(token1Amount, token1PriceValue)
-	totalValue := new(big.Int).Add(token0Value, token1Value)
+	totalToken0Value := new(big.Int).Mul(totalToken0Amount, token0PriceValue)
+	totalToken1Value := new(big.Int).Mul(totalToken1Amount, token1PriceValue)
+	totalValue := new(big.Int).Add(totalToken0Value, totalToken1Value)
 
 	// 计算APR
 	rewardAmount, _ := new(big.Int).SetString(pool.RewardTokenAmount, 10)
@@ -341,8 +552,8 @@ func (c *FarmCallback) UpdateFarmPoolData(incentiveId string) error {
 		ChainId:            c.chainId,
 		IncentiveId:        incentiveId,
 		RewardTokenPrice:   rewardPriceValue.String(),
-		TotalToken0Amount:  "0",
-		TotalToken1Amount:  "0",
+		TotalToken0Amount:  totalToken0Value.String(),
+		TotalToken1Amount:  totalToken1Value.String(),
 		StakedLiquidityUsd: totalValue.String(),
 		Apr:                apr.String(),
 	})

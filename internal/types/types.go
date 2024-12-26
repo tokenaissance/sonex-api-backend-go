@@ -36,6 +36,25 @@ type FarmPoolData struct {
 	UpdatedAt      string `json:"updated_at"`
 }
 
+type FarmPoolLiquidityRequest struct {
+	ChainId     int64  `form:"chain_id,optional"` // 链ID
+	IncentiveId string `form:"incentive_id"`      // 质押池ID
+}
+
+type FarmPoolLiquidityResponse struct {
+	PoolAddress            string `json:"pool_address"`            // v3流动性池合约地址
+	PositionManagerAddress string `json:"postion_manager_address"` // LP Token ID合约地址
+	LiquidityUSD           string `json:"liquidity_usd"`           // 流动性池的流动性价值（USD）
+	TotalToken0Amount      string `json:"total_token0_amount"`     // token0总量
+	TotalToken1Amount      string `json:"total_token1_amount"`     // token1总量
+	Token0Price            string `json:"token0_price"`            // token0价格
+	Token1Price            string `json:"token1_price"`            // token1价格
+	Token0Decimals         int64  `json:"token0_decimals"`         // token0精度
+	Token1Decimals         int64  `json:"token1_decimals"`         // token1精度
+	Token0Symbol           string `json:"token0_symbol"`           // token0符号
+	Token1Symbol           string `json:"token1_symbol"`           // token0符号
+}
+
 type FarmPoolListRequest struct {
 	ChainId     int64  `form:"chain_id,optional"`                       // 链ID
 	UserAddress string `form:"user_address,optional"`                   // 用户地址
