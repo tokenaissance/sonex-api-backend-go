@@ -549,7 +549,7 @@ type XpoolPoolListResponse struct {
 	TVL                  string `json:"tvl"`                    // 质押池的质押总价值（USD）
 	APR                  string `json:"apr"`                    // 年化收益率
 	JoinNum              int64  `json:"join_num"`               // 参与人数
-	Status               string `json:"status"`                 // 运行状态（1-正常，2-已撤销）
+	Status               string `json:"status"`                 // 运行状态
 	CreatedAt            string `json:"created_at"`
 	UpdatedAt            string `json:"updated_at"`
 }
