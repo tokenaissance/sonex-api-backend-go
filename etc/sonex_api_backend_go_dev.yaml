@@ -3,9 +3,6 @@ Host: 0.0.0.0
 Port: 8888
 Log:
   Level: debug
-  Path: ./logs
-  Mode: file
-  MaxContentLength: 1024
 Domains:
   - sonex-devnet-v2.vercel.app
   - devnet.sonex.so
