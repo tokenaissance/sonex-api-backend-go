@@ -52,7 +52,7 @@ func (m *customFarmPoolsModel) withSession(session sqlx.Session) FarmPoolsModel 
 
 func (m *customFarmPoolsModel) FindAll(ctx context.Context, limit, offset int) ([]*FarmPools, error) {
 	var resp []*FarmPools
-	query := fmt.Sprintf("select %s from %s limit ? offset ?", farmPoolsRows, m.table)
+	query := fmt.Sprintf("select %s from %s limit $1 offset $2", farmPoolsRows, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, limit, offset)
 	switch err {
 	case nil:
@@ -78,7 +78,7 @@ func (m *customFarmPoolsModel) Count(ctx context.Context) (int64, error) {
 
 func (m *customFarmPoolsModel) FindByPoolAddress(ctx context.Context, poolAddress string) (*FarmPools, error) {
 	var resp FarmPools
-	query := fmt.Sprintf("select %s from %s where pool_address = ?", farmPoolsRows, m.table)
+	query := fmt.Sprintf("select %s from %s where pool_address = $1", farmPoolsRows, m.table)
 	err := m.conn.QueryRowCtx(ctx, &resp, query, poolAddress)
 	switch err {
 	case nil:
@@ -92,7 +92,7 @@ func (m *customFarmPoolsModel) FindByPoolAddress(ctx context.Context, poolAddres
 
 func (m *customFarmPoolsModel) FindByChainId(ctx context.Context, chainId int64, limit, offset int) ([]*FarmPools, error) {
 	var resp []*FarmPools
-	query := fmt.Sprintf("select %s from %s where chain_id = ? limit ? offset ?", farmPoolsRows, m.table)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 limit $2 offset $3", farmPoolsRows, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, limit, offset)
 	switch err {
 	case nil:
@@ -154,7 +154,7 @@ func (m *customFarmPoolsModel) GetPoolList(ctx context.Context, opts *types.Farm
 	}
 
 	if opts.Limit > 0 || opts.Offset > 0 {
-		query += " LIMIT ? OFFSET ?"
+		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 		args = append(args, opts.Limit, opts.Offset)
 	}
 
