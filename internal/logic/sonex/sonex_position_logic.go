@@ -79,6 +79,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 
 		return cachedResp, nil
 	}
+	defer l.svcCtx.Cache.Del(lockKey)
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)

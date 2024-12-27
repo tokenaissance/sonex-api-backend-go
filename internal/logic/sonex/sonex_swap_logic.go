@@ -82,7 +82,6 @@ func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey stri
 
 		return cachedResp, nil
 	}
-
 	defer l.svcCtx.Cache.Del(lockKey)
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())

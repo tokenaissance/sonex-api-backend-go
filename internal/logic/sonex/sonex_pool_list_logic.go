@@ -99,6 +99,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 
 		return cachedResp, nil
 	}
+	defer l.svcCtx.Cache.Del(lockKey)
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)

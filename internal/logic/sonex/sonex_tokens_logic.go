@@ -83,6 +83,7 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 
 		return cachedResp, nil
 	}
+	defer l.svcCtx.Cache.Del(lockKey)
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
