@@ -1,0 +1,51 @@
+Name: sonex_api_backend_go
+Host: 0.0.0.0
+Port: 8888
+Log:
+  Level: debug
+  Path: ./logs
+  Mode: file
+  MaxContentLength: 1024
+Domains:
+  # - sonex-devnet-v2.vercel.app
+  - testnet.sonex.so
+PostgreSQL:
+  Host: PG_HOST
+  Port: PG_PORT
+  User: PG_USER
+  Password: PG_PWD
+  DbName: PG_DBNAME
+Redis:
+  Host: REDIS_HOST
+  Port: REDIS_PORT
+  Password:
+  Db: 0
+Chains:
+  - ChainId: 1946
+    Name: Minato
+    Nodes: # URL:Weight
+      http://10.1.30.101:8545: 100 # snap内部
+      http://10.1.30.102:8545: 100 # full内部
+    MinConfirmations: 5
+    MinDelayWaitMillisecond: 2000
+    MaxLogsNumber: 5000
+    Multicall: 0x18546Af844DFA77c5268FF8A51941E11692FED25
+    Tokens:
+      - Address: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
+        IsStableCoin: true
+      - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
+        IsStableCoin: true
+    WETH: 0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C
+Sonexes:
+  - ChainId: 1946
+    Factory: 0xF0e4d91E5DBaE579dD72DA2584a09e423d863aC1
+    PositionManager: 0xf40E978fFae0068C11EaC966cD5DBFA6d13622DD 
+    Quoter: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
+    SwapRouter: 0xfC53A3f62B4EfaC7b64CEE3Ae1dD944262b27Ff1
+Xpools:
+  - ChainId: 1946
+    Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531 # testnet
+Farm:
+  - ChainId: 1946
+    Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322 # testnet
+
