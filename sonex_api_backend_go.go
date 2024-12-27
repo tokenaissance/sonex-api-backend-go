@@ -55,7 +55,7 @@ func main() {
 	})
 
 	opts := []rest.RunOption{}
-	opts = append(opts, rest.WithCors(c.Demains...), rest.WithCorsHeaders())
+	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders())
 	if c.Debug {
 		opts = append(opts, rest.WithFileServer("/swagger", http.Dir("./static/swagger")))
 	}

@@ -6,7 +6,7 @@ Log:
   Path: ./logs
   Mode: file
   MaxContentLength: 1024
-Demains:
+Domains:
   - sonex-devnet-v2.vercel.app
   - devnet.sonex.so
 PostgreSQL:

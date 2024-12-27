@@ -405,11 +405,16 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				close(results)
 
 				// Handle results
+				waitForRetryPools = []common.Address{}
+				waitForRetryPoolMap := map[common.Address]struct{}{}
 				for result := range results {
 					if result.Err != nil {
-						waitForRetryPools = append(waitForRetryPools, result.PoolAddress)
+						waitForRetryPoolMap[result.PoolAddress] = struct{}{}
 						logx.Errorf("Handle pool error: %s\n", result.Err)
 					}
+				}
+				for key := range waitForRetryPoolMap {
+					waitForRetryPools = append(waitForRetryPools, key)
 				}
 				if len(waitForRetryPools) != 0 {
 					return fmt.Errorf("%s", fmt.Sprintf("Retry handle pools[%d]: %v", len(waitForRetryPools), waitForRetryPools))
