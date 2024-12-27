@@ -15,6 +15,7 @@ import (
 )
 
 var provider = "http://10.1.30.101:8545"
+var defaultDecimals = 18
 
 func getFarmContract(client *ethclient.Client, addr common.Address) (*farmContract.UniswapV3Staker, error) {
 	contract, err := farmContract.NewUniswapV3Staker(addr, client)
@@ -55,11 +56,10 @@ func getErc20Contract(client *ethclient.Client, addr string) (*commonContract.Er
 // 获取token价格
 func getTokenPrice(chainId int64, tokenAddress string) (*big.Int, error) {
 
-	var priceValue *big.Int
+	priceValue := big.NewInt(0)
 	_, price, err := global.GetPrices(context.Background(), nil, chainId, tokenAddress, true, 2, nil)
 	if err != nil {
 		logx.Errorf("[farm] failed to get token price: %v", err)
-		priceValue = big.NewInt(0)
 	}
 	if price != nil {
 		priceValue = price[0].Value
