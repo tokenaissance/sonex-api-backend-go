@@ -38,10 +38,12 @@ const (
 	// liquidity 3
 
 	// farm 4
-	FarmErrorCode = 40101
+	FarmErrorCode      = 40101
+	FarmParamErrorCode = 40102
 
 	// xpool 5
-	XpoolErrorCode = 50101
+	XpoolErrorCode      = 50101
+	XpoolParamErrorCode = 50102
 )
 
 func Text(code int) string {

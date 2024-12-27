@@ -85,7 +85,11 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	}
 
 	err := m.conn.QueryRowCtx(ctx, &count, countQuery, args...)
-	if err != nil {
+	switch err {
+	case nil:
+	case sqlx.ErrNotFound:
+		count = 0
+	default:
 		return nil, 0, err
 	}
 
@@ -93,11 +97,15 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	args = append(args, opts.Limit, opts.Offset)
 
 	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
-	if err != nil {
+	switch err {
+	case nil:
+		return pools, count, nil
+	case sqlx.ErrNotFound:
+		return []*XpoolPools{}, count, nil
+	default:
 		return nil, 0, err
 	}
 
-	return pools, count, nil
 }
 
 type StatsParams struct {
