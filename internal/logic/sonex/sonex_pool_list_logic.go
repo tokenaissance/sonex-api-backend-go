@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -49,7 +50,18 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 }
 
 func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *PoolsResponseWrapper, err error) {
-	const cacheKey = "sonex_dex:uniswap:pool_list"
+	cacheKey := "sonex_dex:uniswap:pool_list"
+	if req.Token0Address != "" {
+		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Token0Address)
+	}
+
+	if req.Token1Address != "" {
+		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Token1Address)
+	}
+
+	if req.Keywords != "" {
+		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Keywords)
+	}
 
 	// Attempt to get the cached response
 	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
