@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"sonex_api_backend_go/internal/chain_handler"
 	farmCbk "sonex_api_backend_go/internal/chain_handler/callback/farm"
+	"sonex_api_backend_go/internal/chain_handler/callback/sonex"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
+	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/conf"
@@ -101,7 +103,9 @@ func main() {
 					panic(err)
 				}
 				// Swap callback demo
-				handler.AddPoolSwapCallback(chain_handler.SonexSwapCallback)
+				handler.AddPoolSwapCallback(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool string) {
+					sonex.SonexSwapCallback(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool)
+				})
 				chainHandlerManager.AddHandler(1946, handler)
 			}
 		}
