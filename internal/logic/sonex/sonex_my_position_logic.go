@@ -67,11 +67,19 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 
 	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
 	if err != nil {
-		return cachedResp, fmt.Errorf("failed to acquire lock: %w", err)
+		if cachedResp == nil {
+			return nil, fmt.Errorf("failed to acquire lock: %w", err)
+		}
+
+		return cachedResp, nil
 	}
 
 	if !success {
-		return cachedResp, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+		if cachedResp == nil {
+			return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+		}
+
+		return cachedResp, nil
 	}
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
