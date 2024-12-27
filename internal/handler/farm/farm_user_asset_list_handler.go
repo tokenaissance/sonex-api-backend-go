@@ -15,7 +15,10 @@ func FarmUserAssetListHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.FarmUserAssetListRequest
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.ErrorCtx(r.Context(), w, response.BaseError{
+				Code: response.FarmParamErrorCode,
+				Err:  err,
+			})
 			return
 		}
 
@@ -29,6 +32,5 @@ func FarmUserAssetListHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		} else {
 			httpx.OkJsonCtx(r.Context(), w, resp)
 		}
-		httpx.OkJson(w, resp)
 	}
 }

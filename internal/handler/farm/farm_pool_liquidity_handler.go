@@ -3,10 +3,12 @@ package farm
 import (
 	"net/http"
 
-	"github.com/zeromicro/go-zero/rest/httpx"
+	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/logic/farm"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+
+	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 // Farm pool liquidity
@@ -21,7 +23,10 @@ func FarmPoolLiquidityHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := farm.NewFarmPoolLiquidityLogic(r.Context(), svcCtx)
 		resp, err := l.FarmPoolLiquidity(&req)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.ErrorCtx(r.Context(), w, response.BaseError{
+				Code: response.FarmErrorCode,
+				Err:  err,
+			})
 		} else {
 			httpx.OkJsonCtx(r.Context(), w, resp)
 		}

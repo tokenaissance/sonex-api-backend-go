@@ -38,8 +38,10 @@ var enUSText = map[int]string{
 	// liquidity
 
 	// farm
-	FarmErrorCode: "farm error",
+	FarmErrorCode:      "farm error",
+	FarmParamErrorCode: "farm parameter error",
 
 	// x-pool
-	XpoolErrorCode: "xpool error",
+	XpoolErrorCode:      "xpool error",
+	XpoolParamErrorCode: "xpool parameter error",
 }

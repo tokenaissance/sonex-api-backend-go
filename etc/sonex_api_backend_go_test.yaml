@@ -23,8 +23,13 @@ Redis:
 Chains:
   - ChainId: 1946
     Name: Minato
-    Nodes: # URL:Weight
-      http://10.1.30.102:8545: 100 # full内部
+    Nodes:
+      # URL:Weight
+      # http://10.1.30.101:8545: 100 # snap内部
+      # http://10.1.30.102:8545: 100 # full内部
+      https://rpc.minato.soneium.org: 20
+      https://soneium-minato.rpc.scs.startale.com?apikey=MTMwqry0P0CnqHPnLqmOqUsTxkiPa5ST: 50
+      https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
@@ -38,13 +43,12 @@ Chains:
 Sonexes:
   - ChainId: 1946
     Factory: 0xF0e4d91E5DBaE579dD72DA2584a09e423d863aC1
-    PositionManager: 0xf40E978fFae0068C11EaC966cD5DBFA6d13622DD 
+    PositionManager: 0xf40E978fFae0068C11EaC966cD5DBFA6d13622DD
     Quoter: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
     SwapRouter: 0xfC53A3f62B4EfaC7b64CEE3Ae1dD944262b27Ff1
 Xpools:
   - ChainId: 1946
-    Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531 # testnet
+    Factory: 0x8faF01E5Ef1b2B5E239672a83847AD8dc5BF80de
 Farm:
   - ChainId: 1946
-    Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322 # testnet
-
+    Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322

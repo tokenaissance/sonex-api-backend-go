@@ -53,16 +53,35 @@ func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (re
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp MyPositionResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
-			go l.refreshCache(req, cacheKey)
+			go l.refreshCache(req, cacheKey, &cachedResp)
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey)
+	return l.refreshCache(req, cacheKey, nil)
 }
 
-func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheKey string) (resp *MyPositionResponseWrapper, err error) {
+func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheKey string, cachedResp *MyPositionResponseWrapper) (resp *MyPositionResponseWrapper, err error) {
+	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
+
+	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+	if err != nil {
+		if cachedResp == nil {
+			return nil, fmt.Errorf("failed to acquire lock: %w", err)
+		}
+
+		return cachedResp, nil
+	}
+
+	if !success {
+		if cachedResp == nil {
+			return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+		}
+
+		return cachedResp, nil
+	}
+	defer l.svcCtx.Cache.Del(lockKey)
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)

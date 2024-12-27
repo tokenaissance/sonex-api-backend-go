@@ -18,6 +18,7 @@ type ICache interface {
 	Expire(key string, expiration time.Duration) error
 	SMembers(ctx context.Context, key string) *redis.StringSliceCmd
 	SAdd(ctx context.Context, key string, members ...interface{}) *redis.IntCmd
+	SetNX(key string, value interface{}, expiration time.Duration) (bool, error) // Add SetNX to the interface
 }
 
 type RedisCache struct {
@@ -78,4 +79,8 @@ func (c *RedisCache) SMembers(ctx context.Context, key string) *redis.StringSlic
 
 func (c *RedisCache) SAdd(ctx context.Context, key string, members ...interface{}) *redis.IntCmd {
 	return c.client.SAdd(ctx, key, members...)
+}
+
+func (c *RedisCache) SetNX(key string, value interface{}, expiration time.Duration) (bool, error) {
+	return c.client.SetNX(context.Background(), key, value, expiration).Result()
 }

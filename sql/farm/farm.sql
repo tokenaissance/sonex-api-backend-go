@@ -5,42 +5,42 @@
 DROP TABLE IF EXISTS "public"."farm_pools";
 -- Farm质押池表
 CREATE TABLE farm_pools (
-    id SERIAL PRIMARY KEY,
-    chain_id BIGINT NOT NULL DEFAULT 0, -- 链ID
-    incentive_id VARCHAR(66) NOT NULL DEFAULT '', -- 质押池ID
-    start_time TIMESTAMP, -- 质押池开放时间
-    end_time TIMESTAMP, -- 质押池结束时间
-    reward_token_address VARCHAR(42) NOT NULL DEFAULT '', -- 奖励token代币地址
-    reward_token_decimals SMALLINT NOT NULL DEFAULT 0, -- 奖励token代币精度
-    reward_token_amount VARCHAR(50) NOT NULL DEFAULT '', -- 奖励token数量
-    reward_token_price VARCHAR(50) NOT NULL DEFAULT '', -- 奖励token价格
-    refundee_address VARCHAR(42) NOT NULL DEFAULT '', -- 项目方回收奖励代币地址
-
-    pool_address VARCHAR(42) NOT NULL DEFAULT '', -- v3池子合约地址
-    fee_ratio VARCHAR(10) NOT NULL DEFAULT 0.0000, -- v3池子手续费率
-    token0_address VARCHAR(42) NOT NULL DEFAULT '', -- token0代币地址
-    token0_symbol VARCHAR(10) NOT NULL DEFAULT '', -- token0符号
-    token0_decimals SMALLINT NOT NULL DEFAULT 0, -- token0精度
-    token1_address VARCHAR(42) NOT NULL DEFAULT '', -- token1代币地址
-    token1_symbol VARCHAR(10) NOT NULL DEFAULT '', -- token1符号
-    token1_decimals SMALLINT NOT NULL DEFAULT 0, -- token1精度
-    
-    staked_liquidity VARCHAR(50) NOT NULL DEFAULT '', -- 质押池质押的流动性
-    staked_liquidity_usd VARCHAR(50) NOT NULL DEFAULT '', -- 质押池质押的流动性的价值（USD）
-    total_token0_amount VARCHAR(50) NOT NULL DEFAULT '', -- token0质押总量
-    total_token1_amount VARCHAR(50) NOT NULL DEFAULT '', -- token1质押总量
-    apr VARCHAR(50) NOT NULL DEFAULT '', -- 质押池年化收益率
-    join_num INTEGER NOT NULL DEFAULT 0, -- 质押池参与质押人数
-    tx_hash varchar(255) NOT NULL DEFAULT '', -- 交易哈希
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- 创建时间
-    updated_at TIMESTAMP NULL DEFAULT NULL, -- 更新时间
+    "id" int8 PRIMARY KEY,
+    "chain_id" BIGINT NOT NULL DEFAULT 0,
+    "incentive_id" VARCHAR(66) NOT NULL DEFAULT '',
+    "start_time" TIMESTAMP, 
+    "end_time" TIMESTAMP, 
+    "reward_token_address" VARCHAR(42) NOT NULL DEFAULT '',
+    "reward_token_decimals" SMALLINT NOT NULL DEFAULT 0, 
+    "reward_token_amount" VARCHAR(50) NOT NULL DEFAULT '', 
+    "reward_token_price" VARCHAR(50) NOT NULL DEFAULT '', 
+    "refundee_address" VARCHAR(42) NOT NULL DEFAULT '', 
+    "pool_address" VARCHAR(42) NOT NULL DEFAULT '', 
+    "fee_ratio" VARCHAR(10) NOT NULL DEFAULT 0.0000, 
+    "token0_address" VARCHAR(42) NOT NULL DEFAULT '',
+    "token0_symbol" VARCHAR(10) NOT NULL DEFAULT '', 
+    "token0_decimals" SMALLINT NOT NULL DEFAULT 0, 
+    "token1_address" VARCHAR(42) NOT NULL DEFAULT '', 
+    "token1_symbol" VARCHAR(10) NOT NULL DEFAULT '', 
+    "token1_decimals" SMALLINT NOT NULL DEFAULT 0, 
+    "staked_liquidity" VARCHAR(50) NOT NULL DEFAULT '',
+    "staked_liquidity_usd" VARCHAR(50) NOT NULL DEFAULT '', 
+    "total_token0_amount" VARCHAR(50) NOT NULL DEFAULT '', 
+    "total_token1_amount" VARCHAR(50) NOT NULL DEFAULT '', 
+    "apr" VARCHAR(50) NOT NULL DEFAULT '', 
+    "join_num" INTEGER NOT NULL DEFAULT 0, 
+    "tx_hash" varchar(255) NOT NULL DEFAULT '', 
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+    "updated_at" TIMESTAMP NULL DEFAULT NULL,
     UNIQUE ("incentive_id", "chain_id")
 );
 
--- 表注释
-COMMENT ON TABLE farm_pools IS 'Farm质押池表';
+DROP SEQUENCE IF EXISTS "farm_pools_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "farm_pools_id_seq" START WITH 1;
+ALTER TABLE "public"."farm_pools" ALTER COLUMN id SET DEFAULT nextval('farm_pools_id_seq');
 
--- 字段注释
+
+COMMENT ON TABLE farm_pools IS 'Farm质押池表';
 COMMENT ON COLUMN "farm_pools"."chain_id" IS '链ID';
 COMMENT ON COLUMN "farm_pools"."incentive_id" IS '质押池ID';
 COMMENT ON COLUMN "farm_pools"."start_time" IS '质押池开放时间';
@@ -68,24 +68,28 @@ COMMENT ON COLUMN "farm_pools"."tx_hash" IS '质押池创建时的交易哈希';
 COMMENT ON COLUMN "farm_pools"."created_at" IS '创建时间';
 COMMENT ON COLUMN "farm_pools"."updated_at" IS '更新时间';
 
+-- ----------------------------
+-- Table structure for farm_user_pools
+-- ----------------------------
 DROP TABLE IF EXISTS "public"."farm_user_pools";
+-- Farm用户质押池关联表
 CREATE TABLE "public"."farm_user_pools" (
-  "id" SERIAL PRIMARY KEY,
+  "id" int8 PRIMARY KEY,
   "incentive_id" VARCHAR(66) NOT NULL DEFAULT '',
   "token_id" BIGINT NOT NULL DEFAULT 0,
   "user_address" VARCHAR(42) NOT NULL DEFAULT '',
   "chain_id" BIGINT NOT NULL DEFAULT 0,
   "status" VARCHAR(10) NOT NULL CHECK (status IN ('stake', 'unstake')),
   "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP NULL DEFAULT NULL
+  "updated_at" TIMESTAMP NULL DEFAULT NULL,
+  UNIQUE ("user_address", "incentive_id", "token_id",  "chain_id", "status")
 );
 
-CREATE UNIQUE INDEX "idx_farm_user_pools_unique" ON "public"."farm_user_pools" ("user_address", "incentive_id", "token_id",  "chain_id", "status");
+DROP SEQUENCE IF EXISTS "farm_user_pools_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "farm_user_pools_id_seq" START WITH 1;
+ALTER TABLE "public"."farm_user_pools" ALTER COLUMN id SET DEFAULT nextval('farm_user_pools_id_seq');
 
--- 表注释
-COMMENT ON TABLE "public"."farm_user_pools" IS '用户Farm质押池关联表';
-
--- 字段注释
+COMMENT ON TABLE "public"."farm_user_pools" IS 'Farm用户质押池关联表';
 COMMENT ON COLUMN "public"."farm_user_pools"."incentive_id" IS '质押池ID';
 COMMENT ON COLUMN "public"."farm_user_pools"."token_id" IS 'LP Token ID';
 COMMENT ON COLUMN "public"."farm_user_pools"."user_address" IS '用户地址';
@@ -95,10 +99,13 @@ COMMENT ON COLUMN "public"."farm_user_pools"."created_at" IS '创建时间';
 COMMENT ON COLUMN "public"."farm_user_pools"."updated_at" IS '更新时间';
 
 
--- 用户行为表 
+-- ----------------------------
+-- Table structure for farm_user_action
+-- ----------------------------
 DROP TABLE IF EXISTS "public"."farm_user_action";
+-- Farm用户行为流水表 
 CREATE TABLE "public"."farm_user_action" (
-  id SERIAL PRIMARY KEY,
+  id int8 PRIMARY KEY,
   "chain_id" int8 NOT NULL DEFAULT 0,
   "block_number" int8 NOT NULL DEFAULT 0,
   "tx_hash" varchar(66) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
@@ -120,7 +127,11 @@ CREATE TABLE "public"."farm_user_action" (
   CONSTRAINT "farm_user_action_action_check" CHECK (action = ANY (ARRAY['create_pool'::text, 'destroy_pool'::text, 'stake'::text, 'unstake'::text, 'harvest'::text, 'transfer'::text, 'other'::text]))
 );
 
--- 添加字段注释
+DROP SEQUENCE IF EXISTS "farm_user_action_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "farm_user_action_id_seq" START WITH 1;
+ALTER TABLE "public"."farm_user_action" ALTER COLUMN id SET DEFAULT nextval('farm_user_action_id_seq');
+
+COMMENT ON TABLE "public"."farm_user_action" IS 'Farm用户行为流水表'; 
 COMMENT ON COLUMN "public"."farm_user_action"."chain_id" IS '链ID';
 COMMENT ON COLUMN "public"."farm_user_action"."block_number" IS '区块号';
 COMMENT ON COLUMN "public"."farm_user_action"."tx_hash" IS '交易哈希';
