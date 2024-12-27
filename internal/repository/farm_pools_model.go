@@ -160,11 +160,15 @@ func (m *customFarmPoolsModel) GetPoolList(ctx context.Context, opts *types.Farm
 
 	var pools []types.FarmPoolData
 	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
-	if err != nil {
+	switch err {
+	case nil:
+		return pools, total, nil
+	case sqlx.ErrNotFound:
+		return []types.FarmPoolData{}, total, nil
+	default:
 		return nil, 0, err
 	}
 
-	return pools, total, nil
 }
 
 func (m *customFarmPoolsModel) FindByIncentiveId(ctx context.Context, chainId int64, incentiveId string) (*FarmPools, error) {
