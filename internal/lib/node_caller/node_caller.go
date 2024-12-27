@@ -100,6 +100,10 @@ func (nodeCaller *NodeCaller) BatchBlockByNumber(ctx context.Context, numbers []
 		if requests[i].Error != nil {
 			return nil, requests[i].Error
 		}
+		rawMessage := rawMessages[i]
+		if rawMessage == nil {
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Get block[%d] raw data failed", number))
+		}
 		var head *types.Header
 		err := json.Unmarshal(*rawMessages[i], &head)
 		if err != nil {
