@@ -29,7 +29,7 @@ Chains:
       # https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
-    MaxLogsNumber: 50
+    MaxLogsNumber: 10
     Multicall: 0x18546Af844DFA77c5268FF8A51941E11692FED25
     Tokens:
       - Address: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
