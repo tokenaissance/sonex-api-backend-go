@@ -157,6 +157,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			func() error {
 				var poolWg sync.WaitGroup
 
+				if len(waitForRetryPools) != 0 {
+					poolAddresses = waitForRetryPools
+					waitForRetryPools = []common.Address{}
+				}
+
 				results := make(chan struct {
 					Err         error
 					PoolAddress common.Address

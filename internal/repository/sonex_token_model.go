@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"sonex_api_backend_go/internal/types"
@@ -280,18 +281,23 @@ func (m *customSonexTokenModel) GetTokens(ctx context.Context, opts *types.Token
 	return tokenDetails, meta, nil
 }
 
+type TokenVolume struct {
+	Address sql.NullString  `db:"address"`
+	Amounts sql.NullFloat64 `db:"amounts"`
+}
+
 func (m *customSonexTokenModel) GetTokenVolumes(ctx context.Context) ([]types.TokenVolume, error) {
 	// Query for retrieving token volumes
 	volumeQuery := `
 		SELECT
-			st.address AS token_address,
+			st.address AS address,
 			SUM(
 				CASE
 					WHEN st.address = pf.event_token0 THEN ABS(CAST(sp.event_amount0 AS numeric))
 					WHEN st.address = pf.event_token1 THEN ABS(CAST(sp.event_amount1 AS numeric))
 					ELSE 0
 				END
-			) AS total_amount
+			) AS amounts
 		FROM
 			sonex_token st
 		LEFT JOIN
@@ -301,17 +307,32 @@ func (m *customSonexTokenModel) GetTokenVolumes(ctx context.Context) ([]types.To
 		GROUP BY
 			st.address
 		ORDER BY
-			total_amount DESC;
+			amounts DESC;
 	`
 
-	// Execute the query and scan results into tokenVolumes slice
-	var tokenVolumes []types.TokenVolume
+	resp := make([]types.TokenVolume, 0)
+	var tokenVolumes []TokenVolume
 	err := m.conn.QueryRowsCtx(ctx, &tokenVolumes, volumeQuery)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+		return resp, fmt.Errorf("failed to execute volume query: %w", err)
 	}
 
-	return tokenVolumes, nil
+	if len(tokenVolumes) == 0 {
+		fmt.Println("No token volumes found")
+	} else {
+		fmt.Printf("Found %d token volumes\n", len(tokenVolumes))
+	}
+
+	for _, volume := range tokenVolumes {
+		if volume.Amounts.Valid {
+			resp = append(resp, types.TokenVolume{
+				Address: volume.Address.String,
+				Amounts: volume.Amounts.Float64,
+			})
+		}
+	}
+
+	return resp, nil
 }
 
 func (m *customSonexTokenModel) FindAllToMap(ctx context.Context) (map[string]SonexToken, error) {

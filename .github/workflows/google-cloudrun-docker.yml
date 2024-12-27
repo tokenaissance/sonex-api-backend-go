@@ -78,7 +78,7 @@ jobs:
               CLOUDRUN_NAME="sonex-testnet-cloudrun-${REPO_NAME}"
               SUBNET="sonex-testnet-vpc-public-asia-southeast1"
               IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-testnet:latest"
-              gcloud run deploy ${CLOUDRUN_NAME}  --image=${IMAGE_NAME} --cpu 1 --memory 2Gi --network=${NETWORK} --subnet=${SUBNET} --allow-unauthenticated --vpc-egress all-traffic --no-cpu-throttling --min-instances 1 --max-instances 1 --port ${APP_PORT} --platform managed --region=${REPO_LOCATION} 
+              gcloud run deploy ${CLOUDRUN_NAME}  --image=${IMAGE_NAME} --cpu 2 --memory 4Gi --network=${NETWORK} --subnet=${SUBNET} --allow-unauthenticated --vpc-egress all-traffic --no-cpu-throttling --min-instances 1 --max-instances 1 --port ${APP_PORT} --platform managed --region=${REPO_LOCATION} 
               echo "Deploy is done"
               echo "Waiting for 20 seconds..."
               sleep 20
@@ -90,7 +90,7 @@ jobs:
               CLOUDRUN_NAME="sonex-devnet-cloudrun-${REPO_NAME}"
               SUBNET="sonex-devnet-vpc-public-asia-southeast1"
               IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-develop:latest"
-              gcloud run deploy ${CLOUDRUN_NAME}  --image=${IMAGE_NAME} --cpu 1 --memory 2Gi --network=${NETWORK} --subnet=${SUBNET} --allow-unauthenticated --vpc-egress all-traffic --no-cpu-throttling --min-instances 1 --max-instances 1 --port ${APP_PORT} --platform managed --region=${REPO_LOCATION} --set-env-vars "DEBUG=true"
+              gcloud run deploy ${CLOUDRUN_NAME}  --image=${IMAGE_NAME} --cpu 2 --memory 4Gi --network=${NETWORK} --subnet=${SUBNET} --allow-unauthenticated --vpc-egress all-traffic --no-cpu-throttling --min-instances 1 --max-instances 1 --port ${APP_PORT} --platform managed --region=${REPO_LOCATION} --set-env-vars "DEBUG=true"
               echo "Deploy is done"
               echo "Waiting for 20 seconds..."
               sleep 20
