@@ -59,7 +59,7 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *SwapEvent
 		}
 	}
 
-	return l.refreshCache(req, cacheKey)
+	return l.refreshCache(req, cacheKey, nil)
 }
 
 func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey string, cachedResp *SwapEventResponseWrapper) (resp *SwapEventResponseWrapper, err error) {
