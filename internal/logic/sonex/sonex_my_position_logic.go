@@ -166,6 +166,8 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 							// 计算 claimable fees
 							unclaimedFee0Float := new(big.Float).SetInt(unclaimedFee0)
 							unclaimedFee1Float := new(big.Float).SetInt(unclaimedFee1)
+							unclaimedFee0Float.Quo(unclaimedFee0Float, factor0)
+							unclaimedFee1Float.Quo(unclaimedFee1Float, factor1)
 
 							claimableFee0 := new(big.Float).Mul(unclaimedFee0Float, poolPrice0)
 							claimableFee1 := new(big.Float).Mul(unclaimedFee1Float, poolPrice1)
