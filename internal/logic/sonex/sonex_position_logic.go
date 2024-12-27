@@ -50,26 +50,26 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 		var cachedResp NftDataResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
-			go l.refreshCache(req, cacheKey)
+			go l.refreshCache(req, cacheKey, &cachedResp)
 			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey)
+	return l.refreshCache(req, cacheKey, nil)
 }
 
-func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey string) (resp *NftDataResponseWrapper, err error) {
+func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey string, cachedResp *NftDataResponseWrapper) (resp *NftDataResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+		return cachedResp, fmt.Errorf("failed to acquire lock: %w", err)
 	}
 
 	if !success {
-		return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+		return cachedResp, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
 	}
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())

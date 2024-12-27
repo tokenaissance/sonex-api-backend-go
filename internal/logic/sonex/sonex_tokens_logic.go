@@ -54,26 +54,26 @@ func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *Token
 		var cachedResp TokensResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
-			go l.refreshCache(req, cacheKey)
+			go l.refreshCache(req, cacheKey, &cachedResp)
 			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey)
+	return l.refreshCache(req, cacheKey, nil)
 }
 
-func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey string) (*TokensResponseWrapper, error) {
+func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey string, cachedResp *TokensResponseWrapper) (*TokensResponseWrapper, error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+		return cachedResp, fmt.Errorf("failed to acquire lock: %w", err)
 	}
 
 	if !success {
-		return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+		return cachedResp, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
 	}
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
