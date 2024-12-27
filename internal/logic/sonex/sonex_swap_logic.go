@@ -137,7 +137,7 @@ func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey stri
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
 		if err != nil {
 			l.Error("Failed to cache response", err)
 		}
