@@ -1581,16 +1581,20 @@
       "type": "object",
       "properties": {
         "amount0": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
         },
         "amount1": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
         },
         "amount0Price": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
         },
         "amount1Price": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
         },
         "tickUpper": {
           "type": "string"
@@ -2083,6 +2087,30 @@
         "positionAge": {
           "type": "integer",
           "format": "int32"
+        },
+        "amount0": {
+          "type": "number",
+          "format": "double"
+        },
+        "amount1": {
+          "type": "number",
+          "format": "double"
+        },
+        "price0": {
+          "type": "number",
+          "format": "double"
+        },
+        "price1": {
+          "type": "number",
+          "format": "double"
+        },
+        "unclaimedFee0": {
+          "type": "number",
+          "format": "double"
+        },
+        "unclaimedFee1": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "PositionData",
@@ -2098,7 +2126,13 @@
         "isNegative",
         "origin",
         "pool",
-        "positionAge"
+        "positionAge",
+        "amount0",
+        "amount1",
+        "price0",
+        "price1",
+        "unclaimedFee0",
+        "unclaimedFee1"
       ]
     },
     "PositionsRequest": {
