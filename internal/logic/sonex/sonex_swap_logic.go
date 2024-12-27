@@ -3,8 +3,10 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"math/big"
+	"sync"
 	"time"
 
 	"sonex_api_backend_go/internal/lib/global"
@@ -61,7 +63,20 @@ func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *SwapEvent
 }
 
 func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey string) (resp *SwapEventResponseWrapper, err error) {
+	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
+
+	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if !success {
+		return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+	}
+
+	defer l.svcCtx.Cache.Del(lockKey)
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPoolSwapModel(conn)
 	data, meta, err := model.GetSwapEvents(ctx, req)
@@ -76,18 +91,30 @@ func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey stri
 		}, nil
 	}
 
-	for _, item := range data {
-		bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
-		if err == nil && bestPrice != nil {
-			priceFloat := new(big.Float).SetInt(bestPrice.Value)
-			amount1Positive := new(big.Float).SetFloat64(math.Abs(item.Amount1))
-			decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(item.Token1.Decimals)))
-			usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amount1Positive), decimalFactor)
-			item.Usd, _ = usdValue.Float64()
-			item.Amount1, _ = amount1Positive.Float64()
-		}
+	var wg sync.WaitGroup
+	mu := &sync.Mutex{}
 
+	for _, item := range data {
+		wg.Add(1)
+		go func(item *types.SwapEvent) {
+			defer wg.Done()
+
+			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
+			if err == nil && bestPrice != nil {
+				priceFloat := new(big.Float).SetInt(bestPrice.Value)
+				amount1Positive := new(big.Float).SetFloat64(math.Abs(item.Amount1))
+				decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(item.Token1.Decimals)))
+				usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amount1Positive), decimalFactor)
+
+				mu.Lock()
+				item.Usd, _ = usdValue.Float64()
+				item.Amount1, _ = amount1Positive.Float64()
+				mu.Unlock()
+			}
+		}(item)
 	}
+
+	wg.Wait()
 
 	response := &SwapEventResponseWrapper{
 		&types.SwapEventResponse{

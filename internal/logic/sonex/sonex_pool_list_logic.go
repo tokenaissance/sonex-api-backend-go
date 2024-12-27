@@ -80,7 +80,18 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 }
 
 func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey string) (*PoolsResponseWrapper, error) {
+	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
+
+	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if !success {
+		return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+	}
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	data, meta, err := model.GetPoolList(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)

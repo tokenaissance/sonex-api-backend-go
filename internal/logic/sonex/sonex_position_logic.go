@@ -60,7 +60,18 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 }
 
 func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey string) (resp *NftDataResponseWrapper, err error) {
+	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
+
+	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if !success {
+		return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+	}
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
