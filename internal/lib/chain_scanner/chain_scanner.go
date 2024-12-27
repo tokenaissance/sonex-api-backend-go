@@ -111,12 +111,12 @@ func (chainScanner *ChainScanner) Start() {
 				if len(chainScanner.waitForRetryHandlers) == 0 {
 					handlers = chainScanner.handlers
 					var start uint64
-					var end uint64
+					var end *uint64
 					// Check replay
 					if replayA, ok := chainScanner.replays.Dequeue(); ok {
 						replay, _ := replayA.(uint64)
 						start = replay
-						end = replay
+						end = &replay
 						isReplay = true
 					} else {
 						height, err := client.BlockNumber(ctx)
@@ -133,17 +133,17 @@ func (chainScanner *ChainScanner) Start() {
 							return err
 						}
 						start = uint64(chainScannerPrograss.Height) - 1
-						end = height - uint64(chainScanner.config.MinConfirmations)
+						newEnd := height - uint64(chainScanner.config.MinConfirmations)
 						retrys := 0
 						err = retry.Do(func() error {
-							if end > start {
+							if newEnd > start {
 								return nil
 							}
-							end, err = client.BlockNumber(ctx)
+							newHeight, err := client.BlockNumber(ctx)
 							if err != nil {
 								return err
 							}
-							end = end - uint64(chainScanner.config.MinConfirmations)
+							newEnd = newHeight - uint64(chainScanner.config.MinConfirmations)
 							return fmt.Errorf("%s", "Waiting block confirm...")
 						},
 							retry.RetryIf(func(err error) bool { return retrys < 5 }),
@@ -157,9 +157,13 @@ func (chainScanner *ChainScanner) Start() {
 						if err != nil {
 							return err
 						}
+						if newEnd > start+uint64(chainScanner.config.MaxLogsNumber) {
+							newEnd = start + uint64(chainScanner.config.MaxLogsNumber)
+						}
+						end = &newEnd
 					}
 					opt.Start = start
-					opt.End = &end
+					opt.End = end
 				} else {
 					handlers = chainScanner.waitForRetryHandlers
 					chainScanner.waitForRetryHandlers = []IHandler{}
