@@ -52,8 +52,8 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	if req.UserAddress != "" && !common.IsHexAddress(req.UserAddress) {
 		return nil, 0, fmt.Errorf("invalid parameter: user_address")
 	}
-	if req.Limit < 1 {
-		req.Limit = 10
+	if req.Limit < 0 {
+		req.Limit = 0
 	}
 	if req.Offset < 0 {
 		req.Offset = 0
@@ -97,7 +97,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	linq.From(results).SelectT(func(item repository.XpoolPools) types.XpoolPoolListResponse {
 		updatedAt := ""
 		if item.UpdatedAt.Valid {
-			updatedAt = item.UpdatedAt.Time.Format("2006-01-02 15:04:05")
+			updatedAt = item.UpdatedAt.Time.Format(time.RFC3339)
 		}
 		return types.XpoolPoolListResponse{
 			Id:                   item.Id,
@@ -120,7 +120,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			APR:                  item.Apr,
 			JoinNum:              item.JoinNum,
 			Status:               item.Status,
-			CreatedAt:            item.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:            item.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:            updatedAt,
 		}
 	}).ToSlice(&resp)
@@ -128,7 +128,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	return resp, total, nil
 }
 
-// checkAndUpdatePoolListCache 检查并更新池子列表缓存
+// 检查并更新池子列表缓存
 func (l *XpoolPoolListLogic) checkAndUpdatePoolListCache() error {
 	const cacheKeyPrefix = "sonex_dex:xpool:"
 	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
@@ -153,7 +153,7 @@ func (l *XpoolPoolListLogic) checkAndUpdatePoolListCache() error {
 	return nil
 }
 
-// updatePoolBasicInfo 更新池子的基本信息
+// 更新池子的基本信息
 func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 	const updateInterval = 30 * time.Minute
 	const cacheKeyPrefix = "sonex_dex:xpool:"
@@ -223,7 +223,7 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 	return nil
 }
 
-// updatePoolRealTimeInfo 更新池子的实时信息
+// 更新池子的实时信息
 func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 	const updateInterval = 2 * time.Minute
 	const cacheKeyPrefix = "sonex_dex:xpool:"
@@ -278,7 +278,7 @@ func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 	return nil
 }
 
-// getPoolInfo 获取池子的信息
+// 获取池子的信息
 func (l *XpoolPoolListLogic) getPoolInfo(ethClient *ethclient.Client, poolAddress common.Address) (*repository.XpoolPools, error) {
 	factory, err := getFactoryContract(l.ctx, ethClient, l.factoryAddress)
 	if err != nil {
@@ -320,7 +320,7 @@ func (l *XpoolPoolListLogic) getPoolInfo(ethClient *ethclient.Client, poolAddres
 	}, nil
 }
 
-// getPoolRealTimeInfo 获取池子的实时信息
+// 获取池子的实时信息
 func (l *XpoolPoolListLogic) getPoolRealTimeInfo(ethClient *ethclient.Client, poolAddress common.Address) (*repository.XpoolPools, error) {
 	pool, err := getPoolContract(l.ctx, ethClient, poolAddress)
 	if err != nil {

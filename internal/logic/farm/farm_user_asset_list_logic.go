@@ -212,14 +212,14 @@ func (l *FarmUserAssetListLogic) calculateFeesUSD(fees *big.Int, poolData *repos
 	}
 
 	// 获取价格
-	var rewardPriceValue *big.Int
+	rewardPriceValue := big.NewInt(0)
 	_, rewardPrice, err := global.GetPrices(context.Background(), nil, poolData.ChainId, poolData.RewardTokenAddress, true, 2, nil)
 	if err != nil {
 		logx.Errorf("[farm] failed to get reward token price: %v", err)
-		return big.NewInt(0), nil
+		return rewardPriceValue, nil
 	}
 	if rewardPrice == nil || len(rewardPrice) == 0 || rewardPrice[0].Value == nil {
-		return big.NewInt(0), nil
+		return rewardPriceValue, nil
 	}
 	rewardPriceValue = rewardPrice[0].Value
 

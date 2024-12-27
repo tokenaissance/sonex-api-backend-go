@@ -76,7 +76,7 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 		Limit:  req.Limit,
 	}
 
-	// l.checkAndRefreshPools(req)
+	l.checkAndRefreshPools(req)
 
 	return resp, nil
 }
