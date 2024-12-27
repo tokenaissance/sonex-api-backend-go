@@ -39,7 +39,7 @@ func (fetcher *TokenBalanceFetcher) GetTokenBalance(poolAddress, tokenAddress st
 	if err != nil {
 		return 0.0, fmt.Errorf("failed to get balance: %v", err)
 	}
-	fmt.Println("balance:", balance)
+	fmt.Println("poolAddress:balance:", tokenAddress, poolAddress, balance)
 
 	decimalsFactor := new(big.Float).SetInt(big.NewInt(0).Exp(big.NewInt(10), big.NewInt(decimals), nil))
 	balanceFloat := new(big.Float).SetInt(balance)
