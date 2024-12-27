@@ -42,11 +42,11 @@ func (m *customSonexTokenModel) withSession(session sqlx.Session) SonexTokenMode
 }
 
 type TokenData struct {
-	Address  string `db:"address"`
-	Symbol   string `db:"symbol"`
-	Name     string `db:"name"`
-	Decimals int    `db:"decimals"`
-	Logo     string `db:"logo"`
+	Address  string         `db:"address"`
+	Symbol   string         `db:"symbol"`
+	Name     string         `db:"name"`
+	Decimals int            `db:"decimals"`
+	Logo     sql.NullString `db:"logo"`
 }
 
 func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int, positionManager string) ([]*types.Token_TokenDetail, error) {
@@ -83,7 +83,7 @@ func (m *customSonexTokenModel) GetTopTokenList(ctx context.Context, chainId int
 			Symbol:   token.Symbol,
 			Name:     token.Name,
 			Decimals: token.Decimals,
-			Logo:     token.Logo,
+			Logo:     token.Logo.String,
 		}
 
 		for _, pool := range pools {
@@ -175,7 +175,7 @@ func (m *customSonexTokenModel) GetTokenList(ctx context.Context, opts *types.To
 			Symbol:   token.Symbol,
 			Name:     token.Name,
 			Decimals: token.Decimals,
-			Logo:     token.Logo,
+			Logo:     token.Logo.String,
 		}
 
 		for _, pool := range pools {
@@ -262,7 +262,7 @@ func (m *customSonexTokenModel) GetTokens(ctx context.Context, opts *types.Token
 			Symbol:   token.Symbol,
 			Name:     token.Name,
 			Decimals: token.Decimals,
-			Logo:     token.Logo,
+			Logo:     token.Logo.String,
 		}
 
 		tokenDetails = append(tokenDetails, tokenDetail)
