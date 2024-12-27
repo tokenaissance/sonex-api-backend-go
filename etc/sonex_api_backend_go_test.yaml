@@ -25,8 +25,8 @@ Chains:
       # http://10.1.30.101:8545: 100 # snap内部
       # http://10.1.30.102:8545: 100 # full内部
       # https://rpc.minato.soneium.org: 20
-      # https://soneium-minato.rpc.scs.startale.com?apikey=MTMwqry0P0CnqHPnLqmOqUsTxkiPa5ST: 50
-      https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
+      https://soneium-minato.rpc.scs.startale.com?apikey=MTMwqry0P0CnqHPnLqmOqUsTxkiPa5ST: 50
+      # https://soneium-minato.g.alchemy.com/v2/pg5Kc0alBjoVOCO6GrE5yHPRN4oKFavh: 100
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 50
