@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -133,19 +134,28 @@ func (chainScanner *ChainScanner) Start() {
 						}
 						start = uint64(chainScannerPrograss.Height) - 1
 						end = height - uint64(chainScanner.config.MinConfirmations)
-						for {
+						retrys := 0
+						err = retry.Do(func() error {
 							if end > start {
-								break
+								return nil
 							}
-							time.Sleep(time.Millisecond * time.Duration(chainScanner.config.MinDelayWaitMillisecond))
 							end, err = client.BlockNumber(ctx)
 							if err != nil {
 								return err
 							}
 							end = end - uint64(chainScanner.config.MinConfirmations)
-						}
-						if end > start+uint64(chainScanner.config.MaxLogsNumber) {
-							end = start + uint64(chainScanner.config.MaxLogsNumber)
+							return fmt.Errorf("%s", "Waiting block confirm...")
+						},
+							retry.RetryIf(func(err error) bool { return retrys < 5 }),
+							retry.Delay(time.Millisecond*time.Duration(chainScanner.config.MinDelayWaitMillisecond)),
+							retry.DelayType(retry.FixedDelay),
+							retry.OnRetry(func(n uint, err error) {
+								retrys += 1
+								logx.Infof("%s", err)
+							}),
+						)
+						if err != nil {
+							return err
 						}
 					}
 					opt.Start = start

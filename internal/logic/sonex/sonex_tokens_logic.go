@@ -105,7 +105,7 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 
 					tokenVolume := new(big.Float).Quo(volumeAmounts, factor)
 					token.Volume, _ = tokenVolume.Float64()
-
+					fmt.Println("volume: ", price.String(), tokenVolume.String(), factor.String())
 					fdv := new(big.Float).Quo(new(big.Float).Mul(price, tokenVolume), factor)
 					token.Fdv, _ = fdv.Float64()
 

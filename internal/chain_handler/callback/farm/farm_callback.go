@@ -112,7 +112,7 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 		return
 	}
 
-	logx.Info("11111111111111111")
+	// logx.Info("11111111111111111")
 	// 获取pool基本信息
 	// v3PoolModel := repository.NewEventSonexFactoryPoolCreatedModel(c.svcCtx.DB)
 	// poolInfo, err := v3PoolModel.FindByPoolAddress(c.ctx, event.Pool.String())
@@ -133,41 +133,6 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 		logx.Error("pool info not found")
 		return
 	}
-	logx.Info("222222222222222222")
-
-	// 获取token信息
-	// tokenModel := repository.NewSonexTokenModel(c.svcCtx.DB)
-	// tokenMap, err := tokenModel.FindAllToMap(c.ctx)
-	// if err != nil {
-	// 	logx.Errorf("Failed to get token info from table: %v", err)
-	// 	// return
-
-	// 	// 从合约中读取
-
-	// }
-
-	logx.Info("33333333333333333")
-
-	// isVaildRewardToken := true
-	// if _, ok := tokenMap[event.RewardToken.String()]; !ok {
-	// 	isVaildRewardToken = false
-	// 	logx.Errorf("reward token not found: %s", event.RewardToken.String())
-	// }
-	// logx.Info("44444444444444")
-
-	// isVaildToken0 := true
-	// if _, ok := tokenMap[poolInfo.EventToken0]; !ok {
-	// 	isVaildToken0 = false
-	// 	logx.Errorf("token0 not found: %s", poolInfo.EventToken0)
-	// }
-	// logx.Info("55555555555555")
-
-	// isVaildToken1 := true
-	// if _, ok := tokenMap[poolInfo.EventToken1]; !ok {
-	// 	isVaildToken1 = false
-	// 	logx.Errorf("token1 not found: %s", poolInfo.EventToken1)
-	// }
-	// logx.Info("666666666666666")
 
 	// 获取token价格
 	rewardPriceValue := big.NewInt(0)
@@ -179,7 +144,6 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 	if rewardPrice != nil && len(rewardPrice) > 0 {
 		rewardPriceValue = rewardPrice[0].Value
 	}
-	logx.Info("777777777777777")
 
 	// 计算APR
 	var annualRewardValue *big.Int
@@ -200,47 +164,34 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 			annualRewardValue = annualRewardValue.Div(annualRewardValue, durationDays)
 		}
 	}
-	logx.Info("8888888888888888888")
 
 	// 保存
-	// tokenOSymbol := ""
-	// token1Symbol := ""
-
-	token0Info, err := getErc20Info(client, poolInfo.EventToken0)
+	tokenOSymbol := ""
+	token1Symbol := ""
+	token0Decimals := int64(defaultDecimals)
+	token1Decimals := int64(defaultDecimals)
+	token0Info, err := global.GetToken(c.chainId, poolInfo.EventToken0)
 	if err != nil {
-		logx.Errorf("Failed to get token0 info: %v", err)
-		return
+		logx.Errorf("failed to get token0 info: %v", err)
+	}
+	if token0Info != nil {
+		tokenOSymbol = token0Info.Symbol
+		token0Decimals = token0Info.Decimals
 	}
 
-	token1Info, err := getErc20Info(client, poolInfo.EventToken1)
+	token1Info, err := global.GetToken(c.chainId, poolInfo.EventToken1)
 	if err != nil {
-		logx.Errorf("Failed to get token1 info: %v", err)
-		return
+		logx.Errorf("failed to get token1 info: %v", err)
+	}
+	if token1Info != nil {
+		token1Symbol = token1Info.Symbol
+		token1Decimals = token1Info.Decimals
 	}
 
-	rewardTokenInfo, err := getErc20Info(client, data.EventRewardToken)
+	rewardTokenInfo, err := global.GetToken(c.chainId, data.EventRewardToken)
 	if err != nil {
-		logx.Errorf("Failed to get reward token info: %v", err)
-		return
+		logx.Errorf("failed to get reward token info: %v", err)
 	}
-	// if isVaildToken0 && tokenMap[poolInfo.EventToken0].Symbol.Valid {
-	// 	tokenOSymbol = tokenMap[poolInfo.EventToken0].Symbol.String
-	// }
-	// if isVaildToken1 && tokenMap[poolInfo.EventToken1].Symbol.Valid {
-	// 	token1Symbol = tokenMap[poolInfo.EventToken1].Symbol.String
-	// }
-	// rewardTokenDecimals := int64(defaultDecimals)
-	// if isVaildRewardToken {
-	// 	rewardTokenDecimals = int64(tokenMap[event.RewardToken.String()].Decimals)
-	// }
-	// token0Decimals := int64(defaultDecimals)
-	// if isVaildToken0 {
-	// 	token0Decimals = int64(tokenMap[poolInfo.EventToken0].Decimals)
-	// }
-	// token1Decimals := int64(defaultDecimals)
-	// if isVaildToken0 {
-	// 	token1Decimals = int64(tokenMap[poolInfo.EventToken1].Decimals)
-	// }
 	pool := &repository.FarmPools{
 		ChainId:             c.chainId,
 		IncentiveId:         data.EventIncentiveId,
@@ -254,11 +205,11 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 		PoolAddress:         event.Pool.String(),
 		FeeRatio:            strconv.Itoa(int(poolInfo.EventFee)),
 		Token0Address:       poolInfo.EventToken0,
-		Token0Symbol:        token0Info.Symbol,
-		Token0Decimals:      int64(token0Info.Decimals),
+		Token0Symbol:        tokenOSymbol,
+		Token0Decimals:      token0Decimals,
 		Token1Address:       poolInfo.EventToken1,
-		Token1Symbol:        token1Info.Symbol,
-		Token1Decimals:      int64(token1Info.Decimals),
+		Token1Symbol:        token1Symbol,
+		Token1Decimals:      token1Decimals,
 		StakedLiquidityUsd:  initStakedLiquidityUsd,     // 100 * 10^18
 		TotalToken0Amount:   "0",                        //
 		TotalToken1Amount:   "0",                        //
@@ -267,7 +218,6 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 		TxHash:              data.TxHash,
 		CreatedAt:           data.TxAt,
 	}
-	logx.Info("9999999999999999")
 
 	err = c.svcCtx.DB.TransactCtx(c.ctx, func(ctx context.Context, session sqlx.Session) error {
 		farmPoolsModel := repository.NewFarmPoolsModel(sqlx.NewSqlConnFromSession(session))
@@ -667,6 +617,13 @@ func (c *FarmCallback) UpdateFarmPoolData(client *ethclient.Client, incentiveId 
 	totalToken0Value := new(big.Int).Mul(totalToken0Amount, token0PriceValue)
 	totalToken1Value := new(big.Int).Mul(totalToken1Amount, token1PriceValue)
 	totalValue := new(big.Int).Add(totalToken0Value, totalToken1Value)
+	if totalValue.Sign() == 0 {
+		// 设置默认值为 100 * 10^18
+		totalValue = new(big.Int).Mul(
+			big.NewInt(100),
+			new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil),
+		)
+	}
 
 	// 计算APR
 	rewardAmount, _ := new(big.Int).SetString(pool.RewardTokenAmount, 10)
@@ -676,13 +633,16 @@ func (c *FarmCallback) UpdateFarmPoolData(client *ethclient.Client, incentiveId 
 	daysInYear := big.NewInt(365)
 	durationDays := big.NewInt(int64(duration.Hours() / 24))
 
-	// annualRewardValue = rewardValue * 365 / durationDays
-	annualRewardValue := new(big.Int).Mul(rewardValue, daysInYear)
-	annualRewardValue = annualRewardValue.Div(annualRewardValue, durationDays)
+	apr := big.NewInt(0)
+	if durationDays.Sign() > 0 {
+		// annualRewardValue = rewardValue * 365 / durationDays
+		annualRewardValue := new(big.Int).Mul(rewardValue, daysInYear)
+		annualRewardValue = annualRewardValue.Div(annualRewardValue, durationDays)
 
-	// apr = (annualRewardValue / totalValue) * 100
-	apr := new(big.Int).Mul(annualRewardValue, big.NewInt(100))
-	apr = apr.Div(apr, totalValue)
+		// apr = (annualRewardValue / totalValue) * 100
+		apr = new(big.Int).Mul(annualRewardValue, big.NewInt(100))
+		apr = apr.Div(apr, totalValue)
+	}
 
 	// 保存
 	err = farmPoolModel.Update(c.ctx, &repository.FarmPools{

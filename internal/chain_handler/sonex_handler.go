@@ -157,6 +157,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			func() error {
 				var poolWg sync.WaitGroup
 
+				if len(waitForRetryPools) != 0 {
+					poolAddresses = waitForRetryPools
+					waitForRetryPools = []common.Address{}
+				}
+
 				results := make(chan struct {
 					Err         error
 					PoolAddress common.Address
@@ -405,16 +410,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				close(results)
 
 				// Handle results
-				waitForRetryPools = []common.Address{}
-				waitForRetryPoolMap := map[common.Address]struct{}{}
 				for result := range results {
 					if result.Err != nil {
-						waitForRetryPoolMap[result.PoolAddress] = struct{}{}
+						waitForRetryPools = append(waitForRetryPools, result.PoolAddress)
 						logx.Errorf("Handle pool error: %s\n", result.Err)
 					}
-				}
-				for key := range waitForRetryPoolMap {
-					waitForRetryPools = append(waitForRetryPools, key)
 				}
 				if len(waitForRetryPools) != 0 {
 					return fmt.Errorf("%s", fmt.Sprintf("Retry handle pools[%d]: %v", len(waitForRetryPools), waitForRetryPools))
