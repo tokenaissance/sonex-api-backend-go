@@ -24,7 +24,7 @@ Chains:
   - ChainId: 1946
     Name: Minato
     Nodes: # URL:Weight
-      http://10.1.30.101:8545: 100 # snap内部
+      #http://10.1.30.101:8545: 100 # snap内部
       http://10.1.30.102:8545: 100 # full内部
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
