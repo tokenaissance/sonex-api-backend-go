@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"github.com/gogf/gf/v2/util/gconv"
+	"sonex_api_backend_go/internal/lib/log"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -29,11 +30,22 @@ func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp 
 	model := repository.NewSonexTokenPriceRecordModel(conn)
 	result, err := model.Kline(req.Address, req.Interval)
 
-	resp = new(types.SonexTokenKlineResponse)
+	if err != nil {
+		// todo: wrapper error or err response
+		log.Warning("[TokensKline]: err %s", err)
+		return nil, err
+	}
+
+	resp = &types.SonexTokenKlineResponse{
+		Code:    200,
+		Message: "success",
+	}
 
 	gconv.Structs(result, &resp.Data)
 
-	return
+	// todo: cache kline
+
+	return resp, nil
 }
 
 // 根据 interval 获取查询条件的时间范围
