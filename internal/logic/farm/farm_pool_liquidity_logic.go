@@ -72,68 +72,56 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	}
 
 	// 计算质押的流动性价值
-	var token0PriceValue *big.Int
+	token0PriceValue := big.NewInt(0)
 	_, token0Price, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token0Address, true, 2, nil)
 	if err != nil {
 		logx.Errorf("failed to get token0 price: %v", err)
-		token0PriceValue = big.NewInt(0)
 	}
-	if token0Price != nil {
+	if token0Price != nil && len(token0Price) > 0 {
 		token0PriceValue = token0Price[0].Value
 	}
 
-	var token1PriceValue *big.Int
+	token1PriceValue := big.NewInt(0)
 	_, token1Price, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token1Address, true, 2, nil)
 	if err != nil {
 		logx.Errorf("failed to get token1 price: %v", err)
-		token1PriceValue = big.NewInt(0)
 	}
-	if token1Price != nil {
+	if token1Price != nil && len(token1Price) > 0 {
 		token1PriceValue = token1Price[0].Value
 	}
 
 	totalToken0Value := new(big.Int).Mul(totalToken0Amount, token0PriceValue)
 	totalToken1Value := new(big.Int).Mul(totalToken1Amount, token1PriceValue)
 	totalValue := new(big.Int).Add(totalToken0Value, totalToken1Value)
+	if totalValue.Sign() == 0 {
+		// 设置默认值为 100 * 10^18
+		totalValue = new(big.Int).Mul(
+			big.NewInt(100),
+			new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil),
+		)
+	}
 
 	// 获取token信息
-	tokenModel := repository.NewSonexTokenModel(l.svcCtx.DB)
-	tokenMap, err := tokenModel.FindAllToMap(context.Background())
-	if err != nil {
-		logx.Errorf("Failed to get token info: %v", err)
-		return
-	}
-
-	isVaildToken0 := true
-	if _, ok := tokenMap[pool.Token0Address]; !ok {
-		isVaildToken0 = false
-		logx.Errorf("token0 not found: %s", pool.Token0Address)
-	}
-
-	isVaildToken1 := true
-	if _, ok := tokenMap[pool.Token1Address]; !ok {
-		isVaildToken1 = false
-		logx.Errorf("token1 not found: %s", pool.Token1Address)
-	}
-
-	defaultDecimals := 18
 	tokenOSymbol := ""
 	token1Symbol := ""
-	if isVaildToken0 && tokenMap[pool.Token0Address].Symbol.Valid {
-		tokenOSymbol = tokenMap[pool.Token0Address].Symbol.String
-	}
-	if isVaildToken1 && tokenMap[pool.Token1Address].Symbol.Valid {
-		token1Symbol = tokenMap[pool.Token1Address].Symbol.String
-	}
-
 	token0Decimals := int64(defaultDecimals)
-	if isVaildToken0 {
-		token0Decimals = tokenMap[pool.Token0Address].Decimals
+	token1Decimals := int64(defaultDecimals)
+	token0Info, err := global.GetToken(l.chainId, pool.Token0Address)
+	if err != nil {
+		logx.Errorf("failed to get token0 info: %v", err)
+	}
+	if token0Info != nil {
+		tokenOSymbol = token0Info.Symbol
+		token0Decimals = token0Info.Decimals
 	}
 
-	token1Decimals := int64(defaultDecimals)
-	if isVaildToken0 {
-		token1Decimals = tokenMap[pool.Token1Address].Decimals
+	token1Info, err := global.GetToken(l.chainId, pool.Token1Address)
+	if err != nil {
+		logx.Errorf("failed to get token1 info: %v", err)
+	}
+	if token1Info != nil {
+		token1Symbol = token1Info.Symbol
+		token1Decimals = token1Info.Decimals
 	}
 
 	resp = &types.FarmPoolLiquidityResponse{
