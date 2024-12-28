@@ -397,10 +397,11 @@ type SonexTokenPriceRecord {
 	TokenAddress string `json:"token_address"`
 	Price        string `json:"price"`
 	CreatedAt    string `json:"created_at"`
+	TimeStamp    int64  `json:"time_stamp"`
 }
 
 type SonexTokenKlineResponse {
-	Data []SonexTokenPriceRecord `json:"data"`
+	Records []SonexTokenPriceRecord `json:"records"`
 }
 
 @server (

@@ -318,7 +318,7 @@ type SonexTokenKlineRequest struct {
 }
 
 type SonexTokenKlineResponse struct {
-	Data []SonexTokenPriceRecord `json:"data"`
+	Records []SonexTokenPriceRecord `json:"records"`
 }
 
 type SonexTokenPriceRecord struct {
@@ -327,6 +327,7 @@ type SonexTokenPriceRecord struct {
 	TokenAddress string `json:"token_address"`
 	Price        string `json:"price"`
 	CreatedAt    string `json:"created_at"`
+	TimeStamp    int64  `json:"time_stamp"`
 }
 
 type SonexTokenPricesRequest struct {
