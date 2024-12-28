@@ -103,7 +103,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	if err != nil {
 		logx.Errorf("failed to get token1 price: %v", err)
 	} else if len(token1Price) > 0 && token1Price[0].Value != nil {
-		token1PriceValue = token0Price[0].Value
+		token1PriceValue = token1Price[0].Value
 	}
 
 	totalToken0Value := new(big.Int).Mul(totalToken0Amount, token0PriceValue)
