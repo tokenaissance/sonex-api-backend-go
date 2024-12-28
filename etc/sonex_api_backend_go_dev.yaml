@@ -20,9 +20,9 @@ Redis:
 Chains:
   - ChainId: 1946
     Name: Minato
-    Nodes: # URL:Weight
-      # http://10.1.30.101:8545: 100 # snap内部
-      http://inside-minato-chain.sonex.so: 100 # full内部
+    Nodes:
+      # URL:Weight
+      http://inside-minato-chain.sonex.so: 100
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
@@ -41,8 +41,7 @@ Sonexes:
     SwapRouter: 0x8281c39cDb041bef7F37DCa1841e1aD10B1c8e35
 Xpools:
   - ChainId: 1946
-    Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531 # testnet
+    Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531
 Farm:
   - ChainId: 1946
-    Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322 # testnet
-
+    Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322
