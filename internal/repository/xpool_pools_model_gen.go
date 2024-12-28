@@ -40,6 +40,7 @@ type (
 	XpoolPools struct {
 		Id                   int64        `db:"id"`
 		ChainId              int64        `db:"chain_id"`
+		PoolAddress          string       `db:"pool_address"`           // 质押池合约地址
 		StakingTokenName     string       `db:"staking_token_name"`     // 质押的代币名称
 		StakingTokenSymbol   string       `db:"staking_token_symbol"`   // 质押的代币符号
 		StakingTokenAddress  string       `db:"staking_token_address"`  // 质押的代币合约地址
@@ -50,7 +51,6 @@ type (
 		RewardTokenAddress   string       `db:"reward_token_address"`   // 奖励的代币合约地址
 		RewardTokenDecimals  int64        `db:"reward_token_decimals"`  // 奖励的代币合约精度
 		RewardTokenPrice     string       `db:"reward_token_price"`     // 奖励的代币的价格
-		PoolAddress          string       `db:"pool_address"`           // 质押池合约地址
 		RewardPerBlock       string       `db:"reward_per_block"`       // 出块奖励
 		TotalStaked          string       `db:"total_staked"`           // 累计池子的质押币数量
 		TotalClaimed         string       `db:"total_claimed"`          // 累计池子的奖励金额
@@ -58,7 +58,7 @@ type (
 		Tvl                  string       `db:"tvl"`                    // 池子的质押总价值（USD）
 		Apr                  string       `db:"apr"`                    // 年化收益率
 		JoinNum              int64        `db:"join_num"`               // 参与人数
-		Status               string       `db:"status"`                 // 运行状态（1-正常，2-已撤销）
+		Status               string       `db:"status"`                 // 运行状态
 		CreatedAt            time.Time    `db:"created_at"`
 		UpdatedAt            sql.NullTime `db:"updated_at"`
 	}
@@ -107,13 +107,13 @@ func (m *defaultXpoolPoolsModel) FindOneByPoolAddressChainId(ctx context.Context
 
 func (m *defaultXpoolPoolsModel) Insert(ctx context.Context, data *XpoolPools) (sql.Result, error) {
 	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)", m.table, xpoolPoolsRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.StakingTokenName, data.StakingTokenSymbol, data.StakingTokenAddress, data.StakingTokenDecimals, data.StakingTokenPrice, data.RewardTokenName, data.RewardTokenSymbol, data.RewardTokenAddress, data.RewardTokenDecimals, data.RewardTokenPrice, data.PoolAddress, data.RewardPerBlock, data.TotalStaked, data.TotalClaimed, data.BlockTime, data.Tvl, data.Apr, data.JoinNum, data.Status)
+	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.PoolAddress, data.StakingTokenName, data.StakingTokenSymbol, data.StakingTokenAddress, data.StakingTokenDecimals, data.StakingTokenPrice, data.RewardTokenName, data.RewardTokenSymbol, data.RewardTokenAddress, data.RewardTokenDecimals, data.RewardTokenPrice, data.RewardPerBlock, data.TotalStaked, data.TotalClaimed, data.BlockTime, data.Tvl, data.Apr, data.JoinNum, data.Status)
 	return ret, err
 }
 
 func (m *defaultXpoolPoolsModel) Update(ctx context.Context, newData *XpoolPools) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, xpoolPoolsRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.StakingTokenName, newData.StakingTokenSymbol, newData.StakingTokenAddress, newData.StakingTokenDecimals, newData.StakingTokenPrice, newData.RewardTokenName, newData.RewardTokenSymbol, newData.RewardTokenAddress, newData.RewardTokenDecimals, newData.RewardTokenPrice, newData.PoolAddress, newData.RewardPerBlock, newData.TotalStaked, newData.TotalClaimed, newData.BlockTime, newData.Tvl, newData.Apr, newData.JoinNum, newData.Status)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.PoolAddress, newData.StakingTokenName, newData.StakingTokenSymbol, newData.StakingTokenAddress, newData.StakingTokenDecimals, newData.StakingTokenPrice, newData.RewardTokenName, newData.RewardTokenSymbol, newData.RewardTokenAddress, newData.RewardTokenDecimals, newData.RewardTokenPrice, newData.RewardPerBlock, newData.TotalStaked, newData.TotalClaimed, newData.BlockTime, newData.Tvl, newData.Apr, newData.JoinNum, newData.Status)
 	return err
 }
 

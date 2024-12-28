@@ -5,7 +5,7 @@
 DROP TABLE IF EXISTS "public"."xpool_pools";
 -- 单币质押池表
 CREATE TABLE xpool_pools (
-    id BIGSERIAL PRIMARY KEY,
+    "id" int8 NOT NULL,
     chain_id BIGINT NOT NULL DEFAULT 0,
     pool_address VARCHAR(42) NOT NULL DEFAULT '',
     staking_token_name VARCHAR(50) NOT NULL DEFAULT '',
@@ -28,8 +28,14 @@ CREATE TABLE xpool_pools (
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
-    CONSTRAINT check_status CHECK (status IN ('active', 'closed'))
+    CONSTRAINT check_status CHECK (status IN ('active', 'closed')),
+    CONSTRAINT "xpool_pools_pkey" PRIMARY KEY ("id")
 );
+DROP SEQUENCE IF EXISTS "xpool_pools_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "xpool_pools_id_seq" START WITH 1;
+ALTER TABLE "public"."xpool_pools" ALTER COLUMN id SET DEFAULT nextval('xpool_pools_id_seq');
+
+ALTER TABLE "public"."xpool_pools" OWNER TO "postgres";
 
 COMMENT ON TABLE xpool_pools IS '单币质押池表';
 COMMENT ON COLUMN xpool_pools.staking_token_name IS '质押的代币名称';
@@ -57,20 +63,20 @@ CREATE INDEX idx_xpool_pools_staking_token_symbol_chain_id ON xpool_pools(stakin
 CREATE INDEX idx_xpool_pools_addresses_chain_id ON xpool_pools(pool_address, staking_token_address, reward_token_address, chain_id);
 CREATE INDEX idx_xpool_pools_status_tvl ON xpool_pools(status, tvl DESC);
 
-
 -- ----------------------------
 -- Table structure for xpool_user_action
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."xpool_user_action";
+-- 用户参与的质押池子表 
 CREATE TABLE "public"."xpool_user_action" (
-  "id" int4 NOT NULL DEFAULT nextval('xpool_user_action_id_seq'::regclass),
+  "id" int8 NOT NULL,
   "chain_id" int8 NOT NULL DEFAULT 0,
   "block_number" int8 NOT NULL DEFAULT 0,
   "tx_hash" varchar(66) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "user_address" varchar(42) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "pool_id" int4 NOT NULL DEFAULT 0,
   "pool_address" varchar(42) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "action" varchar(100) COLLATE "pg_catalog"."default",
+  "action" text COLLATE "pg_catalog"."default",
   "event_sign" varchar(100) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "log_index" int4 NOT NULL DEFAULT 0,
   "amount" varchar(50) COLLATE "pg_catalog"."default" NOT NULL DEFAULT '0.000000000000000000'::character varying,
@@ -81,11 +87,13 @@ CREATE TABLE "public"."xpool_user_action" (
   CONSTRAINT "xpool_user_action_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "xpool_user_action_tx_hash_event_sign_log_index_key" UNIQUE ("tx_hash", "event_sign", "log_index"),
   CONSTRAINT "xpool_user_action_action_check" CHECK (action = ANY (ARRAY['create_pool'::text, 'destroy_pool'::text, 'stake'::text, 'unstake'::text, 'harvest'::text, 'other'::text]))
-)
-;
+);
 
-ALTER TABLE "public"."xpool_user_action" 
-  OWNER TO "postgres";
+DROP SEQUENCE IF EXISTS "xpool_user_action_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "xpool_user_action_id_seq" START WITH 1;
+ALTER TABLE "public"."xpool_user_action" ALTER COLUMN id SET DEFAULT nextval('xpool_user_action_id_seq');
+
+ALTER TABLE "public"."xpool_user_action" OWNER TO "postgres";
 
 CREATE INDEX "idx_xpool_user_action_user_address_log_index_tx_time" ON "public"."xpool_user_action" USING btree (
   "user_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
@@ -98,6 +106,7 @@ CREATE INDEX "idx_xpool_user_action_pool_id_is_user" ON "public"."xpool_user_act
   "is_user" "pg_catalog"."bool_ops" ASC NULLS LAST
 );
 
+COMMENT ON TABLE "public"."xpool_user_action" IS 'Xpool用户行为流水表'; 
 COMMENT ON COLUMN "public"."xpool_user_action"."tx_hash" IS '交易哈希';
 COMMENT ON COLUMN "public"."xpool_user_action"."user_address" IS '用户地址';
 COMMENT ON COLUMN "public"."xpool_user_action"."pool_id" IS '质押池ID';
@@ -109,3 +118,37 @@ COMMENT ON COLUMN "public"."xpool_user_action"."is_user" IS '是否为用户操�
 COMMENT ON COLUMN "public"."xpool_user_action"."tx_time" IS '成交时间';
 COMMENT ON COLUMN "public"."xpool_user_action"."created_at" IS '创建时间';
 COMMENT ON COLUMN "public"."xpool_user_action"."updated_at" IS '更新时间';
+
+
+-- ----------------------------
+-- Table structure for xpool_user_pools
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."xpool_user_pools";
+-- 用户参与的质押池表 
+CREATE TABLE "public"."xpool_user_pools" (
+  "id" int8 NOT NULL,
+  "chain_id" int8 NOT NULL DEFAULT 0, -- 链ID
+  "pool_address" varchar(42) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying, -- 池地址
+  "user_address" varchar(42) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying, -- 用户地址
+  "staking_amount" varchar(50) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying, -- 质押数量
+  "created_at" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+  "updated_at" timestamp(6), -- 更新时间
+  CONSTRAINT "xpool_user_pools_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "xpool_user_pools_pool_user_chain_idx" ON "public"."xpool_user_pools" ("pool_address", "user_address", "chain_id");
+
+DROP SEQUENCE IF EXISTS "xpool_user_pools_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "xpool_user_pools_id_seq" START WITH 1;
+ALTER TABLE "public"."xpool_user_pools" ALTER COLUMN id SET DEFAULT nextval('xpool_user_pools_id_seq');
+
+ALTER TABLE "public"."xpool_user_pools" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."xpool_user_pools" IS '用户参与的质押池表'; 
+COMMENT ON COLUMN "public"."xpool_user_pools"."chain_id" IS '链ID';
+COMMENT ON COLUMN "public"."xpool_user_pools"."pool_address" IS '质押池地址';
+COMMENT ON COLUMN "public"."xpool_user_pools"."user_address" IS '用户地址';
+COMMENT ON COLUMN "public"."xpool_user_pools"."staking_amount" IS '质押数量';
+COMMENT ON COLUMN "public"."xpool_user_pools"."created_at" IS '创建时间';
+COMMENT ON COLUMN "public"."xpool_user_pools"."updated_at" IS '更新时间';
+

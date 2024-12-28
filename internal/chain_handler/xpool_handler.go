@@ -21,10 +21,20 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
+type xpoolEventCallback interface {
+	OnPoolCreated(*ethclient.Client, *xpool.StakingFactoryPoolCreated, *repository.EventXpoolFactoryPoolCreated)
+	OnPoolDestroied(*ethclient.Client, *xpool.StakingFactoryPoolDestroied, *repository.EventXpoolFactoryPoolDestroied)
+	OnDeposited(*ethclient.Client, *xpool.StakingPoolDeposited, *repository.EventXpoolPoolDeposited)
+	OnWithdrawed(*ethclient.Client, *xpool.StakingPoolWithdrawed, *repository.EventXpoolPoolWithdrawed)
+	OnClaimed(*ethclient.Client, *xpool.StakingPoolClaimed, *repository.EventXpoolPoolClaimed)
+}
+
 type XpoolHandler struct {
 	dataSource string
 	chain      *config.ChainConfig
 	config     *config.XpoolConfig
+	callbacks  []xpoolEventCallback
+	callbackWg sync.WaitGroup
 }
 
 func NewXpoolHandler(dataSource string, chain config.ChainConfig, config config.XpoolConfig) (*XpoolHandler, error) {
@@ -33,6 +43,20 @@ func NewXpoolHandler(dataSource string, chain config.ChainConfig, config config.
 		chain:      &chain,
 		config:     &config,
 	}, nil
+}
+
+func (handler *XpoolHandler) RegisterCallback(callback xpoolEventCallback) {
+	handler.callbacks = append(handler.callbacks, callback)
+}
+
+func (handler *XpoolHandler) triggerCallback(ctx context.Context, fn func(xpoolEventCallback)) {
+	for _, callback := range handler.callbacks {
+		handler.callbackWg.Add(1)
+		go func(cb xpoolEventCallback) {
+			defer handler.callbackWg.Done()
+			fn(cb)
+		}(callback)
+	}
 }
 
 func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
@@ -273,9 +297,50 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 						conn := repository.NewConn(handler.dataSource)
 						err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-							eventXpoolPoolClaimedModel := repository.NewEventXpoolPoolClaimedModel(sqlx.NewSqlConnFromSession(s))
+							eventXpoolPoolDepositedModel := repository.NewEventXpoolPoolDepositedModel(sqlx.NewSqlConnFromSession(s))
 							eventXpoolPoolWithdrawedModel := repository.NewEventXpoolPoolWithdrawedModel(sqlx.NewSqlConnFromSession(s))
-							eventXpoolPoolDestroiedModel := repository.NewEventXpoolPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
+							eventXpoolPoolClaimedModel := repository.NewEventXpoolPoolClaimedModel(sqlx.NewSqlConnFromSession(s))
+							// eventXpoolPoolDestroiedModel := repository.NewEventXpoolPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
+
+							// Deposited event
+							{
+								for _, event := range depositedEvents {
+									blockNumber := int64(event.Raw.BlockNumber)
+									tx := transactions[event.Raw.TxHash.Hex()]
+									txIndex := int64(event.Raw.Index)
+									txHash := tx.Tx.Hash().Hex()
+									txAt := tx.Time
+									from := tx.From.Hex()
+									to := tx.Tx.To().Hex()
+									value := tx.Tx.Value().String()
+									user := event.User.Hex()
+									amount := event.Amount.String()
+									height := event.Height.Int64()
+
+									// If handled, ignore
+									_, err := eventXpoolPoolDepositedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									switch err {
+									case repository.ErrNotFound:
+									case nil:
+										continue
+									default:
+										return err
+									}
+
+									id, err := global.NewId()
+									if err != nil {
+										return err
+									}
+									err = eventXpoolPoolDepositedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									if err != nil {
+										return err
+									} else {
+										handler.triggerCallback(ctx, func(cb xpoolEventCallback) {
+											cb.OnDeposited(client, event, nil)
+										})
+									}
+								}
+							}
 
 							// Claimed event
 							{
@@ -309,6 +374,10 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									err = eventXpoolPoolClaimedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
 									if err != nil {
 										return err
+									} else {
+										handler.triggerCallback(ctx, func(cb xpoolEventCallback) {
+											cb.OnClaimed(client, event, nil)
+										})
 									}
 								}
 							}
@@ -345,14 +414,16 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									err = eventXpoolPoolWithdrawedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
 									if err != nil {
 										return err
+									} else {
+										handler.triggerCallback(ctx, func(cb xpoolEventCallback) {
+											cb.OnWithdrawed(client, event, nil)
+										})
 									}
 								}
 							}
 
-							// Deposited event (The contract has not been updated yet)
 							{
-								_ = depositedEvents
-								_ = eventXpoolPoolDestroiedModel
+								// _ = eventXpoolPoolDestroiedModel
 								// for _, event := range depositedEvents {
 								// 	blockNumber := int64(event.Raw.BlockNumber)
 								// 	tx := transactions[event.Raw.TxHash.Hex()]

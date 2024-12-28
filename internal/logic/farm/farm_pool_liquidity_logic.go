@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmPoolLiquidityLogic struct {
@@ -28,17 +29,14 @@ type FarmPoolLiquidityLogic struct {
 
 // Farm pool liquidity
 func NewFarmPoolLiquidityLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmPoolLiquidityLogic {
-	client, err := ethclient.DialContext(ctx, provider)
-	if err != nil {
-		logx.Errorf("[Farm] failed to connect to the Ethereum client: %v", err)
-		return nil
-	}
+
+	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Farm"))
 	return &FarmPoolLiquidityLogic{
-		Logger:          logx.WithContext(ctx),
+		Logger:          logger,
 		ctx:             ctx,
 		svcCtx:          svcCtx,
 		chainId:         svcCtx.Config.Farm[0].ChainId,
-		ethClient:       client,
+		ethClient:       svcCtx.EthClient,
 		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
@@ -46,9 +44,26 @@ func NewFarmPoolLiquidityLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 
 func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityRequest) (resp *types.FarmPoolLiquidityResponse, err error) {
 
+	resp = &types.FarmPoolLiquidityResponse{
+		PoolAddress:            "",
+		PositionManagerAddress: l.svcCtx.Config.Sonexes[0].PositionManager,
+		LiquidityUSD:           "0",
+		TotalToken0Amount:      "0",
+		TotalToken1Amount:      "0",
+		Token0Price:            "0",
+		Token1Price:            "0",
+		Token0Decimals:         0,
+		Token1Decimals:         0,
+		Token0Symbol:           "",
+		Token1Symbol:           "",
+	}
+
 	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
 	pool, err := farmPoolModel.FindByIncentiveId(context.Background(), l.chainId, req.IncentiveId)
 	if err != nil {
+		if err == sqlx.ErrNotFound {
+			return
+		}
 		return nil, fmt.Errorf("failed to get farm pool: %v", err)
 	}
 
@@ -56,6 +71,9 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.svcCtx.DB)
 	tokenIds, err := farmUserPoolModel.FindTokenIdsByIncentiveId(context.Background(), req.IncentiveId, l.chainId)
 	if err != nil {
+		if err == sqlx.ErrNotFound {
+			return
+		}
 		return nil, fmt.Errorf("failed to get token ids: %v", err)
 	}
 
@@ -76,8 +94,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	_, token0Price, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token0Address, true, 2, nil)
 	if err != nil {
 		logx.Errorf("failed to get token0 price: %v", err)
-	}
-	if token0Price != nil && len(token0Price) > 0 {
+	} else if len(token0Price) > 0 && token0Price[0].Value != nil {
 		token0PriceValue = token0Price[0].Value
 	}
 
@@ -85,9 +102,8 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	_, token1Price, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token1Address, true, 2, nil)
 	if err != nil {
 		logx.Errorf("failed to get token1 price: %v", err)
-	}
-	if token1Price != nil && len(token1Price) > 0 {
-		token1PriceValue = token1Price[0].Value
+	} else if len(token1Price) > 0 && token1Price[0].Value != nil {
+		token1PriceValue = token0Price[0].Value
 	}
 
 	totalToken0Value := new(big.Int).Mul(totalToken0Amount, token0PriceValue)

@@ -36,8 +36,13 @@ CREATE TABLE "public"."event_xpool_factory_pool_created" (
   "event_staking_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward_pre_block" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
-)
-;
+);
+
+DROP SEQUENCE IF EXISTS "event_xpool_factory_pool_created_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "event_xpool_factory_pool_created_id_seq" START WITH 1;
+ALTER TABLE "public"."event_xpool_factory_pool_created" ALTER COLUMN id SET DEFAULT nextval('event_xpool_factory_pool_created_id_seq');
+
+ALTER TABLE "public"."event_xpool_factory_pool_created" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for event_xpool_factory_pool_destroied
@@ -60,8 +65,14 @@ CREATE TABLE "public"."event_xpool_factory_pool_destroied" (
   "event_staking_balance" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward_balance" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_recipient" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
-)
-;
+);
+
+
+DROP SEQUENCE IF EXISTS "event_xpool_factory_pool_destroied_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "event_xpool_factory_pool_destroied_id_seq" START WITH 1;
+ALTER TABLE "public"."event_xpool_factory_pool_destroied" ALTER COLUMN id SET DEFAULT nextval('event_xpool_factory_pool_destroied_id_seq');
+
+ALTER TABLE "public"."event_xpool_factory_pool_destroied" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for event_xpool_pool_claimed
@@ -82,8 +93,13 @@ CREATE TABLE "public"."event_xpool_pool_claimed" (
   "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_height" int8 NOT NULL
-)
-;
+);
+
+DROP SEQUENCE IF EXISTS "event_xpool_pool_claimed_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "event_xpool_pool_claimed_id_seq" START WITH 1;
+ALTER TABLE "public"."event_xpool_pool_claimed" ALTER COLUMN id SET DEFAULT nextval('event_xpool_pool_claimed_id_seq');
+
+ALTER TABLE "public"."event_xpool_pool_claimed" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for event_xpool_pool_destroied
@@ -105,8 +121,13 @@ CREATE TABLE "public"."event_xpool_pool_destroied" (
   "event_staking_balance" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward_balance" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_recipient" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
-)
-;
+);
+
+DROP SEQUENCE IF EXISTS "event_xpool_pool_destroied_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "event_xpool_pool_destroied_id_seq" START WITH 1;
+ALTER TABLE "public"."event_xpool_pool_destroied" ALTER COLUMN id SET DEFAULT nextval('event_xpool_pool_destroied_id_seq');
+
+ALTER TABLE "public"."event_xpool_pool_destroied" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for event_xpool_pool_withdrawed
@@ -127,8 +148,13 @@ CREATE TABLE "public"."event_xpool_pool_withdrawed" (
   "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_height" int8 NOT NULL
-)
-;
+);
+
+DROP SEQUENCE IF EXISTS "event_xpool_pool_withdrawed_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "event_xpool_pool_withdrawed_id_seq" START WITH 1;
+ALTER TABLE "public"."event_xpool_pool_withdrawed" ALTER COLUMN id SET DEFAULT nextval('event_xpool_pool_withdrawed_id_seq');
+
+ALTER TABLE "public"."event_xpool_pool_withdrawed" OWNER TO "postgres";
 
 -- ----------------------------
 -- Indexes structure for table event_xpool_factory_pool_created
@@ -246,3 +272,52 @@ CREATE INDEX "xpool_pool_withdrawed_index_chain_id_user" ON "public"."event_xpoo
 -- Primary Key structure for table event_xpool_pool_withdrawed
 -- ----------------------------
 ALTER TABLE "public"."event_xpool_pool_withdrawed" ADD CONSTRAINT "event_xpool_pool_claimed_copy1_pkey" PRIMARY KEY ("id");
+
+
+-- ----------------------------
+-- Table structure for event_xpool_pool_deposited
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_xpool_pool_deposited";
+CREATE TABLE "public"."event_xpool_pool_deposited" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_height" int8 NOT NULL
+);
+
+DROP SEQUENCE IF EXISTS "event_xpool_pool_deposited_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "event_xpool_pool_deposited_id_seq" START WITH 1;
+ALTER TABLE "public"."event_xpool_pool_deposited" ALTER COLUMN id SET DEFAULT nextval('event_xpool_pool_deposited_id_seq');
+
+-- ----------------------------
+-- Indexes structure for table event_xpool_pool_deposited
+-- ----------------------------
+CREATE INDEX "xpool_pool_deposited_index_chain_id_block_number" ON "public"."event_xpool_pool_deposited" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "xpool_pool_deposited_index_chain_id_tx_hash" ON "public"."event_xpool_pool_deposited" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "xpool_pool_deposited_index_chain_id_user" ON "public"."event_xpool_pool_deposited" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_user" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table event_xpool_pool_deposited
+-- ----------------------------
+ALTER TABLE "public"."event_xpool_pool_deposited" ADD CONSTRAINT "event_xpool_pool_deposited_pkey" PRIMARY KEY ("id");
+
+

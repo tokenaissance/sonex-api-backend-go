@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -17,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmUserAssetListLogic struct {
@@ -31,18 +31,14 @@ type FarmUserAssetListLogic struct {
 
 // Farm user asset list
 func NewFarmUserAssetListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmUserAssetListLogic {
-	client, err := ethclient.DialContext(ctx, provider)
-	if err != nil {
-		logx.Errorf("[Farm] failed to connect to the Ethereum client: %v", err)
-		return nil
-	}
-	defer client.Close()
+
+	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Farm"))
 	return &FarmUserAssetListLogic{
-		Logger:          logx.WithContext(ctx),
+		Logger:          logger,
 		ctx:             ctx,
 		svcCtx:          svcCtx,
 		chainId:         svcCtx.Config.Farm[0].ChainId,
-		ethClient:       client,
+		ethClient:       svcCtx.EthClient,
 		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
@@ -62,10 +58,17 @@ func (l *FarmUserAssetListLogic) FarmUserAssetList(req *types.FarmUserAssetListR
 		return nil, err
 	}
 
+	resp = &types.FarmUserAssetListResponse{
+		UserAssets: make([]types.UserAssetData, 0),
+	}
+
 	// 获取所有活跃池子
 	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
 	pools, err := farmPoolModel.FindActivePools(l.ctx, req.ChainId)
 	if err != nil {
+		if err == sqlx.ErrNotFound {
+			return
+		}
 		return nil, err
 	}
 
@@ -98,10 +101,15 @@ func (l *FarmUserAssetListLogic) FarmUserAssetDetail(req *types.FarmUserAssetDet
 		return nil, fmt.Errorf("invalid parameter: user_address")
 	}
 
+	resp = new(types.FarmUserAssetDetailResponse)
+
 	// 获取池子信息
 	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
 	poolData, err := farmPoolModel.FindByIncentiveId(l.ctx, req.ChainId, req.IncentiveId)
 	if err != nil {
+		if err == sqlx.ErrNotFound {
+			return
+		}
 		return nil, err
 	}
 
@@ -159,14 +167,15 @@ func (l *FarmUserAssetListLogic) getUserAssetsData(ctx context.Context, farmCont
 	}
 
 	// 计算奖励token的USD价值
-	rewardUSD, err := l.calculateFeesUSD(totalReward, poolData)
+	rewardTokenPrice, err := getTokenPrice(poolData.ChainId, poolData.RewardTokenAddress)
 	if err != nil {
 		return nil, err
 	}
+	rewardTokenValue := new(big.Int).Mul(totalReward, rewardTokenPrice)
 
 	return &types.UserAssetData{
 		TotalClaimableFees:    totalReward.String(),
-		TotalClaimableFeesUSD: rewardUSD.String(),
+		TotalClaimableFeesUSD: rewardTokenValue.String(),
 		Decimals:              int64(poolData.RewardTokenDecimals),
 		LPBalance:             balance.Int64(),
 		LPStakedNum:           int64(len(stakedTokens)),
@@ -200,30 +209,4 @@ func (l *FarmUserAssetListLogic) getRewardInfo(ctx context.Context, farm *farmCo
 	}
 
 	return rewardInfo.Reward, nil
-}
-
-func (l *FarmUserAssetListLogic) calculateFeesUSD(fees *big.Int, poolData *repository.FarmPools) (*big.Int, error) {
-	if fees == nil || poolData == nil {
-		return big.NewInt(0), fmt.Errorf("invalid parameters")
-	}
-
-	if fees.Sign() == 0 {
-		return big.NewInt(0), nil
-	}
-
-	// 获取价格
-	var rewardPriceValue *big.Int
-	_, rewardPrice, err := global.GetPrices(context.Background(), nil, poolData.ChainId, poolData.RewardTokenAddress, true, 2, nil)
-	if err != nil {
-		logx.Errorf("[farm] failed to get reward token price: %v", err)
-		return big.NewInt(0), nil
-	}
-	if rewardPrice == nil || len(rewardPrice) == 0 || rewardPrice[0].Value == nil {
-		return big.NewInt(0), nil
-	}
-	rewardPriceValue = rewardPrice[0].Value
-
-	// 计算USD价值
-	feesUSD := new(big.Int).Mul(fees, rewardPriceValue)
-	return feesUSD, nil
 }

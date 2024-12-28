@@ -17,8 +17,9 @@ type FarmUserAssetDetailLogic struct {
 
 // Farm user's asset detail in pool
 func NewFarmUserAssetDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmUserAssetDetailLogic {
+	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Farm"))
 	return &FarmUserAssetDetailLogic{
-		Logger: logx.WithContext(ctx),
+		Logger: logger,
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}

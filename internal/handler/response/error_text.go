@@ -17,6 +17,7 @@ var enUSText = map[int]string{
 	GoVersionErrorCode:     "Go Version mismatch",
 	SocketConnectErrorCode: "Socket not connected",
 	SocketSendErrorCode:    "Socket message sending failed",
+	ChainClientErrorCode:   "Failed to connect to blockchain client",
 
 	CronCreateErrorCode:  "Failed to create cron",
 	CronUpdateErrorCode:  "Failed to update menu",

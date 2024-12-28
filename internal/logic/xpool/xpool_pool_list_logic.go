@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,23 +26,20 @@ type XpoolPoolListLogic struct {
 	ctx            context.Context
 	svcCtx         *svc.ServiceContext
 	chainId        int64
-	factoryAddress common.Address
 	ethClient      *ethclient.Client
+	factoryAddress common.Address
 }
 
 func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolListLogic {
-	client, err := ethclient.DialContext(ctx, provider)
-	if err != nil {
-		logx.Errorf("[Xpool] failed to connect to the Ethereum client: %v", err)
-		return nil
-	}
+
+	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Xpool"))
 	return &XpoolPoolListLogic{
-		Logger:         logx.WithContext(ctx),
+		Logger:         logger,
 		ctx:            ctx,
 		svcCtx:         svcCtx,
 		chainId:        svcCtx.Config.Xpools[0].ChainId,
+		ethClient:      svcCtx.EthClient,
 		factoryAddress: common.HexToAddress(svcCtx.Config.Xpools[0].Factory),
-		ethClient:      client,
 	}
 }
 
@@ -52,12 +50,14 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	if req.UserAddress != "" && !common.IsHexAddress(req.UserAddress) {
 		return nil, 0, fmt.Errorf("invalid parameter: user_address")
 	}
-	if req.Limit < 1 {
-		req.Limit = 10
+	if req.Limit < 0 {
+		req.Limit = 0
 	}
 	if req.Offset < 0 {
 		req.Offset = 0
 	}
+
+	resp = make([]*types.XpoolPoolListResponse, 0)
 
 	// 检查缓存中的池子列表
 	if err := l.checkAndUpdatePoolListCache(); err != nil {
@@ -92,12 +92,15 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
 	results, total, err := model.GetPoolList(l.ctx, req, userPools)
 	if err != nil {
+		if err == sqlx.ErrNotFound {
+			return
+		}
 		return nil, 0, err
 	}
 	linq.From(results).SelectT(func(item repository.XpoolPools) types.XpoolPoolListResponse {
 		updatedAt := ""
 		if item.UpdatedAt.Valid {
-			updatedAt = item.UpdatedAt.Time.Format("2006-01-02 15:04:05")
+			updatedAt = item.UpdatedAt.Time.Format(time.RFC3339)
 		}
 		return types.XpoolPoolListResponse{
 			Id:                   item.Id,
@@ -120,7 +123,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			APR:                  item.Apr,
 			JoinNum:              item.JoinNum,
 			Status:               item.Status,
-			CreatedAt:            item.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:            item.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:            updatedAt,
 		}
 	}).ToSlice(&resp)
@@ -128,7 +131,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	return resp, total, nil
 }
 
-// checkAndUpdatePoolListCache 检查并更新池子列表缓存
+// 检查并更新池子列表缓存
 func (l *XpoolPoolListLogic) checkAndUpdatePoolListCache() error {
 	const cacheKeyPrefix = "sonex_dex:xpool:"
 	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
@@ -153,7 +156,7 @@ func (l *XpoolPoolListLogic) checkAndUpdatePoolListCache() error {
 	return nil
 }
 
-// updatePoolBasicInfo 更新池子的基本信息
+// 更新池子的基本信息
 func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 	const updateInterval = 30 * time.Minute
 	const cacheKeyPrefix = "sonex_dex:xpool:"
@@ -197,7 +200,7 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 			defer wg.Done()
 			pool, err := l.getPoolInfo(l.ethClient, poolAddress)
 			if err != nil {
-				logx.Errorf("[Xpool] failed to get pool full info for %s: %v", poolAddress.Hex(), err)
+				logx.Errorf("failed to get pool full info for %s: %v", poolAddress.Hex(), err)
 				return
 			}
 			pools[i] = pool
@@ -208,7 +211,7 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 	if len(pools) > 0 {
 		model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
 		if err := model.BatchUpdatePools(l.ctx, pools); err != nil {
-			return fmt.Errorf("[Xpool] failed to update pools: %v", err)
+			return fmt.Errorf("failed to update pools: %v", err)
 		}
 	}
 
@@ -223,7 +226,7 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 	return nil
 }
 
-// updatePoolRealTimeInfo 更新池子的实时信息
+// 更新池子的实时信息
 func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 	const updateInterval = 2 * time.Minute
 	const cacheKeyPrefix = "sonex_dex:xpool:"
@@ -242,7 +245,7 @@ func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
 	cachedPoolAddresses, err := l.svcCtx.Cache.SMembers(l.ctx, poolAddressesKey).Result()
 	if err != nil {
-		return fmt.Errorf("[Xpool] failed to get cached pool addresses: %v", err)
+		return fmt.Errorf("failed to get cached pool addresses: %v", err)
 	}
 
 	// 更新池子的实时信息
@@ -278,7 +281,7 @@ func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 	return nil
 }
 
-// getPoolInfo 获取池子的信息
+// 获取池子的信息
 func (l *XpoolPoolListLogic) getPoolInfo(ethClient *ethclient.Client, poolAddress common.Address) (*repository.XpoolPools, error) {
 	factory, err := getFactoryContract(l.ctx, ethClient, l.factoryAddress)
 	if err != nil {
@@ -291,13 +294,19 @@ func (l *XpoolPoolListLogic) getPoolInfo(ethClient *ethclient.Client, poolAddres
 	}
 
 	// 获取代币价格
-	prices, err := getTokenPrices(l.ctx, l.chainId, info.StakingToken, info.RewardToken)
+	stakingTokenPriceBig, err := getTokenPrice(l.chainId, info.StakingToken.Hex())
+	if err != nil {
+		return nil, err
+	}
+
+	rewardTokenBig, err := getTokenPrice(l.chainId, info.RewardToken.Hex())
 	if err != nil {
 		return nil, err
 	}
 
 	// 计算TVL
-	stakingTokenPrice := decimal.NewFromBigInt(prices.StakingTokenPrice, 0)
+	stakingTokenPrice := decimal.NewFromBigInt(stakingTokenPriceBig, 0)
+	rewardTokenPrice := decimal.NewFromBigInt(rewardTokenBig, 0)
 	tvl := decimal.NewFromBigInt(big.NewInt(0), 0).Mul(stakingTokenPrice)
 
 	return &repository.XpoolPools{
@@ -311,7 +320,7 @@ func (l *XpoolPoolListLogic) getPoolInfo(ethClient *ethclient.Client, poolAddres
 		RewardTokenSymbol:    info.RewardTokenSymbol,
 		RewardTokenAddress:   info.RewardToken.Hex(),
 		RewardTokenDecimals:  int64(info.RewardTokenDecimals),
-		RewardTokenPrice:     decimal.NewFromBigInt(prices.RewardTokenPrice, 0).String(),
+		RewardTokenPrice:     rewardTokenPrice.String(),
 		PoolAddress:          poolAddress.Hex(),
 		RewardPerBlock:       info.RewardPerBlock.String(),
 		BlockTime:            blockTime,
@@ -320,7 +329,7 @@ func (l *XpoolPoolListLogic) getPoolInfo(ethClient *ethclient.Client, poolAddres
 	}, nil
 }
 
-// getPoolRealTimeInfo 获取池子的实时信息
+// 获取池子的实时信息
 func (l *XpoolPoolListLogic) getPoolRealTimeInfo(ethClient *ethclient.Client, poolAddress common.Address) (*repository.XpoolPools, error) {
 	pool, err := getPoolContract(l.ctx, ethClient, poolAddress)
 	if err != nil {
@@ -354,20 +363,25 @@ func (l *XpoolPoolListLogic) getPoolRealTimeInfo(ethClient *ethclient.Client, po
 	}
 
 	// 获取代币价格
-	prices, err := getTokenPrices(l.ctx, l.chainId, poolInfo.StakingToken, poolInfo.RewardToken)
+	stakingTokenPriceBig, err := getTokenPrice(l.chainId, poolInfo.StakingToken.Hex())
+	if err != nil {
+		return nil, err
+	}
+
+	rewardTokenPriceBig, err := getTokenPrice(l.chainId, poolInfo.RewardToken.Hex())
 	if err != nil {
 		return nil, err
 	}
 
 	// 计算TVL和APR
-	stakingTokenPrice := decimal.NewFromBigInt(prices.StakingTokenPrice, 0)
+	stakingTokenPrice := decimal.NewFromBigInt(stakingTokenPriceBig, 0)
 	tvl := decimal.NewFromBigInt(totalStaked, 0).Mul(stakingTokenPrice)
 
 	apr, _ := utils.CalculateAPR(
-		prices.RewardTokenPrice,
+		rewardTokenPriceBig,
 		big.NewInt(0),
 		blockTime,
-		prices.StakingTokenPrice,
+		stakingTokenPriceBig,
 		totalStaked,
 	)
 

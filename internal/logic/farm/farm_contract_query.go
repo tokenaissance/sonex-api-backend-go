@@ -14,8 +14,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-var provider = "http://10.1.30.101:8545"
-var defaultDecimals = 18
+const defaultDecimals = 18
 
 func getFarmContract(client *ethclient.Client, addr common.Address) (*farmContract.UniswapV3Staker, error) {
 	contract, err := farmContract.NewUniswapV3Staker(addr, client)
@@ -60,8 +59,7 @@ func getTokenPrice(chainId int64, tokenAddress string) (*big.Int, error) {
 	_, price, err := global.GetPrices(context.Background(), nil, chainId, tokenAddress, true, 2, nil)
 	if err != nil {
 		logx.Errorf("[farm] failed to get token price: %v", err)
-	}
-	if price != nil {
+	} else if len(price) > 0 && price[0].Value != nil {
 		priceValue = price[0].Value
 	}
 
