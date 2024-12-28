@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
@@ -46,56 +47,106 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	fromAddress := common.HexToAddress(req.From)
 	toAddress := common.HexToAddress(req.To)
 	stablecoinAddress := common.HexToAddress(req.Stablecoin)
-	var maxLength int64 = 3
+	var maxLength int64 = 2
 
 	fromPriceUSD := big.NewInt(0)
-	if fromAddress.Hex() == stablecoinAddress.Hex() {
-		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
-		if err != nil {
-			return nil, err
-		}
-		fromPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
-	} else {
-		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.From, true, 3, &req.Stablecoin)
-		if err != nil {
-			return nil, err
-		}
-		if price != nil {
-			fromPriceUSD = price.Value
-		}
-	}
-
 	toPriceUSD := big.NewInt(0)
-	if toAddress.Hex() == stablecoinAddress.Hex() {
-		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
-		if err != nil {
-			return nil, err
-		}
-		toPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
-	} else {
-		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.To, true, 3, &req.Stablecoin)
-		if err != nil {
-			return nil, err
-		}
-		if price != nil {
-			toPriceUSD = price.Value
-		}
-	}
-
 	var prices []cache.Price
-	switch req.Type {
-	case "INPUT":
-		prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+
+	var wg sync.WaitGroup
+	results := make(chan error, 3)
+
+	wg.Add(1)
+	go func(ch chan error) {
+		defer wg.Done()
+		defer func() {
+			if err := recover(); err != nil {
+				ch <- fmt.Errorf("%s(panic)", err)
+			}
+		}()
+
+		if fromAddress.Hex() == stablecoinAddress.Hex() {
+			stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
+			if err != nil {
+				ch <- err
+				return
+			}
+			fromPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
+		} else {
+			price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.From, true, 2, &req.Stablecoin)
+			if err != nil {
+				ch <- err
+				return
+			}
+			if price != nil {
+				fromPriceUSD = price.Value
+			}
+		}
+	}(results)
+
+	wg.Add(1)
+	go func(ch chan error) {
+		defer wg.Done()
+		defer func() {
+			if err := recover(); err != nil {
+				ch <- fmt.Errorf("%s(panic)", err)
+			}
+		}()
+
+		if toAddress.Hex() == stablecoinAddress.Hex() {
+			stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
+			if err != nil {
+				ch <- err
+				return
+			}
+			toPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
+		} else {
+			price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.To, true, 2, &req.Stablecoin)
+			if err != nil {
+				ch <- err
+				return
+			}
+			if price != nil {
+				toPriceUSD = price.Value
+			}
+		}
+	}(results)
+
+	wg.Add(1)
+	go func(ch chan error) {
+		defer wg.Done()
+		defer func() {
+			if err := recover(); err != nil {
+				ch <- fmt.Errorf("%s(panic)", err)
+			}
+		}()
+
+		switch req.Type {
+		case "INPUT":
+			prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+			if err != nil {
+				ch <- err
+				return
+			}
+		case "OUTPUT":
+			prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+			if err != nil {
+				ch <- err
+				return
+			}
+		default:
+			err = fmt.Errorf("%s", "Invalid type")
+			return
+		}
+	}(results)
+
+	wg.Wait()
+	close(results)
+
+	for err := range results {
 		if err != nil {
 			return nil, err
 		}
-	case "OUTPUT":
-		prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("%s", "Invalid type")
 	}
 
 	var bestRouterResult *types.TokenQuoteResponse_Router
