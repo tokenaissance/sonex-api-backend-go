@@ -67,23 +67,26 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
-	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
-	if err != nil {
-		if cachedResp == nil {
-			return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	var lockAcquired bool
+
+	if cachedResp != nil {
+		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		if err != nil {
+			return cachedResp, nil
 		}
 
-		return cachedResp, nil
-	}
-
-	if !success {
-		if cachedResp == nil {
-			return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+		if !success {
+			return cachedResp, nil
 		}
 
-		return cachedResp, nil
+		lockAcquired = true
 	}
-	defer l.svcCtx.Cache.Del(lockKey)
+
+	defer func() {
+		if lockAcquired {
+			l.svcCtx.Cache.Del(lockKey)
+		}
+	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
@@ -147,7 +150,7 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
 	}
 
 	return response, nil

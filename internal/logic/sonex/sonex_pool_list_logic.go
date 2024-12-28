@@ -83,23 +83,26 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
-	success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
-	if err != nil {
-		if cachedResp == nil {
-			return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	var lockAcquired bool
+
+	if cachedResp != nil {
+		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		if err != nil {
+			return cachedResp, nil
 		}
 
-		return cachedResp, nil
-	}
-
-	if !success {
-		if cachedResp == nil {
-			return nil, fmt.Errorf("cache refresh already in progress for key: %s", cacheKey)
+		if !success {
+			return cachedResp, nil
 		}
 
-		return cachedResp, nil
+		lockAcquired = true
 	}
-	defer l.svcCtx.Cache.Del(lockKey)
+
+	defer func() {
+		if lockAcquired {
+			l.svcCtx.Cache.Del(lockKey)
+		}
+	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
@@ -126,7 +129,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 
 			balance0, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token0.Address, int64(pool.Token0.Decimals))
 			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
-
 			price0 := new(big.Float).SetFloat64(0)
 			price1 := new(big.Float).SetFloat64(0)
 
@@ -148,6 +150,8 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 
 			poolPrice1 := new(big.Float).Quo(price1, factor1)
 			pool.Price1, _ = poolPrice1.Float64()
+
+			fmt.Println("pool.Address:balance0:balance1", pool.Address, balance0, balance1, pool.Price0, pool.Price1)
 
 			mu.Lock()
 			token0Balance := new(big.Float).Mul(new(big.Float).SetFloat64(balance0), price0)
@@ -187,7 +191,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
 		if err != nil {
 			l.Error("Failed to cache response", err)
 		}
