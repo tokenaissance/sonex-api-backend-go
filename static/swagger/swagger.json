@@ -1775,6 +1775,31 @@
         "hasNextPage"
       ]
     },
+    "PoolPositionData": {
+      "type": "object",
+      "properties": {
+        "event_pool": {
+          "type": "string"
+        },
+        "event_token0": {
+          "type": "string"
+        },
+        "event_token1": {
+          "type": "string"
+        },
+        "event_token_id": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "PoolPositionData",
+      "required": [
+        "event_pool",
+        "event_token0",
+        "event_token1",
+        "event_token_id"
+      ]
+    },
     "PoolVolume": {
       "type": "object",
       "properties": {
@@ -2896,12 +2921,13 @@
           }
         },
         "volume": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "fdv": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
         }
       },
       "title": "Token_TokenDetail",
@@ -2913,7 +2939,8 @@
         "logo",
         "pools",
         "volume",
-        "fdv"
+        "fdv",
+        "price"
       ]
     },
     "Token_TokenInfo": {

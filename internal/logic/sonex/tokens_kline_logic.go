@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -42,7 +41,7 @@ func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp 
 		return nil, err
 	}
 
-	resp = new(types.SonexTokenKlineResponse)
+	resp = &types.SonexTokenKlineResponse{}
 
 	gconv.Structs(result, &resp.Records)
 	for k, v := range resp.Records {
@@ -52,7 +51,16 @@ func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp 
 		} else {
 			// 处理错误情况
 			log.Warning("[TokensKline]: timestampe convert err: %v", err)
-			v.TimeStamp = 0
+		}
+	}
+
+	for k, v := range resp.Records {
+		// 转换为时间戳（带错误处理）
+		if t, err := gtime.StrToTime(v.CreatedAt); err == nil {
+			resp.Records[k].TimeStamp = t.Timestamp()
+		} else {
+			// 处理错误情况
+			log.Warning("[TokensKline]: timestampe convert err: %v", err)
 		}
 	}
 
