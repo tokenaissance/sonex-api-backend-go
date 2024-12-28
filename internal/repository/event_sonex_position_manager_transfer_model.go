@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sonex_api_backend_go/internal/types"
+	"strings"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -92,10 +93,10 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 		LEFT JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		LEFT JOIN sonex_token token0 ON f.event_token0 = token0.address
 		LEFT JOIN sonex_token token1 ON f.event_token1 = token1.address
-		WHERE t.event_from = $1 OR t.event_to = $1
+		WHERE Lower(t.event_from) = $1 OR Lower(t.event_to) = $1
 	`, m.table)
 
-	err := m.conn.QueryRowsCtx(ctx, &items, query, address)
+	err := m.conn.QueryRowsCtx(ctx, &items, query, strings.ToLower(address))
 	if err != nil {
 		return nil, err
 	}
