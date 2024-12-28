@@ -318,9 +318,7 @@ type SonexTokenKlineRequest struct {
 }
 
 type SonexTokenKlineResponse struct {
-	Code    int                     `json:"code"`
-	Data    []SonexTokenPriceRecord `json:"data"`
-	Message string                  `json:"message"`
+	Data []SonexTokenPriceRecord `json:"data"`
 }
 
 type SonexTokenPriceRecord struct {

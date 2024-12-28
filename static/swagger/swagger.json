@@ -2249,25 +2249,16 @@
     "SonexTokenKlineResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
         "data": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SonexTokenPriceRecord"
           }
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "SonexTokenKlineResponse",
       "required": [
-        "code",
-        "data",
-        "message"
+        "data"
       ]
     },
     "SonexTokenPriceRecord": {
