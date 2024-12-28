@@ -377,6 +377,26 @@ type SwapEventResponse struct {
 	Message string          `json:"message"`
 }
 
+type SwapVolume struct {
+	Timestamp int64   `json:"timestamp"`
+	Volume    float64 `json:"volume"`
+	Amount0   float64 `json:"amount0"`
+	Amount1   float64 `json:"amount1"`
+}
+
+type SwapVolumeRequest struct {
+	PoolAddress string `form:"poolAddress"` // Pool address
+	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapVolumeResponse struct {
+	Volumes []SwapVolume `json:"volumes"`
+}
+
 type TokenListRequest struct {
 	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page    int64  `form:"page,default=1"`    // Current page number, default is 1

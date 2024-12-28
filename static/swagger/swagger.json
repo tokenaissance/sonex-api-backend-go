@@ -549,6 +549,72 @@
         ]
       }
     },
+    "/sonex/swaps/volume": {
+      "get": {
+        "operationId": "SonexSwapVolumeHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SwapVolumeResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "poolAddress",
+            "description": " Pool address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "1d",
+              "1w",
+              "1m"
+            ],
+            "default": "1d"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token0",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token1",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/token/price": {
       "get": {
         "operationId": "SonexTokenPriceHandler",
@@ -2462,6 +2528,85 @@
         "data",
         "meta",
         "message"
+      ]
+    },
+    "SwapVolume": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "volume": {
+          "type": "number",
+          "format": "double"
+        },
+        "amount0": {
+          "type": "number",
+          "format": "double"
+        },
+        "amount1": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "SwapVolume",
+      "required": [
+        "timestamp",
+        "volume",
+        "amount0",
+        "amount1"
+      ]
+    },
+    "SwapVolumeRequest": {
+      "type": "object",
+      "properties": {
+        "poolAddress": {
+          "type": "string",
+          "description": " Pool address"
+        },
+        "interval": {
+          "type": "string",
+          "enum": [
+            "1d",
+            "1w",
+            "1m"
+          ],
+          "default": "1d"
+        },
+        "token": {
+          "type": "string"
+        },
+        "token0": {
+          "type": "string"
+        },
+        "token1": {
+          "type": "string"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "SwapVolumeRequest",
+      "required": [
+        "poolAddress"
+      ]
+    },
+    "SwapVolumeResponse": {
+      "type": "object",
+      "properties": {
+        "volumes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SwapVolume"
+          }
+        }
+      },
+      "title": "SwapVolumeResponse",
+      "required": [
+        "volumes"
       ]
     },
     "TokenListRequest": {
