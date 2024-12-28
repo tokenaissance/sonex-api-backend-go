@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sync"
 	"time"
 
 	"sonex_api_backend_go/internal/lib/global"
@@ -104,39 +105,52 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 		}, nil
 	}
 
-	fmt.Println("update cache")
-
 	wethAddress := l.svcCtx.Config.Chains[0].WETH
 
 	tokenVolumes, err := model.GetTokenVolumes(ctx)
 	if err == nil {
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+
 		for _, token := range data {
-			for _, volume := range tokenVolumes {
+			wg.Add(1)
+			go func(token *types.Token_TokenDetail) { // Replace TokenType with the actual type of token
+				defer wg.Done()
+
 				address := token.Address
 				if token.Symbol == "ETH" {
 					address = wethAddress
 				}
 
-				if address == volume.Address {
-					price := new(big.Float).SetFloat64(0) // Initialize price as a big.Float
-					bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, nil)
-					if err == nil && bestPrice != nil {
-						price.SetInt(bestPrice.Value)
-					}
+				factor := new(big.Float).SetFloat64(math.Pow10(int(token.Decimals)))
+				price := new(big.Float).SetFloat64(0)
 
-					volumeAmounts := new(big.Float).SetFloat64(volume.Amounts)
-					factor := new(big.Float).SetFloat64(math.Pow10(int(token.Decimals)))
+				bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, nil)
 
-					tokenVolume := new(big.Float).Quo(volumeAmounts, factor)
-					token.Volume, _ = tokenVolume.Float64()
-					fmt.Println("volume: ", price.String(), tokenVolume.String(), factor.String())
-					fdv := new(big.Float).Quo(new(big.Float).Mul(price, tokenVolume), factor)
-					token.Fdv, _ = fdv.Float64()
-
-					break
+				if err == nil && bestPrice != nil {
+					price.SetInt(bestPrice.Value)
 				}
-			}
+
+				tokenPrice := new(big.Float).Quo(price, factor)
+				mu.Lock()
+				token.Price = tokenPrice.Text('f', -1)
+				mu.Unlock()
+
+				for _, volume := range tokenVolumes {
+					if address == volume.Address {
+						volumeAmounts := new(big.Float).SetFloat64(volume.Amounts)
+						tokenVolume := new(big.Float).Quo(volumeAmounts, factor)
+						mu.Lock()
+						token.Volume = tokenVolume.Text('f', -1)
+						fdv := new(big.Float).Mul(tokenPrice, tokenVolume)
+						token.Fdv = fdv.Text('f', -1)
+						mu.Unlock()
+						break
+					}
+				}
+			}(token)
 		}
+		wg.Wait()
 	}
 
 	response := &TokensResponseWrapper{

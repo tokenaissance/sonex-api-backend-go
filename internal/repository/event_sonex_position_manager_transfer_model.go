@@ -8,6 +8,8 @@ import (
 	"sonex_api_backend_go/internal/types"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -95,7 +97,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 		WHERE t.event_from = $1 OR t.event_to = $1
 	`, m.table)
 
-	err := m.conn.QueryRowsCtx(ctx, &items, query, address)
+	err := m.conn.QueryRowsCtx(ctx, &items, query, common.HexToAddress(address).Hex())
 	if err != nil {
 		return nil, err
 	}

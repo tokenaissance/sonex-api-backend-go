@@ -118,6 +118,42 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 		}, nil
 	}
 
+	// 这里生成每个pool对应的所有positions数据,可能后面用不到
+	// go func() {
+	// 	backgroundCtx := context.Background()
+	// 	poolPositions, err := model.SyncPoolPositions(backgroundCtx, l.svcCtx.Config.Chains[0].ChainId)
+	// 	if err == nil && len(poolPositions) > 0 {
+	// 		var wg sync.WaitGroup
+
+	// 		for _, poolPosition := range poolPositions {
+	// 			wg.Add(1)
+	// 			go func(poolPosition *types.PoolPositionData) {
+	// 				defer wg.Done()
+
+	// 				hashKey := fmt.Sprintf("event_pool:%s", poolPosition.EventPool)
+
+	// 				err := l.svcCtx.Cache.HSet(hashKey, "event_token0", poolPosition.EventToken0)
+	// 				if err != nil {
+	// 					fmt.Println("PoolPosition HSet error for event_token0:", err)
+	// 				}
+
+	// 				err = l.svcCtx.Cache.HSet(hashKey, "event_token1", poolPosition.EventToken1)
+	// 				if err != nil {
+	// 					fmt.Println("PoolPosition HSet error for event_token1:", err)
+	// 				}
+
+	// 				setKey := fmt.Sprintf("event_pool:%s:token_ids", poolPosition.EventPool)
+	// 				err = l.svcCtx.Cache.SAdd(ctx, setKey, poolPosition.EventTokenId).Err()
+	// 				if err != nil {
+	// 					fmt.Println("PoolPosition SAdd error", err)
+	// 				}
+	// 			}(poolPosition)
+	// 		}
+
+	// 		wg.Wait()
+	// 	}
+	// }()
+
 	balanceFetcher := lp.NewTokenBalanceFetcher(l.svcCtx.Config.Chains[0])
 	var wg sync.WaitGroup
 	mu := &sync.Mutex{}
@@ -151,7 +187,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 			poolPrice1 := new(big.Float).Quo(price1, factor1)
 			pool.Price1, _ = poolPrice1.Float64()
 
-			fmt.Println("pool.Address:balance0:balance1", pool.Address, balance0, balance1, pool.Price0, pool.Price1)
+			//fmt.Println("pool.Address:balance0:balance1", pool.Address, balance0, balance1, pool.Price0, pool.Price1)
 
 			mu.Lock()
 			token0Balance := new(big.Float).Mul(new(big.Float).SetFloat64(balance0), price0)

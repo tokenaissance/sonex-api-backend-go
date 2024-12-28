@@ -1775,6 +1775,31 @@
         "hasNextPage"
       ]
     },
+    "PoolPositionData": {
+      "type": "object",
+      "properties": {
+        "event_pool": {
+          "type": "string"
+        },
+        "event_token0": {
+          "type": "string"
+        },
+        "event_token1": {
+          "type": "string"
+        },
+        "event_token_id": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "PoolPositionData",
+      "required": [
+        "event_pool",
+        "event_token0",
+        "event_token1",
+        "event_token_id"
+      ]
+    },
     "PoolVolume": {
       "type": "object",
       "properties": {
@@ -2249,25 +2274,16 @@
     "SonexTokenKlineResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
+        "records": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SonexTokenPriceRecord"
           }
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "SonexTokenKlineResponse",
       "required": [
-        "code",
-        "data",
-        "message"
+        "records"
       ]
     },
     "SonexTokenPriceRecord": {
@@ -2288,6 +2304,10 @@
         },
         "created_at": {
           "type": "string"
+        },
+        "time_stamp": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "SonexTokenPriceRecord",
@@ -2296,7 +2316,8 @@
         "token_symbol",
         "token_address",
         "price",
-        "created_at"
+        "created_at",
+        "time_stamp"
       ]
     },
     "SonexTokenPricesRequest": {
@@ -2900,12 +2921,13 @@
           }
         },
         "volume": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "fdv": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
         }
       },
       "title": "Token_TokenDetail",
@@ -2917,7 +2939,8 @@
         "logo",
         "pools",
         "volume",
-        "fdv"
+        "fdv",
+        "price"
       ]
     },
     "Token_TokenInfo": {
