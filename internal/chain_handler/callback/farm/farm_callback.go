@@ -2,6 +2,7 @@ package farm
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	farmContract "sonex_api_backend_go/internal/lib/contract/farm"
@@ -531,15 +532,39 @@ func (c *FarmCallback) UpdateFarmPoolData(client *ethclient.Client, incentiveId 
 	}
 
 	// 计算质押池的代币总量
-	totalToken0Amount, totalToken1Amount, err := patch.GetTotalTokensInPool(
-		c.ctx,
-		client,
-		common.HexToAddress(c.svcCtx.Config.Sonexes[0].PositionManager),
-		common.HexToAddress(pool.PoolAddress),
-		tokenIds,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to compute total tokens: %v", err)
+	totalToken0Amount := big.NewInt(0)
+	totalToken1Amount := big.NewInt(0)
+	cacheKey := fmt.Sprintf("farm:pool:liquidity:%s", incentiveId)
+	if cached, err := c.svcCtx.Cache.Get(cacheKey); err == nil {
+		var result struct {
+			TotalToken0Amount string
+			TotalToken1Amount string
+		}
+		if err := json.Unmarshal([]byte(cached), &result); err == nil {
+			totalToken0Amount, _ = new(big.Int).SetString(result.TotalToken0Amount, 10)
+			totalToken1Amount, _ = new(big.Int).SetString(result.TotalToken1Amount, 10)
+		}
+	} else {
+		totalToken0Amount, totalToken1Amount, err = patch.GetTotalTokensInPool(
+			c.ctx,
+			c.svcCtx,
+			c.chainId,
+			common.HexToAddress(pool.PoolAddress),
+			tokenIds,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to compute total tokens: %v", err)
+		}
+
+		cacheData, _ := json.Marshal(struct {
+			TotalToken0Amount string
+			TotalToken1Amount string
+		}{
+			TotalToken0Amount: totalToken0Amount.String(),
+			TotalToken1Amount: totalToken1Amount.String(),
+		})
+
+		_ = c.svcCtx.Cache.Set(cacheKey, string(cacheData), 5*time.Minute)
 	}
 
 	// 计算质押的流动性价值
