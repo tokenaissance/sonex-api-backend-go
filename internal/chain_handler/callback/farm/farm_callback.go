@@ -31,6 +31,7 @@ type FarmCallback struct {
 
 var initStakedLiquidityUsd string = "100000000000000000000" // 100 * 10^18
 var defaultDecimals uint8 = 18
+var zeroAddress = common.Address{}
 
 func NewFarmCallback(svcCtx *svc.ServiceContext) *FarmCallback {
 	return &FarmCallback{
@@ -312,25 +313,6 @@ func (c *FarmCallback) OnTokenUnstaked(client *ethclient.Client, event *farmCont
 			return fmt.Errorf("failed to insert farm user action: %v", err)
 		}
 
-		// 更新用户质押状态
-		farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
-		userPool, err := farmUserPoolModel.FindOneByUserAddressIncentiveIdTokenIdChainIdStatus(
-			ctx,
-			data.From,
-			data.EventIncentiveId,
-			event.TokenId.Int64(),
-			c.chainId,
-			"stake",
-		)
-
-		if err == nil && userPool != nil {
-			userPool.Status = "unstake"
-			err = farmUserPoolModel.Update(ctx, userPool)
-			if err != nil {
-				return fmt.Errorf("failed to update farm user pool status: %v", err)
-			}
-		}
-
 		// 更新参与人数
 		farmPoolModel := repository.NewFarmPoolsModel(sqlx.NewSqlConnFromSession(session))
 		err = farmPoolModel.DecJoinNum(ctx, c.chainId, data.EventIncentiveId)
@@ -399,6 +381,17 @@ func (c *FarmCallback) OnDepositTransferred(client *ethclient.Client, event *far
 		return
 	}
 
+	incentiveId := ""
+	if event.OldOwner != zeroAddress {
+		farmUserPoolModel := repository.NewFarmUserPoolsModel(c.svcCtx.DB)
+		id, err := farmUserPoolModel.FindIncentiveIdByTokenIdAndOwner(c.ctx, event.TokenId.Int64(), data.EventOldOwner)
+		if err != nil {
+			logx.Errorf("Failed to get incentiveId: %v", err)
+		} else {
+			incentiveId = id
+		}
+	}
+
 	err := c.svcCtx.DB.TransactCtx(c.ctx, func(ctx context.Context, session sqlx.Session) error {
 		// 保存用户操作流水
 		farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
@@ -409,6 +402,7 @@ func (c *FarmCallback) OnDepositTransferred(client *ethclient.Client, event *far
 			UserAddress: data.From,
 			ToAddress:   data.EventNewOwner,
 			TokenId:     data.EventTokenId,
+			IncentiveId: incentiveId,
 			Action:      sql.NullString{String: "transfer", Valid: true},
 			EventSign:   "DepositTransferred", // TODO
 			LogIndex:    data.TxIndex,         // TODO
@@ -419,6 +413,27 @@ func (c *FarmCallback) OnDepositTransferred(client *ethclient.Client, event *far
 		_, err := farmUserActionModel.Insert(ctx, actionData)
 		if err != nil {
 			return fmt.Errorf("failed to insert farm user action: %v", err)
+		}
+
+		if event.NewOwner == zeroAddress { // withdrawToken
+			// 更新用户质押状态
+			farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
+			userPool, err := farmUserPoolModel.FindOneByUserAddressIncentiveIdTokenIdChainIdStatus(
+				ctx,
+				data.From,
+				incentiveId,
+				event.TokenId.Int64(),
+				c.chainId,
+				"stake",
+			)
+
+			if err == nil && userPool != nil {
+				userPool.Status = "withdraw"
+				err = farmUserPoolModel.Update(ctx, userPool)
+				if err != nil {
+					return fmt.Errorf("failed to update farm user pool status: %v", err)
+				}
+			}
 		}
 
 		// 转移TokenId的所有权
@@ -436,7 +451,7 @@ func (c *FarmCallback) OnDepositTransferred(client *ethclient.Client, event *far
 		return
 	}
 
-	logx.Infof("[OnDepositTransferred] OK, TokenId: %v", data.EventTokenId)
+	logx.Infof("OnDepositTransferred OK, TokenId: %v", data.EventTokenId)
 }
 
 // 质押池结束

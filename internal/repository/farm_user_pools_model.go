@@ -19,6 +19,7 @@ type (
 		FindByUserAddressIncentiveIdStatus(ctx context.Context, userAddress, incentiveId, status string) ([]*FarmUserPools, error)
 		TransferOwnerOfTokenId(ctx context.Context, chainId int64, oldOwner, newOwner string) error
 		FindTokenIdsByIncentiveId(ctx context.Context, incentiveId string, chainId int64) ([]int64, error)
+		FindIncentiveIdByTokenIdAndOwner(ctx context.Context, tokenId int64, owner string) (string, error)
 	}
 
 	customFarmUserPoolsModel struct {
@@ -104,5 +105,27 @@ func (m *customFarmUserPoolsModel) FindTokenIdsByIncentiveId(ctx context.Context
 		return tokenIds, nil
 	default:
 		return nil, err
+	}
+}
+
+func (m *customFarmUserPoolsModel) FindIncentiveIdByTokenIdAndOwner(ctx context.Context, tokenId int64, owner string) (string, error) {
+	query := fmt.Sprintf(`
+        SELECT incentive_id 
+        FROM %s 
+        WHERE token_id = $1 
+        AND user_address = $2 
+        AND status = 'stake' 
+        LIMIT 1
+    `, m.table)
+
+	var incentiveId string
+	err := m.conn.QueryRowCtx(ctx, &incentiveId, query, tokenId, owner)
+	switch err {
+	case nil:
+		return incentiveId, nil
+	case sqlx.ErrNotFound:
+		return "", nil
+	default:
+		return "", err
 	}
 }

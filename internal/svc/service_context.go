@@ -24,7 +24,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	dbConn := sqlx.NewSqlConn("postgres", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		c.PostgreSQL.User, c.PostgreSQL.Password, c.PostgreSQL.Host, c.PostgreSQL.Port, c.PostgreSQL.DbName))
 
-	client, err := ethclient.DialContext(context.Background(), new(config.ChainConfig).GetNode())
+	// provider := new(config.ChainConfig).GetNode()
+	provider := "http://inside-minato-chain.sonex.so"
+	logx.Infof("provider: %s", provider)
+	client, err := ethclient.DialContext(context.Background(), provider)
 	if err != nil {
 		logx.Errorf("failed to connect to the Ethereum client: %v", err)
 		return nil

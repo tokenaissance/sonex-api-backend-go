@@ -79,7 +79,7 @@ CREATE TABLE "public"."farm_user_pools" (
   "token_id" BIGINT NOT NULL DEFAULT 0,
   "user_address" VARCHAR(42) NOT NULL DEFAULT '',
   "chain_id" BIGINT NOT NULL DEFAULT 0,
-  "status" VARCHAR(10) NOT NULL CHECK (status IN ('stake', 'unstake')),
+  "status" VARCHAR(10) NOT NULL CHECK (status IN ('stake', 'withdraw')),
   "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" TIMESTAMP NULL DEFAULT NULL,
   UNIQUE ("user_address", "incentive_id", "token_id",  "chain_id", "status")
