@@ -150,7 +150,7 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
 	}
 
 	return response, nil

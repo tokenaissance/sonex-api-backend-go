@@ -218,7 +218,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 30*time.Second)
+		l.svcCtx.Cache.Set(cacheKey, responseBytes, 0) // TODO: cache for xxx seconds??
 	}
 
 	return response, nil
