@@ -4,7 +4,6 @@ Port: 8888
 Log:
   Level: debug
 Domains:
-  # - sonex-devnet-v2.vercel.app
   - testnet.sonex.so
 PostgreSQL:
   Host: PG_HOST
@@ -22,10 +21,12 @@ Chains:
     Name: Minato
     Nodes:
       # URL:Weight
-      http://inside-minato-chain.sonex.so: 100
+      http://10.1.30.101:8545: 100
+      http://10.1.30.103:8545: 50
+      http://10.1.30.104:8545: 50
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
-    MaxLogsNumber: 3000
+    MaxLogsNumber: 5000
     Multicall: 0x18546Af844DFA77c5268FF8A51941E11692FED25
     Tokens:
       - Address: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
