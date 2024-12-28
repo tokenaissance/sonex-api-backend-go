@@ -26,6 +26,7 @@ type (
 		GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error)
 		FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error)
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error)
+		SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -220,6 +221,42 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolVolumes(ctx context.Con
 	}
 
 	return poolVolumes, nil
+}
+
+type PoolPositionData struct {
+	EventPool    string `db:"event_pool"`
+	EventToken0  string `db:"event_token0"`
+	EventToken1  string `db:"event_token1"`
+	EventTokenId int64  `db:"event_token_id"`
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error) {
+	query := fmt.Sprintf(`
+		SELECT DISTINCT s.event_pool, s.event_token0, s.event_token1, t.event_token_id
+		FROM %s s
+		JOIN event_sonex_pool_mint m ON s.event_pool = m.extra_pool
+		JOIN event_sonex_position_manager_transfer t ON m.tx_hash = t.tx_hash
+		WHERE s.chain_id = %d AND m.chain_id = %d AND t.chain_id = %d
+		ORDER BY s.event_pool;
+	`, m.table, chainId, chainId, chainId)
+
+	var data []PoolPositionData
+	err := m.conn.QueryRowsCtx(ctx, &data, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	poolPositions := make([]*types.PoolPositionData, 0)
+	for _, d := range data {
+		poolPositions = append(poolPositions, &types.PoolPositionData{
+			EventPool:    d.EventPool,
+			EventToken0:  d.EventToken0,
+			EventToken1:  d.EventToken1,
+			EventTokenId: d.EventTokenId,
+		})
+	}
+
+	return poolPositions, nil
 }
 
 func (m *customEventSonexFactoryPoolCreatedModel) FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error) {

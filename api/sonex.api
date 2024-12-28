@@ -157,6 +157,13 @@ type PoolsResponse_Volume {
 	Volume       string `json:"volume"`
 }
 
+type PoolPositionData {
+	EventPool    string `json:"event_pool"`
+	EventToken0  string `json:"event_token0"`
+	EventToken1  string `json:"event_token1"`
+	EventTokenId int64  `json:"event_token_id"`
+}
+
 type PoolsResponse_Pool {
 	Id            string              `json:"id"`
 	Address       string              `json:"address"`
@@ -196,8 +203,9 @@ type Token_TokenDetail {
 	Decimals int                 `json:"decimals"`
 	Logo     string              `json:"logo"`
 	Pools    []*Token_PoolDetail `json:"pools"`
-	Volume   float64             `json:"volume"`
-	Fdv      float64             `json:"fdv"`
+	Volume   string             `json:"volume"`
+	Fdv      string             `json:"fdv"`
+	Price    string             `json:"price"`
 }
 
 type Token_PoolDetail {

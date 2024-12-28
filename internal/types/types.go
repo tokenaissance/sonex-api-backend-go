@@ -200,6 +200,13 @@ type PaginationMeta struct {
 	HasNextPage     bool `json:"hasNextPage"`
 }
 
+type PoolPositionData struct {
+	EventPool    string `json:"event_pool"`
+	EventToken0  string `json:"event_token0"`
+	EventToken1  string `json:"event_token1"`
+	EventTokenId int64  `json:"event_token_id"`
+}
+
 type PoolVolume struct {
 	Address  string  `json:"address"`
 	Amounts0 float64 `json:"amounts0"`
@@ -488,8 +495,9 @@ type Token_TokenDetail struct {
 	Decimals int                 `json:"decimals"`
 	Logo     string              `json:"logo"`
 	Pools    []*Token_PoolDetail `json:"pools"`
-	Volume   float64             `json:"volume"`
-	Fdv      float64             `json:"fdv"`
+	Volume   string              `json:"volume"`
+	Fdv      string              `json:"fdv"`
+	Price    string              `json:"price"`
 }
 
 type Token_TokenInfo struct {
