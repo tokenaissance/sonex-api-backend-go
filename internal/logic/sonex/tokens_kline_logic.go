@@ -2,10 +2,13 @@ package sonex
 
 import (
 	"context"
-	"github.com/gogf/gf/v2/util/gconv"
+	"sonex_api_backend_go/internal/lib/log"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -33,12 +36,29 @@ func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenPriceRecordModel(conn)
 	result, err := model.Kline(req.Address, req.Interval)
+	if err != nil {
+		// todo: wrapper error or err response
+		log.Warning("[TokensKline]: err %s", err)
+		return nil, err
+	}
 
 	resp = new(types.SonexTokenKlineResponse)
 
-	gconv.Structs(result, &resp.Data)
+	gconv.Structs(result, &resp.Records)
+	for k, v := range resp.Records {
+		// 转换为时间戳（带错误处理）
+		if t, err := gtime.StrToTime(v.CreatedAt); err == nil {
+			resp.Records[k].TimeStamp = t.Timestamp()
+		} else {
+			// 处理错误情况
+			log.Warning("[TokensKline]: timestampe convert err: %v", err)
+			v.TimeStamp = 0
+		}
+	}
 
-	return
+	// todo: cache kline
+
+	return resp, nil
 }
 
 // 根据 interval 获取查询条件的时间范围

@@ -237,10 +237,10 @@ type NftDataResponse {
 }
 
 type NftDataResponse_Data {
-	Amount0         float64           `json:"amount0"`
-	Amount1         float64           `json:"amount1"`
-	Amount0Price    float64           `json:"amount0Price"`
-	Amount1Price    float64           `json:"amount1Price"`
+	Amount0         float64          `json:"amount0"`
+	Amount1         float64          `json:"amount1"`
+	Amount0Price    float64          `json:"amount0Price"`
+	Amount1Price    float64          `json:"amount1Price"`
 	TickUpper       string           `json:"tickUpper"`
 	TickLower       string           `json:"tickLower"`
 	NftId           int              `json:"nftId"`
@@ -355,7 +355,7 @@ type PositionsResponse {
 	GasCosts      float64                       `json:"gasCosts"`
 	IsNegative    bool                          `json:"isNegative"`
 	Pnl           float64                       `json:"pnl"`
-	Data     []*PositionsResponse_Position `json:"positions"`
+	Data          []*PositionsResponse_Position `json:"positions"`
 	Ratio         float64                       `json:"ratio"`
 	TotalFees     float64                       `json:"totalFees"`
 	TotalBalances float64                       `json:"totalBalances"`
@@ -405,12 +405,11 @@ type SonexTokenPriceRecord {
 	TokenAddress string `json:"token_address"`
 	Price        string `json:"price"`
 	CreatedAt    string `json:"created_at"`
+	TimeStamp    int64  `json:"time_stamp"`
 }
 
 type SonexTokenKlineResponse {
-	Code    int                     `json:"code"`
-	Data    []SonexTokenPriceRecord `json:"data"`
-	Message string                  `json:"message"`
+	Records []SonexTokenPriceRecord `json:"records"`
 }
 
 @server (
