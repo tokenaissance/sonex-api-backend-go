@@ -11,7 +11,9 @@ import (
 	"sonex_api_backend_go/internal/types"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmPoolRoiLogic struct {
@@ -19,17 +21,21 @@ type FarmPoolRoiLogic struct {
 	ctx             context.Context
 	svcCtx          *svc.ServiceContext
 	chainId         int64
+	ethClient       *ethclient.Client
 	farmAddress     common.Address // UniswapV3Staker
 	positionAddress common.Address // NonfungiblePositionManager
 }
 
 // Farm pool roi
 func NewFarmPoolRoiLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmPoolRoiLogic {
+
+	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Farm"))
 	return &FarmPoolRoiLogic{
-		Logger:          logx.WithContext(ctx),
+		Logger:          logger,
 		ctx:             ctx,
 		svcCtx:          svcCtx,
 		chainId:         svcCtx.Config.Farm[0].ChainId,
+		ethClient:       svcCtx.EthClient,
 		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
@@ -40,10 +46,15 @@ func (l *FarmPoolRoiLogic) FarmPoolRoi(req *types.FarmPoolRoiRequest) (resp *typ
 		req.ChainId = l.chainId
 	}
 
+	resp = new(types.FarmPoolRoiResponse)
+
 	// 获取质押池信息
 	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
 	poolData, err := farmPoolModel.FindByIncentiveId(l.ctx, req.ChainId, req.IncentiveId)
 	if err != nil {
+		if err == sqlx.ErrNotFound {
+			return
+		}
 		return nil, err
 	}
 	if poolData == nil {

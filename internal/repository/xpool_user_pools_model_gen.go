@@ -38,7 +38,7 @@ type (
 	}
 
 	XpoolUserPools struct {
-		Id            int64        `db:"id"`             // 主键ID
+		Id            int64        `db:"id"`
 		ChainId       int64        `db:"chain_id"`       // 链ID
 		PoolAddress   string       `db:"pool_address"`   // 质押池地址
 		UserAddress   string       `db:"user_address"`   // 用户地址

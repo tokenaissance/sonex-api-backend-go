@@ -16,33 +16,31 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cast"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmPoolListLogic struct {
 	logx.Logger
-	ctx             context.Context
-	svcCtx          *svc.ServiceContext
-	chainId         int64
-	ethClient       *ethclient.Client
-	farmAddress     common.Address // UniswapV3Staker
-	positionAddress common.Address // NonfungiblePositionManager
+	ctx                    context.Context
+	svcCtx                 *svc.ServiceContext
+	chainId                int64
+	ethClient              *ethclient.Client
+	farmAddress            common.Address // UniswapV3Staker
+	positionManagerAddress common.Address // NonfungiblePositionManager
 }
 
 // Farm pool list
 func NewFarmPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmPoolListLogic {
-	client, err := ethclient.DialContext(ctx, provider)
-	if err != nil {
-		logx.Errorf("[Farm] failed to connect to the Ethereum client: %v", err)
-		return nil
-	}
+
+	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Farm"))
 	return &FarmPoolListLogic{
-		Logger:          logx.WithContext(ctx),
-		ctx:             ctx,
-		svcCtx:          svcCtx,
-		chainId:         svcCtx.Config.Farm[0].ChainId,
-		ethClient:       client,
-		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
-		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
+		Logger:                 logger,
+		ctx:                    ctx,
+		svcCtx:                 svcCtx,
+		chainId:                svcCtx.Config.Farm[0].ChainId,
+		ethClient:              svcCtx.EthClient,
+		farmAddress:            common.HexToAddress(svcCtx.Config.Farm[0].Staker),
+		positionManagerAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
 }
 
@@ -63,9 +61,19 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 		req.Offset = 0
 	}
 
+	resp = &types.FarmPoolListResponse{
+		List:   make([]types.FarmPoolData, 0),
+		Total:  0,
+		Offset: req.Offset,
+		Limit:  req.Limit,
+	}
+
 	model := repository.NewFarmPoolsModel(l.svcCtx.DB)
 	pools, total, err := model.GetPoolList(l.ctx, req)
 	if err != nil {
+		if err == sqlx.ErrNotFound {
+			return
+		}
 		return nil, err
 	}
 

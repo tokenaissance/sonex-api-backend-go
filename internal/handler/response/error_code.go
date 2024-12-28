@@ -17,6 +17,7 @@ const (
 	GoVersionErrorCode     = 10114
 	SocketConnectErrorCode = 10115
 	SocketSendErrorCode    = 10116
+	ChainClientErrorCode   = 10117
 
 	CronCreateErrorCode  = 10201
 	CronUpdateErrorCode  = 10202

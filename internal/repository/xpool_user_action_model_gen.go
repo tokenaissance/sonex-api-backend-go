@@ -38,21 +38,21 @@ type (
 	}
 
 	XpoolUserAction struct {
-		Id           int64          `db:"id"`
-		ChainId      int64          `db:"chain_id"`
-		BlockNumber  int64          `db:"block_number"`
-		TxHash       string         `db:"tx_hash"`       // 交易哈希
-		UserAddress  string         `db:"user_address"`  // 用户地址
-		VaultId      int64          `db:"vault_id"`      // 质押池ID
-		VaultAddress string         `db:"vault_address"` // 质押池合约地址
-		Action       sql.NullString `db:"action"`        // 行为
-		EventSign    string         `db:"event_sign"`    // 事件签名
-		LogIndex     int64          `db:"log_index"`
-		Amount       string         `db:"amount"`     // 交易数量
-		IsUser       bool           `db:"is_user"`    // 是否为用户操作（TRUE-是，FALSE-否）
-		TxTime       sql.NullTime   `db:"tx_time"`    // 成交时间
-		CreatedAt    time.Time      `db:"created_at"` // 创建时间
-		UpdatedAt    sql.NullTime   `db:"updated_at"` // 更新时间
+		Id          int64          `db:"id"`
+		ChainId     int64          `db:"chain_id"`
+		BlockNumber int64          `db:"block_number"`
+		TxHash      string         `db:"tx_hash"`      // 交易哈希
+		UserAddress string         `db:"user_address"` // 用户地址
+		PoolId      int64          `db:"pool_id"`      // 质押池ID
+		PoolAddress string         `db:"pool_address"` // 质押池合约地址
+		Action      sql.NullString `db:"action"`       // 行为
+		EventSign   string         `db:"event_sign"`   // 事件签名
+		LogIndex    int64          `db:"log_index"`
+		Amount      string         `db:"amount"`     // 交易数量
+		IsUser      bool           `db:"is_user"`    // 是否为用户操作（TRUE-是，FALSE-否）
+		TxTime      sql.NullTime   `db:"tx_time"`    // 成交时间
+		CreatedAt   time.Time      `db:"created_at"` // 创建时间
+		UpdatedAt   sql.NullTime   `db:"updated_at"` // 更新时间
 	}
 )
 
@@ -99,13 +99,13 @@ func (m *defaultXpoolUserActionModel) FindOneByTxHashEventSignLogIndex(ctx conte
 
 func (m *defaultXpoolUserActionModel) Insert(ctx context.Context, data *XpoolUserAction) (sql.Result, error) {
 	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, xpoolUserActionRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.BlockNumber, data.TxHash, data.UserAddress, data.VaultId, data.VaultAddress, data.Action, data.EventSign, data.LogIndex, data.Amount, data.IsUser, data.TxTime)
+	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.BlockNumber, data.TxHash, data.UserAddress, data.PoolId, data.PoolAddress, data.Action, data.EventSign, data.LogIndex, data.Amount, data.IsUser, data.TxTime)
 	return ret, err
 }
 
 func (m *defaultXpoolUserActionModel) Update(ctx context.Context, newData *XpoolUserAction) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, xpoolUserActionRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxHash, newData.UserAddress, newData.VaultId, newData.VaultAddress, newData.Action, newData.EventSign, newData.LogIndex, newData.Amount, newData.IsUser, newData.TxTime)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxHash, newData.UserAddress, newData.PoolId, newData.PoolAddress, newData.Action, newData.EventSign, newData.LogIndex, newData.Amount, newData.IsUser, newData.TxTime)
 	return err
 }
 

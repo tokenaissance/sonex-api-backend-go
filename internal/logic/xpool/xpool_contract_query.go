@@ -13,9 +13,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
-var provider = "http://10.1.30.101:8545"
 var blockTime int64 = 2 // 出块速度
 var ZeroAddress = common.Address{}
 
@@ -151,28 +151,42 @@ func getPoolInfo(ctx context.Context, client *ethclient.Client, pool *xpoolContr
 }
 
 // getTokenPrices 获取代币价格
-func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
-	prices := new(TokenPrices)
+// func getTokenPrices(ctx context.Context, chainId int64, stakingToken, rewardToken common.Address) (*TokenPrices, error) {
+// 	prices := new(TokenPrices)
 
-	// 获取质押代币价格
-	_, stakingPrice, err := global.GetPrices(ctx, nil, chainId, stakingToken.Hex(), true, 2, nil)
+// 	// 获取质押代币价格
+// 	_, stakingPrice, err := global.GetPrices(ctx, nil, chainId, stakingToken.Hex(), true, 2, nil)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get staking token price: %v", err)
+// 	}
+// 	prices.StakingTokenPrice = big.NewInt(0)
+// 	if stakingPrice != nil {
+// 		prices.StakingTokenPrice = stakingPrice[0].Value
+// 	}
+
+// 	// 获取奖励代币价格
+// 	_, rewardPrice, err := global.GetPrices(ctx, nil, chainId, rewardToken.Hex(), true, 2, nil)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get reward token price: %v", err)
+// 	}
+// 	prices.RewardTokenPrice = big.NewInt(0)
+// 	if rewardPrice != nil {
+// 		prices.RewardTokenPrice = rewardPrice[0].Value
+// 	}
+
+// 	return prices, nil
+// }
+
+// 获取token价格
+func getTokenPrice(chainId int64, tokenAddress string) (*big.Int, error) {
+
+	priceValue := big.NewInt(0)
+	_, price, err := global.GetPrices(context.Background(), nil, chainId, tokenAddress, true, 2, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get staking token price: %v", err)
-	}
-	prices.StakingTokenPrice = big.NewInt(0)
-	if stakingPrice != nil {
-		prices.StakingTokenPrice = stakingPrice[0].Value
+		logx.Errorf("failed to get token price: %v", err)
+	} else if len(price) > 0 && price[0].Value != nil {
+		priceValue = price[0].Value
 	}
 
-	// 获取奖励代币价格
-	_, rewardPrice, err := global.GetPrices(ctx, nil, chainId, rewardToken.Hex(), true, 2, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get reward token price: %v", err)
-	}
-	prices.RewardTokenPrice = big.NewInt(0)
-	if rewardPrice != nil {
-		prices.RewardTokenPrice = rewardPrice[0].Value
-	}
-
-	return prices, nil
+	return priceValue, nil
 }

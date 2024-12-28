@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
-	commonContract "sonex_api_backend_go/internal/lib/contract/common"
 	farmContract "sonex_api_backend_go/internal/lib/contract/farm"
 	"sonex_api_backend_go/internal/lib/contract/farm/patch"
 	v3PoolContract "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
@@ -41,86 +40,16 @@ func NewFarmCallback(svcCtx *svc.ServiceContext) *FarmCallback {
 	}
 }
 
-type PoolInfo struct {
-	EventToken0 string
-	EventToken1 string
-	EventFee    int64
-}
-
-// TODO: 临时读取合约
-func getPoolInfo(client *ethclient.Client, poolAddr common.Address) (*PoolInfo, error) {
-	contract, err := v3PoolContract.NewUniswapV3Pool(poolAddr, client)
-	if err != nil {
-		return nil, err
-	}
-
-	token0, err := contract.Token0(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	token1, err := contract.Token1(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	fee, err := contract.Fee(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &PoolInfo{
-		EventToken0: token0.String(),
-		EventToken1: token1.String(),
-		EventFee:    fee.Int64(),
-	}, nil
-}
-
-type TokenInfo struct {
-	Symbol   string
-	Decimals uint8
-}
-
-func getErc20Info(client *ethclient.Client, addr string) (*TokenInfo, error) {
-	contract, err := commonContract.NewErc20(common.HexToAddress(addr), client)
-	if err != nil {
-		return nil, err
-	}
-	contract.Symbol(nil)
-
-	symbol, err := contract.Symbol(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	decimals, err := contract.Decimals(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &TokenInfo{
-		Symbol:   symbol,
-		Decimals: decimals,
-	}, nil
-}
-
+// 创建池子
 func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmContract.UniswapV3StakerIncentiveCreated, data *repository.EventFarmIncentiveCreated) {
-	logx.Infof("enter OnIncentiveCreated, incentiveId: %s, tx_hash: %s, pool_address: %s", data.EventIncentiveId, data.TxHash, event.Pool.String())
+	logx.Infof("enter OnIncentiveCreated, incentiveId: %s, tx_hash: %s, pool_address: %s", data.EventIncentiveId, data.TxHash, data.EventPool)
 
 	if event == nil || data == nil {
 		logx.Error("event or data is nil")
 		return
 	}
 
-	// logx.Info("11111111111111111")
 	// 获取pool基本信息
-	// v3PoolModel := repository.NewEventSonexFactoryPoolCreatedModel(c.svcCtx.DB)
-	// poolInfo, err := v3PoolModel.FindByPoolAddress(c.ctx, event.Pool.String())
-	// if err != nil {
-	// 	logx.Errorf("Failed to get v3 pool info: %v", err)
-	// 	return
-	// }
-
 	poolInfo, err := getPoolInfo(client, event.Pool)
 	if err != nil {
 		logx.Errorf("Failed to get v3 pool info: %v", err)
@@ -139,9 +68,7 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 	_, rewardPrice, err := global.GetPrices(c.ctx, nil, c.chainId, event.RewardToken.Hex(), true, 2, nil)
 	if err != nil {
 		logx.Errorf("Failed to get reward token price: %v", err)
-		rewardPriceValue = big.NewInt(0)
-	}
-	if rewardPrice != nil && len(rewardPrice) > 0 {
+	} else if len(rewardPrice) > 0 && rewardPrice[0].Value != nil {
 		rewardPriceValue = rewardPrice[0].Value
 	}
 
@@ -165,12 +92,12 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 		}
 	}
 
-	// 保存
+	// 获取token信息
 	tokenOSymbol := ""
 	token1Symbol := ""
 	token0Decimals := int64(defaultDecimals)
 	token1Decimals := int64(defaultDecimals)
-	token0Info, err := global.GetToken(c.chainId, poolInfo.EventToken0)
+	token0Info, err := global.GetToken(c.chainId, poolInfo.Token0Address)
 	if err != nil {
 		logx.Errorf("failed to get token0 info: %v", err)
 	}
@@ -179,7 +106,7 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 		token0Decimals = token0Info.Decimals
 	}
 
-	token1Info, err := global.GetToken(c.chainId, poolInfo.EventToken1)
+	token1Info, err := global.GetToken(c.chainId, poolInfo.Token1Address)
 	if err != nil {
 		logx.Errorf("failed to get token1 info: %v", err)
 	}
@@ -192,6 +119,8 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 	if err != nil {
 		logx.Errorf("failed to get reward token info: %v", err)
 	}
+
+	// 保存
 	pool := &repository.FarmPools{
 		ChainId:             c.chainId,
 		IncentiveId:         data.EventIncentiveId,
@@ -203,11 +132,11 @@ func (c *FarmCallback) OnIncentiveCreated(client *ethclient.Client, event *farmC
 		RewardTokenPrice:    rewardPriceValue.String(),
 		RefundeeAddress:     event.Refundee.String(),
 		PoolAddress:         event.Pool.String(),
-		FeeRatio:            strconv.Itoa(int(poolInfo.EventFee)),
-		Token0Address:       poolInfo.EventToken0,
+		FeeRatio:            strconv.Itoa(int(poolInfo.Fee)),
+		Token0Address:       poolInfo.Token0Address,
 		Token0Symbol:        tokenOSymbol,
 		Token0Decimals:      token0Decimals,
-		Token1Address:       poolInfo.EventToken1,
+		Token1Address:       poolInfo.Token1Address,
 		Token1Symbol:        token1Symbol,
 		Token1Decimals:      token1Decimals,
 		StakedLiquidityUsd:  initStakedLiquidityUsd,     // 100 * 10^18
@@ -348,7 +277,7 @@ func (c *FarmCallback) OnTokenStaked(client *ethclient.Client, event *farmContra
 		return
 	}
 
-	logx.Infof("[OnTokenStaked] OK, IncentiveId: %v", data.EventIncentiveId)
+	logx.Infof("OnTokenStaked OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 解除质押
@@ -424,7 +353,7 @@ func (c *FarmCallback) OnTokenUnstaked(client *ethclient.Client, event *farmCont
 		return
 	}
 
-	logx.Infof("[OnTokenUnstaked] OK, IncentiveId: %v", data.EventIncentiveId)
+	logx.Infof("OnTokenUnstaked OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 奖励领取
@@ -458,7 +387,7 @@ func (c *FarmCallback) OnRewardClaimed(client *ethclient.Client, event *farmCont
 		return
 	}
 
-	logx.Infof("[OnRewardClaimed] OK, TxHash: %v", data.TxHash)
+	logx.Infof("OnRewardClaimed OK, TxHash: %v", data.TxHash)
 }
 
 // LP Token所有权转移
@@ -550,7 +479,7 @@ func (c *FarmCallback) OnIncentiveEnded(client *ethclient.Client, event *farmCon
 		return
 	}
 
-	logx.Infof("[OnIncentiveEnded] OK, IncentiveId: %v", data.EventIncentiveId)
+	logx.Infof("OnIncentiveEnded OK, IncentiveId: %v", data.EventIncentiveId)
 }
 
 // 更新质押池实时数据
@@ -564,35 +493,19 @@ func (c *FarmCallback) UpdateFarmPoolData(client *ethclient.Client, incentiveId 
 	}
 
 	// 获取token价格
-	rewardPriceValue := big.NewInt(0)
-	_, rewardPrice, err := global.GetPrices(c.ctx, nil, c.chainId, pool.RewardTokenAddress, true, 2, nil)
+	rewardPriceValue, err := getTokenPrice(c.chainId, pool.RewardTokenAddress)
 	if err != nil {
-		rewardPriceValue = big.NewInt(0)
 		logx.Errorf("failed to get reward token price: %v", err)
 	}
-	if rewardPrice != nil && len(rewardPrice) > 0 {
-		rewardPriceValue = rewardPrice[0].Value
-	}
 
-	// 计算质押的流动性价值
-	token0PriceValue := big.NewInt(0)
-	_, token0Price, err := global.GetPrices(c.ctx, nil, c.chainId, pool.Token0Address, true, 2, nil)
+	token0PriceValue, err := getTokenPrice(c.chainId, pool.Token0Address)
 	if err != nil {
 		logx.Errorf("failed to get token0 price: %v", err)
-		token0PriceValue = big.NewInt(0)
-	}
-	if token0Price != nil && len(token0Price) > 0 {
-		token0PriceValue = token0Price[0].Value
 	}
 
-	token1PriceValue := big.NewInt(0)
-	_, token1Price, err := global.GetPrices(c.ctx, nil, c.chainId, pool.Token1Address, true, 2, nil)
+	token1PriceValue, err := getTokenPrice(c.chainId, pool.Token1Address)
 	if err != nil {
 		logx.Errorf("failed to get token1 price: %v", err)
-		token1PriceValue = big.NewInt(0)
-	}
-	if token1Price != nil && len(token1Price) > 0 {
-		token1PriceValue = token1Price[0].Value
 	}
 
 	// 获取质押池中的tokenIds
@@ -614,6 +527,7 @@ func (c *FarmCallback) UpdateFarmPoolData(client *ethclient.Client, incentiveId 
 		return fmt.Errorf("failed to compute total tokens: %v", err)
 	}
 
+	// 计算质押的流动性价值
 	totalToken0Value := new(big.Int).Mul(totalToken0Amount, token0PriceValue)
 	totalToken1Value := new(big.Int).Mul(totalToken1Amount, token1PriceValue)
 	totalValue := new(big.Int).Add(totalToken0Value, totalToken1Value)
@@ -658,4 +572,52 @@ func (c *FarmCallback) UpdateFarmPoolData(client *ethclient.Client, incentiveId 
 	logx.Info("UpdateFarmPoolData OK")
 
 	return err
+}
+
+// 获取token价格
+func getTokenPrice(chainId int64, tokenAddress string) (*big.Int, error) {
+
+	priceValue := big.NewInt(0)
+	_, price, err := global.GetPrices(context.Background(), nil, chainId, tokenAddress, true, 2, nil)
+	if err != nil {
+		logx.Errorf("[farm] failed to get token price: %v", err)
+	} else if len(price) > 0 && price[0].Value != nil {
+		priceValue = price[0].Value
+	}
+
+	return priceValue, nil
+}
+
+type PoolInfo struct {
+	Token0Address string
+	Token1Address string
+	Fee           int64
+}
+
+func getPoolInfo(client *ethclient.Client, poolAddr common.Address) (*PoolInfo, error) {
+	contract, err := v3PoolContract.NewUniswapV3Pool(poolAddr, client)
+	if err != nil {
+		return nil, err
+	}
+
+	token0, err := contract.Token0(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	token1, err := contract.Token1(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	fee, err := contract.Fee(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PoolInfo{
+		Token0Address: token0.String(),
+		Token1Address: token1.String(),
+		Fee:           fee.Int64(),
+	}, nil
 }

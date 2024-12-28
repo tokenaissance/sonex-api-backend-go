@@ -15,7 +15,7 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-type eventCallback interface {
+type farmEventCallback interface {
 	OnIncentiveCreated(*ethclient.Client, *farm.UniswapV3StakerIncentiveCreated, *repository.EventFarmIncentiveCreated)
 	OnTokenStaked(*ethclient.Client, *farm.UniswapV3StakerTokenStaked, *repository.EventFarmTokenStaked)
 	OnTokenUnstaked(*ethclient.Client, *farm.UniswapV3StakerTokenUnstaked, *repository.EventFarmTokenUnstaked)
@@ -28,7 +28,7 @@ type FarmHandler struct {
 	dataSource string
 	chain      *config.ChainConfig
 	config     *config.FarmConfig
-	callbacks  []eventCallback
+	callbacks  []farmEventCallback
 	callbackWg sync.WaitGroup
 }
 
@@ -40,14 +40,14 @@ func NewFarmHandler(dataSource string, chain config.ChainConfig, config config.F
 	}, nil
 }
 
-func (handler *FarmHandler) RegisterCallback(callback eventCallback) {
+func (handler *FarmHandler) RegisterCallback(callback farmEventCallback) {
 	handler.callbacks = append(handler.callbacks, callback)
 }
 
-func (handler *FarmHandler) triggerCallback(ctx context.Context, fn func(eventCallback)) {
+func (handler *FarmHandler) triggerCallback(ctx context.Context, fn func(farmEventCallback)) {
 	for _, callback := range handler.callbacks {
 		handler.callbackWg.Add(1)
-		go func(cb eventCallback) {
+		go func(cb farmEventCallback) {
 			defer handler.callbackWg.Done()
 			fn(cb)
 		}(callback)
@@ -210,7 +210,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			if err != nil {
 				return err
 			} else {
-				handler.triggerCallback(ctx, func(cb eventCallback) {
+				handler.triggerCallback(ctx, func(cb farmEventCallback) {
 					cb.OnIncentiveCreated(client, event, eventData)
 				})
 			}
@@ -254,7 +254,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			if err != nil {
 				return err
 			} else {
-				handler.triggerCallback(ctx, func(cb eventCallback) {
+				handler.triggerCallback(ctx, func(cb farmEventCallback) {
 					cb.OnTokenStaked(client, event, eventData)
 				})
 			}
@@ -297,7 +297,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			if err != nil {
 				return err
 			} else {
-				handler.triggerCallback(ctx, func(cb eventCallback) {
+				handler.triggerCallback(ctx, func(cb farmEventCallback) {
 					cb.OnTokenUnstaked(client, event, eventData)
 				})
 			}
@@ -339,7 +339,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			if err != nil {
 				return err
 			} else {
-				handler.triggerCallback(ctx, func(cb eventCallback) {
+				handler.triggerCallback(ctx, func(cb farmEventCallback) {
 					cb.OnRewardClaimed(client, event, eventData)
 				})
 			}
@@ -383,7 +383,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			if err != nil {
 				return err
 			} else {
-				handler.triggerCallback(ctx, func(cb eventCallback) {
+				handler.triggerCallback(ctx, func(cb farmEventCallback) {
 					cb.OnDepositTransferred(client, event, eventData)
 				})
 			}
@@ -427,7 +427,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			if err != nil {
 				return err
 			} else {
-				handler.triggerCallback(ctx, func(cb eventCallback) {
+				handler.triggerCallback(ctx, func(cb farmEventCallback) {
 					cb.OnIncentiveEnded(client, event, eventData)
 				})
 			}
