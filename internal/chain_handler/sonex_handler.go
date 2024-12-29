@@ -426,7 +426,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			retry.DelayType(retry.FixedDelay),
 			retry.OnRetry(func(n uint, err error) {
 				retrys += 1
-				logx.Infof("%s", log.Warning("Retrying handle pools %d times, pools: %v, error: %s", retrys, waitForRetryPools, err))
+				logx.Infof("%s", log.Warning("Retrying handle pools %d times, pools: %v", retrys, waitForRetryPools))
 			}),
 		)
 		if err != nil {
