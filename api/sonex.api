@@ -196,6 +196,16 @@ type TokenTopResponse {
 	Message string               `json:"message"`
 }
 
+type PriceComparisonResult {
+	Comparison string  `json:"comparison"`
+	Percentage float64 `json:"percentage"`
+}
+
+type Token_Kline {
+	Price        string `json:"price"`
+	TimeStamp    int64  `json:"time_stamp"`
+}
+
 type Token_TokenDetail {
 	Address  string              `json:"address"`
 	Symbol   string              `json:"symbol"`
@@ -206,6 +216,9 @@ type Token_TokenDetail {
 	Volume   string             `json:"volume"`
 	Fdv      string             `json:"fdv"`
 	Price    string             `json:"price"`
+	Kline []*Token_Kline `json:"kline"`
+	HourPriceComparison PriceComparisonResult `json:"hour_price_comparison"`
+	DayPriceComparison PriceComparisonResult `json:"day_price_comparison"`
 }
 
 type Token_PoolDetail {

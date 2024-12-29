@@ -14,6 +14,7 @@ import (
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -92,6 +93,8 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
 
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+
 	data, meta, err := model.GetTokens(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 
 	if err != nil {
@@ -121,6 +124,28 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 				if token.Symbol == "ETH" {
 					address = wethAddress
 				}
+
+				currentPrice, _ := tokenPriceModel.GetCurrentPrice(address)
+				lastHourPrice, _ := tokenPriceModel.GetLastHourPrice(address)
+				lastDayPrice, _ := tokenPriceModel.GetYesterdayPrice(address)
+				lastHourComparison := comparePrices(currentPrice, lastHourPrice)
+				lastDayComparison := comparePrices(currentPrice, lastDayPrice)
+				kline, err := tokenPriceModel.Kline(address, "1d")
+				if err == nil && len(kline) > 0 {
+					token.Kline = make([]*types.Token_Kline, 0)
+					for _, record := range kline {
+						t, _ := gtime.StrToTime(record.CreatedAt)
+						token.Kline = append(token.Kline, &types.Token_Kline{
+							Price:     record.Price,
+							TimeStamp: t.Timestamp(),
+						})
+					}
+				}
+
+				token.HourPriceComparison.Comparison = lastHourComparison.Comparison
+				token.HourPriceComparison.Percentage = lastHourComparison.Percentage
+				token.DayPriceComparison.Comparison = lastDayComparison.Comparison
+				token.DayPriceComparison.Percentage = lastDayComparison.Percentage
 
 				factor := new(big.Float).SetFloat64(math.Pow10(int(token.Decimals)))
 				price := new(big.Float).SetFloat64(0)

@@ -165,6 +165,13 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 							poolPrice1 := new(big.Float).Quo(price1, factor1)
 							item.Price1, _ = poolPrice1.Float64()
 
+							// fmt.Println("factor0", factor0.Text('f', -1))
+							// fmt.Println("factor1", factor1.Text('f', -1))
+							// fmt.Println("poolPrice0", bestPrice0.Value.String())
+							// fmt.Println("poolPrice1", bestPrice1.Value.String())
+							// fmt.Println("item.Price0", item.Price0)
+							// fmt.Println("item.Price1", item.Price1)
+
 							// 获取 amount0, amount1 和 unclaimedFee0, unclaimedFee1
 							amount0, amount1 := position.Amounts()
 							unclaimedFee0, unclaimedFee1 := position.UnclaimedFees()

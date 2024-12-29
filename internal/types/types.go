@@ -319,6 +319,11 @@ type PositionsResponse_Position struct {
 	AmountPrice float64 `json:"amount_price"`
 }
 
+type PriceComparisonResult struct {
+	Comparison string  `json:"comparison"`
+	Percentage float64 `json:"percentage"`
+}
+
 type SonexTokenKlineRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
@@ -486,6 +491,11 @@ type TokenVolume struct {
 	Amounts float64 `json:"amounts"`
 }
 
+type Token_Kline struct {
+	Price     string `json:"price"`
+	TimeStamp int64  `json:"time_stamp"`
+}
+
 type Token_PoolDetail struct {
 	ID          int64           `json:"id"`
 	Address     string          `json:"address"`
@@ -509,15 +519,18 @@ type Token_Social struct {
 }
 
 type Token_TokenDetail struct {
-	Address  string              `json:"address"`
-	Symbol   string              `json:"symbol"`
-	Name     string              `json:"name"`
-	Decimals int                 `json:"decimals"`
-	Logo     string              `json:"logo"`
-	Pools    []*Token_PoolDetail `json:"pools"`
-	Volume   string              `json:"volume"`
-	Fdv      string              `json:"fdv"`
-	Price    string              `json:"price"`
+	Address             string                `json:"address"`
+	Symbol              string                `json:"symbol"`
+	Name                string                `json:"name"`
+	Decimals            int                   `json:"decimals"`
+	Logo                string                `json:"logo"`
+	Pools               []*Token_PoolDetail   `json:"pools"`
+	Volume              string                `json:"volume"`
+	Fdv                 string                `json:"fdv"`
+	Price               string                `json:"price"`
+	Kline               []*Token_Kline        `json:"kline"`
+	HourPriceComparison PriceComparisonResult `json:"hour_price_comparison"`
+	DayPriceComparison  PriceComparisonResult `json:"day_price_comparison"`
 }
 
 type Token_TokenInfo struct {
