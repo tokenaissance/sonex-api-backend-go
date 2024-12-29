@@ -418,11 +418,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsByHour(swaps []*types.Swap
 		hourTime := currentHour.Add(time.Duration(-i) * time.Hour)
 		timestamp := hourTime.Unix()
 		hourlyAggregates[timestamp] = &types.SwapVolume{
-			Timestamp:   timestamp,
-			AmountPrice: 0,
-			Amount:      0,
-			Amount0:     0,
-			Amount1:     0,
+			Timestamp: timestamp,
+			Value:     0,
+			Amount:    0,
+			Amount0:   0,
+			Amount1:   0,
 		}
 	}
 
@@ -472,11 +472,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy6Hour(swaps []*types.Swa
 		periodTime := currentPeriod.Add(time.Duration(-i*6) * time.Hour)
 		timestamp := periodTime.Unix()
 		periodAggregates[timestamp] = &types.SwapVolume{
-			Timestamp:   timestamp,
-			AmountPrice: 0,
-			Amount:      0,
-			Amount0:     0,
-			Amount1:     0,
+			Timestamp: timestamp,
+			Value:     0,
+			Amount:    0,
+			Amount0:   0,
+			Amount1:   0,
 		}
 	}
 
@@ -525,11 +525,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy24Hour(swaps []*types.Sw
 		dayTime := currentDay.Add(time.Duration(-i*24) * time.Hour)
 		timestamp := dayTime.Unix()
 		dailyAggregates[timestamp] = &types.SwapVolume{
-			Timestamp:   timestamp,
-			AmountPrice: 0,
-			Amount:      0,
-			Amount0:     0,
-			Amount1:     0,
+			Timestamp: timestamp,
+			Value:     0,
+			Amount:    0,
+			Amount0:   0,
+			Amount1:   0,
 		}
 	}
 
