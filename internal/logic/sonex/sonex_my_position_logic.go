@@ -116,6 +116,11 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 		}
 	default:
 		filteredItems = items
+		for _, item := range items {
+			if !item.IsClosed {
+				filteredTokenIDs = append(filteredTokenIDs, big.NewInt(item.TokenID))
+			}
+		}
 	}
 
 	if len(filteredTokenIDs) > 0 {
