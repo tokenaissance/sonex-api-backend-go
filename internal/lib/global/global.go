@@ -532,3 +532,239 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 
 	return prices, nil
 }
+
+type SummarizePositionsResult_Detail struct {
+	TokenId    *big.Int
+	PoolAddres common.Address
+	BalanceUSD *big.Int
+	EarnedUSD  *big.Int
+}
+
+type SummarizePositionsResult struct {
+	TotalBalanceUSD *big.Int
+	TotalEarnedUSD  *big.Int
+	Details         []SummarizePositionsResult_Detail
+}
+
+func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, positions []*sonex.Position, stablecoinAddress common.Address) (*big.Int, *big.Int, []SummarizePositionsResult_Detail, error) {
+	stablecoin := stablecoinAddress.Hex()
+	totalBalanceUSD := big.NewInt(0)
+	totalEarnedUSD := big.NewInt(0)
+	details := []SummarizePositionsResult_Detail{}
+	var wg sync.WaitGroup
+	results := make(chan struct {
+		BalanceUSD *big.Int
+		EarnedUSD  *big.Int
+		Err        error
+	}, len(positions))
+
+	for _, position := range positions {
+		wg.Add(1)
+
+		go func(ch chan struct {
+			BalanceUSD *big.Int
+			EarnedUSD  *big.Int
+			Err        error
+		}) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct {
+						BalanceUSD *big.Int
+						EarnedUSD  *big.Int
+						Err        error
+					}{
+						Err: fmt.Errorf("%s", err),
+					}
+				}
+			}()
+
+			balanceUSD := big.NewInt(0)
+			earnedUSD := big.NewInt(0)
+
+			amount0, amount1 := position.Amounts()
+			fee0, fee1 := position.UnclaimedFees()
+
+			token0CachePrice, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2, &stablecoin)
+			if err != nil {
+				ch <- struct {
+					BalanceUSD *big.Int
+					EarnedUSD  *big.Int
+					Err        error
+				}{Err: err}
+				return
+			}
+			token0, err := GetToken(chainId, position.Token0.Hex())
+			if err != nil {
+				ch <- struct {
+					BalanceUSD *big.Int
+					EarnedUSD  *big.Int
+					Err        error
+				}{Err: err}
+				return
+			}
+			tokne0Decimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil)
+			token0Price := big.NewInt(0)
+			if token0CachePrice != nil {
+				token0Price = token0CachePrice.Value
+			}
+			balanceUSD = new(big.Int).Add(balanceUSD, new(big.Int).Div(new(big.Int).Mul(amount0, token0Price), tokne0Decimals))
+			earnedUSD = new(big.Int).Add(earnedUSD, new(big.Int).Div(new(big.Int).Mul(fee0, token0Price), tokne0Decimals))
+
+			token1CachePrice, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2, &stablecoin)
+			if err != nil {
+				ch <- struct {
+					BalanceUSD *big.Int
+					EarnedUSD  *big.Int
+					Err        error
+				}{Err: err}
+				return
+			}
+			token1, err := GetToken(chainId, position.Token1.Hex())
+			if err != nil {
+				ch <- struct {
+					BalanceUSD *big.Int
+					EarnedUSD  *big.Int
+					Err        error
+				}{Err: err}
+				return
+			}
+			tokne1Decimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil)
+			token1Price := big.NewInt(0)
+			if token1CachePrice != nil {
+				token1Price = token1CachePrice.Value
+			}
+			balanceUSD = new(big.Int).Add(balanceUSD, new(big.Int).Quo(new(big.Int).Mul(amount1, token1Price), tokne1Decimals))
+			earnedUSD = new(big.Int).Add(earnedUSD, new(big.Int).Quo(new(big.Int).Mul(fee1, token1Price), tokne1Decimals))
+			details = append(details, SummarizePositionsResult_Detail{
+				TokenId:    position.TokenId,
+				PoolAddres: position.Pool.Address,
+				BalanceUSD: balanceUSD,
+				EarnedUSD:  earnedUSD,
+			})
+
+			ch <- struct {
+				BalanceUSD *big.Int
+				EarnedUSD  *big.Int
+				Err        error
+			}{BalanceUSD: balanceUSD, EarnedUSD: earnedUSD}
+		}(results)
+	}
+
+	wg.Wait()
+	close(results)
+
+	for result := range results {
+		if result.Err != nil {
+			return nil, nil, nil, result.Err
+		}
+		totalBalanceUSD = new(big.Int).Add(totalBalanceUSD, result.BalanceUSD)
+		totalEarnedUSD = new(big.Int).Add(totalEarnedUSD, result.EarnedUSD)
+	}
+
+	return totalBalanceUSD, totalEarnedUSD, details, nil
+}
+
+func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
+	conn := repository.NewConn(conf.PostgreSQL.DateSource())
+	model := repository.NewEventSonexPositionManagerTransferModel(conn)
+	items, err := model.GetTransferEvents(ctx, userAddress.Hex())
+	if err != nil {
+		return nil, err
+	}
+
+	var tokenIds []*big.Int
+	for _, item := range items {
+		if item.IsClosed {
+			continue
+		}
+		tokenIds = append(tokenIds, big.NewInt(item.TokenID))
+	}
+
+	totalBalanceUSDResult := big.NewInt(0)
+	totalEarnedUSDResult := big.NewInt(0)
+	detailsResult := []SummarizePositionsResult_Detail{}
+
+	if len(tokenIds) > 0 {
+		sonexConf := conf.GetSonexConfig(chainId)
+		if sonexConf == nil {
+			return nil, fmt.Errorf("%s", "Miss sonex configure")
+		}
+		caller, _ := sonex.NewStaticCaller(conf)
+		positions, err := caller.BatchGetPositions(
+			context.Background(),
+			sonexConf.ChainId,
+			common.HexToAddress(sonexConf.PositionManager),
+			tokenIds,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions, stablecoinAddress)
+		if err != nil {
+			return nil, err
+		}
+		totalBalanceUSDResult = totalBalanceUSD
+		totalEarnedUSDResult = totalEarnedUSD
+		detailsResult = details
+	}
+
+	return &SummarizePositionsResult{
+		TotalBalanceUSD: totalBalanceUSDResult,
+		TotalEarnedUSD:  totalEarnedUSDResult,
+		Details:         detailsResult,
+	}, nil
+}
+
+func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
+	conn := repository.NewConn(conf.PostgreSQL.DateSource())
+	model := repository.NewEventSonexPositionManagerTransferModel(conn)
+	items, err := model.GetTransferEvents(ctx, userAddress.Hex())
+	if err != nil {
+		return nil, err
+	}
+
+	var tokenIds []*big.Int
+	for _, item := range items {
+		if !item.IsClosed {
+			continue
+		}
+		tokenIds = append(tokenIds, big.NewInt(item.TokenID))
+	}
+
+	totalBalanceUSDResult := big.NewInt(0)
+	totalEarnedUSDResult := big.NewInt(0)
+	detailsResult := []SummarizePositionsResult_Detail{}
+
+	if len(tokenIds) > 0 {
+		sonexConf := conf.GetSonexConfig(chainId)
+		if sonexConf == nil {
+			return nil, fmt.Errorf("%s", "Miss sonex configure")
+		}
+		caller, _ := sonex.NewStaticCaller(conf)
+		positions, err := caller.BatchGetPositions(
+			context.Background(),
+			sonexConf.ChainId,
+			common.HexToAddress(sonexConf.PositionManager),
+			tokenIds,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions, stablecoinAddress)
+		if err != nil {
+			return nil, err
+		}
+		totalBalanceUSDResult = totalBalanceUSD
+		totalEarnedUSDResult = totalEarnedUSD
+		detailsResult = details
+	}
+
+	return &SummarizePositionsResult{
+		TotalBalanceUSD: totalBalanceUSDResult,
+		TotalEarnedUSD:  totalEarnedUSDResult,
+		Details:         detailsResult,
+	}, nil
+}
