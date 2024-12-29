@@ -2320,6 +2320,23 @@
         "amount_price"
       ]
     },
+    "PriceComparisonResult": {
+      "type": "object",
+      "properties": {
+        "comparison": {
+          "type": "string"
+        },
+        "percentage": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PriceComparisonResult",
+      "required": [
+        "comparison",
+        "percentage"
+      ]
+    },
     "SonexTokenKlineRequest": {
       "type": "object",
       "properties": {
@@ -2543,7 +2560,11 @@
           "type": "integer",
           "format": "int64"
         },
-        "volume": {
+        "amount_price": {
+          "type": "number",
+          "format": "double"
+        },
+        "amount": {
           "type": "number",
           "format": "double"
         },
@@ -2559,7 +2580,8 @@
       "title": "SwapVolume",
       "required": [
         "timestamp",
-        "volume",
+        "amount_price",
+        "amount",
         "amount0",
         "amount1"
       ]
@@ -2967,6 +2989,23 @@
         "amounts"
       ]
     },
+    "Token_Kline": {
+      "type": "object",
+      "properties": {
+        "price": {
+          "type": "string"
+        },
+        "time_stamp": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "Token_Kline",
+      "required": [
+        "price",
+        "time_stamp"
+      ]
+    },
     "Token_PoolDetail": {
       "type": "object",
       "properties": {
@@ -3082,6 +3121,18 @@
         },
         "price": {
           "type": "string"
+        },
+        "kline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Token_Kline"
+          }
+        },
+        "hour_price_comparison": {
+          "$ref": "#/definitions/PriceComparisonResult"
+        },
+        "day_price_comparison": {
+          "$ref": "#/definitions/PriceComparisonResult"
         }
       },
       "title": "Token_TokenDetail",
@@ -3094,7 +3145,10 @@
         "pools",
         "volume",
         "fdv",
-        "price"
+        "price",
+        "kline",
+        "hour_price_comparison",
+        "day_price_comparison"
       ]
     },
     "Token_TokenInfo": {

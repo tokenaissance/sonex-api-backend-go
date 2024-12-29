@@ -23,7 +23,7 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
 		PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error)
 		GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error)
-		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, error)
+		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 	}
 
 	customEventSonexPoolSwapModel struct {
@@ -256,7 +256,7 @@ func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts 
 }
 
 // GetSwapVolumes get swap volumes by pool address and interval
-func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, error) {
+func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error) {
 	// get interval duration 1d,1w,1m
 	intervalDuration := getIntervalDuration(opts.Interval)
 	// get now time
@@ -313,7 +313,7 @@ func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts
 	var resp []*SwapData
 	err := m.conn.QueryRowsCtx(ctx, &resp, swapQuery, args...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Process the response to include pool and token information
@@ -391,21 +391,20 @@ func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts
 		data = append(data, item)
 	}
 
+	token0 := &data[0].Token0
+
 	// intervalDuration 1d,1w,1y
 	switch opts.Interval {
 	case "1d":
 		// data数组按照过去24小时，每小时进行合并
-		return m.aggregateSwapsByHour(data, now), nil
+		return m.aggregateSwapsByHour(data, now), token0, nil
 	case "1w":
-		return m.aggregateSwapsBy6Hour(data, now), nil
+		return m.aggregateSwapsBy6Hour(data, now), token0, nil
 	case "1m":
-		return m.aggregateSwapsBy24Hour(data, now), nil
+		return m.aggregateSwapsBy24Hour(data, now), token0, nil
 	default:
-		return nil, fmt.Errorf("unsupported interval: %s", opts.Interval)
+		return nil, nil, fmt.Errorf("unsupported interval: %s", opts.Interval)
 	}
-
-	// Implementation here
-	// return nil, nil // Temporary return until you implement the logic
 }
 
 func (m *customEventSonexPoolSwapModel) aggregateSwapsByHour(swaps []*types.SwapEvent, now time.Time) []*types.SwapVolume {
@@ -418,10 +417,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsByHour(swaps []*types.Swap
 		hourTime := currentHour.Add(time.Duration(-i) * time.Hour)
 		timestamp := hourTime.Unix()
 		hourlyAggregates[timestamp] = &types.SwapVolume{
-			Timestamp: timestamp,
-			Volume:    0,
-			Amount0:   0,
-			Amount1:   0,
+			Timestamp:   timestamp,
+			AmountPrice: 0,
+			Amount:      0,
+			Amount0:     0,
+			Amount1:     0,
 		}
 	}
 
@@ -443,7 +443,7 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsByHour(swaps []*types.Swap
 			aggregate.Amount0 += math.Abs(swap.Amount0)
 			aggregate.Amount1 += math.Abs(swap.Amount1)
 			// Use Amount0 as the volume metric
-			aggregate.Volume += math.Abs(swap.Amount0)
+			aggregate.Amount += math.Abs(swap.Amount0)
 		}
 	}
 
@@ -471,10 +471,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy6Hour(swaps []*types.Swa
 		periodTime := currentPeriod.Add(time.Duration(-i*6) * time.Hour)
 		timestamp := periodTime.Unix()
 		periodAggregates[timestamp] = &types.SwapVolume{
-			Timestamp: timestamp,
-			Volume:    0,
-			Amount0:   0,
-			Amount1:   0,
+			Timestamp:   timestamp,
+			AmountPrice: 0,
+			Amount:      0,
+			Amount0:     0,
+			Amount1:     0,
 		}
 	}
 
@@ -493,7 +494,7 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy6Hour(swaps []*types.Swa
 		if aggregate, exists := periodAggregates[periodTimestamp]; exists {
 			aggregate.Amount0 += math.Abs(swap.Amount0)
 			aggregate.Amount1 += math.Abs(swap.Amount1)
-			aggregate.Volume += math.Abs(swap.Amount0)
+			aggregate.Amount += math.Abs(swap.Amount0)
 		}
 	}
 
@@ -520,10 +521,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy24Hour(swaps []*types.Sw
 		dayTime := currentDay.Add(time.Duration(-i*24) * time.Hour)
 		timestamp := dayTime.Unix()
 		dailyAggregates[timestamp] = &types.SwapVolume{
-			Timestamp: timestamp,
-			Volume:    0,
-			Amount0:   0,
-			Amount1:   0,
+			Timestamp:   timestamp,
+			AmountPrice: 0,
+			Amount:      0,
+			Amount0:     0,
+			Amount1:     0,
 		}
 	}
 
@@ -542,7 +544,7 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy24Hour(swaps []*types.Sw
 		if aggregate, exists := dailyAggregates[dayTimestamp]; exists {
 			aggregate.Amount0 += math.Abs(swap.Amount0)
 			aggregate.Amount1 += math.Abs(swap.Amount1)
-			aggregate.Volume += math.Abs(swap.Amount0)
+			aggregate.Amount += math.Abs(swap.Amount0)
 		}
 	}
 
