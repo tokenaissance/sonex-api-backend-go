@@ -383,11 +383,11 @@ type SwapEventResponse struct {
 }
 
 type SwapVolume struct {
-	Timestamp   int64   `json:"timestamp"`
-	AmountPrice float64 `json:"amount_price"`
-	Amount      float64 `json:"amount"`
-	Amount0     float64 `json:"amount0"`
-	Amount1     float64 `json:"amount1"`
+	Timestamp int64   `json:"timestamp"`
+	Value     float64 `json:"value"`
+	Amount    float64 `json:"amount"`
+	Amount0   float64 `json:"amount0"`
+	Amount1   float64 `json:"amount1"`
 }
 
 type SwapVolumeRequest struct {

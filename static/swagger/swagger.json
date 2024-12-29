@@ -2560,7 +2560,7 @@
           "type": "integer",
           "format": "int64"
         },
-        "amount_price": {
+        "value": {
           "type": "number",
           "format": "double"
         },
@@ -2580,7 +2580,7 @@
       "title": "SwapVolume",
       "required": [
         "timestamp",
-        "amount_price",
+        "value",
         "amount",
         "amount0",
         "amount1"

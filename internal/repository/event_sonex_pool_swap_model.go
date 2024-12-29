@@ -260,7 +260,7 @@ func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts
 	// get interval duration 1d,1w,1m
 	intervalDuration := getIntervalDuration(opts.Interval)
 	// get now time
-	now := time.Now() // todo: 确定是否是UTC时间
+	now := time.Now()
 
 	swapQuery := fmt.Sprintf(`FROM %s AS S
 		LEFT JOIN event_sonex_factory_pool_created AS pool ON S.extra_pool = pool.event_pool
@@ -268,15 +268,13 @@ func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts
 		LEFT JOIN sonex_token AS token1 ON pool.event_token1 = token1.address
 		WHERE S.chain_id = $1 AND pool.chain_id = $1
 		AND LOWER(pool.event_pool) = LOWER($2)
-		AND S.created_at >= to_timestamp($3) - INTERVAL '%s'`, m.table, intervalDuration)
-	// todo: 需要根据intervalDuration 来计算时间范围
-	// AND S.created_at >= to_timestamp($3) - INTERVAL '$4'
+		AND S.created_at >= (NOW() - INTERVAL '%s')`, m.table, intervalDuration)
+
 	args := []interface{}{
 		opts.ChainId,
 		opts.PoolAddress,
-		now.Unix(), // todo: 确定 encode 方案
 	}
-	paramIndex := 4
+	paramIndex := 3
 
 	if opts.Address != "" {
 		swapQuery += fmt.Sprintf(" AND LOWER(S.event_recipient) = LOWER($%d)", paramIndex)
@@ -391,7 +389,10 @@ func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts
 		data = append(data, item)
 	}
 
-	token0 := &data[0].Token0
+	token0 := &types.Token_TokenInfo{}
+	if len(data) > 0 {
+		token0 = &data[0].Token0
+	}
 
 	// intervalDuration 1d,1w,1y
 	switch opts.Interval {
@@ -417,11 +418,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsByHour(swaps []*types.Swap
 		hourTime := currentHour.Add(time.Duration(-i) * time.Hour)
 		timestamp := hourTime.Unix()
 		hourlyAggregates[timestamp] = &types.SwapVolume{
-			Timestamp:   timestamp,
-			AmountPrice: 0,
-			Amount:      0,
-			Amount0:     0,
-			Amount1:     0,
+			Timestamp: timestamp,
+			Value:     0,
+			Amount:    0,
+			Amount0:   0,
+			Amount1:   0,
 		}
 	}
 
@@ -463,7 +464,7 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsByHour(swaps []*types.Swap
 
 func (m *customEventSonexPoolSwapModel) aggregateSwapsBy6Hour(swaps []*types.SwapEvent, now time.Time) []*types.SwapVolume {
 	// Round down current time to the start of the 6-hour period
-	currentPeriod := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-now.Hour()%6, 0, 0, 0, time.UTC)
+	currentPeriod := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-6, 0, 0, 0, time.UTC)
 
 	// Create a map with 28 6-hour periods (7 days)
 	periodAggregates := make(map[int64]*types.SwapVolume)
@@ -471,11 +472,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy6Hour(swaps []*types.Swa
 		periodTime := currentPeriod.Add(time.Duration(-i*6) * time.Hour)
 		timestamp := periodTime.Unix()
 		periodAggregates[timestamp] = &types.SwapVolume{
-			Timestamp:   timestamp,
-			AmountPrice: 0,
-			Amount:      0,
-			Amount0:     0,
-			Amount1:     0,
+			Timestamp: timestamp,
+			Value:     0,
+			Amount:    0,
+			Amount0:   0,
+			Amount1:   0,
 		}
 	}
 
@@ -486,10 +487,13 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy6Hour(swaps []*types.Swa
 			continue
 		}
 
-		// Round down to start of 6-hour period
-		periodTimestamp := time.Date(
-			swapTime.Year(), swapTime.Month(), swapTime.Day(),
-			swapTime.Hour()-swapTime.Hour()%6, 0, 0, 0, time.UTC).Unix()
+		swapTime = swapTime.UTC()
+		// 计算交易时间与当前时间的差值(小时数)
+		hoursDiff := currentPeriod.Sub(swapTime).Hours()
+		// 向下取整到最近的6小时时段
+		periodIndex := int(math.Floor(hoursDiff / 6))
+		// 获取对应时间段的时间戳
+		periodTimestamp := currentPeriod.Add(time.Duration(-periodIndex*6) * time.Hour).Unix()
 
 		if aggregate, exists := periodAggregates[periodTimestamp]; exists {
 			aggregate.Amount0 += math.Abs(swap.Amount0)
@@ -521,11 +525,11 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy24Hour(swaps []*types.Sw
 		dayTime := currentDay.Add(time.Duration(-i*24) * time.Hour)
 		timestamp := dayTime.Unix()
 		dailyAggregates[timestamp] = &types.SwapVolume{
-			Timestamp:   timestamp,
-			AmountPrice: 0,
-			Amount:      0,
-			Amount0:     0,
-			Amount1:     0,
+			Timestamp: timestamp,
+			Value:     0,
+			Amount:    0,
+			Amount0:   0,
+			Amount1:   0,
 		}
 	}
 
