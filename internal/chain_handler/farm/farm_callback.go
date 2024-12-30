@@ -270,18 +270,18 @@ func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex i
 				return fmt.Errorf("failed to increment join num: %v", err)
 			}
 
-			// 更新实时数据
-			err = UpdateFarmPoolData(conf, connWithSession, client, chainId, eventIncentiveId)
-			if err != nil {
-				logx.Errorf("Failed to update pool data: %v", err)
-				return err
-			}
-
 			return nil
 		})
 
 		if err != nil {
 			logx.Errorf("Failed to process TokenStaked: %v", err)
+			return err
+		}
+
+		// 更新实时数据
+		err = UpdateFarmPoolData(conf, conn, client, chainId, eventIncentiveId)
+		if err != nil {
+			logx.Errorf("Failed to update pool data: %v", err)
 			return err
 		}
 
@@ -345,18 +345,17 @@ func TokenUnstaked(conf config.Config, chainId int64, blockNumber int64, txIndex
 				return fmt.Errorf("failed to decrement join num: %v", err)
 			}
 
-			// 更新实时数据
-			err = UpdateFarmPoolData(conf, connWithSession, client, chainId, eventIncentiveId)
-			if err != nil {
-				logx.Errorf("Failed to update pool data: %v", err)
-				return err
-			}
-
 			return nil
 		})
-
 		if err != nil {
 			logx.Errorf("Failed to process TokenUnstaked: %v", err)
+			return err
+		}
+
+		// 更新实时数据
+		err = UpdateFarmPoolData(conf, conn, client, chainId, eventIncentiveId)
+		if err != nil {
+			logx.Errorf("Failed to update pool data: %v", err)
 			return err
 		}
 
