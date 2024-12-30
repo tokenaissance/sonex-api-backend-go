@@ -149,14 +149,15 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 
 				factor := new(big.Float).SetFloat64(math.Pow10(int(token.Decimals)))
 				price := new(big.Float).SetFloat64(0)
+				factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-				bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, nil)
+				bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, &l.svcCtx.Config.Chains[0].USD)
 
 				if err == nil && bestPrice != nil {
 					price.SetInt(bestPrice.Value)
 				}
 
-				tokenPrice := new(big.Float).Quo(price, factor)
+				tokenPrice := new(big.Float).Quo(price, factorDai)
 				mu.Lock()
 				token.Price = tokenPrice.Text('f', -1)
 				mu.Unlock()

@@ -180,8 +180,9 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 	if err == nil {
 		price0 := new(big.Float).SetFloat64(0)
 		price1 := new(big.Float).SetFloat64(0)
+		factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-		bestPrice0, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token0.Address).Hex(), true, 2, nil)
+		bestPrice0, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token0.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 		if err == nil && bestPrice0 != nil {
 			price0.SetInt(bestPrice0.Value)
 		}
@@ -189,16 +190,16 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 		factor0 := new(big.Float).SetFloat64(math.Pow10(int(transferItem.Pool.Token0.Decimals)))
 		factor1 := new(big.Float).SetFloat64(math.Pow10(int(transferItem.Pool.Token1.Decimals)))
 
-		poolPrice0 := new(big.Float).Quo(price0, factor0)
+		poolPrice0 := new(big.Float).Quo(price0, factorDai)
 		transferItem.Price0, _ = poolPrice0.Float64()
 
-		bestPrice1, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token1.Address).Hex(), true, 2, nil)
+		bestPrice1, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token1.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 		if err == nil && bestPrice1 != nil {
 			price1.SetInt(bestPrice1.Value)
 		}
 
 		// 转换 price 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
-		poolPrice1 := new(big.Float).Quo(price1, factor1)
+		poolPrice1 := new(big.Float).Quo(price1, factorDai)
 		transferItem.Price1, _ = poolPrice1.Float64()
 
 		// 获取 amount0, amount1 和 unclaimedFee0, unclaimedFee1

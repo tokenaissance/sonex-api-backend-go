@@ -167,24 +167,25 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
 			price0 := new(big.Float).SetFloat64(0)
 			price1 := new(big.Float).SetFloat64(0)
+			factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, nil)
+			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 			if err == nil && bestPrice0 != nil {
 				price0.SetInt(bestPrice0.Value)
 			}
 
-			factor0 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token0.Decimals)))
-			factor1 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals)))
+			// factor0 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token0.Decimals)))
+			// factor1 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals)))
 
-			poolPrice0 := new(big.Float).Quo(price0, factor0)
+			poolPrice0 := new(big.Float).Quo(price0, factorDai)
 			pool.Price0, _ = poolPrice0.Float64()
 
-			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, nil)
+			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 			if err == nil && bestPrice1 != nil {
 				price1.SetInt(bestPrice1.Value)
 			}
 
-			poolPrice1 := new(big.Float).Quo(price1, factor1)
+			poolPrice1 := new(big.Float).Quo(price1, factorDai)
 			pool.Price1, _ = poolPrice1.Float64()
 
 			//fmt.Println("pool.Address:balance0:balance1", pool.Address, balance0, balance1, pool.Price0, pool.Price1)

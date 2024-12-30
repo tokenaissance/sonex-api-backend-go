@@ -46,8 +46,9 @@ func (l *SonexSwapVolumeLogic) SonexSwapVolume(req *types.SwapVolumeRequest) (re
 
 	for i, item := range resp.Volumes {
 		amountPositive := new(big.Float).SetFloat64(item.Amount)
-		decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(token0.Decimals)))
-		usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amountPositive), decimalFactor)
+		//decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(token0.Decimals)))
+		factorDai := new(big.Float).SetFloat64(math.Pow10(18))
+		usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amountPositive), factorDai)
 		resp.Volumes[i].Value, _ = usdValue.Float64()
 	}
 

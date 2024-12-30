@@ -109,12 +109,14 @@ func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey stri
 		go func(item *types.SwapEvent) {
 			defer wg.Done()
 
-			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, item.Token1.Address, true, 2, nil)
+			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, item.Token1.Address, true, 2, &l.svcCtx.Config.Chains[0].USD)
 			if err == nil && bestPrice != nil {
+				factorDai := new(big.Float).SetFloat64(math.Pow10(18))
+
 				priceFloat := new(big.Float).SetInt(bestPrice.Value)
 				amount1Positive := new(big.Float).SetFloat64(math.Abs(item.Amount1))
-				decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(item.Token1.Decimals)))
-				usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amount1Positive), decimalFactor)
+				// decimalFactor := new(big.Float).SetFloat64(math.Pow10(int(item.Token1.Decimals)))
+				usdValue := new(big.Float).Quo(new(big.Float).Mul(priceFloat, amount1Positive), factorDai)
 
 				mu.Lock()
 				item.Usd, _ = usdValue.Float64()
