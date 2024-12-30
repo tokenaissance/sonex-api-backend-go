@@ -423,10 +423,21 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
           }
         ],
         "tags": [
           "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
         ]
       }
     },
@@ -454,6 +465,14 @@
             "required": false,
             "type": "string",
             "default": "1d"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
           }
         ],
         "tags": [
@@ -1551,6 +1570,13 @@
     },
     "GetNftDataRequest": {
       "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
       "title": "GetNftDataRequest"
     },
     "Invested": {
@@ -1614,7 +1640,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PositionData"
+            "$ref": "#/definitions/Position"
           }
         },
         "message": {
@@ -2139,10 +2165,10 @@
         "volume"
       ]
     },
-    "PositionData": {
+    "Position": {
       "type": "object",
       "properties": {
-        "tokenId": {
+        "token_id": {
           "type": "integer",
           "format": "int64"
         },
@@ -2150,18 +2176,18 @@
           "type": "number",
           "format": "double"
         },
-        "claimableFees": {
+        "claimable_fees": {
           "type": "number",
           "format": "double"
         },
-        "isClosed": {
+        "is_closed": {
           "type": "boolean",
           "format": "boolean"
         },
-        "tickUpper": {
+        "tick_upper": {
           "type": "string"
         },
-        "tickLower": {
+        "tick_lower": {
           "type": "string"
         },
         "pnl30d": {
@@ -2171,7 +2197,7 @@
           "type": "number",
           "format": "double"
         },
-        "isNegative": {
+        "is_negative": {
           "type": "boolean",
           "format": "boolean"
         },
@@ -2181,7 +2207,7 @@
         "pool": {
           "$ref": "#/definitions/Token_PoolDetail"
         },
-        "positionAge": {
+        "position_age": {
           "type": "integer",
           "format": "int32"
         },
@@ -2201,35 +2227,35 @@
           "type": "number",
           "format": "double"
         },
-        "unclaimedFee0": {
+        "unclaimed_fee0": {
           "type": "number",
           "format": "double"
         },
-        "unclaimedFee1": {
+        "unclaimed_fee1": {
           "type": "number",
           "format": "double"
         }
       },
-      "title": "PositionData",
+      "title": "Position",
       "required": [
-        "tokenId",
+        "token_id",
         "balance",
-        "claimableFees",
-        "isClosed",
-        "tickUpper",
-        "tickLower",
+        "claimable_fees",
+        "is_closed",
+        "tick_upper",
+        "tick_lower",
         "pnl30d",
         "ratio",
-        "isNegative",
+        "is_negative",
         "origin",
         "pool",
-        "positionAge",
+        "position_age",
         "amount0",
         "amount1",
         "price0",
         "price1",
-        "unclaimedFee0",
-        "unclaimedFee1"
+        "unclaimed_fee0",
+        "unclaimed_fee1"
       ]
     },
     "PositionsRequest": {
@@ -2241,6 +2267,11 @@
         "interval": {
           "type": "string",
           "default": "1d"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
         }
       },
       "title": "PositionsRequest",
@@ -2255,11 +2286,7 @@
           "type": "integer",
           "format": "int32"
         },
-        "gasCosts": {
-          "type": "number",
-          "format": "double"
-        },
-        "isNegative": {
+        "is_negative": {
           "type": "boolean",
           "format": "boolean"
         },
@@ -2270,18 +2297,14 @@
         "positions": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PositionsResponse_Position"
+            "$ref": "#/definitions/Position"
           }
         },
         "ratio": {
           "type": "number",
           "format": "double"
         },
-        "totalFees": {
-          "type": "number",
-          "format": "double"
-        },
-        "totalBalances": {
+        "total_balances": {
           "type": "number",
           "format": "double"
         },
@@ -2292,32 +2315,12 @@
       "title": "PositionsResponse",
       "required": [
         "code",
-        "gasCosts",
-        "isNegative",
+        "is_negative",
         "pnl",
         "positions",
         "ratio",
-        "totalFees",
-        "totalBalances",
+        "total_balances",
         "message"
-      ]
-    },
-    "PositionsResponse_Position": {
-      "type": "object",
-      "properties": {
-        "timestamp": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "amount_price": {
-          "type": "number",
-          "format": "double"
-        }
-      },
-      "title": "PositionsResponse_Position",
-      "required": [
-        "timestamp",
-        "amount_price"
       ]
     },
     "PriceComparisonResult": {

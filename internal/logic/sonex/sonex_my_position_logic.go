@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"sync"
-	"time"
-
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -101,7 +100,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacher
 	}
 
 	var filteredTokenIDs []*big.Int
-	var filteredItems []*types.PositionData
+	var filteredItems []*types.Position
 	switch req.FilterType {
 	case "closed":
 		for _, item := range items {

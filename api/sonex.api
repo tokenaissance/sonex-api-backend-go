@@ -308,6 +308,7 @@ type AggregatedAmounts {
 
 type GetNftDataRequest {
 	Id int64 `path:"id"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
 }
 
 type SwapEventRequest {
@@ -378,22 +379,37 @@ type PoolVolume {
 type PositionsRequest {
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
+	ChainId  int64  `form:"chainId,default=1946,optional"`
 }
 
-type PositionsResponse_Position {
-	Timestamp   int     `json:"timestamp"`
-	AmountPrice float64 `json:"amount_price"`
+type Position {
+	TokenID       int64            `json:"token_id"`
+	Balance       float64          `json:"balance"`
+	ClaimableFees float64          `json:"claimable_fees"`
+	IsClosed      bool             `json:"is_closed"`
+	TickUpper     string           `json:"tick_upper"`
+	TickLower     string           `json:"tick_lower"`
+	PNL30d        string           `json:"pnl30d"`
+	Ratio         float64          `json:"ratio"`
+	IsNegative    bool             `json:"is_negative"`
+	Origin        string           `json:"origin"`
+	Pool          Token_PoolDetail `json:"pool"`
+	PositionAge   int              `json:"position_age"`
+	Amount0       float64          `json:"amount0"`
+	Amount1       float64          `json:"amount1"`
+	Price0        float64          `json:"price0"`
+	Price1        float64          `json:"price1"`
+	UnclaimedFee0 float64          `json:"unclaimed_fee0"`
+	UnclaimedFee1 float64          `json:"unclaimed_fee1"`
 }
 
 type PositionsResponse {
 	Code          int                           `json:"code"`
-	GasCosts      float64                       `json:"gasCosts"`
-	IsNegative    bool                          `json:"isNegative"`
+	IsNegative    bool                          `json:"is_negative"`
 	Pnl           float64                       `json:"pnl"`
-	Data          []*PositionsResponse_Position `json:"positions"`
+	Positions     []*Position                   `json:"positions"`
 	Ratio         float64                       `json:"ratio"`
-	TotalFees     float64                       `json:"totalFees"`
-	TotalBalances float64                       `json:"totalBalances"`
+	TotalBalances float64                       `json:"total_balances"`
 	Message       string                        `json:"message"`
 }
 
@@ -402,30 +418,9 @@ type MyPositionRequest {
 	FilterType string `form:"filter_type,optional,default=none"`
 }
 
-type PositionData {
-	TokenID       int64            `json:"tokenId"`
-	Balance       float64          `json:"balance"`
-	ClaimableFees float64          `json:"claimableFees"`
-	IsClosed      bool             `json:"isClosed"`
-	TickUpper     string           `json:"tickUpper"`
-	TickLower     string           `json:"tickLower"`
-	PNL30d        string           `json:"pnl30d"`
-	Ratio         float64          `json:"ratio"`
-	IsNegative    bool             `json:"isNegative"`
-	Origin        string           `json:"origin"`
-	Pool          Token_PoolDetail `json:"pool"`
-	PositionAge   int              `json:"positionAge"`
-	Amount0       float64          `json:"amount0"`
-	Amount1       float64          `json:"amount1"`
-	Price0        float64          `json:"price0"`
-	Price1        float64          `json:"price1"`
-	UnclaimedFee0 float64          `json:"unclaimedFee0"`
-	UnclaimedFee1 float64          `json:"unclaimedFee1"`
-}
-
 type MyPositionResponse {
 	Code    int             `json:"code"`
-	Data    []*PositionData `json:"data"`
+	Data    []*Position 	`json:"data"`
 	Message string          `json:"message"`
 }
 

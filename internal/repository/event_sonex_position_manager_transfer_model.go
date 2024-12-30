@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -22,8 +21,8 @@ type (
 		eventSonexPositionManagerTransferModel
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
-		GetTransferEvents(ctx context.Context, address string) ([]*types.PositionData, error)
-		GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.PositionData, error)
+		GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error)
+		GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error)
 	}
 
 	customEventSonexPositionManagerTransferModel struct {
@@ -72,7 +71,7 @@ type transferData struct {
 	TxAt             sql.NullTime   `db:"tx_at"`
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string) ([]*types.PositionData, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error) {
 	var items []*transferData
 
 	query := fmt.Sprintf(`
@@ -102,7 +101,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 		return nil, err
 	}
 
-	positionMap := make(map[int64]*types.PositionData)
+	positionMap := make(map[int64]*types.Position)
 	closedPositionMap := make(map[int64]int64)
 
 	for _, item := range items {
@@ -117,7 +116,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 				positionAge = int(daysSinceTx)
 			}
 
-			positionData := &types.PositionData{
+			position := &types.Position{
 				Origin:      item.EventFrom.String,
 				TokenID:     item.TokenId.Int64,
 				TickUpper:   item.EventTickUpper.String,
@@ -152,7 +151,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 				IsClosed: false,
 			}
 
-			positionMap[item.TokenId.Int64] = positionData
+			positionMap[item.TokenId.Int64] = position
 		} else {
 			closedPositionMap[item.TokenId.Int64] = item.TokenId.Int64
 		}
@@ -164,15 +163,15 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 		}
 	}
 
-	events := make([]*types.PositionData, 0, len(positionMap))
-	for _, positionData := range positionMap {
-		events = append(events, positionData)
+	events := make([]*types.Position, 0, len(positionMap))
+	for _, position := range positionMap {
+		events = append(events, position)
 	}
 
 	return events, nil
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.PositionData, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error) {
 	var item transferData
 
 	query := fmt.Sprintf(`
@@ -212,7 +211,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 		positionAge = int(daysSinceTx)
 	}
 
-	positionData := &types.PositionData{
+	position := &types.Position{
 		TokenID:     item.TokenId.Int64,
 		TickUpper:   item.EventTickUpper.String,
 		TickLower:   item.EventTickLower.String,
@@ -246,5 +245,5 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 		},
 	}
 
-	return positionData, nil
+	return position, nil
 }
