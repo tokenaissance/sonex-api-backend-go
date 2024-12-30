@@ -50,7 +50,7 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 	// 获取时间范围
 	//intervalDuration := getIntervalDuration(interval)
 
-	query := fmt.Sprintf("select %s from %s where token_address = $1 and  created_at >= NOW() - INTERVAL '%s'", sonexTokenPriceRecordRows, m.table, getIntervalDuration(interval))
+	query := fmt.Sprintf("select %s from %s where token_address = $1 and  created_at >= NOW() - INTERVAL '%s' ORDER BY created_at ASC", sonexTokenPriceRecordRows, m.table, getIntervalDuration(interval))
 
 	var resp []*TokenPriceRecord
 	err := m.conn.QueryRows(&resp, query, address)
