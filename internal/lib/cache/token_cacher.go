@@ -407,6 +407,7 @@ func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token common.Address, 
 	if err != nil {
 		return nil, err
 	}
+
 	amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(tokenI.Decimals), nil))
 
 	var wg sync.WaitGroup
@@ -436,7 +437,21 @@ func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token common.Address, 
 
 			var prices []Price
 
-			if isCache {
+			if token.Hex() == common.HexToAddress(stablecoin.Address).Hex() {
+				prices = []Price{{
+					From:                        token.Hex(),
+					To:                          stablecoin.Address,
+					Pools:                       []quoter.Pool{},
+					Path:                        []byte{},
+					Value:                       new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(stablecoin.Decimals), nil)),
+					SqrtPriceX96AfterList:       []*big.Int{},
+					InitializedTicksCrossedList: []uint32{},
+					GasEstimate:                 big.NewInt(0),
+					PriceImpact:                 0,
+				}}
+			}
+
+			if prices != nil && isCache {
 				cacher.pricesLock.RLock()
 				from, ok := cacher.prices[tokenI.Address]
 				if ok {
