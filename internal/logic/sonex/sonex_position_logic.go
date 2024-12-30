@@ -197,6 +197,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 			price1.SetInt(bestPrice1.Value)
 		}
 
+		// 转换 price 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
 		poolPrice1 := new(big.Float).Quo(price1, factor1)
 		transferItem.Price1, _ = poolPrice1.Float64()
 
