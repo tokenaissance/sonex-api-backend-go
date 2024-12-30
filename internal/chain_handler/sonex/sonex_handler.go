@@ -1,4 +1,4 @@
-package chain_handler
+package sonex
 
 import (
 	"context"
@@ -22,25 +22,66 @@ import (
 )
 
 type SonexHandler struct {
-	dataSource                                string
-	chain                                     config.ChainConfig
-	config                                    config.SonexConfig
-	factoryPoolCreatedCallbacks               []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string)
-	poolMintCallbacks                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, owner string, tickLower string, tickUpper string, amount0 string, amount1 string, pool string)
-	poolSwapCallbacks                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string)
-	poolBurnCallbacks                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, owner string, tickLower string, tickUpper string, amount string, amount0 string, amount1 string, pool string)
-	positionManagerTransferCallbacks          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64)
-	positionManagerIncreaseLiquidityCallbacks []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)
-	positionManagerDecreaseLiquidityCallbacks []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)
-	positionManagerCollectCallbacks           []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, recipient string, amount0 string, amount1 string)
+	dataSource string
+	chain      config.ChainConfig
+	config     config.SonexConfig
+
+	onFactoryPoolCreated               []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventToken0 string, eventToken1 string, eventFee string, eventTickSpacing string, eventPool string)
+	onPoolMint                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount0 string, eventAmount1 string, eventPool string)
+	onPoolSwap                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventRecipient string, eventAmount0 string, eventAmount1 string, eventSqrtPriceX96 string, eventTick string, eventPool string)
+	onPoolBurn                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount string, eventAmount0 string, eventAmount1 string, eventPool string)
+	onPositionManagerTransfer          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventFrom string, eventTo string, tokenId int64)
+	onPositionManagerIncreaseLiquidity []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)
+	onPositionManagerDecreaseLiquidity []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)
+	onPositionManagerCollect           []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventRecipient string, eventAmount0 string, eventAmount1 string)
 }
 
 func NewSonexHandler(dataSource string, chain config.ChainConfig, config config.SonexConfig) (*SonexHandler, error) {
 	return &SonexHandler{
-		dataSource: dataSource,
-		chain:      chain,
-		config:     config,
+		dataSource:                         dataSource,
+		chain:                              chain,
+		config:                             config,
+		onFactoryPoolCreated:               []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventToken0 string, eventToken1 string, eventFee string, eventTickSpacing string, eventPool string){},
+		onPoolMint:                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount0 string, eventAmount1 string, eventPool string){},
+		onPoolSwap:                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventRecipient string, eventAmount0 string, eventAmount1 string, eventSqrtPriceX96 string, eventTick string, eventPool string){},
+		onPoolBurn:                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount string, eventAmount0 string, eventAmount1 string, eventPool string){},
+		onPositionManagerTransfer:          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventFrom string, eventTo string, tokenId int64){},
+		onPositionManagerIncreaseLiquidity: []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string){},
+		onPositionManagerDecreaseLiquidity: []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string){},
+		onPositionManagerCollect:           []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventRecipient string, eventAmount0 string, eventAmount1 string){},
 	}, nil
+}
+
+func (handler *SonexHandler) OnFactoryPoolCreated(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventToken0 string, eventToken1 string, eventFee string, eventTickSpacing string, eventPool string)) {
+	handler.onFactoryPoolCreated = append(handler.onFactoryPoolCreated, callback)
+}
+
+func (handler *SonexHandler) OnPoolMint(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount0 string, eventAmount1 string, eventPool string)) {
+	handler.onPoolMint = append(handler.onPoolMint, callback)
+}
+
+func (handler *SonexHandler) OnPoolSwap(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventRecipient string, eventAmount0 string, eventAmount1 string, eventSqrtPriceX96 string, eventTick string, eventPool string)) {
+	handler.onPoolSwap = append(handler.onPoolSwap, callback)
+}
+
+func (handler *SonexHandler) OnPoolBurn(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount string, eventAmount0 string, eventAmount1 string, eventPool string)) {
+	handler.onPoolBurn = append(handler.onPoolBurn, callback)
+}
+
+func (handler *SonexHandler) OnPositionManagerTransfer(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventFrom string, eventTo string, tokenId int64)) {
+	handler.onPositionManagerTransfer = append(handler.onPositionManagerTransfer, callback)
+}
+
+func (handler *SonexHandler) OnPositionManagerIncreaseLiquidity(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)) {
+	handler.onPositionManagerIncreaseLiquidity = append(handler.onPositionManagerIncreaseLiquidity, callback)
+}
+
+func (handler *SonexHandler) OnPositionManagerDecreaseLiquidity(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)) {
+	handler.onPositionManagerDecreaseLiquidity = append(handler.onPositionManagerDecreaseLiquidity, callback)
+}
+
+func (handler *SonexHandler) OnPositionManagerCollect(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)) {
+	handler.onPositionManagerCollect = append(handler.onPositionManagerCollect, callback)
 }
 
 func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
@@ -129,7 +170,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				}
 
 				// Callback
-				for _, callback := range handler.factoryPoolCreatedCallbacks {
+				for _, callback := range handler.onFactoryPoolCreated {
 					go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
 				}
 			}
@@ -302,7 +343,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									}
 
 									// Callback
-									for _, callback := range handler.poolMintCallbacks {
+									for _, callback := range handler.onPoolMint {
 										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
 									}
 								}
@@ -346,7 +387,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									}
 
 									// Callback
-									for _, callback := range handler.poolSwapCallbacks {
+									for _, callback := range handler.onPoolSwap {
 										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
 									}
 								}
@@ -390,7 +431,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									}
 
 									// Callback
-									for _, callback := range handler.poolBurnCallbacks {
+									for _, callback := range handler.onPoolBurn {
 										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
 									}
 								}
@@ -426,7 +467,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			retry.DelayType(retry.FixedDelay),
 			retry.OnRetry(func(n uint, err error) {
 				retrys += 1
-				logx.Infof("%s", log.Warning("Retrying handle pools %d times, pools: %v, error: %s", retrys, waitForRetryPools, err))
+				logx.Infof("%s", log.Warning("Retrying handle pools %d times, pools: %v", retrys, waitForRetryPools))
 			}),
 		)
 		if err != nil {
@@ -554,7 +595,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					}
 
 					// Callback
-					for _, callback := range handler.positionManagerTransferCallbacks {
+					for _, callback := range handler.onPositionManagerTransfer {
 						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
 					}
 				}
@@ -596,7 +637,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					}
 
 					// Callback
-					for _, callback := range handler.positionManagerIncreaseLiquidityCallbacks {
+					for _, callback := range handler.onPositionManagerIncreaseLiquidity {
 						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 					}
 				}
@@ -638,7 +679,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					}
 
 					// Callback
-					for _, callback := range handler.positionManagerDecreaseLiquidityCallbacks {
+					for _, callback := range handler.onPositionManagerDecreaseLiquidity {
 						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 					}
 				}
@@ -680,7 +721,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					}
 
 					// Callback
-					for _, callback := range handler.positionManagerCollectCallbacks {
+					for _, callback := range handler.onPositionManagerCollect {
 						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
 					}
 				}
@@ -700,36 +741,4 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 	}
 
 	return nil, false
-}
-
-func (handler *SonexHandler) AddFactoryPoolCreatedCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string)) {
-	handler.factoryPoolCreatedCallbacks = append(handler.factoryPoolCreatedCallbacks, callback)
-}
-
-func (handler *SonexHandler) AddPoolMintCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string)) {
-	handler.poolMintCallbacks = append(handler.poolMintCallbacks, callback)
-}
-
-func (handler *SonexHandler) AddPoolSwapCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, owner string, tickLower string, tickUpper string, amount0 string, amount1 string, pool string)) {
-	handler.poolSwapCallbacks = append(handler.poolSwapCallbacks, callback)
-}
-
-func (handler *SonexHandler) AddPoolBurnCallback(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, owner string, tickLower string, tickUpper string, amount string, amount0 string, amount1 string, pool string)) {
-	handler.poolBurnCallbacks = append(handler.poolBurnCallbacks, callback)
-}
-
-func (handler *SonexHandler) AddPositionManagerTransferCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64)) {
-	handler.positionManagerTransferCallbacks = append(handler.positionManagerTransferCallbacks, callback)
-}
-
-func (handler *SonexHandler) AddPositionManagerIncreaseLiquidityCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)) {
-	handler.positionManagerIncreaseLiquidityCallbacks = append(handler.positionManagerIncreaseLiquidityCallbacks, callback)
-}
-
-func (handler *SonexHandler) AddPositionManagerDecreaseLiquidityCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string)) {
-	handler.positionManagerDecreaseLiquidityCallbacks = append(handler.positionManagerDecreaseLiquidityCallbacks, callback)
-}
-
-func (handler *SonexHandler) AddPositionManagerCollectCallbacks(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, recipient string, amount0 string, amount1 string)) {
-	handler.positionManagerCollectCallbacks = append(handler.positionManagerCollectCallbacks, callback)
 }

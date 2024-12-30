@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	lp "sonex_api_backend_go/internal/lib/pool"
 	"sonex_api_backend_go/internal/repository"
@@ -64,29 +65,30 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 	}
 
 	// Attempt to get the cached response
-	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp PoolsResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
-			go l.refreshCache(req, cacheKey, &cachedResp)
+			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
 			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
 	// If no valid cache, proceed to refresh and return the new response
-	return l.refreshCache(req, cacheKey, nil)
+	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey string, cachedResp *PoolsResponseWrapper) (*PoolsResponseWrapper, error) {
+func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.ICache, cacheKey string, cachedResp *PoolsResponseWrapper) (*PoolsResponseWrapper, error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	var lockAcquired bool
 
 	if cachedResp != nil {
-		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
 		if err != nil {
 			return cachedResp, nil
 		}
@@ -100,7 +102,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 
 	defer func() {
 		if lockAcquired {
-			l.svcCtx.Cache.Del(lockKey)
+			cacher.Del(lockKey)
 		}
 	}()
 
@@ -167,24 +169,25 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
 			price0 := new(big.Float).SetFloat64(0)
 			price1 := new(big.Float).SetFloat64(0)
+			factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, nil)
+			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 			if err == nil && bestPrice0 != nil {
 				price0.SetInt(bestPrice0.Value)
 			}
 
-			factor0 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token0.Decimals)))
-			factor1 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals)))
+			// factor0 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token0.Decimals)))
+			// factor1 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals)))
 
-			poolPrice0 := new(big.Float).Quo(price0, factor0)
+			poolPrice0 := new(big.Float).Quo(price0, factorDai)
 			pool.Price0, _ = poolPrice0.Float64()
 
-			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, nil)
+			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 			if err == nil && bestPrice1 != nil {
 				price1.SetInt(bestPrice1.Value)
 			}
 
-			poolPrice1 := new(big.Float).Quo(price1, factor1)
+			poolPrice1 := new(big.Float).Quo(price1, factorDai)
 			pool.Price1, _ = poolPrice1.Float64()
 
 			//fmt.Println("pool.Address:balance0:balance1", pool.Address, balance0, balance1, pool.Price0, pool.Price1)
@@ -227,7 +230,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacheKey stri
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
+		err = cacher.Set(cacheKey, responseBytes, 0)
 		if err != nil {
 			l.Error("Failed to cache response", err)
 		}

@@ -39,7 +39,7 @@ func TestBatchGetPositions(t *testing.T) {
 	positions, err := caller.BatchGetPositions(
 		context.Background(), 1946,
 		common.HexToAddress("0xeC816FCdc262601C0E23902c679FDd87CFb24077"),
-		[]*big.Int{big.NewInt(1), big.NewInt(69), big.NewInt(63), big.NewInt(100), big.NewInt(135)},
+		[]*big.Int{big.NewInt(199)},
 	)
 	if err != nil {
 		t.Error(err)

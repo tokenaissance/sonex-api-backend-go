@@ -319,6 +319,11 @@ type PositionsResponse_Position struct {
 	AmountPrice float64 `json:"amount_price"`
 }
 
+type PriceComparisonResult struct {
+	Comparison string  `json:"comparison"`
+	Percentage float64 `json:"percentage"`
+}
+
 type SonexTokenKlineRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
@@ -375,6 +380,28 @@ type SwapEventResponse struct {
 	Data    []*SwapEvent    `json:"data"`
 	Meta    *PaginationMeta `json:"meta"`
 	Message string          `json:"message"`
+}
+
+type SwapVolume struct {
+	Timestamp int64   `json:"timestamp"`
+	Value     float64 `json:"value"`
+	Amount    float64 `json:"amount"`
+	Amount0   float64 `json:"amount0"`
+	Amount1   float64 `json:"amount1"`
+}
+
+type SwapVolumeRequest struct {
+	PoolAddress string `form:"poolAddress"` // Pool address
+	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
+	Address     string `form:"address,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapVolumeResponse struct {
+	Volumes []SwapVolume `json:"volumes"`
 }
 
 type TokenListRequest struct {
@@ -465,6 +492,11 @@ type TokenVolume struct {
 	Amounts float64 `json:"amounts"`
 }
 
+type Token_Kline struct {
+	Price     string `json:"price"`
+	TimeStamp int64  `json:"time_stamp"`
+}
+
 type Token_PoolDetail struct {
 	ID          int64           `json:"id"`
 	Address     string          `json:"address"`
@@ -488,15 +520,18 @@ type Token_Social struct {
 }
 
 type Token_TokenDetail struct {
-	Address  string              `json:"address"`
-	Symbol   string              `json:"symbol"`
-	Name     string              `json:"name"`
-	Decimals int                 `json:"decimals"`
-	Logo     string              `json:"logo"`
-	Pools    []*Token_PoolDetail `json:"pools"`
-	Volume   string              `json:"volume"`
-	Fdv      string              `json:"fdv"`
-	Price    string              `json:"price"`
+	Address             string                `json:"address"`
+	Symbol              string                `json:"symbol"`
+	Name                string                `json:"name"`
+	Decimals            int                   `json:"decimals"`
+	Logo                string                `json:"logo"`
+	Pools               []*Token_PoolDetail   `json:"pools"`
+	Volume              string                `json:"volume"`
+	Fdv                 string                `json:"fdv"`
+	Price               string                `json:"price"`
+	Kline               []*Token_Kline        `json:"kline"`
+	HourPriceComparison PriceComparisonResult `json:"hour_price_comparison"`
+	DayPriceComparison  PriceComparisonResult `json:"day_price_comparison"`
 }
 
 type Token_TokenInfo struct {

@@ -17,6 +17,7 @@ type ChainConfig struct {
 	Multicall               string           `json:",optional"`
 	Tokens                  []TokenConfig    `json:",optional"`
 	WETH                    string           `json:",optional"`
+	USD                     string           `json:",optional"`
 }
 
 type TokenConfig struct {

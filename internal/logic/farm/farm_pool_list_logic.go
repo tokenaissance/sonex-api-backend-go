@@ -3,13 +3,14 @@ package farm
 import (
 	"context"
 	"fmt"
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 	"time"
 
 	"sonex_api_backend_go/internal/repository"
 
-	farmCbk "sonex_api_backend_go/internal/chain_handler/callback/farm"
+	farmCbk "sonex_api_backend_go/internal/chain_handler/farm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -25,6 +26,8 @@ type FarmPoolListLogic struct {
 	svcCtx                 *svc.ServiceContext
 	chainId                int64
 	ethClient              *ethclient.Client
+	cacher                 cache.ICache
+	conn                   sqlx.SqlConn
 	farmAddress            common.Address // UniswapV3Staker
 	positionManagerAddress common.Address // NonfungiblePositionManager
 }
@@ -38,7 +41,6 @@ func NewFarmPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Farm
 		ctx:                    ctx,
 		svcCtx:                 svcCtx,
 		chainId:                svcCtx.Config.Farm[0].ChainId,
-		ethClient:              svcCtx.EthClient,
 		farmAddress:            common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionManagerAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
@@ -68,7 +70,16 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 		Limit:  req.Limit,
 	}
 
-	model := repository.NewFarmPoolsModel(l.svcCtx.DB)
+	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	if err != nil {
+		return nil, err
+	}
+	l.ethClient = client
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	l.cacher = redisCache
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+
+	model := repository.NewFarmPoolsModel(l.conn)
 	pools, total, err := model.GetPoolList(l.ctx, req)
 	if err != nil {
 		if err == sqlx.ErrNotFound {
@@ -92,7 +103,7 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 // 1小时内未更新的池子数据，异步更新
 func (l *FarmPoolListLogic) checkAndRefreshPools(req *types.FarmPoolListRequest) {
 	cacheKey := fmt.Sprintf("farm:pools:last_update:%d", req.ChainId)
-	lastUpdate, err := l.svcCtx.Cache.Get(cacheKey)
+	lastUpdate, err := l.cacher.Get(cacheKey)
 	if err == redis.Nil || lastUpdate == "" || time.Since(time.Unix(cast.ToInt64(lastUpdate), 0)) > time.Hour {
 		// 更新池子数据
 		go func() {
@@ -102,7 +113,7 @@ func (l *FarmPoolListLogic) checkAndRefreshPools(req *types.FarmPoolListRequest)
 				}
 			}()
 
-			model := repository.NewFarmPoolsModel(l.svcCtx.DB)
+			model := repository.NewFarmPoolsModel(l.conn)
 			outdatedPools, err := model.FindNotFreshPools(context.Background(), req.ChainId, time.Hour)
 			if err != nil {
 				logx.Errorf("Failed to get outdated pools: %v", err)
@@ -110,16 +121,15 @@ func (l *FarmPoolListLogic) checkAndRefreshPools(req *types.FarmPoolListRequest)
 			}
 
 			if len(outdatedPools) > 0 {
-				farmCallback := farmCbk.NewFarmCallback(l.svcCtx)
 				for _, pool := range outdatedPools {
-					if err := farmCallback.UpdateFarmPoolData(l.ethClient, pool.IncentiveId); err != nil {
+					if err := farmCbk.UpdateFarmPoolData(l.svcCtx.Config, l.conn, l.ethClient, l.chainId, pool.IncentiveId); err != nil {
 						logx.Errorf("Failed to update pool %s data: %v", pool.IncentiveId, err)
 					}
 				}
 			}
 
 			// 更新最后更新时间
-			if err := l.svcCtx.Cache.Set(cacheKey, time.Now().Unix(), 2*time.Hour); err != nil {
+			if err := l.cacher.Set(cacheKey, time.Now().Unix(), 2*time.Hour); err != nil {
 				logx.Errorf("Failed to update last update time: %v", err)
 			}
 		}()

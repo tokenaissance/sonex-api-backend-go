@@ -7,7 +7,9 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
 )
 
@@ -67,5 +69,65 @@ func TestQuote(t *testing.T) {
 			s = append(s, fmt.Sprintf("%s:%s[%d]", pool.Token0, pool.Token1, pool.Fee))
 		}
 		fmt.Printf("Path: %s, Price: %s\n", strings.Join(s, " -> "), price.Value.String())
+	}
+}
+
+func TestSummarizeCurrentPositions(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../../etc/sonex_api_backend_go.yaml", &c)
+
+	Initialize(c)
+	{
+		ti := time.Now()
+		reslut, err := SummarizeCurrentPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		fmt.Printf("%s\n", reslut.TotalBalanceUSD.String())
+		fmt.Printf("%s\n", reslut.TotalEarnedUSD.String())
+		fmt.Printf("%ds\n", time.Now().Unix()-ti.Unix())
+	}
+
+	{
+		ti := time.Now()
+		reslut, err := SummarizeCurrentPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		fmt.Printf("%s\n", reslut.TotalBalanceUSD.String())
+		fmt.Printf("%s\n", reslut.TotalEarnedUSD.String())
+		fmt.Printf("%ds\n", time.Now().Unix()-ti.Unix())
+	}
+}
+
+func TestSummarizeClosedPositions(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../../etc/sonex_api_backend_go.yaml", &c)
+
+	Initialize(c)
+	{
+		ti := time.Now()
+		reslut, err := SummarizeClosedPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		fmt.Printf("%s\n", reslut.TotalBalanceUSD.String())
+		fmt.Printf("%s\n", reslut.TotalEarnedUSD.String())
+		fmt.Printf("%ds\n", time.Now().Unix()-ti.Unix())
+	}
+
+	{
+		ti := time.Now()
+		reslut, err := SummarizeClosedPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		fmt.Printf("%s\n", reslut.TotalBalanceUSD.String())
+		fmt.Printf("%s\n", reslut.TotalEarnedUSD.String())
+		fmt.Printf("%ds\n", time.Now().Unix()-ti.Unix())
 	}
 }

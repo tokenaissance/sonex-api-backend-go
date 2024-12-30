@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"sonex_api_backend_go/internal/chain_handler"
-	farmCbk "sonex_api_backend_go/internal/chain_handler/callback/farm"
-	"sonex_api_backend_go/internal/chain_handler/callback/sonex"
+	"sonex_api_backend_go/internal/chain_handler/farm"
+	"sonex_api_backend_go/internal/chain_handler/sonex"
+	"sonex_api_backend_go/internal/chain_handler/xpool"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
@@ -125,13 +126,13 @@ func main() {
 			configA := linq.From(c.Sonexes).SingleWithT(func(item config.SonexConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
 				config, _ := configA.(config.SonexConfig)
-				handler, err := chain_handler.NewSonexHandler(c.PostgreSQL.DateSource(), chain, config)
+				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, config)
 				if err != nil {
 					panic(err)
 				}
 				// Swap callback demo
-				handler.AddPoolSwapCallback(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool string) {
-					sonex.SonexSwapCallback(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool)
+				handler.OnPoolSwap(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool string) {
+					sonex.SwapCallback(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool)
 				})
 				chainHandlerManager.AddHandler(1946, handler)
 			}
@@ -142,7 +143,7 @@ func main() {
 			configA := linq.From(c.Xpools).SingleWithT(func(item config.XpoolConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
 				config, _ := configA.(config.XpoolConfig)
-				handler, err := chain_handler.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, config)
+				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, config)
 				if err != nil {
 					panic(err)
 				}
@@ -155,13 +156,29 @@ func main() {
 			configA := linq.From(c.Farm).SingleWithT(func(item config.FarmConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
 				config, _ := configA.(config.FarmConfig)
-				handler, err := chain_handler.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
+				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
 				if err != nil {
 					panic(err)
 				}
 
-				farmCallback := farmCbk.NewFarmCallback(ctx)
-				handler.RegisterCallback(farmCallback)
+				handler.OnIncentiveCreated(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, eventRewardToken, eventPool string, eventStartTime, eventEndTime int64, eventRefundee, eventReward, eventIncentiveId string) {
+					farm.IncentiveCreated(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventRewardToken, eventPool, eventStartTime, eventEndTime, eventRefundee, eventReward, eventIncentiveId)
+				})
+				handler.OnTokenStaked(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value string, eventTokenId int64, eventIncentiveId, eventLiquidity string) {
+					farm.TokenStaked(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTokenId, eventIncentiveId, eventLiquidity)
+				})
+				handler.OnTokenUnstaked(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value string, eventTokenId int64, eventIncentiveId string) {
+					farm.TokenUnstaked(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTokenId, eventIncentiveId)
+				})
+				handler.OnRewardClaimed(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, eventTo, eventReward string) {
+					farm.RewardClaimed(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTo, eventReward)
+				})
+				handler.OnDepositTransferred(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value string, eventTokenId int64, eventOldOwner, eventNewOwner string) {
+					farm.DepositTransferred(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTokenId, eventOldOwner, eventNewOwner)
+				})
+				handler.OnIncentiveEnded(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, eventIncentiveId, eventRefund string) {
+					farm.IncentiveEnded(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventIncentiveId, eventRefund)
+				})
 
 				chainHandlerManager.AddHandler(1946, handler)
 			}

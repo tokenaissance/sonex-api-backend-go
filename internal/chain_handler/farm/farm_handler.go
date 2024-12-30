@@ -1,4 +1,4 @@
-package chain_handler
+package farm
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"sonex_api_backend_go/internal/lib/contract/farm"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
-	"sync"
+	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -15,21 +15,17 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-type farmEventCallback interface {
-	OnIncentiveCreated(*ethclient.Client, *farm.UniswapV3StakerIncentiveCreated, *repository.EventFarmIncentiveCreated)
-	OnTokenStaked(*ethclient.Client, *farm.UniswapV3StakerTokenStaked, *repository.EventFarmTokenStaked)
-	OnTokenUnstaked(*ethclient.Client, *farm.UniswapV3StakerTokenUnstaked, *repository.EventFarmTokenUnstaked)
-	OnRewardClaimed(*ethclient.Client, *farm.UniswapV3StakerRewardClaimed, *repository.EventFarmRewardClaimed)
-	OnDepositTransferred(*ethclient.Client, *farm.UniswapV3StakerDepositTransferred, *repository.EventFarmDepositTransferred)
-	OnIncentiveEnded(*ethclient.Client, *farm.UniswapV3StakerIncentiveEnded, *repository.EventFarmIncentiveEnded)
-}
-
 type FarmHandler struct {
 	dataSource string
 	chain      *config.ChainConfig
 	config     *config.FarmConfig
-	callbacks  []farmEventCallback
-	callbackWg sync.WaitGroup
+
+	onIncentiveCreated   []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventRewardToken string, eventPool string, eventStartTime int64, eventEndTime int64, eventRefundee string, eventReward string, eventIncentiveId string)
+	onTokenStaked        []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventIncentiveId string, eventLiquidity string)
+	onTokenUnstaked      []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventIncentiveId string)
+	onRewardClaimed      []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTo string, eventReward string)
+	onDepositTransferred []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventOldOwner string, eventNewOwner string)
+	onIncentiveEnded     []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventIncentiveId string, eventRefund string)
 }
 
 func NewFarmHandler(dataSource string, chain config.ChainConfig, config config.FarmConfig) (*FarmHandler, error) {
@@ -40,18 +36,28 @@ func NewFarmHandler(dataSource string, chain config.ChainConfig, config config.F
 	}, nil
 }
 
-func (handler *FarmHandler) RegisterCallback(callback farmEventCallback) {
-	handler.callbacks = append(handler.callbacks, callback)
+func (handler *FarmHandler) OnIncentiveCreated(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventRewardToken string, eventPool string, eventStartTime int64, eventEndTime int64, eventRefundee string, eventReward string, eventIncentiveId string)) {
+	handler.onIncentiveCreated = append(handler.onIncentiveCreated, callback)
 }
 
-func (handler *FarmHandler) triggerCallback(ctx context.Context, fn func(farmEventCallback)) {
-	for _, callback := range handler.callbacks {
-		handler.callbackWg.Add(1)
-		go func(cb farmEventCallback) {
-			defer handler.callbackWg.Done()
-			fn(cb)
-		}(callback)
-	}
+func (handler *FarmHandler) OnTokenStaked(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventIncentiveId string, eventLiquidity string)) {
+	handler.onTokenStaked = append(handler.onTokenStaked, callback)
+}
+
+func (handler *FarmHandler) OnTokenUnstaked(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventIncentiveId string)) {
+	handler.onTokenUnstaked = append(handler.onTokenUnstaked, callback)
+}
+
+func (handler *FarmHandler) OnRewardClaimed(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTo string, eventReward string)) {
+	handler.onRewardClaimed = append(handler.onRewardClaimed, callback)
+}
+
+func (handler *FarmHandler) OnDepositTransferred(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventOldOwner string, eventNewOwner string)) {
+	handler.onDepositTransferred = append(handler.onDepositTransferred, callback)
+}
+
+func (handler *FarmHandler) OnIncentiveEnded(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventIncentiveId string, eventRefund string)) {
+	handler.onIncentiveEnded = append(handler.onIncentiveEnded, callback)
 }
 
 func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
@@ -209,10 +215,15 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			_, err = eventFarmIncentiveCreatedModel.Insert(ctx, eventData)
 			if err != nil {
 				return err
-			} else {
-				handler.triggerCallback(ctx, func(cb farmEventCallback) {
-					cb.OnIncentiveCreated(client, event, eventData)
-				})
+			}
+
+			// Callback
+			for _, callback := range handler.onIncentiveCreated {
+				go callback(
+					handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+					eventData.EventRewardToken, eventData.EventPool, eventData.EventStartTime,
+					eventData.EventEndTime, eventData.EventRefundee, eventData.EventReward, eventData.EventIncentiveId,
+				)
 			}
 		}
 
@@ -253,10 +264,14 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			_, err = eventFarmTokenStakedModel.Insert(ctx, eventData)
 			if err != nil {
 				return err
-			} else {
-				handler.triggerCallback(ctx, func(cb farmEventCallback) {
-					cb.OnTokenStaked(client, event, eventData)
-				})
+			}
+
+			// Callback
+			for _, callback := range handler.onTokenStaked {
+				go callback(
+					handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+					eventData.EventTokenId, eventData.EventIncentiveId, eventData.EventLiquidity,
+				)
 			}
 		}
 
@@ -296,12 +311,17 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			_, err = eventFarmTokenUnstakedModel.Insert(ctx, eventData)
 			if err != nil {
 				return err
-			} else {
-				handler.triggerCallback(ctx, func(cb farmEventCallback) {
-					cb.OnTokenUnstaked(client, event, eventData)
-				})
+			}
+
+			// Callback
+			for _, callback := range handler.onTokenUnstaked {
+				go callback(
+					handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+					eventData.EventTokenId, eventData.EventIncentiveId,
+				)
 			}
 		}
+
 		// RewardClaimed Event
 		for _, event := range rewardClaimedEvents {
 			blockNumber := int64(event.Raw.BlockNumber)
@@ -338,10 +358,14 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			_, err = eventFarmRewardClaimedModel.Insert(ctx, eventData)
 			if err != nil {
 				return err
-			} else {
-				handler.triggerCallback(ctx, func(cb farmEventCallback) {
-					cb.OnRewardClaimed(client, event, eventData)
-				})
+			}
+
+			// Callback
+			for _, callback := range handler.onRewardClaimed {
+				go callback(
+					handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+					eventData.EventTo, eventData.EventReward,
+				)
 			}
 		}
 
@@ -382,12 +406,15 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			_, err = eventFarmDepositTransferredModel.Insert(ctx, eventData)
 			if err != nil {
 				return err
-			} else {
-				handler.triggerCallback(ctx, func(cb farmEventCallback) {
-					cb.OnDepositTransferred(client, event, eventData)
-				})
 			}
 
+			// Callback
+			for _, callback := range handler.onDepositTransferred {
+				go callback(
+					handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+					eventData.EventTokenId, eventData.EventOldOwner, eventData.EventNewOwner,
+				)
+			}
 		}
 
 		// IncentiveEnded Event
@@ -426,21 +453,22 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			_, err = eventFarmIncentiveEndedModel.Insert(ctx, eventData)
 			if err != nil {
 				return err
-			} else {
-				handler.triggerCallback(ctx, func(cb farmEventCallback) {
-					cb.OnIncentiveEnded(client, event, eventData)
-				})
 			}
 
+			// Callback
+			for _, callback := range handler.onIncentiveEnded {
+				go callback(
+					handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+					eventData.EventIncentiveId, eventData.EventRefund,
+				)
+			}
 		}
 
 		return nil
 	})
-
 	if err != nil {
 		return err, false
 	}
-	handler.callbackWg.Wait()
 
 	return nil, false
 }

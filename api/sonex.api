@@ -196,6 +196,16 @@ type TokenTopResponse {
 	Message string               `json:"message"`
 }
 
+type PriceComparisonResult {
+	Comparison string  `json:"comparison"`
+	Percentage float64 `json:"percentage"`
+}
+
+type Token_Kline {
+	Price        string `json:"price"`
+	TimeStamp    int64  `json:"time_stamp"`
+}
+
 type Token_TokenDetail {
 	Address  string              `json:"address"`
 	Symbol   string              `json:"symbol"`
@@ -206,6 +216,9 @@ type Token_TokenDetail {
 	Volume   string             `json:"volume"`
 	Fdv      string             `json:"fdv"`
 	Price    string             `json:"price"`
+	Kline []*Token_Kline `json:"kline"`
+	HourPriceComparison PriceComparisonResult `json:"hour_price_comparison"`
+	DayPriceComparison PriceComparisonResult `json:"day_price_comparison"`
 }
 
 type Token_PoolDetail {
@@ -329,6 +342,28 @@ type SwapEventResponse {
 	Message string          `json:"message"`
 }
 
+type SwapVolumeRequest {
+	PoolAddress string `form:"poolAddress"` // Pool address
+	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
+	Address     string `form:"address,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapVolume {
+	Timestamp   int64   `json:"timestamp"`
+	Value       float64 `json:"value"`
+	Amount      float64 `json:"amount"`
+	Amount0     float64 `json:"amount0"`
+	Amount1     float64 `json:"amount1"`
+}
+
+type SwapVolumeResponse {
+	Volumes []SwapVolume `json:"volumes"`
+}
+
 type TokenVolume {
 	Address string  `json:"address"`
 	Amounts float64 `json:"amounts"`
@@ -446,6 +481,9 @@ service sonex_api_backend_go {
 
 	@handler SonexSwapHandler
 	get /swaps (SwapEventRequest) returns (SwapEventResponse)
+
+	@handler SonexSwapVolumeHandler
+	get /swaps/volume (SwapVolumeRequest) returns (SwapVolumeResponse)
 
 	@handler TokensKlineHandler
 	get /tokens/kline (SonexTokenKlineRequest) returns (SonexTokenKlineResponse)

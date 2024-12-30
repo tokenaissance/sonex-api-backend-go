@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
@@ -49,26 +50,27 @@ func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (re
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:my-position:%s:%s", req.Address, req.FilterType)
 
 	// Check cache
-	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp MyPositionResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
-			go l.refreshCache(req, cacheKey, &cachedResp)
+			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey, nil)
+	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheKey string, cachedResp *MyPositionResponseWrapper) (resp *MyPositionResponseWrapper, err error) {
+func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacher cache.ICache, cacheKey string, cachedResp *MyPositionResponseWrapper) (resp *MyPositionResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	var lockAcquired bool
 
 	if cachedResp != nil {
-		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
 		if err != nil {
 			return cachedResp, nil
 		}
@@ -82,7 +84,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 
 	defer func() {
 		if lockAcquired {
-			l.svcCtx.Cache.Del(lockKey)
+			cacher.Del(lockKey)
 		}
 	}()
 
@@ -116,6 +118,11 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 		}
 	default:
 		filteredItems = items
+		for _, item := range items {
+			if !item.IsClosed {
+				filteredTokenIDs = append(filteredTokenIDs, big.NewInt(item.TokenID))
+			}
+		}
 	}
 
 	if len(filteredTokenIDs) > 0 {
@@ -141,28 +148,44 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 							price0 := new(big.Float).SetFloat64(0)
 							price1 := new(big.Float).SetFloat64(0)
 
-							bestPrice0, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(item.Pool.Token0.Address).Hex(), true, 2, nil)
-							if err == nil && bestPrice0 != nil {
-								price0.SetInt(bestPrice0.Value)
-							}
-
 							factor0 := new(big.Float).SetFloat64(math.Pow10(int(item.Pool.Token0.Decimals)))
 							factor1 := new(big.Float).SetFloat64(math.Pow10(int(item.Pool.Token1.Decimals)))
+							factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-							poolPrice0 := new(big.Float).Quo(price0, factor0)
-							item.Price0, _ = poolPrice0.Float64()
-
-							bestPrice1, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(item.Pool.Token1.Address).Hex(), true, 2, nil)
-							if err == nil && bestPrice1 != nil {
-								price1.SetInt(bestPrice1.Value)
+							bestPrice0, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(item.Pool.Token0.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
+							fmt.Println("token0", position.TokenId, item.Pool.Token0.Address)
+							if err == nil && bestPrice0 != nil {
+								price0.SetInt(bestPrice0.Value)
+								fmt.Println("bestPrice0", bestPrice0.Value.String())
+							} else {
+								fmt.Println("bestPrice0", "nil")
 							}
 
-							poolPrice1 := new(big.Float).Quo(price1, factor1)
+							poolPrice0 := new(big.Float).Quo(price0, factorDai)
+							item.Price0, _ = poolPrice0.Float64()
+
+							fmt.Println("token1", position.TokenId, item.Pool.Token1.Address)
+							bestPrice1, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(item.Pool.Token1.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
+							if err == nil && bestPrice1 != nil {
+								price1.SetInt(bestPrice1.Value)
+								fmt.Println("bestPrice1", bestPrice1.Value.String())
+							} else {
+								fmt.Println("bestPrice1", "nil")
+							}
+
+							poolPrice1 := new(big.Float).Quo(price1, factorDai)
 							item.Price1, _ = poolPrice1.Float64()
 
 							// 获取 amount0, amount1 和 unclaimedFee0, unclaimedFee1
 							amount0, amount1 := position.Amounts()
 							unclaimedFee0, unclaimedFee1 := position.UnclaimedFees()
+
+							fmt.Println("amount0", amount0.String())
+							fmt.Println("amount1", amount1.String())
+							fmt.Println("unclaimedFee0", unclaimedFee0.String())
+							fmt.Println("unclaimedFee1", unclaimedFee1.String())
+							fmt.Println("factor0", factor0.String())
+							fmt.Println("factor1", factor1.String())
 
 							// 转换 amount0, amount1 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
 							amount0Float := new(big.Float).SetInt(amount0)
@@ -178,6 +201,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 							// 计算总余额
 							totalBalance := new(big.Float).Add(amount0Price, amount1Price)
 							item.Balance, _ = totalBalance.Float64()
+							fmt.Println("item.Balance", item.Balance)
 
 							// 计算未结费用 unclaimedFee0 和 unclaimedFee1
 							item.Amount0, _ = new(big.Float).SetInt(amount0).Float64()
@@ -197,6 +221,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 							// 计算总的 claimableFees
 							claimableFees := new(big.Float).Add(claimableFee0, claimableFee1)
 							item.ClaimableFees, _ = claimableFees.Float64()
+							fmt.Println("item.ClaimableFees", item.ClaimableFees)
 
 							break
 						}
@@ -218,7 +243,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 0) // TODO: cache for xxx seconds??
+		cacher.Set(cacheKey, responseBytes, 0) // TODO: cache for xxx seconds??
 	}
 
 	return response, nil

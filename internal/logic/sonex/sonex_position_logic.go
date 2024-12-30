@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
@@ -45,28 +46,29 @@ func (p *NftDataResponseWrapper) GetCode() interface{} {
 
 func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *NftDataResponseWrapper, err error) {
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position:%d", req.Id)
-	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp NftDataResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
-			go l.refreshCache(req, cacheKey, &cachedResp)
+			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
 			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey, nil)
+	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey string, cachedResp *NftDataResponseWrapper) (resp *NftDataResponseWrapper, err error) {
+func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher cache.ICache, cacheKey string, cachedResp *NftDataResponseWrapper) (resp *NftDataResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	var lockAcquired bool
 
 	if cachedResp != nil {
-		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
 		if err != nil {
 			return cachedResp, nil
 		}
@@ -80,7 +82,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 
 	defer func() {
 		if lockAcquired {
-			l.svcCtx.Cache.Del(lockKey)
+			cacher.Del(lockKey)
 		}
 	}()
 
@@ -180,8 +182,9 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 	if err == nil {
 		price0 := new(big.Float).SetFloat64(0)
 		price1 := new(big.Float).SetFloat64(0)
+		factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-		bestPrice0, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token0.Address).Hex(), true, 2, nil)
+		bestPrice0, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token0.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 		if err == nil && bestPrice0 != nil {
 			price0.SetInt(bestPrice0.Value)
 		}
@@ -189,15 +192,16 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 		factor0 := new(big.Float).SetFloat64(math.Pow10(int(transferItem.Pool.Token0.Decimals)))
 		factor1 := new(big.Float).SetFloat64(math.Pow10(int(transferItem.Pool.Token1.Decimals)))
 
-		poolPrice0 := new(big.Float).Quo(price0, factor0)
+		poolPrice0 := new(big.Float).Quo(price0, factorDai)
 		transferItem.Price0, _ = poolPrice0.Float64()
 
-		bestPrice1, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token1.Address).Hex(), true, 2, nil)
+		bestPrice1, _, err := global.GetPrices(ctx, nil, l.svcCtx.Config.Chains[0].ChainId, common.HexToAddress(transferItem.Pool.Token1.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
 		if err == nil && bestPrice1 != nil {
 			price1.SetInt(bestPrice1.Value)
 		}
 
-		poolPrice1 := new(big.Float).Quo(price1, factor1)
+		// 转换 price 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
+		poolPrice1 := new(big.Float).Quo(price1, factorDai)
 		transferItem.Price1, _ = poolPrice1.Float64()
 
 		// 获取 amount0, amount1 和 unclaimedFee0, unclaimedFee1
@@ -248,7 +252,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacheKey
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
+		err = cacher.Set(cacheKey, responseBytes, 0)
 		if err != nil {
 			l.Error("Failed to cache response", err)
 		}

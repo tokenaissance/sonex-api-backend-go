@@ -9,11 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -50,28 +52,29 @@ func (p *TokensResponseWrapper) GetCode() interface{} {
 func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *TokensResponseWrapper, err error) {
 	const cacheKey = "sonex_dex:uniswap:tokens"
 
-	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp TokensResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
-			go l.refreshCache(req, cacheKey, &cachedResp)
+			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
 			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey, nil)
+	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey string, cachedResp *TokensResponseWrapper) (*TokensResponseWrapper, error) {
+func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacher cache.ICache, cacheKey string, cachedResp *TokensResponseWrapper) (*TokensResponseWrapper, error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	var lockAcquired bool
 
 	if cachedResp != nil {
-		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
 		if err != nil {
 			return cachedResp, nil
 		}
@@ -85,12 +88,14 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 
 	defer func() {
 		if lockAcquired {
-			l.svcCtx.Cache.Del(lockKey)
+			cacher.Del(lockKey)
 		}
 	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenModel(conn)
+
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 	data, meta, err := model.GetTokens(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 
@@ -122,16 +127,39 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 					address = wethAddress
 				}
 
+				currentPrice, _ := tokenPriceModel.GetCurrentPrice(address)
+				lastHourPrice, _ := tokenPriceModel.GetLastHourPrice(address)
+				lastDayPrice, _ := tokenPriceModel.GetYesterdayPrice(address)
+				lastHourComparison := comparePrices(currentPrice, lastHourPrice)
+				lastDayComparison := comparePrices(currentPrice, lastDayPrice)
+				kline, err := tokenPriceModel.Kline(address, "1d")
+				if err == nil && len(kline) > 0 {
+					token.Kline = make([]*types.Token_Kline, 0)
+					for _, record := range kline {
+						t, _ := gtime.StrToTime(record.CreatedAt)
+						token.Kline = append(token.Kline, &types.Token_Kline{
+							Price:     record.Price,
+							TimeStamp: t.Timestamp(),
+						})
+					}
+				}
+
+				token.HourPriceComparison.Comparison = lastHourComparison.Comparison
+				token.HourPriceComparison.Percentage = lastHourComparison.Percentage
+				token.DayPriceComparison.Comparison = lastDayComparison.Comparison
+				token.DayPriceComparison.Percentage = lastDayComparison.Percentage
+
 				factor := new(big.Float).SetFloat64(math.Pow10(int(token.Decimals)))
 				price := new(big.Float).SetFloat64(0)
+				factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-				bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, nil)
+				bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, &l.svcCtx.Config.Chains[0].USD)
 
 				if err == nil && bestPrice != nil {
 					price.SetInt(bestPrice.Value)
 				}
 
-				tokenPrice := new(big.Float).Quo(price, factor)
+				tokenPrice := new(big.Float).Quo(price, factorDai)
 				mu.Lock()
 				token.Price = tokenPrice.Text('f', -1)
 				mu.Unlock()
@@ -164,7 +192,7 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacheKey st
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
+		cacher.Set(cacheKey, responseBytes, 0)
 	}
 
 	return response, nil

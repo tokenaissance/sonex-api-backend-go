@@ -95,8 +95,8 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 
 	baseQuery := fmt.Sprintf(`
 		FROM %s AS pool
-		LEFT JOIN sonex_token AS token0 ON pool.event_token0 = token0.address
-		LEFT JOIN sonex_token AS token1 ON pool.event_token1 = token1.address
+		INNER JOIN sonex_token AS token0 ON pool.event_token0 = token0.address AND token0."isHidden" = false
+		INNER JOIN sonex_token AS token1 ON pool.event_token1 = token1.address AND token1."isHidden" = false
 		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
 	args := []interface{}{opts.ChainId, positionManager}
 
