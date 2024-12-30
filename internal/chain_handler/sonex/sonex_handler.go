@@ -26,14 +26,14 @@ type SonexHandler struct {
 	chain      config.ChainConfig
 	config     config.SonexConfig
 
-	onFactoryPoolCreated               []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventToken0 string, eventToken1 string, eventFee string, eventTickSpacing string, eventPool string)
-	onPoolMint                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount0 string, eventAmount1 string, eventPool string)
-	onPoolSwap                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventRecipient string, eventAmount0 string, eventAmount1 string, eventSqrtPriceX96 string, eventTick string, eventPool string)
-	onPoolBurn                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount string, eventAmount0 string, eventAmount1 string, eventPool string)
-	onPositionManagerTransfer          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventFrom string, eventTo string, tokenId int64)
-	onPositionManagerIncreaseLiquidity []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)
-	onPositionManagerDecreaseLiquidity []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)
-	onPositionManagerCollect           []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventRecipient string, eventAmount0 string, eventAmount1 string)
+	onFactoryPoolCreated               []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3FactoryPoolCreated)
+	onPoolMint                         []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolMint)
+	onPoolSwap                         []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap)
+	onPoolBurn                         []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolBurn)
+	onPositionManagerTransfer          []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerTransfer)
+	onPositionManagerIncreaseLiquidity []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity)
+	onPositionManagerDecreaseLiquidity []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity)
+	onPositionManagerCollect           []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerCollect)
 }
 
 func NewSonexHandler(dataSource string, chain config.ChainConfig, config config.SonexConfig) (*SonexHandler, error) {
@@ -41,46 +41,46 @@ func NewSonexHandler(dataSource string, chain config.ChainConfig, config config.
 		dataSource:                         dataSource,
 		chain:                              chain,
 		config:                             config,
-		onFactoryPoolCreated:               []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventToken0 string, eventToken1 string, eventFee string, eventTickSpacing string, eventPool string){},
-		onPoolMint:                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount0 string, eventAmount1 string, eventPool string){},
-		onPoolSwap:                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventRecipient string, eventAmount0 string, eventAmount1 string, eventSqrtPriceX96 string, eventTick string, eventPool string){},
-		onPoolBurn:                         []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount string, eventAmount0 string, eventAmount1 string, eventPool string){},
-		onPositionManagerTransfer:          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventFrom string, eventTo string, tokenId int64){},
-		onPositionManagerIncreaseLiquidity: []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string){},
-		onPositionManagerDecreaseLiquidity: []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string){},
-		onPositionManagerCollect:           []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventRecipient string, eventAmount0 string, eventAmount1 string){},
+		onFactoryPoolCreated:               []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3FactoryPoolCreated){},
+		onPoolMint:                         []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolMint){},
+		onPoolSwap:                         []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap){},
+		onPoolBurn:                         []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolBurn){},
+		onPositionManagerTransfer:          []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerTransfer){},
+		onPositionManagerIncreaseLiquidity: []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity){},
+		onPositionManagerDecreaseLiquidity: []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity){},
+		onPositionManagerCollect:           []func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerCollect){},
 	}, nil
 }
 
-func (handler *SonexHandler) OnFactoryPoolCreated(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventToken0 string, eventToken1 string, eventFee string, eventTickSpacing string, eventPool string)) {
+func (handler *SonexHandler) OnFactoryPoolCreated(callback func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3FactoryPoolCreated)) {
 	handler.onFactoryPoolCreated = append(handler.onFactoryPoolCreated, callback)
 }
 
-func (handler *SonexHandler) OnPoolMint(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount0 string, eventAmount1 string, eventPool string)) {
+func (handler *SonexHandler) OnPoolMint(callback func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolMint)) {
 	handler.onPoolMint = append(handler.onPoolMint, callback)
 }
 
-func (handler *SonexHandler) OnPoolSwap(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventSender string, eventRecipient string, eventAmount0 string, eventAmount1 string, eventSqrtPriceX96 string, eventTick string, eventPool string)) {
+func (handler *SonexHandler) OnPoolSwap(callback func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap)) {
 	handler.onPoolSwap = append(handler.onPoolSwap, callback)
 }
 
-func (handler *SonexHandler) OnPoolBurn(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventOwner string, eventTickLower string, eventTickUpper string, eventAmount string, eventAmount0 string, eventAmount1 string, eventPool string)) {
+func (handler *SonexHandler) OnPoolBurn(callback func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolBurn)) {
 	handler.onPoolBurn = append(handler.onPoolBurn, callback)
 }
 
-func (handler *SonexHandler) OnPositionManagerTransfer(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventFrom string, eventTo string, tokenId int64)) {
+func (handler *SonexHandler) OnPositionManagerTransfer(callback func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerTransfer)) {
 	handler.onPositionManagerTransfer = append(handler.onPositionManagerTransfer, callback)
 }
 
-func (handler *SonexHandler) OnPositionManagerIncreaseLiquidity(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)) {
+func (handler *SonexHandler) OnPositionManagerIncreaseLiquidity(callback func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity)) {
 	handler.onPositionManagerIncreaseLiquidity = append(handler.onPositionManagerIncreaseLiquidity, callback)
 }
 
-func (handler *SonexHandler) OnPositionManagerDecreaseLiquidity(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)) {
+func (handler *SonexHandler) OnPositionManagerDecreaseLiquidity(callback func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity)) {
 	handler.onPositionManagerDecreaseLiquidity = append(handler.onPositionManagerDecreaseLiquidity, callback)
 }
 
-func (handler *SonexHandler) OnPositionManagerCollect(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventLiquidity string, eventAmount0 string, eventAmount1 string)) {
+func (handler *SonexHandler) OnPositionManagerCollect(callback func(chainId int64, tx *node_caller.Transaction, event *uniswap_v3.NonfungiblePositionManagerCollect)) {
 	handler.onPositionManagerCollect = append(handler.onPositionManagerCollect, callback)
 }
 
@@ -108,24 +108,24 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		numberSet := map[int64]struct{}{}
 
 		// PoolCreated Event
-		logs, err := factory.FilterPoolCreated(opt, nil, nil, nil)
+		poolCreatedLogs, err := factory.FilterPoolCreated(opt, nil, nil, nil)
 		if err != nil {
 			handleErr = err
 			return
 		}
-		events := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
-		for logs.Next() {
-			if err = logs.Error(); err != nil {
+		poolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
+		for poolCreatedLogs.Next() {
+			if err = poolCreatedLogs.Error(); err != nil {
 				handleErr = err
 				return
 			}
-			numberSet[int64(logs.Event.Raw.BlockNumber)] = struct{}{}
-			events = append(events, logs.Event)
+			numberSet[int64(poolCreatedLogs.Event.Raw.BlockNumber)] = struct{}{}
+			poolCreatedEvents = append(poolCreatedEvents, poolCreatedLogs.Event)
 		}
 
 		var numbers []int64
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := nodeCaller.GetTranscations(opt.Context, numbers)
+		transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
 		if err != nil {
 			handleErr = err
 			return
@@ -133,17 +133,17 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 		conn := repository.NewConn(handler.dataSource)
 		err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-			for _, event := range events {
+			for _, event := range poolCreatedEvents {
 				eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
 
 				blockNumber := int64(event.Raw.BlockNumber)
 				tx := transactions[event.Raw.TxHash.Hex()]
 				txIndex := int64(event.Raw.Index)
-				txHash := tx.Tx.Hash().Hex()
-				txAt := tx.Time
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
 				from := tx.From.Hex()
-				to := tx.Tx.To().Hex()
-				value := tx.Tx.Value().String()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
 				token0 := event.Token0.Hex()
 				token1 := event.Token1.Hex()
 				fee := event.Fee.String()
@@ -168,11 +168,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				if err != nil {
 					return err
 				}
-
-				// Callback
-				for _, callback := range handler.onFactoryPoolCreated {
-					go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
-				}
 			}
 
 			return nil
@@ -180,6 +175,14 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		if err != nil {
 			handleErr = err
 			return
+		}
+
+		// Callback
+		for _, event := range poolCreatedEvents {
+			for _, callback := range handler.onFactoryPoolCreated {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
 		}
 
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
@@ -293,7 +296,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 						var numbers []int64
 						linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-						transactions, err := nodeCaller.GetTranscations(opt.Context, numbers)
+						transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
 						if err != nil {
 							sendResult(err)
 							return
@@ -311,11 +314,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									blockNumber := int64(event.Raw.BlockNumber)
 									tx := transactions[event.Raw.TxHash.Hex()]
 									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx.Hash().Hex()
-									txAt := tx.Time
+									txHash := tx.Tx().Hash().Hex()
+									txAt := tx.TxAt
 									from := tx.From.Hex()
-									to := tx.Tx.To().Hex()
-									value := tx.Tx.Value().String()
+									to := tx.Tx().To().Hex()
+									value := tx.Tx().Value().String()
 									sender := event.Sender.Hex()
 									owner := event.Owner.Hex()
 									tickLower := event.TickLower.String()
@@ -341,11 +344,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
-
-									// Callback
-									for _, callback := range handler.onPoolMint {
-										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
-									}
 								}
 							}
 
@@ -355,11 +353,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									blockNumber := int64(event.Raw.BlockNumber)
 									tx := transactions[event.Raw.TxHash.Hex()]
 									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx.Hash().Hex()
-									txAt := tx.Time
+									txHash := tx.Tx().Hash().Hex()
+									txAt := tx.TxAt
 									from := tx.From.Hex()
-									to := tx.Tx.To().Hex()
-									value := tx.Tx.Value().String()
+									to := tx.Tx().To().Hex()
+									value := tx.Tx().Value().String()
 									sender := event.Sender.Hex()
 									recipient := event.Recipient.Hex()
 									amount0 := event.Amount0.String()
@@ -385,11 +383,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
-
-									// Callback
-									for _, callback := range handler.onPoolSwap {
-										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
-									}
 								}
 							}
 
@@ -399,11 +392,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									blockNumber := int64(event.Raw.BlockNumber)
 									tx := transactions[event.Raw.TxHash.Hex()]
 									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx.Hash().Hex()
-									txAt := tx.Time
+									txHash := tx.Tx().Hash().Hex()
+									txAt := tx.TxAt
 									from := tx.From.Hex()
-									to := tx.Tx.To().Hex()
-									value := tx.Tx.Value().String()
+									to := tx.Tx().To().Hex()
+									value := tx.Tx().Value().String()
 									owner := event.Owner.Hex()
 									tickLower := event.TickLower.String()
 									tickUpper := event.TickUpper.String()
@@ -429,11 +422,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
-
-									// Callback
-									for _, callback := range handler.onPoolBurn {
-										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
-									}
 								}
 							}
 
@@ -444,6 +432,25 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							return
 						}
 
+						// Callback
+						for _, event := range mintEvents {
+							for _, callback := range handler.onPoolMint {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
+						}
+						for _, event := range swapEvents {
+							for _, callback := range handler.onPoolSwap {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
+						}
+						for _, event := range burnEvents {
+							for _, callback := range handler.onPoolBurn {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
+						}
 					}(poolAddress, client, results)
 				}
 
@@ -547,7 +554,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 		var numbers []int64
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := nodeCaller.GetTranscations(opt.Context, numbers)
+		transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
 		if err != nil {
 			handleErr = err
 			return
@@ -566,11 +573,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					blockNumber := int64(event.Raw.BlockNumber)
 					tx := transactions[event.Raw.TxHash.Hex()]
 					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx.Hash().Hex()
-					txAt := tx.Time
+					txHash := tx.Tx().Hash().Hex()
+					txAt := tx.TxAt
 					from := tx.From.Hex()
-					to := tx.Tx.To().Hex()
-					value := tx.Tx.Value().String()
+					to := tx.Tx().To().Hex()
+					value := tx.Tx().Value().String()
 					fromE := event.From.Hex()
 					toE := event.To.Hex()
 					tokenId := event.TokenId.Int64()
@@ -593,11 +600,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
-
-					// Callback
-					for _, callback := range handler.onPositionManagerTransfer {
-						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
-					}
 				}
 			}
 
@@ -607,11 +609,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					blockNumber := int64(event.Raw.BlockNumber)
 					tx := transactions[event.Raw.TxHash.Hex()]
 					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx.Hash().Hex()
-					txAt := tx.Time
+					txHash := tx.Tx().Hash().Hex()
+					txAt := tx.TxAt
 					from := tx.From.Hex()
-					to := tx.Tx.To().Hex()
-					value := tx.Tx.Value().String()
+					to := tx.Tx().To().Hex()
+					value := tx.Tx().Value().String()
 					tokenId := event.TokenId.Int64()
 					liquidity := event.Liquidity.String()
 					amount0 := event.Amount0.String()
@@ -635,11 +637,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
-
-					// Callback
-					for _, callback := range handler.onPositionManagerIncreaseLiquidity {
-						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
-					}
 				}
 			}
 
@@ -649,11 +646,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					blockNumber := int64(event.Raw.BlockNumber)
 					tx := transactions[event.Raw.TxHash.Hex()]
 					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx.Hash().Hex()
-					txAt := tx.Time
+					txHash := tx.Tx().Hash().Hex()
+					txAt := tx.TxAt
 					from := tx.From.Hex()
-					to := tx.Tx.To().Hex()
-					value := tx.Tx.Value().String()
+					to := tx.Tx().To().Hex()
+					value := tx.Tx().Value().String()
 					tokenId := event.TokenId.Int64()
 					liquidity := event.Liquidity.String()
 					amount0 := event.Amount0.String()
@@ -677,11 +674,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
-
-					// Callback
-					for _, callback := range handler.onPositionManagerDecreaseLiquidity {
-						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
-					}
 				}
 			}
 
@@ -691,11 +683,11 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					blockNumber := int64(event.Raw.BlockNumber)
 					tx := transactions[event.Raw.TxHash.Hex()]
 					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx.Hash().Hex()
-					txAt := tx.Time
+					txHash := tx.Tx().Hash().Hex()
+					txAt := tx.TxAt
 					from := tx.From.Hex()
-					to := tx.Tx.To().Hex()
-					value := tx.Tx.Value().String()
+					to := tx.Tx().To().Hex()
+					value := tx.Tx().Value().String()
 					tokenId := event.TokenId.Int64()
 					recipient := event.Recipient.Hex()
 					amount0 := event.Amount0.String()
@@ -719,11 +711,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
-
-					// Callback
-					for _, callback := range handler.onPositionManagerCollect {
-						go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
-					}
 				}
 			}
 
@@ -732,6 +719,32 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		if err != nil {
 			handleErr = err
 			return
+		}
+
+		// Callback
+		for _, event := range transferEvents {
+			for _, callback := range handler.onPositionManagerTransfer {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range increaseLiquidityEvents {
+			for _, callback := range handler.onPositionManagerIncreaseLiquidity {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range decreaseLiquidityEvents {
+			for _, callback := range handler.onPositionManagerDecreaseLiquidity {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range collectEvents {
+			for _, callback := range handler.onPositionManagerCollect {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
 		}
 	}()
 

@@ -26,11 +26,11 @@ type XpoolHandler struct {
 	chain      *config.ChainConfig
 	config     *config.XpoolConfig
 
-	onFactoryPoolCreated   []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventPool string, eventStakingToken string, eventRewardToken string, eventRewardPreBlcok string)
-	onFactoryPoolDestroied []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventPool string, eventEthBalance string, eventStakingBalance string, eventRewardBalance string, eventRecipient string)
-	onPoolDeposited        []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64)
-	onPoolClaimed          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64)
-	onPoolWithdrawed       []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64)
+	onFactoryPoolCreated   []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated)
+	onFactoryPoolDestroied []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied)
+	onPoolDeposited        []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolDeposited)
+	onPoolClaimed          []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolClaimed)
+	onPoolWithdrawed       []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolWithdrawed)
 }
 
 func NewXpoolHandler(dataSource string, chain config.ChainConfig, config config.XpoolConfig) (*XpoolHandler, error) {
@@ -38,31 +38,31 @@ func NewXpoolHandler(dataSource string, chain config.ChainConfig, config config.
 		dataSource:             dataSource,
 		chain:                  &chain,
 		config:                 &config,
-		onFactoryPoolCreated:   []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventPool string, eventStakingToken string, eventRewardToken string, eventRewardPreBlcok string){},
-		onFactoryPoolDestroied: []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventPool string, eventEthBalance string, eventStakingBalance string, eventRewardBalance string, eventRecipient string){},
-		onPoolDeposited:        []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64){},
-		onPoolClaimed:          []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64){},
-		onPoolWithdrawed:       []func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64){},
+		onFactoryPoolCreated:   []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated){},
+		onFactoryPoolDestroied: []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied){},
+		onPoolDeposited:        []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolDeposited){},
+		onPoolClaimed:          []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolClaimed){},
+		onPoolWithdrawed:       []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolWithdrawed){},
 	}, nil
 }
 
-func (handler *XpoolHandler) OnFactoryPoolCreated(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventPool string, eventStakingToken string, eventRewardToken string, eventRewardPreBlcok string)) {
+func (handler *XpoolHandler) OnFactoryPoolCreated(callback func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated)) {
 	handler.onFactoryPoolCreated = append(handler.onFactoryPoolCreated, callback)
 }
 
-func (handler *XpoolHandler) OnFactoryPoolDestroied(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventPool string, eventEthBalance string, eventStakingBalance string, eventRewardBalance string, eventRecipient string)) {
+func (handler *XpoolHandler) OnFactoryPoolDestroied(callback func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied)) {
 	handler.onFactoryPoolDestroied = append(handler.onFactoryPoolDestroied, callback)
 }
 
-func (handler *XpoolHandler) OnPoolDeposited(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64)) {
+func (handler *XpoolHandler) OnPoolDeposited(callback func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolDeposited)) {
 	handler.onPoolDeposited = append(handler.onPoolDeposited, callback)
 }
 
-func (handler *XpoolHandler) OnPoolClaimed(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64)) {
+func (handler *XpoolHandler) OnPoolClaimed(callback func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolClaimed)) {
 	handler.onPoolClaimed = append(handler.onPoolClaimed, callback)
 }
 
-func (handler *XpoolHandler) OnPoolWithdrawed(callback func(chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventUser string, eventAmount string, eventHeight int64)) {
+func (handler *XpoolHandler) OnPoolWithdrawed(callback func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolWithdrawed)) {
 	handler.onPoolWithdrawed = append(handler.onPoolWithdrawed, callback)
 }
 
@@ -106,7 +106,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 	var numbers []int64
 	linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-	transactions, err := nodeCaller.GetTranscations(opt.Context, numbers)
+	transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
 	if err != nil {
 		return err, false
 	}
@@ -122,11 +122,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				blockNumber := int64(event.Raw.BlockNumber)
 				tx := transactions[event.Raw.TxHash.Hex()]
 				txIndex := int64(event.Raw.Index)
-				txHash := tx.Tx.Hash().Hex()
-				txAt := tx.Time
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
 				from := tx.From.Hex()
-				to := tx.Tx.To().Hex()
-				value := tx.Tx.Value().String()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
 				pool := event.Pool.Hex()
 				stakingToken := event.StakingToken.Hex()
 				rewardToken := event.RewardToken.Hex()
@@ -150,11 +150,6 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				if err != nil {
 					return err
 				}
-
-				// Callback
-				for _, callback := range handler.onFactoryPoolCreated {
-					go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, stakingToken, rewardToken, rewardPreBlock)
-				}
 			}
 		}
 
@@ -164,11 +159,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				blockNumber := int64(event.Raw.BlockNumber)
 				tx := transactions[event.Raw.TxHash.Hex()]
 				txIndex := int64(event.Raw.Index)
-				txHash := tx.Tx.Hash().Hex()
-				txAt := tx.Time
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
 				from := tx.From.Hex()
-				to := tx.Tx.To().Hex()
-				value := tx.Tx.Value().String()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
 				pool := event.Pool.Hex()
 				ethBalance := event.EthBalance.String()
 				stakingBalance := event.StakingBalance.String()
@@ -193,11 +188,20 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				if err != nil {
 					return err
 				}
+			}
+		}
 
-				// Callback
-				for _, callback := range handler.onFactoryPoolDestroied {
-					go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, ethBalance, stakingBalance, rewardBalance, recipient)
-				}
+		// Callback
+		for _, event := range poolCreatedEvents {
+			for _, callback := range handler.onFactoryPoolCreated {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range poolDestroiedEvents {
+			for _, callback := range handler.onFactoryPoolDestroied {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
 			}
 		}
 
@@ -306,7 +310,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 						var numbers []int64
 						linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-						transactions, err := nodeCaller.GetTranscations(opt.Context, numbers)
+						transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
 						if err != nil {
 							sendResult(err)
 							return
@@ -325,11 +329,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									blockNumber := int64(event.Raw.BlockNumber)
 									tx := transactions[event.Raw.TxHash.Hex()]
 									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx.Hash().Hex()
-									txAt := tx.Time
+									txHash := tx.Tx().Hash().Hex()
+									txAt := tx.TxAt
 									from := tx.From.Hex()
-									to := tx.Tx.To().Hex()
-									value := tx.Tx.Value().String()
+									to := tx.Tx().To().Hex()
+									value := tx.Tx().Value().String()
 									user := event.User.Hex()
 									amount := event.Amount.String()
 									height := event.Height.Int64()
@@ -352,11 +356,6 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
-
-									// Callback
-									for _, callback := range handler.onPoolDeposited {
-										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
-									}
 								}
 							}
 
@@ -366,11 +365,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									blockNumber := int64(event.Raw.BlockNumber)
 									tx := transactions[event.Raw.TxHash.Hex()]
 									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx.Hash().Hex()
-									txAt := tx.Time
+									txHash := tx.Tx().Hash().Hex()
+									txAt := tx.TxAt
 									from := tx.From.Hex()
-									to := tx.Tx.To().Hex()
-									value := tx.Tx.Value().String()
+									to := tx.Tx().To().Hex()
+									value := tx.Tx().Value().String()
 									user := event.User.Hex()
 									amount := event.Amount.String()
 									height := event.Height.Int64()
@@ -393,11 +392,6 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
-
-									// Callback
-									for _, callback := range handler.onPoolClaimed {
-										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
-									}
 								}
 							}
 
@@ -407,11 +401,11 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									blockNumber := int64(event.Raw.BlockNumber)
 									tx := transactions[event.Raw.TxHash.Hex()]
 									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx.Hash().Hex()
-									txAt := tx.Time
+									txHash := tx.Tx().Hash().Hex()
+									txAt := tx.TxAt
 									from := tx.From.Hex()
-									to := tx.Tx.To().Hex()
-									value := tx.Tx.Value().String()
+									to := tx.Tx().To().Hex()
+									value := tx.Tx().Value().String()
 									user := event.User.Hex()
 									amount := event.Amount.String()
 									height := event.Height.Int64()
@@ -434,11 +428,6 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
-
-									// Callback
-									for _, callback := range handler.onPoolWithdrawed {
-										go callback(handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
-									}
 								}
 							}
 
@@ -449,6 +438,25 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							return
 						}
 
+						// Callback
+						for _, event := range depositedEvents {
+							for _, callback := range handler.onPoolDeposited {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
+						}
+						for _, event := range claimedEvents {
+							for _, callback := range handler.onPoolClaimed {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
+						}
+						for _, event := range withdrawedEvents {
+							for _, callback := range handler.onPoolWithdrawed {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
+						}
 					}(poolAddress, client, results)
 				}
 
