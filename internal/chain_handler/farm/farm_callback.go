@@ -7,9 +7,9 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
-	"sonex_api_backend_go/internal/lib/contract/farm/patch"
 	v3PoolContract "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/log"
+	"sonex_api_backend_go/internal/module/sonex"
 
 	"sonex_api_backend_go/internal/repository"
 	"strconv"
@@ -19,6 +19,7 @@ import (
 
 	"context"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/avast/retry-go/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -620,15 +621,29 @@ func UpdateFarmPoolData(conf config.Config, conn sqlx.SqlConn, client *ethclient
 			totalToken1Amount, _ = new(big.Int).SetString(result.TotalToken1Amount, 10)
 		}
 	} else {
-		totalToken0Amount, totalToken1Amount, err = patch.GetTotalTokensInPool(
-			context.Background(),
-			conf,
-			chainId,
-			common.HexToAddress(pool.PoolAddress),
-			tokenIds,
-		)
+		staticCaller, err := sonex.NewStaticCaller(conf)
 		if err != nil {
-			return fmt.Errorf("failed to compute total tokens: %v", err)
+			return err
+		}
+		var tIds []*big.Int
+		linq.From(tokenIds).SelectT(func(item int64) *big.Int { return big.NewInt(item) }).ToSlice(&tIds)
+		positions, err := staticCaller.BatchGetPositions(context.Background(), chainId, common.HexToAddress(conf.GetSonexConfig(chainId).PositionManager), tIds)
+		if err != nil {
+			return err
+		}
+		// totalToken0Amount, totalToken1Amount, err = patch.GetTotalTokensInPool(
+		// 	context.Background(),
+		// 	conf,
+		// 	chainId,
+		// 	common.HexToAddress(pool.PoolAddress),
+		// 	tokenIds,
+		// )
+		totalToken0Amount := big.NewInt(0)
+		totalToken1Amount := big.NewInt(0)
+		for _, position := range positions {
+			amount0, amount1 := position.Amounts()
+			totalToken0Amount = new(big.Int).Add(totalToken0Amount, amount0)
+			totalToken1Amount = new(big.Int).Add(totalToken1Amount, amount1)
 		}
 
 		cacheData, _ := json.Marshal(struct {
