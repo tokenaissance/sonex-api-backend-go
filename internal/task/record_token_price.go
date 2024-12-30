@@ -43,13 +43,13 @@ func HandleRecordTokenPrice(config *config.Config) {
 			// todo: 2024-12-29 chainID 固定，目前 sonex_token_price_record 中并没有包含 chainId 字段
 			chainId := int64(1946)
 			usdAddress := config.GetChainConfig(chainId).USD
-			bestPrice, _, err := global.GetPrices(ctx, nil, chainId, item.Address, true, 2, &usdAddress)
+			bestPrice, _, err := global.GetPrices(ctx, nil, chainId, item.Address, false, 2, &usdAddress)
 			if err != nil {
-				logx.Errorf("[HandleRecordTokenPrice]: get token price error: %s", err)
+				logx.Errorf("[HandleRecordTokenPrice]: get token Address: %s Symbol: %s price error: %s", item.Address, item.Symbol, err)
 				return
 			}
 			if bestPrice == nil {
-				logx.Errorf("[HandleRecordTokenPrice]: bestPrice == nil, get token price error")
+				logx.Errorf("[HandleRecordTokenPrice]: bestPrice == nil, get token token Address: %s Symbol: %s price error", item.Address, item.Symbol)
 				return
 			}
 			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().Format("2006-01-02 15:04:05"))
