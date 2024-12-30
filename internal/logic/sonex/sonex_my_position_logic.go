@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
@@ -49,26 +50,27 @@ func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (re
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:my-position:%s:%s", req.Address, req.FilterType)
 
 	// Check cache
-	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp MyPositionResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
-			go l.refreshCache(req, cacheKey, &cachedResp)
+			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey, nil)
+	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheKey string, cachedResp *MyPositionResponseWrapper) (resp *MyPositionResponseWrapper, err error) {
+func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacher cache.ICache, cacheKey string, cachedResp *MyPositionResponseWrapper) (resp *MyPositionResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	var lockAcquired bool
 
 	if cachedResp != nil {
-		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
 		if err != nil {
 			return cachedResp, nil
 		}
@@ -82,7 +84,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 
 	defer func() {
 		if lockAcquired {
-			l.svcCtx.Cache.Del(lockKey)
+			cacher.Del(lockKey)
 		}
 	}()
 
@@ -230,7 +232,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacheK
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 0) // TODO: cache for xxx seconds??
+		cacher.Set(cacheKey, responseBytes, 0) // TODO: cache for xxx seconds??
 	}
 
 	return response, nil

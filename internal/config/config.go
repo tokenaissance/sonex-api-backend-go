@@ -31,3 +31,12 @@ func (config *Config) GetSonexConfig(chainId int64) *SonexConfig {
 	}
 	return nil
 }
+
+func (config *Config) GetXpoolConfig(chainId int64) *XpoolConfig {
+	for _, c := range config.Xpools {
+		if c.ChainId == chainId {
+			return &c
+		}
+	}
+	return nil
+}

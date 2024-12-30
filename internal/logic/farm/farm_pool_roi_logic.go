@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -22,6 +23,8 @@ type FarmPoolRoiLogic struct {
 	svcCtx          *svc.ServiceContext
 	chainId         int64
 	ethClient       *ethclient.Client
+	cacher          cache.ICache
+	conn            sqlx.SqlConn
 	farmAddress     common.Address // UniswapV3Staker
 	positionAddress common.Address // NonfungiblePositionManager
 }
@@ -35,7 +38,6 @@ func NewFarmPoolRoiLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmP
 		ctx:             ctx,
 		svcCtx:          svcCtx,
 		chainId:         svcCtx.Config.Farm[0].ChainId,
-		ethClient:       svcCtx.EthClient,
 		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
@@ -48,8 +50,17 @@ func (l *FarmPoolRoiLogic) FarmPoolRoi(req *types.FarmPoolRoiRequest) (resp *typ
 
 	resp = new(types.FarmPoolRoiResponse)
 
+	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	if err != nil {
+		return nil, err
+	}
+	l.ethClient = client
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	l.cacher = redisCache
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+
 	// 获取质押池信息
-	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
+	farmPoolModel := repository.NewFarmPoolsModel(l.conn)
 	poolData, err := farmPoolModel.FindByIncentiveId(l.ctx, req.ChainId, req.IncentiveId)
 	if err != nil {
 		if err == sqlx.ErrNotFound {

@@ -3,8 +3,10 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -45,7 +47,8 @@ func (p *TokenListResponseWrapper) GetCode() interface{} {
 func (l *SonexTokenListLogic) SonexTokenList(req *types.TokenListRequest) (resp *TokenListResponseWrapper, err error) {
 	const cacheKey = "sonex_dex:uniswap:token_list"
 
-	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp TokenListResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
@@ -79,7 +82,7 @@ func (l *SonexTokenListLogic) SonexTokenList(req *types.TokenListRequest) (resp 
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		l.svcCtx.Cache.Set(cacheKey, responseBytes, 20*time.Second)
+		redisCache.Set(cacheKey, responseBytes, 20*time.Second)
 	}
 
 	return response, nil
