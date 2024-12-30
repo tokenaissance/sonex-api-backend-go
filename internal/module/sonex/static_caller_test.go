@@ -58,23 +58,3 @@ func TestBatchGetPositions(t *testing.T) {
 		)
 	}
 }
-
-func TestX(t *testing.T) {
-	var balance0 float64
-	{
-		amount, _ := new(big.Float).SetString("979368929721524473764")
-		amountD := new(big.Float).Quo(amount, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)))
-		price, _ := new(big.Float).SetString("179452960859740338")
-		priceD := new(big.Float).Quo(price, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)))
-		balance0, _ = new(big.Float).Mul(amountD, priceD).Float64()
-	}
-	var balance1 float64
-	{
-		amount, _ := new(big.Float).SetString("96271776")
-		amountD := new(big.Float).Quo(amount, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(6), nil)))
-		price, _ := new(big.Float).SetString("15986252634283681194")
-		priceD := new(big.Float).Quo(price, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)))
-		balance1, _ = new(big.Float).Mul(amountD, priceD).Float64()
-	}
-	fmt.Println(balance0 + balance1)
-}
