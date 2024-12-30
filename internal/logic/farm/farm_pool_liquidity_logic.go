@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/contract/farm/patch"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
@@ -25,6 +26,8 @@ type FarmPoolLiquidityLogic struct {
 	svcCtx          *svc.ServiceContext
 	chainId         int64
 	ethClient       *ethclient.Client
+	cacher          cache.ICache
+	conn            sqlx.SqlConn
 	farmAddress     common.Address // UniswapV3Staker
 	positionAddress common.Address // NonfungiblePositionManager
 }
@@ -38,7 +41,6 @@ func NewFarmPoolLiquidityLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 		ctx:             ctx,
 		svcCtx:          svcCtx,
 		chainId:         svcCtx.Config.Farm[0].ChainId,
-		ethClient:       svcCtx.EthClient,
 		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
@@ -60,7 +62,16 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 		Token1Symbol:           "",
 	}
 
-	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
+	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	if err != nil {
+		return nil, err
+	}
+	l.ethClient = client
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	l.cacher = redisCache
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+
+	farmPoolModel := repository.NewFarmPoolsModel(l.conn)
 	pool, err := farmPoolModel.FindByIncentiveId(context.Background(), l.chainId, req.IncentiveId)
 	if err != nil {
 		if err == sqlx.ErrNotFound {
@@ -70,7 +81,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	}
 
 	// 获取质押池中的tokenIds
-	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.svcCtx.DB)
+	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.conn)
 	tokenIds, err := farmUserPoolModel.FindTokenIdsByIncentiveId(context.Background(), req.IncentiveId, l.chainId)
 	if err != nil {
 		if err == sqlx.ErrNotFound {
@@ -83,7 +94,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	totalToken0Amount := big.NewInt(0)
 	totalToken1Amount := big.NewInt(0)
 	cacheKey := fmt.Sprintf("farm:pool:liquidity:%s", req.IncentiveId)
-	if cached, err := l.svcCtx.Cache.Get(cacheKey); err == nil {
+	if cached, err := l.cacher.Get(cacheKey); err == nil {
 		var result struct {
 			TotalToken0Amount string
 			TotalToken1Amount string
@@ -95,7 +106,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	} else {
 		totalToken0Amount, totalToken1Amount, err = patch.GetTotalTokensInPool(
 			l.ctx,
-			l.svcCtx,
+			l.svcCtx.Config,
 			l.chainId,
 			common.HexToAddress(pool.PoolAddress),
 			tokenIds,
@@ -112,7 +123,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 			TotalToken1Amount: totalToken1Amount.String(),
 		})
 
-		_ = l.svcCtx.Cache.Set(cacheKey, string(cacheData), 5*time.Minute)
+		_ = l.cacher.Set(cacheKey, string(cacheData), 5*time.Minute)
 	}
 
 	// 计算质押的流动性价值

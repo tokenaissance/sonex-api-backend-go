@@ -7,11 +7,12 @@ import (
 	"strings"
 	"sync"
 
-	"sonex_api_backend_go/internal/svc"
+	"sonex_api_backend_go/internal/config"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	commonContract "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/contract/farm/patch/math"
@@ -41,20 +42,24 @@ type PositionResult struct {
 }
 
 // 获取质押池中所有token的总量
-func GetTotalTokensInPool(ctx context.Context, svcCtx *svc.ServiceContext, chainId int64, poolAddress common.Address, tokenIds []int64) (totalToken0 *big.Int, totalToken1 *big.Int, err error) {
+func GetTotalTokensInPool(ctx context.Context, conf config.Config, chainId int64, poolAddress common.Address, tokenIds []int64) (totalToken0 *big.Int, totalToken1 *big.Int, err error) {
 
 	totalToken0 = big.NewInt(0)
 	totalToken1 = big.NewInt(0)
 
-	positionManagerAddress := svcCtx.Config.Sonexes[0].PositionManager
-	chainConfig := svcCtx.Config.GetChainConfig(chainId)
+	positionManagerAddress := conf.GetSonexConfig(chainId).PositionManager
+	chainConfig := conf.GetChainConfig(chainId)
 	multicallAddress := chainConfig.Multicall
 	if positionManagerAddress == "" || multicallAddress == "" {
 		err = fmt.Errorf("invalid config")
 		return
 	}
 
-	pool, err := v3Contract.NewUniswapV3Pool(poolAddress, svcCtx.EthClient)
+	client, err := ethclient.Dial(chainConfig.GetNode())
+	if err != nil {
+		return
+	}
+	pool, err := v3Contract.NewUniswapV3Pool(poolAddress, client)
 	if err != nil {
 		err = fmt.Errorf("failed to create pool contract: %v", err)
 		return

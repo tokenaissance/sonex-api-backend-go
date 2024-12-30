@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/module/xpool/utils"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -27,18 +28,18 @@ type XpoolPoolListLogic struct {
 	svcCtx         *svc.ServiceContext
 	chainId        int64
 	ethClient      *ethclient.Client
+	cacher         cache.ICache
+	conn           sqlx.SqlConn
 	factoryAddress common.Address
 }
 
 func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolListLogic {
-
 	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Xpool"))
 	return &XpoolPoolListLogic{
 		Logger:         logger,
 		ctx:            ctx,
 		svcCtx:         svcCtx,
 		chainId:        svcCtx.Config.Xpools[0].ChainId,
-		ethClient:      svcCtx.EthClient,
 		factoryAddress: common.HexToAddress(svcCtx.Config.Xpools[0].Factory),
 	}
 }
@@ -58,6 +59,15 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	}
 
 	resp = make([]*types.XpoolPoolListResponse, 0)
+
+	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	if err != nil {
+		return nil, 0, err
+	}
+	l.ethClient = client
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	l.cacher = redisCache
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 
 	// 检查缓存中的池子列表
 	if err := l.checkAndUpdatePoolListCache(); err != nil {
@@ -80,7 +90,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	if req.StakedOnly == "true" && req.UserAddress != "" {
 		// 从缓存中获取用户的质押池列表
 		poolListKey := fmt.Sprintf("sonex_dex:xpool:user_pools:%s", req.UserAddress)
-		cachedPoolAddresses, err := l.svcCtx.Cache.SMembers(l.ctx, poolListKey).Result()
+		cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolListKey).Result()
 		if err == nil && len(cachedPoolAddresses) > 0 {
 			userPools = cachedPoolAddresses
 		} else {
@@ -89,7 +99,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	}
 
 	// 获取池子列表
-	model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
+	model := repository.NewXpoolPoolsModel(l.conn)
 	results, total, err := model.GetPoolList(l.ctx, req, userPools)
 	if err != nil {
 		if err == sqlx.ErrNotFound {
@@ -135,7 +145,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 func (l *XpoolPoolListLogic) checkAndUpdatePoolListCache() error {
 	const cacheKeyPrefix = "sonex_dex:xpool:"
 	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
-	cachedPoolAddresses, err := l.svcCtx.Cache.SMembers(l.ctx, poolAddressesKey).Result()
+	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolAddressesKey).Result()
 	if err != nil || len(cachedPoolAddresses) == 0 {
 		if err := l.updatePoolBasicInfo(); err != nil {
 			return fmt.Errorf("failed to update pool basic info: %v", err)
@@ -143,7 +153,7 @@ func (l *XpoolPoolListLogic) checkAndUpdatePoolListCache() error {
 	} else {
 		// 检查是否需要增量更新
 		lastUpdateKey := cacheKeyPrefix + "last_update_time_basic"
-		lastUpdateStr, err := l.svcCtx.Cache.Get(lastUpdateKey)
+		lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
 		if err == nil {
 			lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
 			if err == nil && time.Since(lastUpdate) >= 30*time.Minute {
@@ -163,7 +173,7 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 
 	// 检查是否需要更新
 	lastUpdateKey := cacheKeyPrefix + "last_update_time_basic"
-	lastUpdateStr, err := l.svcCtx.Cache.Get(lastUpdateKey)
+	lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
 	if err == nil {
 		lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
 		if err == nil && time.Since(lastUpdate) < updateInterval {
@@ -182,7 +192,7 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 	}
 
 	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
-	cachedPoolAddresses, err := l.svcCtx.Cache.SMembers(l.ctx, poolAddressesKey).Result()
+	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolAddressesKey).Result()
 	if err == nil && len(cachedPoolAddresses) > 0 {
 		newPoolAddresses := findNewAddresses(cachedPoolAddresses, poolAddresses)
 		if len(newPoolAddresses) == 0 {
@@ -209,7 +219,7 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 	wg.Wait()
 
 	if len(pools) > 0 {
-		model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
+		model := repository.NewXpoolPoolsModel(l.conn)
 		if err := model.BatchUpdatePools(l.ctx, pools); err != nil {
 			return fmt.Errorf("failed to update pools: %v", err)
 		}
@@ -220,8 +230,8 @@ func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
 		poolAddressesStr = append(poolAddressesStr, addr.Hex())
 	}
 
-	l.svcCtx.Cache.Set(lastUpdateKey, time.Now().Format(time.RFC3339), 0)
-	l.svcCtx.Cache.SAdd(l.ctx, poolAddressesKey, poolAddressesStr)
+	l.cacher.Set(lastUpdateKey, time.Now().Format(time.RFC3339), 0)
+	l.cacher.SAdd(l.ctx, poolAddressesKey, poolAddressesStr)
 
 	return nil
 }
@@ -233,7 +243,7 @@ func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 
 	// 检查是否需要更新
 	lastUpdateKey := cacheKeyPrefix + "last_update_time_realtime"
-	lastUpdateStr, err := l.svcCtx.Cache.Get(lastUpdateKey)
+	lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
 	if err == nil {
 		lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
 		if err == nil && time.Since(lastUpdate) < updateInterval {
@@ -243,7 +253,7 @@ func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 
 	// 从缓存中获取池子列表
 	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
-	cachedPoolAddresses, err := l.svcCtx.Cache.SMembers(l.ctx, poolAddressesKey).Result()
+	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolAddressesKey).Result()
 	if err != nil {
 		return fmt.Errorf("failed to get cached pool addresses: %v", err)
 	}
@@ -269,14 +279,14 @@ func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
 
 	// 批量更新数据库
 	if len(pools) > 0 {
-		model := repository.NewXpoolPoolsModel(l.svcCtx.DB)
+		model := repository.NewXpoolPoolsModel(l.conn)
 		if err := model.BatchUpdatePools(l.ctx, pools); err != nil {
 			return fmt.Errorf("failed to update pools: %v", err)
 		}
 	}
 
 	// 更新缓存时间
-	l.svcCtx.Cache.Set(lastUpdateKey, time.Now().Format(time.RFC3339), 0)
+	l.cacher.Set(lastUpdateKey, time.Now().Format(time.RFC3339), 0)
 
 	return nil
 }
@@ -400,11 +410,11 @@ func (l *XpoolPoolListLogic) updateUserPoolsData(userAddr string) error {
 
 	// 检查缓存中是否存在用户的质押池数据
 	poolListKey := fmt.Sprintf("%suser_pools:%s", cacheKeyPrefix, userAddr)
-	cachedPoolAddresses, err := l.svcCtx.Cache.SMembers(l.ctx, poolListKey).Result()
+	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolListKey).Result()
 	if err == nil && len(cachedPoolAddresses) > 0 {
 		// 检查更新时间
 		lastUpdateKey := fmt.Sprintf("%suser_pools_last_update:%s", cacheKeyPrefix, userAddr)
-		lastUpdateStr, err := l.svcCtx.Cache.Get(lastUpdateKey)
+		lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
 		if err == nil {
 			lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
 			if err == nil && time.Since(lastUpdate) < cacheExpiration {
@@ -427,11 +437,11 @@ func (l *XpoolPoolListLogic) updateUserPoolsData(userAddr string) error {
 	for i, addr := range pools {
 		poolAddrs[i] = addr.Hex()
 	}
-	l.svcCtx.Cache.SAdd(l.ctx, poolListKey, poolAddrs)
+	l.cacher.SAdd(l.ctx, poolListKey, poolAddrs)
 
 	// 更新用户质押池数据的更新时间
 	lastUpdateKey := fmt.Sprintf("%suser_pools_last_update:%s", cacheKeyPrefix, userAddr)
-	l.svcCtx.Cache.Set(lastUpdateKey, time.Now().Format(time.RFC3339), cacheExpiration)
+	l.cacher.Set(lastUpdateKey, time.Now().Format(time.RFC3339), cacheExpiration)
 
 	// 计算用户总资产
 	totalStaked := decimal.NewFromInt(0)
@@ -460,10 +470,10 @@ func (l *XpoolPoolListLogic) updateUserPoolsData(userAddr string) error {
 
 	// 缓存用户资产数据
 	assetsKey := fmt.Sprintf("%suser_assets:%s", cacheKeyPrefix, userAddr)
-	l.svcCtx.Cache.HSet(assetsKey, "balance", totalStaked.Add(totalEarned).String())
-	l.svcCtx.Cache.HSet(assetsKey, "staked", totalStaked.String())
-	l.svcCtx.Cache.HSet(assetsKey, "earned", totalEarned.String())
-	l.svcCtx.Cache.Expire(assetsKey, cacheExpiration)
+	l.cacher.HSet(assetsKey, "balance", totalStaked.Add(totalEarned).String())
+	l.cacher.HSet(assetsKey, "staked", totalStaked.String())
+	l.cacher.HSet(assetsKey, "earned", totalEarned.String())
+	l.cacher.Expire(assetsKey, cacheExpiration)
 
 	return nil
 }

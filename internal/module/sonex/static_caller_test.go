@@ -39,7 +39,7 @@ func TestBatchGetPositions(t *testing.T) {
 	positions, err := caller.BatchGetPositions(
 		context.Background(), 1946,
 		common.HexToAddress("0xeC816FCdc262601C0E23902c679FDd87CFb24077"),
-		[]*big.Int{big.NewInt(1), big.NewInt(69), big.NewInt(63), big.NewInt(100), big.NewInt(135)},
+		[]*big.Int{big.NewInt(199)},
 	)
 	if err != nil {
 		t.Error(err)
@@ -57,4 +57,24 @@ func TestBatchGetPositions(t *testing.T) {
 			position.Token1.Hex(), amount1.String(), unclaimedFee1.String(),
 		)
 	}
+}
+
+func TestX(t *testing.T) {
+	var balance0 float64
+	{
+		amount, _ := new(big.Float).SetString("979368929721524473764")
+		amountD := new(big.Float).Quo(amount, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)))
+		price, _ := new(big.Float).SetString("179452960859740338")
+		priceD := new(big.Float).Quo(price, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)))
+		balance0, _ = new(big.Float).Mul(amountD, priceD).Float64()
+	}
+	var balance1 float64
+	{
+		amount, _ := new(big.Float).SetString("96271776")
+		amountD := new(big.Float).Quo(amount, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(6), nil)))
+		price, _ := new(big.Float).SetString("15986252634283681194")
+		priceD := new(big.Float).Quo(price, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)))
+		balance1, _ = new(big.Float).Mul(amountD, priceD).Float64()
+	}
+	fmt.Println(balance0 + balance1)
 }

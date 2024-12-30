@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -50,26 +51,27 @@ func (p *SwapEventResponseWrapper) GetCode() interface{} {
 func (l *SonexSwapLogic) SonexSwap(req *types.SwapEventRequest) (resp *SwapEventResponseWrapper, err error) {
 	cacheKey := "sonex_dex:uniswap:swap"
 
-	cachedResponse, err := l.svcCtx.Cache.Get(cacheKey)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp SwapEventResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
-			go l.refreshCache(req, cacheKey, &cachedResp)
+			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, cacheKey, nil)
+	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey string, cachedResp *SwapEventResponseWrapper) (resp *SwapEventResponseWrapper, err error) {
+func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacher cache.ICache, cacheKey string, cachedResp *SwapEventResponseWrapper) (resp *SwapEventResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
 	var lockAcquired bool
 
 	if cachedResp != nil {
-		success, err := l.svcCtx.Cache.SetNX(lockKey, "locked", 30*time.Second)
+		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
 		if err != nil {
 			return cachedResp, nil
 		}
@@ -83,7 +85,7 @@ func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey stri
 
 	defer func() {
 		if lockAcquired {
-			l.svcCtx.Cache.Del(lockKey)
+			cacher.Del(lockKey)
 		}
 	}()
 
@@ -139,7 +141,7 @@ func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacheKey stri
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		err = l.svcCtx.Cache.Set(cacheKey, responseBytes, 0)
+		err = cacher.Set(cacheKey, responseBytes, 0)
 		if err != nil {
 			l.Error("Failed to cache response", err)
 		}

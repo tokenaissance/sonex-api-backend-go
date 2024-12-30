@@ -25,6 +25,7 @@ type FarmUserAssetListLogic struct {
 	svcCtx          *svc.ServiceContext
 	chainId         int64
 	ethClient       *ethclient.Client
+	conn            sqlx.SqlConn
 	farmAddress     common.Address // UniswapV3Staker
 	positionAddress common.Address // NonfungiblePositionManager
 }
@@ -38,7 +39,6 @@ func NewFarmUserAssetListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 		ctx:             ctx,
 		svcCtx:          svcCtx,
 		chainId:         svcCtx.Config.Farm[0].ChainId,
-		ethClient:       svcCtx.EthClient,
 		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
@@ -62,8 +62,15 @@ func (l *FarmUserAssetListLogic) FarmUserAssetList(req *types.FarmUserAssetListR
 		UserAssets: make([]types.UserAssetData, 0),
 	}
 
+	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	if err != nil {
+		return nil, err
+	}
+	l.ethClient = client
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+
 	// 获取所有活跃池子
-	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
+	farmPoolModel := repository.NewFarmPoolsModel(l.conn)
 	pools, err := farmPoolModel.FindActivePools(l.ctx, req.ChainId)
 	if err != nil {
 		if err == sqlx.ErrNotFound {
@@ -104,7 +111,7 @@ func (l *FarmUserAssetListLogic) FarmUserAssetDetail(req *types.FarmUserAssetDet
 	resp = new(types.FarmUserAssetDetailResponse)
 
 	// 获取池子信息
-	farmPoolModel := repository.NewFarmPoolsModel(l.svcCtx.DB)
+	farmPoolModel := repository.NewFarmPoolsModel(l.conn)
 	poolData, err := farmPoolModel.FindByIncentiveId(l.ctx, req.ChainId, req.IncentiveId)
 	if err != nil {
 		if err == sqlx.ErrNotFound {
@@ -149,7 +156,7 @@ func (l *FarmUserAssetListLogic) getUserAssetsData(ctx context.Context, farmCont
 	}
 
 	// 查询已质押的token数量
-	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.svcCtx.DB)
+	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.conn)
 	stakedTokens, err := farmUserPoolModel.FindByUserAddressIncentiveIdStatus(ctx, userAddress, poolData.IncentiveId, "stake")
 	if err != nil {
 		return nil, err
@@ -183,7 +190,7 @@ func (l *FarmUserAssetListLogic) getUserAssetsData(ctx context.Context, farmCont
 }
 
 func (l *FarmUserAssetListLogic) getStakedTokenNum(ctx context.Context, farmContract *farmContract.UniswapV3Staker, userAddress string, incentiveId string) (int64, error) {
-	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.svcCtx.DB)
+	farmUserPoolModel := repository.NewFarmUserPoolsModel(l.conn)
 	count, err := farmUserPoolModel.CountByUserAddressIncentiveIdStatus(ctx, userAddress, incentiveId, "stake")
 	if err != nil {
 		return 0, fmt.Errorf("failed to get staked token num: %v", err)
