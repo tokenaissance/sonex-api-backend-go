@@ -4,10 +4,10 @@ syntax = "v1"
 Sonex Module
 */
 type TokenPriceRequest {
-	ChainId        int64   `form:"chain_id"`
+	ChainId        int64   `form:"chainId"`
 	Token          string  `form:"token"`
-	IsCache        bool    `form:"is_cache,optional,default=true"`
-	WantStablecoin *string `form:"want_stablecoin,optional"`
+	IsCache        bool    `form:"isCache,optional,default=true"`
+	WantStablecoin *string `form:"wantStablecoin,optional"`
 }
 
 type TokenPriceResponse_Price_Pool {
@@ -24,12 +24,12 @@ type TokenPriceResponse_Price {
 }
 
 type TokenPriceResponse {
-	BasePrice *TokenPriceResponse_Price  `json:"best_price"`
+	BasePrice *TokenPriceResponse_Price  `json:"bestPrice"`
 	Prices    []TokenPriceResponse_Price `json:"prices"`
 }
 
 type TokenQuoteRequest {
-	ChainId    int64  `form:"chain_id"`
+	ChainId    int64  `form:"chainId"`
 	From       string `form:"from"`
 	To         string `form:"to"`
 	Type       string `form:"type,options=INPUT|OUTPUT"`
@@ -45,24 +45,24 @@ type TokenQuoteResponse_Router_Pool {
 }
 
 type TokenQuoteResponse_Router {
-	TokenIn                     string                           `json:"token_in"`
-	TokenOut                    string                           `json:"token_out"`
-	AmountIn                    string                           `json:"amount_in"`
-	AmountOut                   string                           `json:"amount_out"`
+	TokenIn                     string                           `json:"tokenIn"`
+	TokenOut                    string                           `json:"tokenOut"`
+	AmountIn                    string                           `json:"amountIn"`
+	AmountOut                   string                           `json:"amountOut"`
 	Stablecoin                  string                           `json:"stablecoin"`
-	PriceUSDIn                  string                           `json:"price_usd_in"`
-	PriceUSDOut                 string                           `json:"price_usd_out"`
+	PriceUSDIn                  string                           `json:"priceUsdIn"`
+	PriceUSDOut                 string                           `json:"priceUsdOut"`
 	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
 	Path                        string                           `json:"path"`
-	SqrtPriceX96AfterList       []string                         `json:"sqrt_price_x96_after_list"`
-	InitializedTicksCrossedList []int64                          `json:"initialized_ticks_crossed_list"`
-	GasEstimate                 string                           `json:"gas_estimate"`
-	PriceImpact                 string                           `json:"price_impact"`
+	SqrtPriceX96AfterList       []string                         `json:"sqrtPriceX96AfterList"`
+	InitializedTicksCrossedList []int64                          `json:"initializedTicksCrossedList"`
+	GasEstimate                 string                           `json:"gasEstimate"`
+	PriceImpact                 string                           `json:"priceImpact"`
 }
 
 type TokenQuoteResponse {
-	SwapRouter string                      `json:"swap_router"`
-	BestRouter *TokenQuoteResponse_Router  `json:"best_router"`
+	SwapRouter string                      `json:"swapRouter"`
+	BestRouter *TokenQuoteResponse_Router  `json:"bestRouter"`
 	Routers    []TokenQuoteResponse_Router `json:"routers"`
 }
 
@@ -158,10 +158,10 @@ type PoolsResponse_Volume {
 }
 
 type PoolPositionData {
-	EventPool    string `json:"event_pool"`
-	EventToken0  string `json:"event_token0"`
-	EventToken1  string `json:"event_token1"`
-	EventTokenId int64  `json:"event_token_id"`
+	EventPool    string `json:"eventPool"`
+	EventToken0  string `json:"eventToken0"`
+	EventToken1  string `json:"eventToken1"`
+	EventTokenId int64  `json:"eventTokenId"`
 }
 
 type PoolsResponse_Pool {
@@ -202,23 +202,23 @@ type PriceComparisonResult {
 }
 
 type Token_Kline {
-	Price        string `json:"price"`
-	TimeStamp    int64  `json:"time_stamp"`
+	Price     string `json:"price"`
+	TimeStamp int64  `json:"timeStamp"`
 }
 
 type Token_TokenDetail {
-	Address  string              `json:"address"`
-	Symbol   string              `json:"symbol"`
-	Name     string              `json:"name"`
-	Decimals int                 `json:"decimals"`
-	Logo     string              `json:"logo"`
-	Pools    []*Token_PoolDetail `json:"pools"`
-	Volume   string             `json:"volume"`
-	Fdv      string             `json:"fdv"`
-	Price    string             `json:"price"`
-	Kline []*Token_Kline `json:"kline"`
-	HourPriceComparison PriceComparisonResult `json:"hour_price_comparison"`
-	DayPriceComparison PriceComparisonResult `json:"day_price_comparison"`
+	Address             string                `json:"address"`
+	Symbol              string                `json:"symbol"`
+	Name                string                `json:"name"`
+	Decimals            int                   `json:"decimals"`
+	Logo                string                `json:"logo"`
+	Pools               []*Token_PoolDetail   `json:"pools"`
+	Volume              string                `json:"volume"`
+	Fdv                 string                `json:"fdv"`
+	Price               string                `json:"price"`
+	Kline               []*Token_Kline        `json:"kline"`
+	HourPriceComparison PriceComparisonResult `json:"hourPriceComparison"`
+	DayPriceComparison  PriceComparisonResult `json:"dayPriceComparison"`
 }
 
 type Token_PoolDetail {
@@ -302,13 +302,13 @@ type Fees {
 }
 
 type AggregatedAmounts {
-	TotalAmount0 float64 `json:"total_amount0"`
-	TotalAmount1 float64 `json:"total_amount1"`
+	TotalAmount0 float64 `json:"totalAmount0"`
+	TotalAmount1 float64 `json:"totalAmount1"`
 }
 
 type GetNftDataRequest {
-	Id int64 `path:"id"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
+	Id      int64 `path:"id"`
+	ChainId int64 `form:"chainId,default=1946,optional"`
 }
 
 type SwapEventRequest {
@@ -333,7 +333,7 @@ type SwapEvent {
 	Amount0   float64          `json:"amount0"`
 	Amount1   float64          `json:"amount1"`
 	Usd       float64          `json:"usd"`
-	CreatedAt string           `json:"created_at"`
+	CreatedAt string           `json:"createdAt"`
 }
 
 type SwapEventResponse {
@@ -354,11 +354,11 @@ type SwapVolumeRequest {
 }
 
 type SwapVolume {
-	Timestamp   int64   `json:"timestamp"`
-	Value       float64 `json:"value"`
-	Amount      float64 `json:"amount"`
-	Amount0     float64 `json:"amount0"`
-	Amount1     float64 `json:"amount1"`
+	Timestamp int64   `json:"timestamp"`
+	Value     float64 `json:"value"`
+	Amount    float64 `json:"amount"`
+	Amount0   float64 `json:"amount0"`
+	Amount1   float64 `json:"amount1"`
 }
 
 type SwapVolumeResponse {
@@ -383,45 +383,45 @@ type PositionsRequest {
 }
 
 type Position {
-	TokenID       int64            `json:"token_id"`
+	TokenID       int64            `json:"tokenId"`
 	Balance       float64          `json:"balance"`
-	ClaimableFees float64          `json:"claimable_fees"`
-	IsClosed      bool             `json:"is_closed"`
-	TickUpper     string           `json:"tick_upper"`
-	TickLower     string           `json:"tick_lower"`
+	ClaimableFees float64          `json:"claimableFees"`
+	IsClosed      bool             `json:"isClosed"`
+	TickUpper     string           `json:"tickUpper"`
+	TickLower     string           `json:"tickLower"`
 	PNL30d        string           `json:"pnl30d"`
 	Ratio         float64          `json:"ratio"`
-	IsNegative    bool             `json:"is_negative"`
+	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
-	PositionAge   int              `json:"position_age"`
+	PositionAge   int              `json:"positionAge"`
 	Amount0       float64          `json:"amount0"`
 	Amount1       float64          `json:"amount1"`
 	Price0        float64          `json:"price0"`
 	Price1        float64          `json:"price1"`
-	UnclaimedFee0 float64          `json:"unclaimed_fee0"`
-	UnclaimedFee1 float64          `json:"unclaimed_fee1"`
+	UnclaimedFee0 float64          `json:"unclaimedFee0"`
+	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 }
 
 type PositionsResponse {
-	Code          int                           `json:"code"`
-	IsNegative    bool                          `json:"is_negative"`
-	Pnl           float64                       `json:"pnl"`
-	Positions     []*Position                   `json:"positions"`
-	Ratio         float64                       `json:"ratio"`
-	TotalBalances float64                       `json:"total_balances"`
-	Message       string                        `json:"message"`
+	Code          int         `json:"code"`
+	IsNegative    bool        `json:"isNegative"`
+	Pnl           float64     `json:"pnl"`
+	Positions     []*Position `json:"positions"`
+	Ratio         float64     `json:"ratio"`
+	TotalBalances float64     `json:"totalBalances"`
+	Message       string      `json:"message"`
 }
 
 type MyPositionRequest {
 	Address    string `form:"address"`
-	FilterType string `form:"filter_type,optional,default=none"`
+	FilterType string `form:"filterType,optional,default=none"`
 }
 
 type MyPositionResponse {
-	Code    int             `json:"code"`
-	Data    []*Position 	`json:"data"`
-	Message string          `json:"message"`
+	Code    int         `json:"code"`
+	Data    []*Position `json:"data"`
+	Message string      `json:"message"`
 }
 
 type SonexTokenKlineRequest {
@@ -431,11 +431,11 @@ type SonexTokenKlineRequest {
 
 type SonexTokenPriceRecord {
 	Id           int64  `json:"id"`
-	TokenSymbol  string `json:"token_symbol"`
-	TokenAddress string `json:"token_address"`
+	TokenSymbol  string `json:"tokenSymbol"`
+	TokenAddress string `json:"tokenAddress"`
 	Price        string `json:"price"`
-	CreatedAt    string `json:"created_at"`
-	TimeStamp    int64  `json:"time_stamp"`
+	CreatedAt    string `json:"createdAt"`
+	TimeStamp    int64  `json:"timeStamp"`
 }
 
 type SonexTokenKlineResponse {

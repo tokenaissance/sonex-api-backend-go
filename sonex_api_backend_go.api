@@ -10,13 +10,13 @@ Global Module
 type MetaRequest {}
 
 type ChainSyncPrograss {
-	ChainId   int64  `json:"chain_id"`
+	ChainId   int64  `json:"chainId"`
 	Height    int64  `json:"height"`
-	UpdatedAt string `json:"update_at"`
+	UpdatedAt string `json:"updateAt"`
 }
 
 type MetaResponse {
-	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chainSyncPrograsses"`
 }
 
 service sonex_api_backend_go {
