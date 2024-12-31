@@ -23,7 +23,7 @@ Chains:
       # URL:Weight
       http://10.1.30.101:8545: 100
       http://10.1.30.103:8545: 50
-      http://10.1.30.104:8545: 50
+      # http://10.1.30.104:8545: 50
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
