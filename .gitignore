@@ -9,8 +9,4 @@ air_errors.log
 main.exe
 MYREADME
 
-sql/xpool
-!sql/xpool/*.sql
-sql/farm
-!sql/farm/*.sql
 logs/
