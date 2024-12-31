@@ -41,6 +41,13 @@ func (p *PositionsResponseWrapper) GetCode() interface{} {
 	return p.Code
 }
 
+type taskResult struct {
+	collectedAmounts map[int64]*types.AggregatedAmounts
+	positions        []*sonex.Position
+	tokenPrices      map[string]float64
+	err              error
+}
+
 func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp *PositionsResponseWrapper, err error) {
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:positions:%s", req.Address)
 
@@ -56,8 +63,10 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 
 	// Fetch from database if not cached
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	model := repository.NewEventSonexPositionManagerTransferModel(conn)
-	items, err := model.GetTransferEvents(l.ctx, req.Address)
+	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
+	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+	items, err := transferModel.GetTransferEvents(l.ctx, req.Address)
 	if err != nil {
 		return &PositionsResponseWrapper{
 			&types.PositionsResponse{
@@ -68,58 +77,108 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 		}, nil
 	}
 
-	positionTokenIds := make([]*big.Int, 0)
+	positionTokenIds := make([]int64, 0)
 	positionTransferItemMap := make(map[int64]*types.Position)
-
+	token0Decimals := make([]int, 0)
+	token0Addresses := make([]string, 0)
+	token1Decimals := make([]int, 0)
+	token1Addresses := make([]string, 0)
 	for _, item := range items {
 		if !item.IsClosed {
 			tokenId := item.TokenID
-			positionTokenIds = append(positionTokenIds, big.NewInt(tokenId))
+			positionTokenIds = append(positionTokenIds, tokenId)
 			positionTransferItemMap[tokenId] = item
+			token0Decimals = append(token0Decimals, item.Pool.Token0.Decimals)
+			token1Decimals = append(token1Decimals, item.Pool.Token1.Decimals)
+			token0Addresses = append(token0Addresses, item.Pool.Token0.Address)
+			token1Addresses = append(token1Addresses, item.Pool.Token1.Address)
 		}
 	}
 
-	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
-	positions, err := caller.BatchGetPositions(
-		context.Background(),
-		req.ChainId,
-		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
-		positionTokenIds,
-	)
-
-	resultPositions := make([]*types.Position, 0)
 	var wg sync.WaitGroup
-	positionChan := make(chan *types.Position, len(positions))
+	results := make(chan taskResult, 3)
 
-	for _, position := range positions {
-		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
-			wg.Add(1)
-			go func(pos *sonex.Position, transferItem *types.Position) {
-				defer wg.Done()
-				convertedPosition := l.convertPosition(l.ctx, req, transferItem, pos)
-				positionChan <- convertedPosition
-			}(position, positionTransferItem)
-		}
-	}
-
-	// Close channel after all goroutines complete
+	// Task 1: Get collected fees
+	wg.Add(1)
 	go func() {
-		wg.Wait()
-		close(positionChan)
+		defer wg.Done()
+		amounts, err := collectModel.BatchAggregateAmounts(l.ctx, req.ChainId, positionTokenIds, token0Decimals, token1Decimals)
+		results <- taskResult{collectedAmounts: amounts, err: err}
 	}()
 
-	totalBalance := new(big.Float).SetInt(big.NewInt(0))
+	// Task 2: Get positions
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
+		pos, err := caller.BatchGetPositions(
+			context.Background(),
+			req.ChainId,
+			common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
+			func(tokenIds []int64) []*big.Int {
+				converted := make([]*big.Int, len(tokenIds))
+				for i, tokenId := range tokenIds {
+					converted[i] = big.NewInt(tokenId)
+				}
+				return converted
+			}(positionTokenIds),
+		)
+		results <- taskResult{positions: pos, err: err}
+	}()
+
+	// Task 3: Get token prices
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		prices, err := tokenPriceModel.GetCurrentPrices(append(token0Addresses, token1Addresses...))
+		results <- taskResult{tokenPrices: prices, err: err}
+	}()
+
+	// Close results channel after all goroutines complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
 	// Collect results
-	for position := range positionChan {
-		resultPositions = append(resultPositions, position)
-		totalBalance.Add(totalBalance, big.NewFloat(position.Balance))
+	var collectedAmounts map[int64]*types.AggregatedAmounts
+	var positions []*sonex.Position
+	var tokenPrices map[string]float64
+
+	for result := range results {
+		if result.err != nil {
+			return &PositionsResponseWrapper{
+				&types.PositionsResponse{
+					Code:      400,
+					Positions: []*types.Position{},
+					Message:   result.err.Error(),
+				},
+			}, nil
+		}
+		if result.collectedAmounts != nil {
+			collectedAmounts = result.collectedAmounts
+		}
+		if result.positions != nil {
+			positions = result.positions
+		}
+		if result.tokenPrices != nil {
+			tokenPrices = result.tokenPrices
+		}
 	}
 
 	positionResponse := &types.PositionsResponse{
-		Positions: resultPositions,
+		Positions: make([]*types.Position, 0),
 	}
 
-	positionResponse.TotalBalances, _ = totalBalance.Float64()
+	// Collect results
+	for _, position := range positions {
+		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
+			convertedPosition := l.fillPosition(l.ctx, req, positionTransferItem, position, tokenPrices, collectedAmounts)
+			positionResponse.Positions = append(positionResponse.Positions, convertedPosition)
+			positionResponse.TotalPosition += convertedPosition.Position
+			positionResponse.Pnl += convertedPosition.PNL
+		}
+	}
 
 	response := &PositionsResponseWrapper{
 		PositionsResponse: positionResponse,
@@ -133,13 +192,35 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	return response, nil
 }
 
-func (l *SonexPositionsLogic) convertPosition(ctx context.Context, req *types.PositionsRequest, position *types.Position, innnerPosition *sonex.Position) *types.Position {
+func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
+	req *types.PositionsRequest,
+	position *types.Position,
+	innnerPosition *sonex.Position,
+	prices map[string]float64,
+	collectedAmounts map[int64]*types.AggregatedAmounts) *types.Position {
 	price0 := new(big.Float).SetFloat64(0)
 	price1 := new(big.Float).SetFloat64(0)
+	// 优先获取从 db 中的价格，如果获取失败，则从链上获取
+	if price0Val, exists0 := prices[innnerPosition.Token0.Hex()]; exists0 {
+		price0 = price0.SetFloat64(price0Val)
+	} else {
+		logx.Errorf("[convertPosition] Token0 price not found from db for address: %s", innnerPosition.Token0.Hex())
 
-	bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token0.Hex(), true, 2, nil)
-	if err == nil && bestPrice0 != nil {
-		price0.SetInt(bestPrice0.Value)
+		bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token0.Hex(), true, 2, nil)
+		if err == nil && bestPrice0 != nil {
+			price0.SetInt(bestPrice0.Value)
+		}
+	}
+
+	if price1Val, exists1 := prices[innnerPosition.Token1.Hex()]; exists1 {
+		price1 = price1.SetFloat64(price1Val)
+	} else {
+		logx.Errorf("[convertPosition] Token1 price not found from db for address: %s", innnerPosition.Token1.Hex())
+
+		bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token1.Hex(), true, 2, nil)
+		if err == nil && bestPrice1 != nil {
+			price1.SetInt(bestPrice1.Value)
+		}
 	}
 
 	factor0 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token0.Decimals)))
@@ -148,11 +229,6 @@ func (l *SonexPositionsLogic) convertPosition(ctx context.Context, req *types.Po
 	poolPrice0 := new(big.Float).Quo(price0, factor0)
 	position.Price0, _ = poolPrice0.Float64()
 	position.Pool.Token0Price = poolPrice0.String()
-
-	bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token1.Hex(), true, 2, nil)
-	if err == nil && bestPrice1 != nil {
-		price1.SetInt(bestPrice1.Value)
-	}
 
 	// 转换 price 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
 	poolPrice1 := new(big.Float).Quo(price1, factor1)
@@ -179,7 +255,7 @@ func (l *SonexPositionsLogic) convertPosition(ctx context.Context, req *types.Po
 
 	// 计算总余额
 	totalBalance := new(big.Float).Add(amount0Balance, amount1Balance)
-	position.Balance, _ = totalBalance.Float64()
+	position.Position, _ = totalBalance.Float64()
 
 	// 计算未结费用 unclaimedFee0 和 unclaimedFee1
 	position.UnclaimedFee0, _ = new(big.Float).SetInt(unclaimedFee0).Float64()
@@ -197,6 +273,12 @@ func (l *SonexPositionsLogic) convertPosition(ctx context.Context, req *types.Po
 	// 计算总的 claimableFees
 	claimableFees := new(big.Float).Add(claimableFee0, claimableFee1)
 	position.ClaimableFees, _ = claimableFees.Float64()
+
+	// PNL = claimableFees + collectedFees
+	collectedFees, exists := collectedAmounts[position.TokenID]
+	if exists {
+		position.PNL = position.ClaimableFees + collectedFees.TotalAmount0 + collectedFees.TotalAmount1
+	}
 
 	return position
 }

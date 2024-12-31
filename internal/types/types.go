@@ -284,7 +284,7 @@ type Position struct {
 	IsClosed      bool             `json:"isClosed"`
 	TickUpper     string           `json:"tickUpper"`
 	TickLower     string           `json:"tickLower"`
-	PNL           string           `json:"pnl"`
+	PNL           float64          `json:"pnl"`
 	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
