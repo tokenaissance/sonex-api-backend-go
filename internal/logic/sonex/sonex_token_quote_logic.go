@@ -9,6 +9,7 @@ import (
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/quoter"
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -54,7 +55,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	var prices []cache.Price
 
 	var wg sync.WaitGroup
-	results := make(chan error, 3)
+	results := make(chan error, 2)
 
 	wg.Add(1)
 	go func(ch chan error) {
@@ -65,52 +66,76 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			}
 		}()
 
-		if fromAddress.Hex() == stablecoinAddress.Hex() {
-			stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
-			if err != nil {
-				ch <- err
-				return
-			}
-			fromPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
-		} else {
-			price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.From, true, 2, &req.Stablecoin)
-			if err != nil {
-				ch <- err
-				return
-			}
-			if price != nil {
-				fromPriceUSD = price.Value
-			}
+		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+		tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+		prices, err := tokenPriceModel.GetLatestHistoryPrices([]string{fromAddress.Hex(), toAddress.Hex()})
+		if err != nil {
+			ch <- err
+			return
+		}
+		if price, ok := prices[fromAddress.Hex()]; ok {
+			fromPriceUSD = price
+		}
+		if price, ok := prices[toAddress.Hex()]; ok {
+			toPriceUSD = price
 		}
 	}(results)
 
-	wg.Add(1)
-	go func(ch chan error) {
-		defer wg.Done()
-		defer func() {
-			if err := recover(); err != nil {
-				ch <- fmt.Errorf("%s(panic)", err)
-			}
-		}()
+	// wg.Add(1)
+	// go func(ch chan error) {
+	// 	defer wg.Done()
+	// 	defer func() {
+	// 		if err := recover(); err != nil {
+	// 			ch <- fmt.Errorf("%s(panic)", err)
+	// 		}
+	// 	}()
 
-		if toAddress.Hex() == stablecoinAddress.Hex() {
-			stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
-			if err != nil {
-				ch <- err
-				return
-			}
-			toPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
-		} else {
-			price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.To, true, 2, &req.Stablecoin)
-			if err != nil {
-				ch <- err
-				return
-			}
-			if price != nil {
-				toPriceUSD = price.Value
-			}
-		}
-	}(results)
+	// 	if fromAddress.Hex() == stablecoinAddress.Hex() {
+	// 		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
+	// 		if err != nil {
+	// 			ch <- err
+	// 			return
+	// 		}
+	// 		fromPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
+	// 	} else {
+	// 		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.From, true, 2, &req.Stablecoin)
+	// 		if err != nil {
+	// 			ch <- err
+	// 			return
+	// 		}
+	// 		if price != nil {
+	// 			fromPriceUSD = price.Value
+	// 		}
+	// 	}
+	// }(results)
+
+	// wg.Add(1)
+	// go func(ch chan error) {
+	// 	defer wg.Done()
+	// 	defer func() {
+	// 		if err := recover(); err != nil {
+	// 			ch <- fmt.Errorf("%s(panic)", err)
+	// 		}
+	// 	}()
+
+	// 	if toAddress.Hex() == stablecoinAddress.Hex() {
+	// 		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
+	// 		if err != nil {
+	// 			ch <- err
+	// 			return
+	// 		}
+	// 		toPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
+	// 	} else {
+	// 		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.To, true, 2, &req.Stablecoin)
+	// 		if err != nil {
+	// 			ch <- err
+	// 			return
+	// 		}
+	// 		if price != nil {
+	// 			toPriceUSD = price.Value
+	// 		}
+	// 	}
+	// }(results)
 
 	wg.Add(1)
 	go func(ch chan error) {

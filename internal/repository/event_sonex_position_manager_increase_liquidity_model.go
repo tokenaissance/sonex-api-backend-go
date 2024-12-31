@@ -21,6 +21,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPositionManagerIncreaseLiquidityModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error
 		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*types.AggregatedAmounts, error)
+		BatchAggregateAmounts(ctx context.Context, chainId int64, tokenDecimalPairs []*TokenDecimalPair) (map[int64]*types.AggregatedAmounts, error)
 	}
 
 	customEventSonexPositionManagerIncreaseLiquidityModel struct {
@@ -50,8 +51,18 @@ type PositionManagerEventData struct {
 	Amount1 string `db:"event_amount1"` // Use string to scan first
 }
 
+type TokenDecimalPair struct {
+	EventTokenId int64
+	Decimal0     int
+	Decimal1     int
+}
+
 func (m *customEventSonexPositionManagerIncreaseLiquidityModel) AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*types.AggregatedAmounts, error) {
 	return aggregateAmounts(ctx, m.conn, m.table, chainId, eventTokenId, decimal0, decimal1)
+}
+
+func (m *customEventSonexPositionManagerIncreaseLiquidityModel) BatchAggregateAmounts(ctx context.Context, chainId int64, tokenDecimalPairs []*TokenDecimalPair) (map[int64]*types.AggregatedAmounts, error) {
+	return batchAggregateAmounts(ctx, m.conn, m.table, chainId, tokenDecimalPairs)
 }
 
 func aggregateAmounts(ctx context.Context, conn sqlx.SqlConn, tableName string, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*types.AggregatedAmounts, error) {
@@ -105,4 +116,79 @@ func aggregateAmounts(ctx context.Context, conn sqlx.SqlConn, tableName string, 
 	}
 
 	return result, nil
+}
+
+func batchAggregateAmounts(ctx context.Context, conn sqlx.SqlConn, tableName string, chainId int64, tokenDecimalPairs []*TokenDecimalPair) (map[int64]*types.AggregatedAmounts, error) {
+	if len(tokenDecimalPairs) == 0 {
+		return make(map[int64]*types.AggregatedAmounts), nil
+	}
+
+	// Create token ID list for IN clause
+	tokenIds := make([]int64, len(tokenDecimalPairs))
+	for i, pair := range tokenDecimalPairs {
+		tokenIds[i] = pair.EventTokenId
+	}
+
+	var events []struct {
+		TokenId int64  `db:"event_token_id"`
+		Amount0 string `db:"event_amount0"`
+		Amount1 string `db:"event_amount1"`
+	}
+
+	// Build query with IN clause
+	query := fmt.Sprintf(`
+		SELECT
+			event_token_id,
+			event_amount0,
+			event_amount1
+		FROM %s
+		WHERE chain_id = $1 AND event_token_id = ANY($2)
+	`, tableName)
+
+	err := conn.QueryRowsCtx(ctx, &events, query, chainId, tokenIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// Group events by token ID
+	eventsByToken := make(map[int64][]PositionManagerEventData)
+	for _, event := range events {
+		eventsByToken[event.TokenId] = append(eventsByToken[event.TokenId], PositionManagerEventData{
+			Amount0: event.Amount0,
+			Amount1: event.Amount1,
+		})
+	}
+
+	// Calculate results for each token
+	results := make(map[int64]*types.AggregatedAmounts)
+	for _, pair := range tokenDecimalPairs {
+		tokenEvents := eventsByToken[pair.EventTokenId]
+
+		totalAmount0 := new(big.Int)
+		totalAmount1 := new(big.Int)
+
+		for _, event := range tokenEvents {
+			amount0 := new(big.Int)
+			amount1 := new(big.Int)
+
+			amount0.SetString(event.Amount0, 10)
+			amount1.SetString(event.Amount1, 10)
+
+			totalAmount0.Add(totalAmount0, amount0)
+			totalAmount1.Add(totalAmount1, amount1)
+		}
+
+		factor0 := math.Pow(10, float64(pair.Decimal0))
+		factor1 := math.Pow(10, float64(pair.Decimal1))
+
+		totalAmount0Float, _ := new(big.Float).SetInt(totalAmount0).Float64()
+		totalAmount1Float, _ := new(big.Float).SetInt(totalAmount1).Float64()
+
+		results[pair.EventTokenId] = &types.AggregatedAmounts{
+			TotalAmount0: totalAmount0Float / factor0,
+			TotalAmount1: totalAmount1Float / factor1,
+		}
+	}
+
+	return results, nil
 }

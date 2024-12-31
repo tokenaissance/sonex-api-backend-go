@@ -130,7 +130,7 @@ func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn
 	return &output, nil
 }
 
-func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte, amountIn *big.Int) ([]*QuoteExactInputResult, error) {
+func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte, amountIn *big.Int) (map[string]*QuoteExactInputResult, error) {
 	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
 	quoterABI, err := abi.JSON(strings.NewReader(uniswap_v3.IquoterV2MetaData.ABI))
@@ -145,12 +145,7 @@ func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte,
 	if err != nil {
 		return nil, err
 	}
-	var multicallResult struct {
-		ReturnData []struct {
-			Success    bool   `json:"success"`
-			ReturnData []byte `json:"returnData"`
-		} `json:"returnData"`
-	}
+	var multicallResults []contract_common.Multicall3Result
 
 	multicallData := []contract_common.Multicall3Call3{}
 	for _, path := range paths {
@@ -168,22 +163,23 @@ func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte,
 	if err != nil {
 		return nil, err
 	}
-	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(quoter.chainConf.Multicall), "aggregate3", data, &multicallResult)
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(quoter.chainConf.Multicall), "aggregate3", data, &multicallResults)
 	if err != nil {
 		return nil, err
 	}
 
-	result := []*QuoteExactInputResult{}
-	for i := range paths {
+	result := map[string]*QuoteExactInputResult{}
+	for i, path := range paths {
 		var output QuoteExactInputResult
-		returnData := multicallResult.ReturnData[i]
-		if returnData.Success {
-			err = quoterABI.UnpackIntoInterface(&output, "quoteExactInput", returnData.ReturnData)
-			if err != nil {
-				return nil, err
-			}
+		multicallResult := multicallResults[i]
+		if !multicallResult.Success {
+			continue
 		}
-		result = append(result, &output)
+		err = quoterABI.UnpackIntoInterface(&output, "quoteExactInput", multicallResult.ReturnData)
+		if err != nil {
+			return nil, err
+		}
+		result[common.Bytes2Hex(path)] = &output
 	}
 
 	return result, nil
@@ -236,12 +232,7 @@ func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte
 	if err != nil {
 		return nil, err
 	}
-	var multicallResult struct {
-		ReturnData []struct {
-			Success    bool   `json:"success"`
-			ReturnData []byte `json:"returnData"`
-		} `json:"returnData"`
-	}
+	var multicallResults []contract_common.Multicall3Result
 
 	multicallData := []contract_common.Multicall3Call3{}
 	for _, path := range paths {
@@ -259,7 +250,7 @@ func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte
 	if err != nil {
 		return nil, err
 	}
-	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(quoter.chainConf.Multicall), "aggregate3", data, &multicallResult)
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(quoter.chainConf.Multicall), "aggregate3", data, &multicallResults)
 	if err != nil {
 		return nil, err
 	}
@@ -267,12 +258,13 @@ func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte
 	result := []*QuoteExactOutputResult{}
 	for i := range paths {
 		var output QuoteExactOutputResult
-		returnData := multicallResult.ReturnData[i]
-		if returnData.Success {
-			err = quoterABI.UnpackIntoInterface(&output, "quoteExactOutput", returnData.ReturnData)
-			if err != nil {
-				return nil, err
-			}
+		multicallResult := multicallResults[i]
+		if multicallResult.Success {
+			continue
+		}
+		err = quoterABI.UnpackIntoInterface(&output, "quoteExactOutput", multicallResult.ReturnData)
+		if err != nil {
+			return nil, err
 		}
 		result = append(result, &output)
 	}

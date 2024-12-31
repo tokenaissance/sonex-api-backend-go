@@ -144,7 +144,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		temp := common.HexToAddress(*wantStablecoin)
 		wantStablecoinAddress = &temp
 	}
-	prices, err := cacher.GetPrices(pools, common.HexToAddress(token), isCache, maxLength, wantStablecoinAddress)
+	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5, wantStablecoinAddress)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -258,126 +258,30 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 			ToSlice(&pools)
 	}
 
-	prices, err := cacher.QuoteExactInput(pools, common.HexToAddress(from), common.HexToAddress(to), amountIn, maxLength)
+	prices, err := cacher.QuoteExactInput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountIn, maxLength, 50)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(prices) > 0 {
-		poolMap := map[string]*struct {
-			Liquidity *big.Int
-			Slot0     *sonex.Slot0
-		}{}
-		linq.From(prices).ForEachT(func(price cache.Price) {
-			linq.From(price.Pools).ForEachT(func(pool quoter.Pool) {
-				poolMap[pool.Address.Hex()] = nil
-			})
-		})
-		usedPools := []common.Address{}
-		for key := range poolMap {
-			usedPools = append(usedPools, common.HexToAddress(key))
-		}
-
-		chain := c.GetChainConfig(chainId)
-		if chain == nil {
-			return nil, fmt.Errorf("%s", "Miss chain configure")
-		}
-		if chain.Multicall == "" || !common.IsHexAddress(chain.Multicall) {
-			return nil, fmt.Errorf("%s", "Invalid multicall contract")
-		}
-
-		callDatas := []contract_common.Multicall3Call{}
-		poolABI, err := abi.JSON(strings.NewReader(uniswap_v3.UniswapV3PoolABI))
-		if err != nil {
-			return nil, err
-		}
-		liquidityData, err := poolABI.Pack("liquidity")
-		if err != nil {
-			return nil, err
-		}
-		slot0Data, err := poolABI.Pack("slot0")
-		if err != nil {
-			return nil, err
-		}
-		for _, pool := range usedPools {
-			callDatas = append(callDatas, contract_common.Multicall3Call{
-				Target:   pool,
-				CallData: liquidityData,
-			})
-			callDatas = append(callDatas, contract_common.Multicall3Call{
-				Target:   pool,
-				CallData: slot0Data,
-			})
-		}
-		multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
-		if err != nil {
-			return nil, err
-		}
-		data, err := multicallABI.Pack("aggregate", callDatas)
-		if err != nil {
-			return nil, err
-		}
-		nodeCaller, err := node_caller.NewNodeCaller(*chain)
-		if err != nil {
-			return nil, err
-		}
-		var result struct {
-			BlockNumber *big.Int `json:"blockNumber"`
-			ReturnData  [][]byte `json:"returnData"`
-		}
-		err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate", data, &result)
-		if err != nil {
-			return nil, err
-		}
-		for i, poolAddr := range usedPools {
-			var liquidity *big.Int
-			err = poolABI.UnpackIntoInterface(&liquidity, "liquidity", result.ReturnData[i*2])
-			if err != nil {
-				return nil, err
-			}
-			var slot0 sonex.Slot0
-			err = poolABI.UnpackIntoInterface(&slot0, "slot0", result.ReturnData[i*2+1])
-			if err != nil {
-				return nil, err
-			}
-			poolMap[poolAddr.Hex()] = &struct {
-				Liquidity *big.Int
-				Slot0     *sonex.Slot0
-			}{
-				Liquidity: liquidity,
-				Slot0:     &slot0,
-			}
-		}
-
-		// Filter price if has zero liquidity pool
-		linq.From(prices).WhereT(func(item cache.Price) bool {
-			for _, pool := range item.Pools {
-				info := poolMap[pool.Address.Hex()]
-				if info.Liquidity.Cmp(big.NewInt(0)) <= 0 {
-					return false
-				}
-			}
-			return true
-		}).ToSlice(&prices)
-
-		// Calculate price impact
-		Q192 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 192))
-		for i, price := range prices {
-			totalPriceImpact := big.NewFloat(0)
-			totalLiquidity := big.NewFloat(0)
-			for j, pool := range price.Pools {
-				info := poolMap[pool.Address.Hex()]
-				currentPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(info.Slot0.SqrtPriceX96), new(big.Float).SetInt(info.Slot0.SqrtPriceX96)), Q192)
-				newPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(price.SqrtPriceX96AfterList[j]), new(big.Float).SetInt(price.SqrtPriceX96AfterList[j])), Q192)
-				liquidity := new(big.Float).SetInt(info.Liquidity)
-				priceImpact := new(big.Float).Quo(new(big.Float).Sub(newPrice, currentPrice), currentPrice)
-				totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
-				totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
-			}
-			avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
-			prices[i].PriceImpact = avgPriceImpact
-		}
-	}
+	// if len(prices) > 0 {
+	// 	// Calculate price impact
+	// 	Q192 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 192))
+	// 	for i, price := range prices {
+	// 		totalPriceImpact := big.NewFloat(0)
+	// 		totalLiquidity := big.NewFloat(0)
+	// 		for j, pool := range price.Pools {
+	// 			info := poolMap[pool.Address.Hex()]
+	// 			currentPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(info.Slot0.SqrtPriceX96), new(big.Float).SetInt(info.Slot0.SqrtPriceX96)), Q192)
+	// 			newPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(price.SqrtPriceX96AfterList[j]), new(big.Float).SetInt(price.SqrtPriceX96AfterList[j])), Q192)
+	// 			liquidity := new(big.Float).SetInt(info.Liquidity)
+	// 			priceImpact := new(big.Float).Quo(new(big.Float).Sub(newPrice, currentPrice), currentPrice)
+	// 			totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
+	// 			totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
+	// 		}
+	// 		avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
+	// 		prices[i].PriceImpact = avgPriceImpact
+	// 	}
+	// }
 
 	return prices, nil
 }
@@ -409,7 +313,7 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 			ToSlice(&pools)
 	}
 
-	prices, err := cacher.QuoteExactOutput(pools, common.HexToAddress(from), common.HexToAddress(to), amountOut, maxLength)
+	prices, err := cacher.QuoteExactOutput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountOut, maxLength, 50)
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
 		PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error)
+		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]PoolVolume, error)
 		GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 	}
@@ -36,6 +37,12 @@ type (
 		Token1      string `db:"token1"`
 		Fee         string `db:"fee"`
 		TickSpacing string `db:"tick_spacing"`
+	}
+
+	PoolVolume struct {
+		Address string `json:"address"`
+		Amount0 string `json:"amount0"`
+		Amount1 string `json:"amount1"`
 	}
 )
 
@@ -71,6 +78,38 @@ func (m *defaultEventSonexPoolSwapModel) PageQueryWithPool(ctx context.Context, 
 		return nil, 0, err
 	}
 	return resp, total, err
+}
+
+func (m *defaultEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]PoolVolume, error) {
+	volumeQuery := fmt.Sprintf(`
+		SELECT
+			sp.extra_pool AS address,
+			SUM(ABS(CAST(sp.event_amount0 AS numeric)))::VARCHER AS amount0,
+			SUM(ABS(CAST(sp.event_amount1 AS numeric)))::VARCHER AS amount1
+		FROM
+			%s sp
+		WHERE sp.chain_id = %d
+	`, m.table, chainId)
+
+	if last24Hours {
+		// Assuming `transaction_time` is a timestamp column in your table
+		volumeQuery += " AND sp.tx_at >= NOW() - INTERVAL '24 HOURS'"
+	}
+
+	// Complete the query with grouping
+	volumeQuery += " GROUP BY sp.extra_pool"
+
+	// Format the query with the chainId
+	volumeQuery = fmt.Sprintf(volumeQuery, chainId)
+
+	// Execute the query and scan results into poolVolumes slice
+	var poolVolumes []PoolVolume
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumes, volumeQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	return poolVolumes, nil
 }
 
 type SwapData struct {

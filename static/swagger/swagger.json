@@ -1998,7 +1998,7 @@
         },
         "feeTier": {
           "type": "integer",
-          "format": "int32"
+          "format": "int64"
         },
         "liquidity": {
           "type": "string"
@@ -2019,32 +2019,32 @@
           "type": "string"
         },
         "volume": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "tvlUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "token0Balance": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "token1Balance": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "yield24h": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "price0": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "price1": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
+        },
+        "stablecoin": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "PoolsResponse_Pool",
@@ -2064,7 +2064,9 @@
         "token1Balance",
         "yield24h",
         "price0",
-        "price1"
+        "price1",
+        "stablecoin",
+        "decimals"
       ]
     },
     "PoolsResponse_Token": {
@@ -2172,7 +2174,7 @@
           "type": "integer",
           "format": "int64"
         },
-        "balance": {
+        "position": {
           "type": "number",
           "format": "double"
         },
@@ -2190,10 +2192,7 @@
         "tickLower": {
           "type": "string"
         },
-        "pnl30d": {
-          "type": "string"
-        },
-        "ratio": {
+        "pnl": {
           "type": "number",
           "format": "double"
         },
@@ -2239,13 +2238,12 @@
       "title": "Position",
       "required": [
         "tokenId",
-        "balance",
+        "position",
         "claimableFees",
         "isClosed",
         "tickUpper",
         "tickLower",
-        "pnl30d",
-        "ratio",
+        "pnl",
         "isNegative",
         "origin",
         "pool",
@@ -2300,11 +2298,7 @@
             "$ref": "#/definitions/Position"
           }
         },
-        "ratio": {
-          "type": "number",
-          "format": "double"
-        },
-        "totalBalances": {
+        "totalPosition": {
           "type": "number",
           "format": "double"
         },
@@ -2318,8 +2312,7 @@
         "isNegative",
         "pnl",
         "positions",
-        "ratio",
-        "totalBalances",
+        "totalPosition",
         "message"
       ]
     },
