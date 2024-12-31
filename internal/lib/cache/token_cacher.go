@@ -6,8 +6,10 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
+	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/lib/quoter"
+	"sonex_api_backend_go/internal/module/sonex"
 	"strings"
 	"sync"
 	"time"
@@ -62,6 +64,124 @@ func NewTokenCacher(chainConf config.ChainConfig, sonexConf config.SonexConfig) 
 		prices:                  map[string]map[string]PriceCache{},
 		priceCacheExpireSeconds: DEFAULT_PRICE_CACHE_EXPIRE_SECONDS,
 	}
+}
+
+type Liquidity struct {
+	Value *big.Int
+}
+
+func (liquidity Liquidity) CompareTo(other linq.Comparable) int {
+	l, _ := other.(Liquidity)
+	return liquidity.Value.Cmp(l.Value)
+}
+
+func (cacher *TokenCacher) filterPath(ctx context.Context, paths []quoter.Path, maxNumber int64) ([]quoter.Path, error) {
+	poolMap := map[string]*struct {
+		Liquidity *big.Int
+		Slot0     *sonex.Slot0
+	}{}
+	linq.From(paths).ForEachT(func(path quoter.Path) {
+		linq.From(path.Pools).ForEachT(func(pool quoter.Pool) {
+			poolMap[pool.Address.Hex()] = nil
+		})
+	})
+	usedPools := []common.Address{}
+	for key := range poolMap {
+		usedPools = append(usedPools, common.HexToAddress(key))
+	}
+
+	if cacher.chainConf.Multicall == "" || !common.IsHexAddress(cacher.chainConf.Multicall) {
+		return nil, fmt.Errorf("%s", "Invalid multicall contract")
+	}
+
+	callDatas := []contract_common.Multicall3Call{}
+	poolABI, err := abi.JSON(strings.NewReader(uniswap_v3.UniswapV3PoolABI))
+	if err != nil {
+		return nil, err
+	}
+	liquidityData, err := poolABI.Pack("liquidity")
+	if err != nil {
+		return nil, err
+	}
+	slot0Data, err := poolABI.Pack("slot0")
+	if err != nil {
+		return nil, err
+	}
+	for _, pool := range usedPools {
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   pool,
+			CallData: liquidityData,
+		})
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   pool,
+			CallData: slot0Data,
+		})
+	}
+	multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+	if err != nil {
+		return nil, err
+	}
+	data, err := multicallABI.Pack("aggregate", callDatas)
+	if err != nil {
+		return nil, err
+	}
+	nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf)
+	if err != nil {
+		return nil, err
+	}
+	var result struct {
+		BlockNumber *big.Int `json:"blockNumber"`
+		ReturnData  [][]byte `json:"returnData"`
+	}
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(cacher.chainConf.Multicall), "aggregate", data, &result)
+	if err != nil {
+		return nil, err
+	}
+	for i, poolAddr := range usedPools {
+		var liquidity *big.Int
+		err = poolABI.UnpackIntoInterface(&liquidity, "liquidity", result.ReturnData[i*2])
+		if err != nil {
+			return nil, err
+		}
+		var slot0 sonex.Slot0
+		err = poolABI.UnpackIntoInterface(&slot0, "slot0", result.ReturnData[i*2+1])
+		if err != nil {
+			return nil, err
+		}
+		poolMap[poolAddr.Hex()] = &struct {
+			Liquidity *big.Int
+			Slot0     *sonex.Slot0
+		}{
+			Liquidity: liquidity,
+			Slot0:     &slot0,
+		}
+	}
+	linq.From(paths).SelectT(func(path quoter.Path) struct {
+		Path      quoter.Path
+		Liquidity *big.Int
+	} {
+		liquidity := big.NewInt(0)
+		for _, pool := range path.Pools {
+			info := poolMap[pool.Address.Hex()]
+			liquidity = new(big.Int).Add(liquidity, info.Liquidity)
+		}
+		return struct {
+			Path      quoter.Path
+			Liquidity *big.Int
+		}{Path: path, Liquidity: liquidity}
+	}).OrderByDescendingT(func(item struct {
+		Path      quoter.Path
+		Liquidity *big.Int
+	}) Liquidity {
+		return Liquidity{Value: item.Liquidity}
+	}).Take(int(maxNumber)).SelectT(func(item struct {
+		Path      quoter.Path
+		Liquidity *big.Int
+	}) quoter.Path {
+		return item.Path
+	}).ToSlice(&paths)
+
+	return paths, nil
 }
 
 func (cacher *TokenCacher) Get(address string) (*Token, error) {
@@ -197,7 +317,7 @@ func (cacher *TokenCacher) SetPriceCacheExpireSeconds(duration int64) {
 	cacher.priceCacheExpireSeconds = duration
 }
 
-func (cacher *TokenCacher) QuoteExactInput(pools []quoter.Pool, from common.Address, to common.Address, amountIn *big.Int, maxLength int64) ([]Price, error) {
+func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.Pool, from common.Address, to common.Address, amountIn *big.Int, maxLength int64, maxNumber int64) ([]Price, error) {
 	fromToken, err := cacher.Get(from.Hex())
 	if err != nil {
 		return nil, err
@@ -215,87 +335,42 @@ func (cacher *TokenCacher) QuoteExactInput(pools []quoter.Pool, from common.Addr
 	if len(paths) < 1 {
 		return nil, fmt.Errorf("%s", "No available path")
 	}
-
-	var wg sync.WaitGroup
-	results := make(chan struct {
-		Path  quoter.Path
-		Err   error
-		Price quoter.QuoteExactInputResult
-	}, len(paths))
-
-	for _, path := range paths {
-		wg.Add(1)
-
-		go func(ch chan struct {
-			Path  quoter.Path
-			Err   error
-			Price quoter.QuoteExactInputResult
-		}) {
-			defer wg.Done()
-			defer func() {
-				if err := recover(); err != nil {
-					ch <- struct {
-						Path  quoter.Path
-						Err   error
-						Price quoter.QuoteExactInputResult
-					}{
-						Path: path,
-						Err:  fmt.Errorf("%s", err),
-					}
-				}
-			}()
-
-			result, err := q.QuoteExactInput(context.Background(), path.ToBytes(), amountIn)
-			if err != nil {
-				panic(err)
-			}
-
-			ch <- struct {
-				Path  quoter.Path
-				Err   error
-				Price quoter.QuoteExactInputResult
-			}{
-				Path:  path,
-				Price: *result,
-			}
-		}(results)
+	// Filter paths
+	paths, err = cacher.filterPath(ctx, paths, maxNumber)
+	if err != nil {
+		return nil, err
 	}
 
-	wg.Wait()
-	close(results)
+	pathBytes := [][]byte{}
+	linq.From(paths).SelectT(func(item quoter.Path) []byte { return item.ToBytes() }).ToSlice(&pathBytes)
+	results, err := q.BatchQuoteExactInputs(ctx, pathBytes, amountIn)
+	if err != nil {
+		return nil, err
+	}
 
 	// Handle results
 	var prices []Price
-	linq.From(results).
-		WhereT(func(item struct {
-			Path  quoter.Path
-			Err   error
-			Price quoter.QuoteExactInputResult
-		}) bool {
-			return item.Err == nil
-		}).
-		SelectT(func(item struct {
-			Path  quoter.Path
-			Err   error
-			Price quoter.QuoteExactInputResult
-		}) Price {
-			return Price{
-				From:                        fromToken.Address,
-				To:                          toToken.Address,
-				Pools:                       item.Path.Pools,
-				Path:                        item.Path.ToBytes(),
-				Value:                       item.Price.AmountOut,
-				SqrtPriceX96AfterList:       item.Price.SqrtPriceX96AfterList,
-				InitializedTicksCrossedList: item.Price.InitializedTicksCrossedList,
-				GasEstimate:                 item.Price.GasEstimate,
-			}
-		}).
-		ToSlice(&prices)
+	for _, path := range paths {
+		result, ok := results[common.Bytes2Hex(path.ToBytes())]
+		if !ok {
+			continue
+		}
+		prices = append(prices, Price{
+			From:                        fromToken.Address,
+			To:                          toToken.Address,
+			Pools:                       path.Pools,
+			Path:                        path.ToBytes(),
+			Value:                       result.AmountOut,
+			SqrtPriceX96AfterList:       result.SqrtPriceX96AfterList,
+			InitializedTicksCrossedList: result.InitializedTicksCrossedList,
+			GasEstimate:                 result.GasEstimate,
+		})
+	}
 
 	return prices, nil
 }
 
-func (cacher *TokenCacher) QuoteExactOutput(pools []quoter.Pool, from common.Address, to common.Address, amountOut *big.Int, maxLength int64) ([]Price, error) {
+func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.Pool, from common.Address, to common.Address, amountOut *big.Int, maxLength int64, maxNumber int64) ([]Price, error) {
 	fromToken, err := cacher.Get(from.Hex())
 	if err != nil {
 		return nil, err
@@ -313,87 +388,38 @@ func (cacher *TokenCacher) QuoteExactOutput(pools []quoter.Pool, from common.Add
 	if len(paths) < 1 {
 		return nil, fmt.Errorf("%s", "No available path")
 	}
-
-	var wg sync.WaitGroup
-	results := make(chan struct {
-		Path  quoter.Path
-		Err   error
-		Price quoter.QuoteExactOutputResult
-	}, len(paths))
-
-	for _, path := range paths {
-		wg.Add(1)
-
-		go func(ch chan struct {
-			Path  quoter.Path
-			Err   error
-			Price quoter.QuoteExactOutputResult
-		}) {
-			defer wg.Done()
-			defer func() {
-				if err := recover(); err != nil {
-					ch <- struct {
-						Path  quoter.Path
-						Err   error
-						Price quoter.QuoteExactOutputResult
-					}{
-						Path: path,
-						Err:  fmt.Errorf("%s", err),
-					}
-				}
-			}()
-
-			result, err := q.QuoteExactOutput(context.Background(), path.ToBytes(), amountOut)
-			if err != nil {
-				panic(err)
-			}
-
-			ch <- struct {
-				Path  quoter.Path
-				Err   error
-				Price quoter.QuoteExactOutputResult
-			}{
-				Path:  path,
-				Price: *result,
-			}
-		}(results)
+	// Filter paths
+	paths, err = cacher.filterPath(ctx, paths, maxNumber)
+	if err != nil {
+		return nil, err
 	}
 
-	wg.Wait()
-	close(results)
+	pathBytes := [][]byte{}
+	linq.From(paths).SelectT(func(item quoter.Path) []byte { return item.ToBytes() }).ToSlice(&pathBytes)
+	results, err := q.BatchQuoteExactOutputs(ctx, pathBytes, amountOut)
+	if err != nil {
+		return nil, err
+	}
 
 	// Handle results
 	var prices []Price
-	linq.From(results).
-		WhereT(func(item struct {
-			Path  quoter.Path
-			Err   error
-			Price quoter.QuoteExactOutputResult
-		}) bool {
-			return item.Err == nil
-		}).
-		SelectT(func(item struct {
-			Path  quoter.Path
-			Err   error
-			Price quoter.QuoteExactOutputResult
-		}) Price {
-			return Price{
-				From:                        fromToken.Address,
-				To:                          toToken.Address,
-				Pools:                       item.Path.Pools,
-				Path:                        item.Path.ToBytes(),
-				Value:                       item.Price.AmountIn,
-				SqrtPriceX96AfterList:       item.Price.SqrtPriceX96AfterList,
-				InitializedTicksCrossedList: item.Price.InitializedTicksCrossedList,
-				GasEstimate:                 item.Price.GasEstimate,
-			}
-		}).
-		ToSlice(&prices)
+	for i, path := range paths {
+		prices = append(prices, Price{
+			From:                        fromToken.Address,
+			To:                          toToken.Address,
+			Pools:                       path.Pools,
+			Path:                        path.ToBytes(),
+			Value:                       results[i].AmountIn,
+			SqrtPriceX96AfterList:       results[i].SqrtPriceX96AfterList,
+			InitializedTicksCrossedList: results[i].InitializedTicksCrossedList,
+			GasEstimate:                 results[i].GasEstimate,
+		})
+	}
 
 	return prices, nil
 }
 
-func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token common.Address, isCache bool, maxLength int64, wantStablecoin *common.Address) ([]Price, error) {
+func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, token common.Address, isCache bool, maxLength int64, maxNumber int64, wantStablecoin *common.Address) ([]Price, error) {
 	if token.Hex() == (common.Address{}).Hex() {
 		if !common.IsHexAddress(cacher.chainConf.WETH) {
 			return nil, fmt.Errorf("%s", "Miss WETH configure")
@@ -489,7 +515,7 @@ func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token common.Address, 
 					}).
 					ToSlice(&prices)
 			} else {
-				prices, err = cacher.QuoteExactInput(pools, token, common.HexToAddress(stablecoin.Address), amountIn, maxLength)
+				prices, err = cacher.QuoteExactInput(ctx, pools, token, common.HexToAddress(stablecoin.Address), amountIn, maxLength, maxNumber)
 				if err != nil {
 					panic(err)
 				}
