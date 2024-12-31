@@ -4,18 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
 	"sonex_api_backend_go/internal/lib/cache"
+	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/global"
-	lp "sonex_api_backend_go/internal/lib/pool"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -84,6 +86,12 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.ICache, cacheKey string, cachedResp *PoolsResponseWrapper) (*PoolsResponseWrapper, error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
+	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	sonex := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	stablecoinToken, err := global.GetToken(req.ChainId, chain.USD)
+	if err != nil {
+		return nil, err
+	}
 
 	var lockAcquired bool
 
@@ -107,8 +115,9 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	model := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	data, meta, err := model.GetPoolList(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
+	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(ctx, req, sonex.PositionManager)
 	if err != nil {
 		return &PoolsResponseWrapper{
 			PoolsResponse: &types.PoolsResponse{
@@ -156,7 +165,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	// 	}
 	// }()
 
-	balanceFetcher := lp.NewTokenBalanceFetcher(l.svcCtx.Config.Chains[0])
 	var wg sync.WaitGroup
 	mu := &sync.Mutex{}
 
@@ -165,54 +173,98 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		go func(pool *types.PoolsResponse_Pool) {
 			defer wg.Done()
 
-			balance0, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token0.Address, int64(pool.Token0.Decimals))
-			balance1, _ := balanceFetcher.GetTokenBalance(pool.Address, pool.Token1.Address, int64(pool.Token1.Decimals))
-			price0 := new(big.Float).SetFloat64(0)
-			price1 := new(big.Float).SetFloat64(0)
-			factorDai := new(big.Float).SetFloat64(math.Pow10(18))
+			nodeCaller, err := node_caller.NewNodeCaller(*chain)
+			if err != nil {
+				return
+			}
+			multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+			if err != nil {
+				return
+			}
+			erc20ABI, err := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
+			if err != nil {
+				return
+			}
 
-			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
+			callDatas := []contract_common.Multicall3Call3{}
+			data, err := erc20ABI.Pack("balanceOf", common.HexToAddress(pool.Address))
+			if err != nil {
+				return
+			}
+			callDatas = append(callDatas, contract_common.Multicall3Call3{
+				Target:       common.HexToAddress(pool.Token0.Address),
+				AllowFailure: true,
+				CallData:     data,
+			})
+			callDatas = append(callDatas, contract_common.Multicall3Call3{
+				Target:       common.HexToAddress(pool.Token1.Address),
+				AllowFailure: true,
+				CallData:     data,
+			})
+			data, err = multicallABI.Pack("aggregate3", callDatas)
+			if err != nil {
+				return
+			}
+			var multicallResults []contract_common.Multicall3Result
+			err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &multicallResults)
+			if err != nil {
+				return
+			}
+			if !multicallResults[0].Success {
+				logx.Errorf("%s", fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", multicallResults[0].ReturnData[4:])))
+				return
+			}
+			balance0 := big.NewInt(0)
+			balance1 := big.NewInt(0)
+
+			err = erc20ABI.UnpackIntoInterface(&balance0, "factory", multicallResults[0].ReturnData)
+			if err != nil {
+				return
+			}
+			err = erc20ABI.UnpackIntoInterface(&balance1, "factory", multicallResults[1].ReturnData)
+			if err != nil {
+				return
+			}
+
+			price0 := big.NewInt(0)
+			price1 := big.NewInt(0)
+
+			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, &chain.USD)
 			if err == nil && bestPrice0 != nil {
-				price0.SetInt(bestPrice0.Value)
+				price0 = bestPrice0.Value
 			}
+			pool.Price0 = price0.String()
 
-			// factor0 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token0.Decimals)))
-			// factor1 := new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals)))
-
-			poolPrice0 := new(big.Float).Quo(price0, factorDai)
-			pool.Price0, _ = poolPrice0.Float64()
-
-			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, &l.svcCtx.Config.Chains[0].USD)
+			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, &chain.USD)
 			if err == nil && bestPrice1 != nil {
-				price1.SetInt(bestPrice1.Value)
+				price1 = bestPrice1.Value
 			}
+			pool.Price1 = price1.String()
 
-			poolPrice1 := new(big.Float).Quo(price1, factorDai)
-			pool.Price1, _ = poolPrice1.Float64()
-
-			//fmt.Println("pool.Address:balance0:balance1", pool.Address, balance0, balance1, pool.Price0, pool.Price1)
+			token0Balance := new(big.Int).Div(new(big.Int).Mul(balance0, price0), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(pool.Token0.Decimals)), nil))
+			token1Balance := new(big.Int).Div(new(big.Int).Mul(balance1, price1), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(pool.Token1.Decimals)), nil))
+			tvlUSD := new(big.Int).Add(token0Balance, token1Balance)
 
 			mu.Lock()
-			token0Balance := new(big.Float).Mul(new(big.Float).SetFloat64(balance0), price0)
-			token1Balance := new(big.Float).Mul(new(big.Float).SetFloat64(balance1), price1)
-			pool.Token0Balance, _ = token0Balance.Float64()
-			pool.Token1Balance, _ = token1Balance.Float64()
-			tvlUSD := new(big.Float).Add(token0Balance, token1Balance)
-			pool.TvlUSD, _ = tvlUSD.Float64()
+			pool.Token0Balance = token0Balance.String()
+			pool.Token1Balance = token1Balance.String()
+			pool.TvlUSD = tvlUSD.String()
+			pool.Stablecoin = stablecoinToken.Address
+			pool.StablecoinDecimals = stablecoinToken.Decimals
 			mu.Unlock()
 		}(data[i])
 	}
 
 	wg.Wait()
 
-	poolVolumes, err := model.GetPoolVolumes(ctx, l.svcCtx.Config.Sonexes[0].ChainId, true)
+	poolVolumes, err := eventSonexPoolSwapModel.SummarizePoolVolumes(ctx, sonex.ChainId, true)
 	if err == nil {
 		for _, pool := range data {
 			for _, volume := range poolVolumes {
 				if pool.Address == volume.Address {
-					factor0 := math.Pow(10, float64(pool.Token0.Decimals))
-					factor1 := math.Pow(10, float64(pool.Token1.Decimals))
-					pool.Volume = volume.Amounts0/factor0 + volume.Amounts1/factor1
+					amount0, _ := new(big.Int).SetString(volume.Amount0, 10)
+					amount1, _ := new(big.Int).SetString(volume.Amount1, 10)
+					pool.Volume = new(big.Int).Add(amount0, amount1).String()
 					break
 				}
 			}
