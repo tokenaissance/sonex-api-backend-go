@@ -281,13 +281,12 @@ type PoolsResponse_Volume struct {
 
 type Position struct {
 	TokenID       int64            `json:"tokenId"`
-	Balance       float64          `json:"balance"`
+	Position      float64          `json:"position"`
 	ClaimableFees float64          `json:"claimableFees"`
 	IsClosed      bool             `json:"isClosed"`
 	TickUpper     string           `json:"tickUpper"`
 	TickLower     string           `json:"tickLower"`
-	PNL30d        string           `json:"pnl30d"`
-	Ratio         float64          `json:"ratio"`
+	PNL           float64          `json:"pnl"`
 	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
@@ -311,8 +310,7 @@ type PositionsResponse struct {
 	IsNegative    bool        `json:"isNegative"`
 	Pnl           float64     `json:"pnl"`
 	Positions     []*Position `json:"positions"`
-	Ratio         float64     `json:"ratio"`
-	TotalBalances float64     `json:"totalBalances"`
+	TotalPosition float64     `json:"totalPosition"`
 	Message       string      `json:"message"`
 }
 

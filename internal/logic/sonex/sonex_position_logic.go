@@ -226,7 +226,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 
 		// 计算总余额
 		totalBalance := new(big.Float).Add(amount0Price, amount1Price)
-		transferItem.Balance, _ = totalBalance.Float64()
+		transferItem.Position, _ = totalBalance.Float64()
 
 		// 计算未结费用 unclaimedFee0 和 unclaimedFee1
 		transferItem.Amount0, _ = new(big.Float).SetInt(amount0).Float64()
