@@ -7,8 +7,10 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
+	"sonex_api_backend_go/internal/lib/contract/farm"
 	v3PoolContract "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/log"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/module/sonex"
 
 	"sonex_api_backend_go/internal/repository"
@@ -28,8 +30,15 @@ import (
 )
 
 // 创建池子
-func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventRewardToken string, eventPool string, eventStartTime int64, eventEndTime int64, eventRefundee string, eventReward string, eventIncentiveId string) {
-	logx.Infof("enter OnIncentiveCreated, incentiveId: %s, tx_hash: %s, pool_address: %s", eventIncentiveId, txHash, eventPool)
+func IncentiveCreated(conf config.Config, chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerIncentiveCreated) {
+	blockNumber := int64(event.Raw.BlockNumber)
+	txIndex := int64(event.Raw.Index)
+	txHash := tx.Tx().Hash().Hex()
+	txAt := tx.TxAt
+	from := tx.From.Hex()
+	to := tx.Tx().To().Hex()
+
+	logx.Infof("enter OnIncentiveCreated, incentiveId: %s, tx_hash: %s, pool_address: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), txHash, event.Pool)
 
 	retrys := 0
 	err := retry.Do(func() error {
@@ -39,7 +48,7 @@ func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIn
 		}
 
 		// 获取pool基本信息
-		poolInfo, err := getPoolInfo(client, common.HexToAddress(eventPool))
+		poolInfo, err := getPoolInfo(client, event.Pool)
 		if err != nil {
 			logx.Errorf("Failed to get v3 pool info: %v", err)
 			return err
@@ -54,7 +63,7 @@ func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIn
 
 		// 获取token价格
 		rewardPriceValue := big.NewInt(0)
-		_, rewardPrice, err := global.GetPrices(context.Background(), nil, chainId, common.HexToAddress(eventRewardToken).Hex(), true, 2, nil)
+		_, rewardPrice, err := global.GetPrices(context.Background(), nil, chainId, event.RewardToken.Hex(), true, 2, nil)
 		if err != nil {
 			logx.Errorf("Failed to get reward token price: %v", err)
 			return err
@@ -64,12 +73,12 @@ func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIn
 
 		// 计算APR
 		var annualRewardValue *big.Int
-		duration := eventEndTime - eventStartTime
+		duration := new(big.Int).Sub(event.EndTime, event.StartTime).Int64()
 		if duration <= 0 {
 			logx.Error("invalid duration, apr will be set to 0")
 			annualRewardValue = big.NewInt(0)
 		} else {
-			eventRewardI, _ := new(big.Int).SetString(eventReward, 10)
+			eventRewardI := event.Reward
 			rewardValue := new(big.Int).Mul(eventRewardI, rewardPriceValue)
 			daysInYear := big.NewInt(365)
 			durationDays := big.NewInt(duration / (24 * 60 * 60))
@@ -106,7 +115,7 @@ func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIn
 			token1Decimals = token1Info.Decimals
 		}
 
-		rewardTokenInfo, err := global.GetToken(chainId, eventRewardToken)
+		rewardTokenInfo, err := global.GetToken(chainId, event.RewardToken.Hex())
 		if err != nil {
 			logx.Errorf("failed to get reward token info: %v", err)
 		}
@@ -114,15 +123,15 @@ func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIn
 		// 保存
 		pool := &repository.FarmPools{
 			ChainId:             chainId,
-			IncentiveId:         eventIncentiveId,
-			StartTime:           sql.NullTime{Time: time.Unix(eventStartTime, 0), Valid: true},
-			EndTime:             sql.NullTime{Time: time.Unix(eventEndTime, 0), Valid: true},
-			RewardTokenAddress:  eventRewardToken,
+			IncentiveId:         common.BytesToHash(event.IncentiveId[:]).Hex(),
+			StartTime:           sql.NullTime{Time: time.Unix(event.StartTime.Int64(), 0), Valid: true},
+			EndTime:             sql.NullTime{Time: time.Unix(event.EndTime.Int64(), 0), Valid: true},
+			RewardTokenAddress:  event.RewardToken.Hex(),
 			RewardTokenDecimals: int64(rewardTokenInfo.Decimals),
-			RewardTokenAmount:   eventReward,
+			RewardTokenAmount:   event.Reward.String(),
 			RewardTokenPrice:    rewardPriceValue.String(),
-			RefundeeAddress:     eventRefundee,
-			PoolAddress:         eventPool,
+			RefundeeAddress:     event.Refundee.Hex(),
+			PoolAddress:         event.Pool.Hex(),
 			FeeRatio:            strconv.Itoa(int(poolInfo.Fee)),
 			Token0Address:       poolInfo.Token0Address,
 			Token0Symbol:        tokenOSymbol,
@@ -154,11 +163,11 @@ func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIn
 				TxHash:      txHash,
 				UserAddress: from,
 				ToAddress:   to,
-				IncentiveId: eventIncentiveId,
+				IncentiveId: common.BytesToHash(event.IncentiveId[:]).Hex(),
 				Action:      sql.NullString{String: "create_pool", Valid: true},
 				EventSign:   "IncentiveCreated", // TODO
 				LogIndex:    txIndex,            // TODO
-				Amount:      eventReward,
+				Amount:      event.Reward.String(),
 				IsUser:      false,
 				TxTime:      sql.NullTime{Time: txAt, Valid: true},
 			}
@@ -185,16 +194,23 @@ func IncentiveCreated(conf config.Config, chainId int64, blockNumber int64, txIn
 		}),
 	)
 	if err != nil {
-		logx.Errorf("[OnIncentiveCreated] Failed, IncentiveId: %s, Error: %s", eventIncentiveId, err)
+		logx.Errorf("[OnIncentiveCreated] Failed, IncentiveId: %s, Error: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), err)
 		return
 	}
 
-	logx.Infof("[OnIncentiveCreated] OK, IncentiveId: %s", eventIncentiveId)
+	logx.Infof("[OnIncentiveCreated] OK, IncentiveId: %s", common.BytesToHash(event.IncentiveId[:]).Hex())
 }
 
 // 质押
-func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventIncentiveId string, eventLiquidity string) {
-	logx.Infof("enter OnTokenStaked, incentiveId: %s, tx_hash: %s", eventIncentiveId, txHash)
+func TokenStaked(conf config.Config, chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenStaked) {
+	blockNumber := int64(event.Raw.BlockNumber)
+	txIndex := int64(event.Raw.Index)
+	txHash := tx.Tx().Hash().Hex()
+	txAt := tx.TxAt
+	from := tx.From.Hex()
+	to := tx.Tx().To().Hex()
+
+	logx.Infof("enter OnTokenStaked, incentiveId: %s, tx_hash: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), txHash)
 
 	retrys := 0
 	err := retry.Do(func() error {
@@ -206,19 +222,28 @@ func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex i
 		conn := repository.NewConn(conf.PostgreSQL.DateSource())
 		err = conn.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
 			connWithSession := sqlx.NewSqlConnFromSession(session)
-			farmPoolModel := repository.NewFarmPoolsModel(connWithSession)
-			isExists, err := farmPoolModel.IsExistsByIncentiveIdAndChainId(ctx, eventIncentiveId, chainId)
-			if err != nil || !isExists {
-				return fmt.Errorf("pool not found: %v, incentiveId: %s, chainId: %d", err, eventIncentiveId, chainId)
+			eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(connWithSession)
+			_, err := eventFarmIncentiveCreatedModel.FindOneByEventIncentiveIdChainId(ctx, common.BytesToHash(event.IncentiveId[:]).Hex(), chainId)
+			switch err {
+			case repository.ErrNotFound:
+				return fmt.Errorf("pool not found: %v, incentiveId: %s, chainId: %d", err, common.BytesToHash(event.IncentiveId[:]).Hex(), chainId)
+			case nil:
+			default:
+				return err
 			}
+			// farmPoolModel := repository.NewFarmPoolsModel(connWithSession)
+			// isExists, err := farmPoolModel.IsExistsByIncentiveIdAndChainId(ctx, common.BytesToHash(event.IncentiveId[:]).Hex(), chainId)
+			// if err != nil || !isExists {
+			// 	return fmt.Errorf("pool not found: %v, incentiveId: %s, chainId: %d", err, common.BytesToHash(event.IncentiveId[:]).Hex(), chainId)
+			// }
 
 			// 检查是否已存在质押记录
 			farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
 			existing, err := farmUserPoolModel.FindOneByUserAddressIncentiveIdTokenIdChainIdStatus(
 				ctx,
 				from,
-				eventIncentiveId,
-				eventTokenId,
+				common.BytesToHash(event.IncentiveId[:]).Hex(),
+				event.TokenId.Int64(),
 				chainId,
 				"stake",
 			)
@@ -231,8 +256,8 @@ func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex i
 
 			// 创建用户质押记录
 			userPool := &repository.FarmUserPools{
-				IncentiveId: eventIncentiveId,
-				TokenId:     eventTokenId,
+				IncentiveId: common.BytesToHash(event.IncentiveId[:]).Hex(),
+				TokenId:     event.TokenId.Int64(),
 				UserAddress: from,
 				ChainId:     chainId,
 				Status:      "stake",
@@ -250,9 +275,9 @@ func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex i
 				TxHash:      txHash,
 				UserAddress: from,
 				ToAddress:   to,
-				IncentiveId: eventIncentiveId,
-				Liquidity:   eventLiquidity,
-				TokenId:     eventTokenId,
+				IncentiveId: common.BytesToHash(event.IncentiveId[:]).Hex(),
+				Liquidity:   event.Liquidity.String(),
+				TokenId:     event.TokenId.Int64(),
 				Action:      sql.NullString{String: "stake", Valid: true},
 				EventSign:   "TokenStaked", // TODO
 				LogIndex:    txIndex,       // TODO
@@ -266,7 +291,8 @@ func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex i
 			}
 
 			// 更新参与人数
-			err = farmPoolModel.IncJoinNum(ctx, chainId, eventIncentiveId)
+			farmPoolModel := repository.NewFarmPoolsModel(connWithSession)
+			err = farmPoolModel.IncJoinNum(ctx, chainId, common.BytesToHash(event.IncentiveId[:]).Hex())
 			if err != nil {
 				return fmt.Errorf("failed to increment join num: %v", err)
 			}
@@ -280,7 +306,7 @@ func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex i
 		}
 
 		// 更新实时数据
-		err = UpdateFarmPoolData(conf, conn, client, chainId, eventIncentiveId)
+		err = UpdateFarmPoolData(conf, conn, client, chainId, common.BytesToHash(event.IncentiveId[:]).Hex())
 		if err != nil {
 			logx.Errorf("Failed to update pool data: %v", err)
 			return err
@@ -296,16 +322,23 @@ func TokenStaked(conf config.Config, chainId int64, blockNumber int64, txIndex i
 		}),
 	)
 	if err != nil {
-		logx.Errorf("[OnTokenStaked] Failed, IncentiveId: %s, Error: %s", eventIncentiveId, err)
+		logx.Errorf("[OnTokenStaked] Failed, IncentiveId: %s, Error: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), err)
 		return
 	}
 
-	logx.Infof("[OnTokenStaked] OK, IncentiveId: %s", eventIncentiveId)
+	logx.Infof("[OnTokenStaked] OK, IncentiveId: %s", common.BytesToHash(event.IncentiveId[:]).Hex())
 }
 
 // 解除质押
-func TokenUnstaked(conf config.Config, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventIncentiveId string) {
-	logx.Infof("enter OnTokenUnstaked, incentiveId: %s, tx_hash: %s", eventIncentiveId, txHash)
+func TokenUnstaked(conf config.Config, chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenUnstaked) {
+	blockNumber := int64(event.Raw.BlockNumber)
+	txIndex := int64(event.Raw.Index)
+	txHash := tx.Tx().Hash().Hex()
+	txAt := tx.TxAt
+	from := tx.From.Hex()
+	to := tx.Tx().To().Hex()
+
+	logx.Infof("enter OnTokenUnstaked, incentiveId: %s, tx_hash: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), txHash)
 
 	retrys := 0
 	err := retry.Do(func() error {
@@ -325,8 +358,8 @@ func TokenUnstaked(conf config.Config, chainId int64, blockNumber int64, txIndex
 				TxHash:      txHash,
 				UserAddress: from,
 				ToAddress:   to,
-				IncentiveId: eventIncentiveId,
-				TokenId:     eventTokenId,
+				IncentiveId: common.BytesToHash(event.IncentiveId[:]).Hex(),
+				TokenId:     event.TokenId.Int64(),
 				Action:      sql.NullString{String: "unstake", Valid: true},
 				EventSign:   "TokenUnstaked", // TODO
 				LogIndex:    txIndex,         // TODO
@@ -341,7 +374,7 @@ func TokenUnstaked(conf config.Config, chainId int64, blockNumber int64, txIndex
 
 			// 更新参与人数
 			farmPoolModel := repository.NewFarmPoolsModel(sqlx.NewSqlConnFromSession(session))
-			err = farmPoolModel.DecJoinNum(ctx, chainId, eventIncentiveId)
+			err = farmPoolModel.DecJoinNum(ctx, chainId, common.BytesToHash(event.IncentiveId[:]).Hex())
 			if err != nil {
 				return fmt.Errorf("failed to decrement join num: %v", err)
 			}
@@ -354,7 +387,7 @@ func TokenUnstaked(conf config.Config, chainId int64, blockNumber int64, txIndex
 		}
 
 		// 更新实时数据
-		err = UpdateFarmPoolData(conf, conn, client, chainId, eventIncentiveId)
+		err = UpdateFarmPoolData(conf, conn, client, chainId, common.BytesToHash(event.IncentiveId[:]).Hex())
 		if err != nil {
 			logx.Errorf("Failed to update pool data: %v", err)
 			return err
@@ -370,16 +403,22 @@ func TokenUnstaked(conf config.Config, chainId int64, blockNumber int64, txIndex
 		}),
 	)
 	if err != nil {
-		logx.Errorf("[OnTokenUnstaked] Failed, IncentiveId: %s, Error: %s", eventIncentiveId, err)
+		logx.Errorf("[OnTokenUnstaked] Failed, IncentiveId: %s, Error: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), err)
 		return
 	}
 
-	logx.Infof("[OnTokenUnstaked] OK, IncentiveId: %s", eventIncentiveId)
+	logx.Infof("[OnTokenUnstaked] OK, IncentiveId: %s", common.BytesToHash(event.IncentiveId[:]).Hex())
 }
 
 // 奖励领取
-func RewardClaimed(conf config.Config, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTo string, eventReward string) {
-	logx.Infof("enter OnRewardClaimed, from: %s, to: %s, reward: %s, tx_hash: %s", from, eventTo, eventReward, txHash)
+func RewardClaimed(conf config.Config, chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerRewardClaimed) {
+	blockNumber := int64(event.Raw.BlockNumber)
+	txIndex := int64(event.Raw.Index)
+	txHash := tx.Tx().Hash().Hex()
+	txAt := tx.TxAt
+	from := tx.From.Hex()
+
+	logx.Infof("enter OnRewardClaimed, from: %s, to: %s, reward: %s, tx_hash: %s", from, event.To, event.Reward, txHash)
 
 	retrys := 0
 	err := retry.Do(func() error {
@@ -391,11 +430,11 @@ func RewardClaimed(conf config.Config, chainId int64, blockNumber int64, txIndex
 			BlockNumber: blockNumber,
 			TxHash:      txHash,
 			UserAddress: from,
-			ToAddress:   eventTo,
+			ToAddress:   event.To.Hex(),
 			Action:      sql.NullString{String: "harvest", Valid: true},
 			EventSign:   "RewardClaimed", // TODO
 			LogIndex:    txIndex,         // TODO
-			Amount:      eventReward,
+			Amount:      event.Reward.String(),
 			IsUser:      true,
 			TxTime:      sql.NullTime{Time: txAt, Valid: true},
 		}
@@ -424,17 +463,23 @@ func RewardClaimed(conf config.Config, chainId int64, blockNumber int64, txIndex
 }
 
 // LP Token所有权转移
-func DepositTransferred(conf config.Config, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventTokenId int64, eventOldOwner string, eventNewOwner string) {
-	logx.Infof("enter OnDepositTransferred, tokenId: %d, tx_hash: %s", eventTokenId, txHash)
+func DepositTransferred(conf config.Config, chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerDepositTransferred) {
+	blockNumber := int64(event.Raw.BlockNumber)
+	txIndex := int64(event.Raw.Index)
+	txHash := tx.Tx().Hash().Hex()
+	txAt := tx.TxAt
+	from := tx.From.Hex()
+
+	logx.Infof("enter OnDepositTransferred, tokenId: %d, tx_hash: %s", event.TokenId, txHash)
 
 	retrys := 0
 	err := retry.Do(func() error {
 		incentiveId := ""
 
 		conn := repository.NewConn(conf.PostgreSQL.DateSource())
-		if eventOldOwner != (common.Address{}).Hex() {
+		if event.OldOwner.Hex() != (common.Address{}).Hex() {
 			farmUserPoolModel := repository.NewFarmUserPoolsModel(conn)
-			id, err := farmUserPoolModel.FindIncentiveIdByTokenIdAndOwner(context.Background(), eventTokenId, eventOldOwner)
+			id, err := farmUserPoolModel.FindIncentiveIdByTokenIdAndOwner(context.Background(), event.TokenId.Int64(), event.OldOwner.Hex())
 			if err != nil {
 				logx.Errorf("Failed to get incentiveId: %v", err)
 			} else {
@@ -450,8 +495,8 @@ func DepositTransferred(conf config.Config, chainId int64, blockNumber int64, tx
 				BlockNumber: blockNumber,
 				TxHash:      txHash,
 				UserAddress: from,
-				ToAddress:   eventNewOwner,
-				TokenId:     eventTokenId,
+				ToAddress:   event.NewOwner.Hex(),
+				TokenId:     event.TokenId.Int64(),
 				IncentiveId: incentiveId,
 				Action:      sql.NullString{String: "transfer", Valid: true},
 				EventSign:   "DepositTransferred", // TODO
@@ -465,14 +510,14 @@ func DepositTransferred(conf config.Config, chainId int64, blockNumber int64, tx
 				return fmt.Errorf("failed to insert farm user action: %v", err)
 			}
 
-			if eventNewOwner == (common.Address{}).Hex() { // withdrawToken
+			if event.NewOwner.Hex() == (common.Address{}).Hex() { // withdrawToken
 				// 更新用户质押状态
 				farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
 				userPool, err := farmUserPoolModel.FindOneByUserAddressIncentiveIdTokenIdChainIdStatus(
 					ctx,
 					from,
 					incentiveId,
-					eventTokenId,
+					event.TokenId.Int64(),
 					chainId,
 					"stake",
 				)
@@ -488,7 +533,7 @@ func DepositTransferred(conf config.Config, chainId int64, blockNumber int64, tx
 
 			// 转移TokenId的所有权
 			farmUserPoolModel := repository.NewFarmUserPoolsModel(sqlx.NewSqlConnFromSession(session))
-			err = farmUserPoolModel.TransferOwnerOfTokenId(ctx, chainId, eventOldOwner, eventNewOwner)
+			err = farmUserPoolModel.TransferOwnerOfTokenId(ctx, chainId, event.OldOwner.Hex(), event.NewOwner.Hex())
 			if err != nil {
 				return fmt.Errorf("failed to update farm user pools: %v", err)
 			}
@@ -511,16 +556,23 @@ func DepositTransferred(conf config.Config, chainId int64, blockNumber int64, tx
 		}),
 	)
 	if err != nil {
-		logx.Errorf("[OnDepositTransferred] Failed, TokenId: %d, Error: %s", eventTokenId, err)
+		logx.Errorf("[OnDepositTransferred] Failed, TokenId: %d, Error: %s", event.TokenId, err)
 		return
 	}
 
-	logx.Infof("[OnDepositTransferred] OK, TokenId: %d", eventTokenId)
+	logx.Infof("[OnDepositTransferred] OK, TokenId: %d", event.TokenId)
 }
 
 // 质押池结束
-func IncentiveEnded(conf config.Config, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, eventIncentiveId string, eventRefund string) {
-	logx.Infof("enter OnIncentiveEnded, incentiveId: %s, tx_hash: %s", eventIncentiveId, txHash)
+func IncentiveEnded(conf config.Config, chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerIncentiveEnded) {
+	blockNumber := int64(event.Raw.BlockNumber)
+	txIndex := int64(event.Raw.Index)
+	txHash := tx.Tx().Hash().Hex()
+	txAt := tx.TxAt
+	from := tx.From.Hex()
+	to := tx.Tx().To().Hex()
+
+	logx.Infof("enter OnIncentiveEnded, incentiveId: %s, tx_hash: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), txHash)
 
 	retrys := 0
 	err := retry.Do(func() error {
@@ -534,11 +586,11 @@ func IncentiveEnded(conf config.Config, chainId int64, blockNumber int64, txInde
 				TxHash:      txHash,
 				UserAddress: from,
 				ToAddress:   to,
-				IncentiveId: eventIncentiveId,
+				IncentiveId: common.BytesToHash(event.IncentiveId[:]).Hex(),
 				Action:      sql.NullString{String: "destroy_pool", Valid: true},
 				EventSign:   "IncentiveEnded", // TODO
 				LogIndex:    txIndex,          // TODO
-				Amount:      eventRefund,
+				Amount:      event.Refund.String(),
 				IsUser:      false,
 				TxTime:      sql.NullTime{Time: txAt, Valid: true},
 			}
@@ -565,11 +617,11 @@ func IncentiveEnded(conf config.Config, chainId int64, blockNumber int64, txInde
 		}),
 	)
 	if err != nil {
-		logx.Errorf("[OnIncentiveEnded] Failed, IncentiveId: %s, Error: %s", eventIncentiveId, err)
+		logx.Errorf("[OnIncentiveEnded] Failed, IncentiveId: %s, Error: %s", common.BytesToHash(event.IncentiveId[:]).Hex(), err)
 		return
 	}
 
-	logx.Infof("[OnIncentiveEnded] OK, IncentiveId: %s", eventIncentiveId)
+	logx.Infof("[OnIncentiveEnded] OK, IncentiveId: %s", common.BytesToHash(event.IncentiveId[:]).Hex())
 }
 
 // 更新质押池实时数据
@@ -631,13 +683,6 @@ func UpdateFarmPoolData(conf config.Config, conn sqlx.SqlConn, client *ethclient
 		if err != nil {
 			return err
 		}
-		// totalToken0Amount, totalToken1Amount, err = patch.GetTotalTokensInPool(
-		// 	context.Background(),
-		// 	conf,
-		// 	chainId,
-		// 	common.HexToAddress(pool.PoolAddress),
-		// 	tokenIds,
-		// )
 		totalToken0Amount := big.NewInt(0)
 		totalToken1Amount := big.NewInt(0)
 		for _, position := range positions {

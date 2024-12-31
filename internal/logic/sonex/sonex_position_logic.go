@@ -175,8 +175,8 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
 	positions, err := caller.BatchGetPositions(
 		context.Background(),
-		l.svcCtx.Config.Chains[0].ChainId,
-		common.HexToAddress(l.svcCtx.Config.Sonexes[0].PositionManager),
+		req.ChainId,
+		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
 		[]*big.Int{big.NewInt(req.Id)},
 	)
 	if err == nil {

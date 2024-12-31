@@ -132,7 +132,7 @@ func (chainScanner *ChainScanner) Start() {
 						default:
 							return err
 						}
-						start = uint64(chainScannerPrograss.Height) - 1
+						start = uint64(chainScannerPrograss.Height)
 						newEnd := height - uint64(chainScanner.config.MinConfirmations)
 						retrys := 0
 						err = retry.Do(func() error {

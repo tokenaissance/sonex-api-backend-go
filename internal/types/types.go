@@ -122,7 +122,8 @@ type Fees struct {
 }
 
 type GetNftDataRequest struct {
-	Id int64 `path:"id"`
+	Id      int64 `path:"id"`
+	ChainId int64 `form:"chainId,default=1946,optional"`
 }
 
 type Invested struct {
@@ -143,9 +144,9 @@ type MyPositionRequest struct {
 }
 
 type MyPositionResponse struct {
-	Code    int             `json:"code"`
-	Data    []*PositionData `json:"data"`
-	Message string          `json:"message"`
+	Code    int         `json:"code"`
+	Data    []*Position `json:"data"`
+	Message string      `json:"message"`
 }
 
 type NftDataResponse struct {
@@ -276,47 +277,41 @@ type PoolsResponse_Volume struct {
 	Volume       string `json:"volume"`
 }
 
-type PositionData struct {
-	TokenID       int64            `json:"tokenId"`
+type Position struct {
+	TokenID       int64            `json:"token_id"`
 	Balance       float64          `json:"balance"`
-	ClaimableFees float64          `json:"claimableFees"`
-	IsClosed      bool             `json:"isClosed"`
-	TickUpper     string           `json:"tickUpper"`
-	TickLower     string           `json:"tickLower"`
+	ClaimableFees float64          `json:"claimable_fees"`
+	IsClosed      bool             `json:"is_closed"`
+	TickUpper     string           `json:"tick_upper"`
+	TickLower     string           `json:"tick_lower"`
 	PNL30d        string           `json:"pnl30d"`
 	Ratio         float64          `json:"ratio"`
-	IsNegative    bool             `json:"isNegative"`
+	IsNegative    bool             `json:"is_negative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
-	PositionAge   int              `json:"positionAge"`
+	PositionAge   int              `json:"position_age"`
 	Amount0       float64          `json:"amount0"`
 	Amount1       float64          `json:"amount1"`
 	Price0        float64          `json:"price0"`
 	Price1        float64          `json:"price1"`
-	UnclaimedFee0 float64          `json:"unclaimedFee0"`
-	UnclaimedFee1 float64          `json:"unclaimedFee1"`
+	UnclaimedFee0 float64          `json:"unclaimed_fee0"`
+	UnclaimedFee1 float64          `json:"unclaimed_fee1"`
 }
 
 type PositionsRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
+	ChainId  int64  `form:"chainId,default=1946,optional"`
 }
 
 type PositionsResponse struct {
-	Code          int                           `json:"code"`
-	GasCosts      float64                       `json:"gasCosts"`
-	IsNegative    bool                          `json:"isNegative"`
-	Pnl           float64                       `json:"pnl"`
-	Data          []*PositionsResponse_Position `json:"positions"`
-	Ratio         float64                       `json:"ratio"`
-	TotalFees     float64                       `json:"totalFees"`
-	TotalBalances float64                       `json:"totalBalances"`
-	Message       string                        `json:"message"`
-}
-
-type PositionsResponse_Position struct {
-	Timestamp   int     `json:"timestamp"`
-	AmountPrice float64 `json:"amount_price"`
+	Code          int         `json:"code"`
+	IsNegative    bool        `json:"is_negative"`
+	Pnl           float64     `json:"pnl"`
+	Positions     []*Position `json:"positions"`
+	Ratio         float64     `json:"ratio"`
+	TotalBalances float64     `json:"total_balances"`
+	Message       string      `json:"message"`
 }
 
 type PriceComparisonResult struct {

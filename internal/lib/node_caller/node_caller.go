@@ -74,7 +74,7 @@ func (nodeCaller *NodeCaller) BatchHeaderByNumber(ctx context.Context, numbers [
 	return result, nil
 }
 
-func (nodeCaller *NodeCaller) BatchBlockByNumber(ctx context.Context, numbers []int64) (map[int64]*types.Block, error) {
+func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers []int64) (map[int64]*types.Block, error) {
 	if len(numbers) == 0 {
 		return map[int64]*types.Block{}, nil
 	}
@@ -173,24 +173,16 @@ func (nodeCaller *NodeCaller) BatchBlockByNumber(ctx context.Context, numbers []
 	return result, nil
 }
 
-func (nodeCaller *NodeCaller) GetTranscations(ctx context.Context, blockNumbers []int64) (map[string]*struct {
-	Time time.Time
-	From common.Address
-	Tx   *types.Transaction
-}, error) {
+func (nodeCaller *NodeCaller) BatchGetTranscationsByNumber(ctx context.Context, blockNumbers []int64) (map[string]*Transaction, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	blocks, err := nodeCaller.BatchBlockByNumber(ctx, blockNumbers)
+	blocks, err := nodeCaller.BatchGetBlockByNumber(ctx, blockNumbers)
 	if err != nil {
 		return nil, err
 	}
-	transactions := map[string]*struct {
-		Time time.Time
-		From common.Address
-		Tx   *types.Transaction
-	}{}
+	transactions := map[string]*Transaction{}
 	for _, block := range blocks {
 		txAt := time.Unix(int64(block.Time()), 0).UTC()
 		for _, transaction := range block.Transactions() {
@@ -198,14 +190,14 @@ func (nodeCaller *NodeCaller) GetTranscations(ctx context.Context, blockNumbers 
 			if err != nil {
 				return nil, err
 			}
-			transactions[transaction.Hash().Hex()] = &struct {
-				Time time.Time
-				From common.Address
-				Tx   *types.Transaction
-			}{
-				Time: txAt,
-				From: from,
-				Tx:   transaction,
+			transactions[transaction.Hash().Hex()] = &Transaction{
+				tx: transaction,
+				ExtraInfo: ExtraInfo{
+					BlockNumber: block.Number().Int64(),
+					BlockHash:   block.Hash(),
+					From:        from,
+					TxAt:        txAt,
+				},
 			}
 		}
 	}

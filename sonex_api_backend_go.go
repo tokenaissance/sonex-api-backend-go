@@ -12,12 +12,15 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
+	contract_farm "sonex_api_backend_go/internal/lib/contract/farm"
+	contract_uniswap_v3 "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
-	"time"
 
 	"github.com/ahmetb/go-linq/v3"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -131,8 +134,8 @@ func main() {
 					panic(err)
 				}
 				// Swap callback demo
-				handler.OnPoolSwap(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool string) {
-					sonex.SwapCallback(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, pool)
+				handler.OnPoolSwap(func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *contract_uniswap_v3.UniswapV3PoolSwap) {
+					sonex.SwapCallback(c, chainId, pool, tx, event)
 				})
 				chainHandlerManager.AddHandler(1946, handler)
 			}
@@ -161,23 +164,23 @@ func main() {
 					panic(err)
 				}
 
-				handler.OnIncentiveCreated(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, eventRewardToken, eventPool string, eventStartTime, eventEndTime int64, eventRefundee, eventReward, eventIncentiveId string) {
-					farm.IncentiveCreated(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventRewardToken, eventPool, eventStartTime, eventEndTime, eventRefundee, eventReward, eventIncentiveId)
+				handler.OnIncentiveCreated(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerIncentiveCreated) {
+					farm.IncentiveCreated(c, chainId, tx, event)
 				})
-				handler.OnTokenStaked(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value string, eventTokenId int64, eventIncentiveId, eventLiquidity string) {
-					farm.TokenStaked(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTokenId, eventIncentiveId, eventLiquidity)
+				handler.OnTokenStaked(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerTokenStaked) {
+					farm.TokenStaked(c, chainId, tx, event)
 				})
-				handler.OnTokenUnstaked(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value string, eventTokenId int64, eventIncentiveId string) {
-					farm.TokenUnstaked(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTokenId, eventIncentiveId)
+				handler.OnTokenUnstaked(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerTokenUnstaked) {
+					farm.TokenUnstaked(c, chainId, tx, event)
 				})
-				handler.OnRewardClaimed(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, eventTo, eventReward string) {
-					farm.RewardClaimed(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTo, eventReward)
+				handler.OnRewardClaimed(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerRewardClaimed) {
+					farm.RewardClaimed(c, chainId, tx, event)
 				})
-				handler.OnDepositTransferred(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value string, eventTokenId int64, eventOldOwner, eventNewOwner string) {
-					farm.DepositTransferred(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventTokenId, eventOldOwner, eventNewOwner)
+				handler.OnDepositTransferred(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerDepositTransferred) {
+					farm.DepositTransferred(c, chainId, tx, event)
 				})
-				handler.OnIncentiveEnded(func(chainId, blockNumber, txIndex int64, txHash string, txAt time.Time, from, to, value, eventIncentiveId, eventRefund string) {
-					farm.IncentiveEnded(c, chainId, blockNumber, txIndex, txHash, txAt, from, to, value, eventIncentiveId, eventRefund)
+				handler.OnIncentiveEnded(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerIncentiveEnded) {
+					farm.IncentiveEnded(c, chainId, tx, event)
 				})
 
 				chainHandlerManager.AddHandler(1946, handler)

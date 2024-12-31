@@ -36,7 +36,7 @@ func TestBatchHeaderByNumber(t *testing.T) {
 	}
 }
 
-func TestBatchBlockByNumber(t *testing.T) {
+func TestBatchGetBlockByNumber(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
@@ -45,7 +45,7 @@ func TestBatchBlockByNumber(t *testing.T) {
 		t.Errorf("%s\n", err.Error())
 		return
 	}
-	blocks, err := nodeCaller.BatchBlockByNumber(context.Background(), []int64{5110044, 5110046, 5110048})
+	blocks, err := nodeCaller.BatchGetBlockByNumber(context.Background(), []int64{5110044, 5110046, 5110048})
 	if err != nil {
 		t.Errorf("%s\n", err.Error())
 		return
@@ -54,6 +54,25 @@ func TestBatchBlockByNumber(t *testing.T) {
 		tx := block.Transactions()[0]
 		sender, _ := types.LatestSignerForChainID(big.NewInt(1946)).Sender(tx)
 		fmt.Printf("%d ==> %s %s %s\n", number, tx.Hash(), time.Unix(int64(block.Time()), 0).UTC(), sender)
+	}
+}
+
+func TestBatchGetTranscationsByNumber(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
+
+	nodeCaller, err := NewNodeCaller(c.Chains[0])
+	if err != nil {
+		t.Errorf("%s\n", err.Error())
+		return
+	}
+	transactions, err := nodeCaller.BatchGetTranscationsByNumber(context.Background(), []int64{5110044})
+	if err != nil {
+		t.Errorf("%s\n", err.Error())
+		return
+	}
+	for _, transaction := range transactions {
+		fmt.Printf("%s(%d) ===> from %s to %s at %v\n", transaction.tx.Hash(), transaction.BlockNumber, transaction.From, transaction.tx.To(), transaction.TxAt)
 	}
 }
 
