@@ -18,6 +18,7 @@ type (
 		withSession(session sqlx.Session) SonexTokenPriceRecordModel
 		Kline(address string, interval string) ([]*TokenPriceRecord, error)
 		GetCurrentPrice(tokenAddress string) (float64, error)
+		GetCurrentPrices(tokenAddresses []string) (map[string]float64, error)
 		GetLastHourPrice(tokenAddress string) (float64, error)
 		GetYesterdayPrice(tokenAddress string) (float64, error)
 	}
@@ -79,6 +80,35 @@ func (m *customSonexTokenPriceRecordModel) GetCurrentPrice(tokenAddress string) 
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
 	return price, err
+}
+
+func (m *customSonexTokenPriceRecordModel) GetCurrentPrices(tokenAddresses []string) (map[string]float64, error) {
+	ctx := context.Background()
+
+	type PriceRecord struct {
+		TokenAddress string  `db:"token_address"`
+		Price        float64 `db:"price"`
+	}
+
+	var records []PriceRecord
+	query := `
+		SELECT DISTINCT ON (token_address) token_address, price
+		FROM sonex_token_price_record
+		WHERE token_address = ANY($1)
+		ORDER BY token_address, created_at DESC;
+	`
+
+	err := m.conn.QueryRowsCtx(ctx, &records, query, tokenAddresses)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]float64, len(records))
+	for _, record := range records {
+		result[record.TokenAddress] = record.Price
+	}
+
+	return result, nil
 }
 
 func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(tokenAddress string) (float64, error) {
