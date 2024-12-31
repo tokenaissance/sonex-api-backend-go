@@ -153,7 +153,6 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 		CallData:     data,
 	})
 	for _, tokenId := range tokenIds {
-		_ = tokenId
 		positionsData, err := positionManagerABI.Pack("positions", tokenId)
 		if err != nil {
 			return nil, err
