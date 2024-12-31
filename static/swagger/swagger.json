@@ -413,7 +413,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/NftDataResponse"
+              "$ref": "#/definitions/PositionResponse"
             }
           }
         },
@@ -1568,17 +1568,6 @@
         "feeAmount1"
       ]
     },
-    "GetNftDataRequest": {
-      "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
-      "title": "GetNftDataRequest"
-    },
     "Invested": {
       "type": "object",
       "properties": {
@@ -1648,27 +1637,6 @@
         }
       },
       "title": "MyPositionResponse",
-      "required": [
-        "code",
-        "data",
-        "message"
-      ]
-    },
-    "NftDataResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
-          "$ref": "#/definitions/NftDataResponse_Data"
-        },
-        "message": {
-          "type": "string"
-        }
-      },
-      "title": "NftDataResponse",
       "required": [
         "code",
         "data",
@@ -2256,6 +2224,38 @@
         "price1",
         "unclaimed_fee0",
         "unclaimed_fee1"
+      ]
+    },
+    "PositionRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "PositionRequest"
+    },
+    "PositionResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "data": {
+          "$ref": "#/definitions/Position"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "PositionResponse",
+      "required": [
+        "code",
+        "data",
+        "message"
       ]
     },
     "PositionsRequest": {

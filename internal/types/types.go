@@ -121,11 +121,6 @@ type Fees struct {
 	FeeAmount1 string `json:"feeAmount1"`
 }
 
-type GetNftDataRequest struct {
-	Id      int64 `path:"id"`
-	ChainId int64 `form:"chainId,default=1946,optional"`
-}
-
 type Invested struct {
 	InvestedAmount0 string `json:"investedAmount0"`
 	InvestedAmount1 string `json:"investedAmount1"`
@@ -147,12 +142,6 @@ type MyPositionResponse struct {
 	Code    int         `json:"code"`
 	Data    []*Position `json:"data"`
 	Message string      `json:"message"`
-}
-
-type NftDataResponse struct {
-	Code    int                   `json:"code"`
-	Data    *NftDataResponse_Data `json:"data"`
-	Message string                `json:"message"`
 }
 
 type NftDataResponse_Data struct {
@@ -296,6 +285,17 @@ type Position struct {
 	Price1        float64          `json:"price1"`
 	UnclaimedFee0 float64          `json:"unclaimed_fee0"`
 	UnclaimedFee1 float64          `json:"unclaimed_fee1"`
+}
+
+type PositionRequest struct {
+	Id      int64 `path:"id"`
+	ChainId int64 `form:"chainId,default=1946,optional"`
+}
+
+type PositionResponse struct {
+	Code     int       `json:"code"`
+	Position *Position `json:"data"`
+	Message  string    `json:"message"`
 }
 
 type PositionsRequest struct {
