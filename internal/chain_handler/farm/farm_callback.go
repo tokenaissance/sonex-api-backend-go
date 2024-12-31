@@ -157,6 +157,15 @@ func IncentiveCreated(conf config.Config, chainId int64, tx *node_caller.Transac
 			}
 
 			farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+			_, err = farmUserActionModel.FindOneByTxHashEventSignLogIndex(ctx, txHash, "IncentiveCreated", txIndex)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				return nil
+			default:
+				return err
+			}
+
 			actionData := &repository.FarmUserAction{
 				ChainId:     chainId,
 				BlockNumber: blockNumber,
@@ -269,6 +278,15 @@ func TokenStaked(conf config.Config, chainId int64, tx *node_caller.Transaction,
 
 			// 保存用户操作流水
 			farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+			_, err = farmUserActionModel.FindOneByTxHashEventSignLogIndex(ctx, txHash, "TokenStaked", txIndex)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				return nil
+			default:
+				return err
+			}
+
 			actionData := &repository.FarmUserAction{
 				ChainId:     chainId,
 				BlockNumber: blockNumber,
@@ -352,6 +370,15 @@ func TokenUnstaked(conf config.Config, chainId int64, tx *node_caller.Transactio
 			connWithSession := sqlx.NewSqlConnFromSession(session)
 			// 保存用户操作流水
 			farmUserActionModel := repository.NewFarmUserActionModel(connWithSession)
+			_, err = farmUserActionModel.FindOneByTxHashEventSignLogIndex(ctx, txHash, "TokenUnstaked", txIndex)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				return nil
+			default:
+				return err
+			}
+
 			actionData := &repository.FarmUserAction{
 				ChainId:     chainId,
 				BlockNumber: blockNumber,
@@ -425,6 +452,15 @@ func RewardClaimed(conf config.Config, chainId int64, tx *node_caller.Transactio
 		conn := repository.NewConn(conf.PostgreSQL.DateSource())
 		// 保存用户操作流水
 		farmUserActionModel := repository.NewFarmUserActionModel(conn)
+		_, err := farmUserActionModel.FindOneByTxHashEventSignLogIndex(context.Background(), txHash, "RewardClaimed", txIndex)
+		switch err {
+		case repository.ErrNotFound:
+		case nil:
+			return nil
+		default:
+			return err
+		}
+
 		actionData := &repository.FarmUserAction{
 			ChainId:     chainId,
 			BlockNumber: blockNumber,
@@ -439,7 +475,7 @@ func RewardClaimed(conf config.Config, chainId int64, tx *node_caller.Transactio
 			TxTime:      sql.NullTime{Time: txAt, Valid: true},
 		}
 
-		_, err := farmUserActionModel.Insert(context.Background(), actionData)
+		_, err = farmUserActionModel.Insert(context.Background(), actionData)
 		if err != nil {
 			logx.Errorf("Failed to insert farm user action: %v", err)
 			return err
@@ -490,6 +526,15 @@ func DepositTransferred(conf config.Config, chainId int64, tx *node_caller.Trans
 		err := conn.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
 			// 保存用户操作流水
 			farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+			_, err := farmUserActionModel.FindOneByTxHashEventSignLogIndex(ctx, txHash, "DepositTransferred", txIndex)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				return nil
+			default:
+				return err
+			}
+
 			actionData := &repository.FarmUserAction{
 				ChainId:     chainId,
 				BlockNumber: blockNumber,
@@ -505,7 +550,7 @@ func DepositTransferred(conf config.Config, chainId int64, tx *node_caller.Trans
 				TxTime:      sql.NullTime{Time: txAt, Valid: true},
 			}
 
-			_, err := farmUserActionModel.Insert(ctx, actionData)
+			_, err = farmUserActionModel.Insert(ctx, actionData)
 			if err != nil {
 				return fmt.Errorf("failed to insert farm user action: %v", err)
 			}
@@ -580,6 +625,15 @@ func IncentiveEnded(conf config.Config, chainId int64, tx *node_caller.Transacti
 		err := conn.TransactCtx(context.Background(), func(ctx context.Context, session sqlx.Session) error {
 			// 保存用户操作流水
 			farmUserActionModel := repository.NewFarmUserActionModel(sqlx.NewSqlConnFromSession(session))
+			_, err := farmUserActionModel.FindOneByTxHashEventSignLogIndex(ctx, txHash, "IncentiveEnded", txIndex)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				return nil
+			default:
+				return err
+			}
+
 			actionData := &repository.FarmUserAction{
 				ChainId:     chainId,
 				BlockNumber: blockNumber,
@@ -595,7 +649,7 @@ func IncentiveEnded(conf config.Config, chainId int64, tx *node_caller.Transacti
 				TxTime:      sql.NullTime{Time: txAt, Valid: true},
 			}
 
-			_, err := farmUserActionModel.Insert(ctx, actionData)
+			_, err = farmUserActionModel.Insert(ctx, actionData)
 			if err != nil {
 				return fmt.Errorf("failed to insert farm user action: %v", err)
 			}

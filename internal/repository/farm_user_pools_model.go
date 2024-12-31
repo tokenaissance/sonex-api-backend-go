@@ -94,8 +94,13 @@ func (m *customFarmUserPoolsModel) FindTokenIdsByIncentiveId(ctx context.Context
         SELECT DISTINCT token_id 
         FROM %s 
         WHERE incentive_id = $1 
-        AND chain_id = $2 
-        AND status = 'stake'
+        	AND chain_id = $2 
+        	AND status = 'stake'
+			AND token_id NOT IN (
+				SELECT event_token_id
+				FROM event_sonex_position_manager_transfer
+				WHERE event_to = '0x0000000000000000000000000000000000000000'
+			)
     `, m.table)
 
 	var tokenIds []int64
