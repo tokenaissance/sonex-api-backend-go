@@ -19,6 +19,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPositionManagerCollectModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, recipient string, amount0 string, amount1 string) error
 		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*types.AggregatedAmounts, error)
+		BatchAggregateAmounts(ctx context.Context, chainId int64, eventTokenIds []int64, token0Decimals []int, token1Decimals []int) (map[int64]*types.AggregatedAmounts, error)
 	}
 
 	customEventSonexPositionManagerCollectModel struct {
@@ -45,4 +46,16 @@ func (m *customEventSonexPositionManagerCollectModel) New(ctx context.Context, i
 
 func (m *customEventSonexPositionManagerCollectModel) AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*types.AggregatedAmounts, error) {
 	return aggregateAmounts(ctx, m.conn, m.table, chainId, eventTokenId, decimal0, decimal1)
+}
+
+func (m *customEventSonexPositionManagerCollectModel) BatchAggregateAmounts(ctx context.Context, chainId int64, eventTokenIds []int64, token0Decimals []int, token1Decimals []int) (map[int64]*types.AggregatedAmounts, error) {
+	tokenDecimalPairs := make([]*TokenDecimalPair, 0)
+	for i := range eventTokenIds {
+		tokenDecimalPairs = append(tokenDecimalPairs, &TokenDecimalPair{
+			EventTokenId: eventTokenIds[i],
+			Decimal0:     token0Decimals[i],
+			Decimal1:     token1Decimals[i],
+		})
+	}
+	return batchAggregateAmounts(ctx, m.conn, m.table, chainId, tokenDecimalPairs)
 }
