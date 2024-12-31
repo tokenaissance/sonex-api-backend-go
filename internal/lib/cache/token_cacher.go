@@ -394,6 +394,12 @@ func (cacher *TokenCacher) QuoteExactOutput(pools []quoter.Pool, from common.Add
 }
 
 func (cacher *TokenCacher) GetPrices(pools []quoter.Pool, token common.Address, isCache bool, maxLength int64, wantStablecoin *common.Address) ([]Price, error) {
+	if token.Hex() == (common.Address{}).Hex() {
+		if !common.IsHexAddress(cacher.chainConf.WETH) {
+			return nil, fmt.Errorf("%s", "Miss WETH configure")
+		}
+		token = common.HexToAddress(cacher.chainConf.WETH)
+	}
 	stablecoins := cacher.GetStablecoins()
 	if len(stablecoins) == 0 {
 		return nil, fmt.Errorf("%s", "No any stablecoins")
