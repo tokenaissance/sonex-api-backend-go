@@ -6,6 +6,7 @@ import (
 	"sonex_api_backend_go/internal/lib/contract/farm"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
+	"sync"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -421,42 +422,50 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 	}
 
 	// Callback
-	for _, event := range incentiveCreatedEvents {
-		for _, callback := range handler.onIncentiveCreated {
-			tx := transactions[event.Raw.TxHash.Hex()]
-			go callback(handler.chain.ChainId, tx, event)
+	go func() {
+		var wg sync.WaitGroup
+		for _, event := range incentiveCreatedEvents {
+			for _, callback := range handler.onIncentiveCreated {
+				wg.Add(1)
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go func() {
+					defer wg.Done()
+					callback(handler.chain.ChainId, tx, event)
+				}()
+			}
 		}
-	}
-	for _, event := range tokenStakedEvents {
-		for _, callback := range handler.onTokenStaked {
-			tx := transactions[event.Raw.TxHash.Hex()]
-			go callback(handler.chain.ChainId, tx, event)
+		wg.Wait()
+		for _, event := range tokenStakedEvents {
+			for _, callback := range handler.onTokenStaked {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
 		}
-	}
-	for _, event := range tokenUnstakedEvents {
-		for _, callback := range handler.onTokenUnstaked {
-			tx := transactions[event.Raw.TxHash.Hex()]
-			go callback(handler.chain.ChainId, tx, event)
+		for _, event := range tokenUnstakedEvents {
+			for _, callback := range handler.onTokenUnstaked {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
 		}
-	}
-	for _, event := range rewardClaimedEvents {
-		for _, callback := range handler.onRewardClaimed {
-			tx := transactions[event.Raw.TxHash.Hex()]
-			go callback(handler.chain.ChainId, tx, event)
+		for _, event := range rewardClaimedEvents {
+			for _, callback := range handler.onRewardClaimed {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
 		}
-	}
-	for _, event := range depositTransferredEvents {
-		for _, callback := range handler.onDepositTransferred {
-			tx := transactions[event.Raw.TxHash.Hex()]
-			go callback(handler.chain.ChainId, tx, event)
+		for _, event := range depositTransferredEvents {
+			for _, callback := range handler.onDepositTransferred {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
 		}
-	}
-	for _, event := range incentiveEndedEvents {
-		for _, callback := range handler.onIncentiveEnded {
-			tx := transactions[event.Raw.TxHash.Hex()]
-			go callback(handler.chain.ChainId, tx, event)
+		for _, event := range incentiveEndedEvents {
+			for _, callback := range handler.onIncentiveEnded {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
 		}
-	}
+	}()
 
 	return nil, false
 }

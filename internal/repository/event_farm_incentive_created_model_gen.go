@@ -27,6 +27,7 @@ type (
 	eventFarmIncentiveCreatedModel interface {
 		Insert(ctx context.Context, data *EventFarmIncentiveCreated) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventFarmIncentiveCreated, error)
+		FindOneByEventIncentiveIdChainId(ctx context.Context, eventIncentiveId string, chainId int64) (*EventFarmIncentiveCreated, error)
 		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmIncentiveCreated, error)
 		Update(ctx context.Context, data *EventFarmIncentiveCreated) error
 		Delete(ctx context.Context, id int64) error
@@ -50,12 +51,12 @@ type (
 		To               string    `db:"to_"`
 		Value            string    `db:"value"`
 		EventRewardToken string    `db:"event_reward_token"` // 奖励代币地址
-		EventPool        string    `db:"event_pool"`         // Uniswap V3资金池地址
-		EventStartTime   int64     `db:"event_start_time"`   // 激励计划开始时间
-		EventEndTime     int64     `db:"event_end_time"`     // 激励计划结束时间
+		EventPool        string    `db:"event_pool"`         // V3池子地址
+		EventStartTime   int64     `db:"event_start_time"`   // 质押池开放时间
+		EventEndTime     int64     `db:"event_end_time"`     // 质押池结束时间
 		EventRefundee    string    `db:"event_refundee"`     // 剩余奖励代币接收地址
 		EventReward      string    `db:"event_reward"`       // 奖励代币数量
-		EventIncentiveId string    `db:"event_incentive_id"` // 激励计划ID
+		EventIncentiveId string    `db:"event_incentive_id"` // 质押池ID
 	}
 )
 
@@ -76,6 +77,20 @@ func (m *defaultEventFarmIncentiveCreatedModel) FindOne(ctx context.Context, id 
 	query := fmt.Sprintf("select %s from %s where id = $1 limit 1", eventFarmIncentiveCreatedRows, m.table)
 	var resp EventFarmIncentiveCreated
 	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *defaultEventFarmIncentiveCreatedModel) FindOneByEventIncentiveIdChainId(ctx context.Context, eventIncentiveId string, chainId int64) (*EventFarmIncentiveCreated, error) {
+	var resp EventFarmIncentiveCreated
+	query := fmt.Sprintf("select %s from %s where event_incentive_id = $1 and chain_id = $2 limit 1", eventFarmIncentiveCreatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, eventIncentiveId, chainId)
 	switch err {
 	case nil:
 		return &resp, nil
