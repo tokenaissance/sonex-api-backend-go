@@ -157,7 +157,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		pool := &types.PoolsResponse_Pool{
 			Id:      pd.EventPool,
 			Address: pd.EventPool,
-			FeeTier: int(pd.EventFee),
+			FeeTier: pd.EventFee,
 			Token0: types.PoolsResponse_Token{
 				Address:    pd.Token0Address.String,
 				Symbol:     pd.Token0Symbol.String,

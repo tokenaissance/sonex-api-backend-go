@@ -232,22 +232,24 @@ type PoolsResponse struct {
 }
 
 type PoolsResponse_Pool struct {
-	Id            string              `json:"id"`
-	Address       string              `json:"address"`
-	FeeTier       int                 `json:"feeTier"`
-	Liquidity     string              `json:"liquidity"`
-	Token0        PoolsResponse_Token `json:"token0"`
-	Token1        PoolsResponse_Token `json:"token1"`
-	Token0Price   string              `json:"token0Price"`
-	Token1Price   string              `json:"token1Price"`
-	Tick          string              `json:"tick"`
-	Volume        float64             `json:"volume"`
-	TvlUSD        float64             `json:"tvlUSD"`
-	Token0Balance float64             `json:"token0Balance"`
-	Token1Balance float64             `json:"token1Balance"`
-	Yield24h      float64             `json:"yield24h"`
-	Price0        float64             `json:"price0"`
-	Price1        float64             `json:"price1"`
+	Id                 string              `json:"id"`
+	Address            string              `json:"address"`
+	FeeTier            int64               `json:"feeTier"`
+	Liquidity          string              `json:"liquidity"`
+	Token0             PoolsResponse_Token `json:"token0"`
+	Token1             PoolsResponse_Token `json:"token1"`
+	Token0Price        string              `json:"token0Price"`
+	Token1Price        string              `json:"token1Price"`
+	Tick               string              `json:"tick"`
+	Volume             string              `json:"volume"`
+	TvlUSD             string              `json:"tvlUSD"`
+	Token0Balance      string              `json:"token0Balance"`
+	Token1Balance      string              `json:"token1Balance"`
+	Yield24h           string              `json:"yield24h"`
+	Price0             string              `json:"price0"`
+	Price1             string              `json:"price1"`
+	Stablecoin         string              `json:"stablecoin"`
+	StablecoinDecimals int64               `json:"decimals"`
 }
 
 type PoolsResponse_Token struct {

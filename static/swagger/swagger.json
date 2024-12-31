@@ -1998,7 +1998,7 @@
         },
         "feeTier": {
           "type": "integer",
-          "format": "int32"
+          "format": "int64"
         },
         "liquidity": {
           "type": "string"
@@ -2019,32 +2019,32 @@
           "type": "string"
         },
         "volume": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "tvlUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "token0Balance": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "token1Balance": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "yield24h": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "price0": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "price1": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
+        },
+        "stablecoin": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "PoolsResponse_Pool",
@@ -2064,7 +2064,9 @@
         "token1Balance",
         "yield24h",
         "price0",
-        "price1"
+        "price1",
+        "stablecoin",
+        "decimals"
       ]
     },
     "PoolsResponse_Token": {
