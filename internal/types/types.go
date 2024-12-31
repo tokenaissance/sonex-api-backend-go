@@ -4,66 +4,66 @@
 package types
 
 type AggregatedAmounts struct {
-	TotalAmount0 float64 `json:"total_amount0"`
-	TotalAmount1 float64 `json:"total_amount1"`
+	TotalAmount0 float64 `json:"totalAmount0"`
+	TotalAmount1 float64 `json:"totalAmount1"`
 }
 
 type ChainSyncPrograss struct {
-	ChainId   int64  `json:"chain_id"`
+	ChainId   int64  `json:"chainId"`
 	Height    int64  `json:"height"`
-	UpdatedAt string `json:"update_at"`
+	UpdatedAt string `json:"updateAt"`
 }
 
 type FarmPoolData struct {
 	Id             int64  `json:"id"`
-	ChainId        int64  `json:"chain_id"`        // 链ID
-	PoolAddress    string `json:"pool_address"`    // 池子合约地址
-	FeeRatio       string `json:"fee_ratio"`       // 池子手续费率
-	Token0Address  string `json:"token0_address"`  // token0合约地址
-	Token0Symbol   string `json:"token0_symbol"`   // token0代币符号
-	Token0Decimals int64  `json:"token0_decimals"` // token0精度
-	Token0Price    string `json:"token0_price"`    // token0价格
-	Token1Address  string `json:"token1_address"`  // token1合约地址
-	Token1Symbol   string `json:"token1_symbol"`   // token1代币符号
-	Token1Decimals int64  `json:"token1_decimals"` // token1精度
-	Token1Price    string `json:"token1_price"`    // token1价格
-	Liquidity      string `json:"liquidity"`       // 池子的流动性
-	LiquidityUSD   string `json:"liquidity_usd"`   // 池子的流动性价值（USD）
-	APR            string `json:"APR"`             // 年化收益率
-	JoinNum        int64  `json:"join_num"`        // 参与人数
-	Status         string `json:"status"`          // 运行状态（active or closed）
-	CreatedAt      string `json:"created_at"`
-	UpdatedAt      string `json:"updated_at"`
+	ChainId        int64  `json:"chainId"`        // 链ID
+	PoolAddress    string `json:"poolAddress"`    // 池子合约地址
+	FeeRatio       string `json:"feeRatio"`       // 池子手续费率
+	Token0Address  string `json:"token0Address"`  // token0合约地址
+	Token0Symbol   string `json:"token0symbol"`   // token0代币符号
+	Token0Decimals int64  `json:"token0Decimals"` // token0精度
+	Token0Price    string `json:"token0Price"`    // token0价格
+	Token1Address  string `json:"token1Address"`  // token1合约地址
+	Token1Symbol   string `json:"token1Symbol"`   // token1代币符号
+	Token1Decimals int64  `json:"token1Decimals"` // token1精度
+	Token1Price    string `json:"token1Price"`    // token1价格
+	Liquidity      string `json:"liquidity"`      // 池子的流动性
+	LiquidityUSD   string `json:"liquidityUsd"`   // 池子的流动性价值（USD）
+	APR            string `json:"APR"`            // 年化收益率
+	JoinNum        int64  `json:"joinNum"`        // 参与人数
+	Status         string `json:"status"`         // 运行状态（active or closed）
+	CreatedAt      string `json:"createdAt"`
+	UpdatedAt      string `json:"updatedAt"`
 }
 
 type FarmPoolLiquidityRequest struct {
-	ChainId     int64  `form:"chain_id,optional"` // 链ID
-	IncentiveId string `form:"incentive_id"`      // 质押池ID
+	ChainId     int64  `form:"chainId,optional"` // 链ID
+	IncentiveId string `form:"incentiveId"`      // 质押池ID
 }
 
 type FarmPoolLiquidityResponse struct {
-	PoolAddress            string `json:"pool_address"`            // v3流动性池合约地址
-	PositionManagerAddress string `json:"postion_manager_address"` // LP Token ID合约地址
-	LiquidityUSD           string `json:"liquidity_usd"`           // 流动性池的流动性价值（USD）
-	TotalToken0Amount      string `json:"total_token0_amount"`     // token0总量
-	TotalToken1Amount      string `json:"total_token1_amount"`     // token1总量
-	Token0Price            string `json:"token0_price"`            // token0价格
-	Token1Price            string `json:"token1_price"`            // token1价格
-	Token0Decimals         int64  `json:"token0_decimals"`         // token0精度
-	Token1Decimals         int64  `json:"token1_decimals"`         // token1精度
-	Token0Symbol           string `json:"token0_symbol"`           // token0符号
-	Token1Symbol           string `json:"token1_symbol"`           // token0符号
+	PoolAddress            string `json:"poolAddress"`           // v3流动性池合约地址
+	PositionManagerAddress string `json:"postionManagerAddress"` // LP Token ID合约地址
+	LiquidityUSD           string `json:"liquidityUsd"`          // 流动性池的流动性价值（USD）
+	TotalToken0Amount      string `json:"totalToken0Amount"`     // token0总量
+	TotalToken1Amount      string `json:"totalToken1Amount"`     // token1总量
+	Token0Price            string `json:"token0Price"`           // token0价格
+	Token1Price            string `json:"token1Price"`           // token1价格
+	Token0Decimals         int64  `json:"token0Decimals"`        // token0精度
+	Token1Decimals         int64  `json:"token1Decimals"`        // token1精度
+	Token0Symbol           string `json:"token0Symbol"`          // token0符号
+	Token1Symbol           string `json:"token1Symbol"`          // token0符号
 }
 
 type FarmPoolListRequest struct {
-	ChainId     int64  `form:"chain_id,optional"`                       // 链ID
-	UserAddress string `form:"user_address,optional"`                   // 用户地址
-	Keyword     string `form:"keyword,optional"`                        // 搜索关键字
-	StakedOnly  string `form:"staked_only,optional,options=true|false"` // 是否只显示用户参与的池子
-	Status      string `form:"status,optional,options=active|closed"`   // 运行状态
-	OrderBy     string `form:"order_by,optional,options=hot|apr"`       // 排序字段
-	Offset      int    `form:"offset,optional"`                         // 偏移量
-	Limit       int    `form:"limit,optional,default=10"`               // 每页数量
+	ChainId     int64  `form:"chainId,optional"`                       // 链ID
+	UserAddress string `form:"userAddress,optional"`                   // 用户地址
+	Keyword     string `form:"keyword,optional"`                       // 搜索关键字
+	StakedOnly  string `form:"stakedOnly,optional,options=true|false"` // 是否只显示用户参与的池子
+	Status      string `form:"status,optional,options=active|closed"`  // 运行状态
+	OrderBy     string `form:"orderBy,optional,options=hot|apr"`       // 排序字段
+	Offset      int    `form:"offset,optional"`                        // 偏移量
+	Limit       int    `form:"limit,optional,default=10"`              // 每页数量
 }
 
 type FarmPoolListResponse struct {
@@ -74,46 +74,46 @@ type FarmPoolListResponse struct {
 }
 
 type FarmPoolRoiRequest struct {
-	ChainId     int64  `form:"chain_id,optional"`                // 链ID
-	IncentiveId string `form:"incentive_id"`                     // 质押池ID
+	ChainId     int64  `form:"chainId,optional"`                 // 链ID
+	IncentiveId string `form:"incentiveId"`                      // 质押池ID
 	Amount      string `form:"amount"`                           // 金额（USD）
 	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
 }
 
 type FarmPoolRoiResponse struct {
-	APR                 string `json:"APR"`                   // 年化收益率
-	ROI                 string `json:"ROI"`                   // 投资回报率
-	Profit              string `json:"profit"`                // 投资回报金额（USD）
-	PoolAddress         string `json:"pool_address"`          // 流动性池合约地址
-	RewardTokenAmount   string `json:"reward_token_amount"`   // 质押池的奖励代币总量
-	RewardTokenPrice    string `json:"reward_token_price"`    // 奖励代币价格（USD）
-	RewardTokenDecimals int64  `json:"reward_token_decimals"` // 奖励代币的精度
-	StartTime           string `json:"start_time"`            // 质押池开放时间
-	EndTime             string `json:"end_time"`              // 质押池结束时间
+	APR                 string `json:"APR"`                 // 年化收益率
+	ROI                 string `json:"ROI"`                 // 投资回报率
+	Profit              string `json:"profit"`              // 投资回报金额（USD）
+	PoolAddress         string `json:"poolAddress"`         // 流动性池合约地址
+	RewardTokenAmount   string `json:"rewardTokenAmount"`   // 质押池的奖励代币总量
+	RewardTokenPrice    string `json:"rewardTokenPrice"`    // 奖励代币价格（USD）
+	RewardTokenDecimals int64  `json:"rewardTokenDecimals"` // 奖励代币的精度
+	StartTime           string `json:"startTime"`           // 质押池开放时间
+	EndTime             string `json:"endTime"`             // 质押池结束时间
 }
 
 type FarmUserAssetDetailRequest struct {
-	ChainId     int64  `form:"chain_id,optional"` // 链ID
-	IncentiveId string `form:"incentive_id"`      // 质押池ID
-	UserAddress string `form:"user_address"`      // 用户地址
+	ChainId     int64  `form:"chainId,optional"` // 链ID
+	IncentiveId string `form:"incentiveId"`      // 质押池ID
+	UserAddress string `form:"userAddress"`      // 用户地址
 }
 
 type FarmUserAssetDetailResponse struct {
-	IncentiveId           string `form:"incentive_id"`             // 质押池ID
-	TotalClaimableFees    string `json:"total_claimable_fees"`     // 用户总可领取的手续费
-	TotalClaimableFeesUSD string `json:"total_claimable_fees_usd"` // 用户总可领取的手续费的价值
-	Decimals              int64  `json:"decimals"`                 // 手续费token的精度
-	LPBalance             int64  `json:"lp_balance"`               // 用户的LP token ID余额
-	LPStakedNum           int64  `json:"lp_staked_num"`            // 用户参与质押的LP token ID数量
+	IncentiveId           string `form:"incentiveId"`           // 质押池ID
+	TotalClaimableFees    string `json:"totalClaimableFees"`    // 用户总可领取的手续费
+	TotalClaimableFeesUSD string `json:"totalClaimableFeesUsd"` // 用户总可领取的手续费的价值
+	Decimals              int64  `json:"decimals"`              // 手续费token的精度
+	LPBalance             int64  `json:"lpBalance"`             // 用户的LP token ID余额
+	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户参与质押的LP token ID数量
 }
 
 type FarmUserAssetListRequest struct {
-	ChainId     int64  `form:"chain_id,optional"` // 链ID
-	UserAddress string `form:"user_address"`      // 用户地址
+	ChainId     int64  `form:"chainId,optional"` // 链ID
+	UserAddress string `form:"userAddress"`      // 用户地址
 }
 
 type FarmUserAssetListResponse struct {
-	UserAssets []UserAssetData `json:"user_assets"`
+	UserAssets []UserAssetData `json:"userAssets"`
 }
 
 type Fees struct {
@@ -135,12 +135,12 @@ type MetaRequest struct {
 }
 
 type MetaResponse struct {
-	ChainSyncPrograsses []ChainSyncPrograss `json:"chain_sync_prograsses"`
+	ChainSyncPrograsses []ChainSyncPrograss `json:"chainSyncPrograsses"`
 }
 
 type MyPositionRequest struct {
 	Address    string `form:"address"`
-	FilterType string `form:"filter_type,optional,default=none"`
+	FilterType string `form:"filterType,optional,default=none"`
 }
 
 type MyPositionResponse struct {
@@ -202,10 +202,10 @@ type PaginationMeta struct {
 }
 
 type PoolPositionData struct {
-	EventPool    string `json:"event_pool"`
-	EventToken0  string `json:"event_token0"`
-	EventToken1  string `json:"event_token1"`
-	EventTokenId int64  `json:"event_token_id"`
+	EventPool    string `json:"eventPool"`
+	EventToken0  string `json:"eventToken0"`
+	EventToken1  string `json:"eventToken1"`
+	EventTokenId int64  `json:"eventTokenId"`
 }
 
 type PoolVolume struct {
@@ -278,24 +278,24 @@ type PoolsResponse_Volume struct {
 }
 
 type Position struct {
-	TokenID       int64            `json:"token_id"`
+	TokenID       int64            `json:"tokenId"`
 	Balance       float64          `json:"balance"`
-	ClaimableFees float64          `json:"claimable_fees"`
-	IsClosed      bool             `json:"is_closed"`
-	TickUpper     string           `json:"tick_upper"`
-	TickLower     string           `json:"tick_lower"`
+	ClaimableFees float64          `json:"claimableFees"`
+	IsClosed      bool             `json:"isClosed"`
+	TickUpper     string           `json:"tickUpper"`
+	TickLower     string           `json:"tickLower"`
 	PNL30d        string           `json:"pnl30d"`
 	Ratio         float64          `json:"ratio"`
-	IsNegative    bool             `json:"is_negative"`
+	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
-	PositionAge   int              `json:"position_age"`
+	PositionAge   int              `json:"positionAge"`
 	Amount0       float64          `json:"amount0"`
 	Amount1       float64          `json:"amount1"`
 	Price0        float64          `json:"price0"`
 	Price1        float64          `json:"price1"`
-	UnclaimedFee0 float64          `json:"unclaimed_fee0"`
-	UnclaimedFee1 float64          `json:"unclaimed_fee1"`
+	UnclaimedFee0 float64          `json:"unclaimedFee0"`
+	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 }
 
 type PositionsRequest struct {
@@ -306,11 +306,11 @@ type PositionsRequest struct {
 
 type PositionsResponse struct {
 	Code          int         `json:"code"`
-	IsNegative    bool        `json:"is_negative"`
+	IsNegative    bool        `json:"isNegative"`
 	Pnl           float64     `json:"pnl"`
 	Positions     []*Position `json:"positions"`
 	Ratio         float64     `json:"ratio"`
-	TotalBalances float64     `json:"total_balances"`
+	TotalBalances float64     `json:"totalBalances"`
 	Message       string      `json:"message"`
 }
 
@@ -330,11 +330,11 @@ type SonexTokenKlineResponse struct {
 
 type SonexTokenPriceRecord struct {
 	Id           int64  `json:"id"`
-	TokenSymbol  string `json:"token_symbol"`
-	TokenAddress string `json:"token_address"`
+	TokenSymbol  string `json:"tokenSymbol"`
+	TokenAddress string `json:"tokenAddress"`
 	Price        string `json:"price"`
-	CreatedAt    string `json:"created_at"`
-	TimeStamp    int64  `json:"time_stamp"`
+	CreatedAt    string `json:"createdAt"`
+	TimeStamp    int64  `json:"timeStamp"`
 }
 
 type SonexTokenPricesRequest struct {
@@ -355,7 +355,7 @@ type SwapEvent struct {
 	Amount0   float64          `json:"amount0"`
 	Amount1   float64          `json:"amount1"`
 	Usd       float64          `json:"usd"`
-	CreatedAt string           `json:"created_at"`
+	CreatedAt string           `json:"createdAt"`
 }
 
 type SwapEventRequest struct {
@@ -414,14 +414,14 @@ type TokenListResponse struct {
 }
 
 type TokenPriceRequest struct {
-	ChainId        int64   `form:"chain_id"`
+	ChainId        int64   `form:"chainId"`
 	Token          string  `form:"token"`
-	IsCache        bool    `form:"is_cache,optional,default=true"`
-	WantStablecoin *string `form:"want_stablecoin,optional"`
+	IsCache        bool    `form:"isCache,optional,default=true"`
+	WantStablecoin *string `form:"wantStablecoin,optional"`
 }
 
 type TokenPriceResponse struct {
-	BasePrice *TokenPriceResponse_Price  `json:"best_price"`
+	BasePrice *TokenPriceResponse_Price  `json:"bestPrice"`
 	Prices    []TokenPriceResponse_Price `json:"prices"`
 }
 
@@ -439,7 +439,7 @@ type TokenPriceResponse_Price_Pool struct {
 }
 
 type TokenQuoteRequest struct {
-	ChainId    int64  `form:"chain_id"`
+	ChainId    int64  `form:"chainId"`
 	From       string `form:"from"`
 	To         string `form:"to"`
 	Type       string `form:"type,options=INPUT|OUTPUT"`
@@ -448,25 +448,25 @@ type TokenQuoteRequest struct {
 }
 
 type TokenQuoteResponse struct {
-	SwapRouter string                      `json:"swap_router"`
-	BestRouter *TokenQuoteResponse_Router  `json:"best_router"`
+	SwapRouter string                      `json:"swapRouter"`
+	BestRouter *TokenQuoteResponse_Router  `json:"bestRouter"`
 	Routers    []TokenQuoteResponse_Router `json:"routers"`
 }
 
 type TokenQuoteResponse_Router struct {
-	TokenIn                     string                           `json:"token_in"`
-	TokenOut                    string                           `json:"token_out"`
-	AmountIn                    string                           `json:"amount_in"`
-	AmountOut                   string                           `json:"amount_out"`
+	TokenIn                     string                           `json:"tokenIn"`
+	TokenOut                    string                           `json:"tokenOut"`
+	AmountIn                    string                           `json:"amountIn"`
+	AmountOut                   string                           `json:"amountOut"`
 	Stablecoin                  string                           `json:"stablecoin"`
-	PriceUSDIn                  string                           `json:"price_usd_in"`
-	PriceUSDOut                 string                           `json:"price_usd_out"`
+	PriceUSDIn                  string                           `json:"priceUsdIn"`
+	PriceUSDOut                 string                           `json:"priceUsdOut"`
 	Router                      []TokenQuoteResponse_Router_Pool `json:"router"`
 	Path                        string                           `json:"path"`
-	SqrtPriceX96AfterList       []string                         `json:"sqrt_price_x96_after_list"`
-	InitializedTicksCrossedList []int64                          `json:"initialized_ticks_crossed_list"`
-	GasEstimate                 string                           `json:"gas_estimate"`
-	PriceImpact                 string                           `json:"price_impact"`
+	SqrtPriceX96AfterList       []string                         `json:"sqrtPriceX96AfterList"`
+	InitializedTicksCrossedList []int64                          `json:"initializedTicksCrossedList"`
+	GasEstimate                 string                           `json:"gasEstimate"`
+	PriceImpact                 string                           `json:"priceImpact"`
 }
 
 type TokenQuoteResponse_Router_Pool struct {
@@ -489,7 +489,7 @@ type TokenVolume struct {
 
 type Token_Kline struct {
 	Price     string `json:"price"`
-	TimeStamp int64  `json:"time_stamp"`
+	TimeStamp int64  `json:"timeStamp"`
 }
 
 type Token_PoolDetail struct {
@@ -525,8 +525,8 @@ type Token_TokenDetail struct {
 	Fdv                 string                `json:"fdv"`
 	Price               string                `json:"price"`
 	Kline               []*Token_Kline        `json:"kline"`
-	HourPriceComparison PriceComparisonResult `json:"hour_price_comparison"`
-	DayPriceComparison  PriceComparisonResult `json:"day_price_comparison"`
+	HourPriceComparison PriceComparisonResult `json:"hourPriceComparison"`
+	DayPriceComparison  PriceComparisonResult `json:"dayPriceComparison"`
 }
 
 type Token_TokenInfo struct {
@@ -553,12 +553,12 @@ type TokensResponse struct {
 }
 
 type UserAssetData struct {
-	IncentiveId           string `form:"incentive_id"`             // 质押池ID
-	TotalClaimableFees    string `json:"total_claimable_fees"`     // 用户总可领取的手续费
-	TotalClaimableFeesUSD string `json:"total_claimable_fees_usd"` // 用户总可领取的手续费的价值
-	Decimals              int64  `json:"decimals"`                 // ClaimableFees的精度
-	LPBalance             int64  `json:"lp_balance"`               // 用户的LP token ID余额
-	LPStakedNum           int64  `json:"lp_staked_num"`            // 用户质押的LP token ID数量
+	IncentiveId           string `form:"incentiveId"`           // 质押池ID
+	TotalClaimableFees    string `json:"totalClaimableFees"`    // 用户总可领取的手续费
+	TotalClaimableFeesUSD string `json:"totalClaimableFeesUsd"` // 用户总可领取的手续费的价值
+	Decimals              int64  `json:"decimals"`              // ClaimableFees的精度
+	LPBalance             int64  `json:"lpBalance"`             // 用户的LP token ID余额
+	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户质押的LP token ID数量
 }
 
 type Withdrawn struct {
@@ -567,58 +567,58 @@ type Withdrawn struct {
 }
 
 type XpoolPoolListRequest struct {
-	ChainId     int64  `form:"chain_id,optional"`
-	UserAddress string `form:"user_address,optional"`
+	ChainId     int64  `form:"chainId,optional"`
+	UserAddress string `form:"userAddress,optional"`
 	Keyword     string `form:"keyword,optional"`
-	StakedOnly  string `form:"staked_only,optional,options=true|false"`
-	OrderBy     string `form:"order_by,optional,options=hot|apr"`
+	StakedOnly  string `form:"stakedOnly,optional,options=true|false"`
+	OrderBy     string `form:"orderBy,optional,options=hot|apr"`
 	Offset      int    `form:"offset,optional"`
 	Limit       int    `form:"limit,optional,default=10"`
 }
 
 type XpoolPoolListResponse struct {
 	Id                   int64  `json:"id"`
-	ChainId              int64  `json:"chain_id"`               // 链ID
-	StakingTokenName     string `json:"staking_token_name"`     // 质押的代币名称
-	StakingTokenSymbol   string `json:"staking_token_symbol"`   // 质押的代币符号
-	StakingTokenAddress  string `json:"staking_token_address"`  // 质押的代币合约地址
-	StakingTokenDecimals int64  `json:"staking_token_decimals"` // 质押的代币合约精度
-	StakingTokenPrice    string `json:"staking_token_price"`    // 质押的代币价格
-	RewardTokenName      string `json:"reward_token_name"`      // 奖励的代币名称
-	RewardTokenSymbol    string `json:"reward_token_symbol"`    // 奖励的代币符号
-	RewardTokenAddress   string `json:"reward_token_address"`   // 奖励的代币合约地址
-	RewardTokenDecimals  int64  `json:"reward_token_decimals"`  // 奖励的代币合约精度
-	RewardTokenPrice     string `json:"reward_token_price"`     // 奖励的代币价格
-	PoolAddress          string `json:"pool_address"`           // 质押池合约地址
-	RewardPerBlock       string `json:"reward_per_block"`       // 出块奖励
-	TotalStaked          string `json:"total_staked"`           // 质押池的质押币总数量
-	BlockTime            int64  `json:"block_time"`             // 出块时长 单位s
-	TVL                  string `json:"tvl"`                    // 质押池的质押总价值（USD）
-	APR                  string `json:"apr"`                    // 年化收益率
-	JoinNum              int64  `json:"join_num"`               // 参与人数
-	Status               string `json:"status"`                 // 运行状态
-	CreatedAt            string `json:"created_at"`
-	UpdatedAt            string `json:"updated_at"`
+	ChainId              int64  `json:"chainId"`              // 链ID
+	StakingTokenName     string `json:"stakingTokenName"`     // 质押的代币名称
+	StakingTokenSymbol   string `json:"stakingTokenSymbol"`   // 质押的代币符号
+	StakingTokenAddress  string `json:"stakingTokenAddress"`  // 质押的代币合约地址
+	StakingTokenDecimals int64  `json:"stakingTokenDecimals"` // 质押的代币合约精度
+	StakingTokenPrice    string `json:"stakingTokenPrice"`    // 质押的代币价格
+	RewardTokenName      string `json:"rewardTokenName"`      // 奖励的代币名称
+	RewardTokenSymbol    string `json:"rewardTokenSymbol"`    // 奖励的代币符号
+	RewardTokenAddress   string `json:"rewardTokenAddress"`   // 奖励的代币合约地址
+	RewardTokenDecimals  int64  `json:"rewardTokenDecimals"`  // 奖励的代币合约精度
+	RewardTokenPrice     string `json:"rewardTokenPrice"`     // 奖励的代币价格
+	PoolAddress          string `json:"poolAddress"`          // 质押池合约地址
+	RewardPerBlock       string `json:"rewardPerBlock"`       // 出块奖励
+	TotalStaked          string `json:"totalStaked"`          // 质押池的质押币总数量
+	BlockTime            int64  `json:"blockTime"`            // 出块时长 单位s
+	TVL                  string `json:"tvl"`                  // 质押池的质押总价值（USD）
+	APR                  string `json:"apr"`                  // 年化收益率
+	JoinNum              int64  `json:"joinNum"`              // 参与人数
+	Status               string `json:"status"`               // 运行状态
+	CreatedAt            string `json:"createdAt"`
+	UpdatedAt            string `json:"updatedAt"`
 }
 
 type XpoolPoolStatsRequest struct {
-	ChainId     int64   `form:"chain_id,optional"`
-	PoolAddress string  `form:"pool_address"`                              // 质押池地址
+	ChainId     int64   `form:"chainId,optional"`
+	PoolAddress string  `form:"poolAddress"`                               // 质押池地址
 	Amount      float64 `form:"amount,optional"`                           // 金额（USD）
 	Duration    int     `form:"duration,optional,options=1|7|30|365|1825"` // 质押时长（单位：天）
 }
 
 type XpoolPoolStatsResponse struct {
-	PoolAddress       string `json:"pool_address"`        // 质押池合约地址
-	TotalStaked       string `json:"total_staked"`        // 质押池总质押代币数量
-	JoinNum           int64  `json:"join_num"`            // 参与质押人数
-	RewardPerBlock    string `json:"reward_per_block"`    // 每块奖励数量
-	BlockTime         int64  `json:"block_time"`          // 出块秒数
-	EveryDayYield     string `json:"every_day_yield"`     // 每日产量
-	RewardTokenPrice  string `json:"reward_token_price"`  // 奖励币价（USD）
-	StakingTokenPrice string `json:"staking_token_price"` // 质押币价（USD）
-	TVL               string `json:"TVL"`                 // 质押池当前总质押价值（USD）
-	APR               string `json:"APR"`                 // 年化收益率
-	ROI               string `json:"ROI"`                 // 投资回报率
-	Profit            string `json:"profit"`              // 投资回报金额（USD）
+	PoolAddress       string `json:"poolAddress"`       // 质押池合约地址
+	TotalStaked       string `json:"totalStaked"`       // 质押池总质押代币数量
+	JoinNum           int64  `json:"joinNum"`           // 参与质押人数
+	RewardPerBlock    string `json:"rewardPerBlock"`    // 每块奖励数量
+	BlockTime         int64  `json:"blockTime"`         // 出块秒数
+	EveryDayYield     string `json:"everyDayYield"`     // 每日产量
+	RewardTokenPrice  string `json:"rewardTokenPrice"`  // 奖励币价（USD）
+	StakingTokenPrice string `json:"stakingTokenPrice"` // 质押币价（USD）
+	TVL               string `json:"TVL"`               // 质押池当前总质押价值（USD）
+	APR               string `json:"APR"`               // 年化收益率
+	ROI               string `json:"ROI"`               // 投资回报率
+	Profit            string `json:"profit"`            // 投资回报金额（USD）
 }
