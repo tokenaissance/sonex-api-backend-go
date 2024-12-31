@@ -42,10 +42,10 @@ func (p *PositionsResponseWrapper) GetCode() interface{} {
 }
 
 type taskResult struct {
-	collectedAmounts map[int64]*types.AggregatedAmounts
-	positions        []*sonex.Position
-	tokenPrices      map[string]float64
-	err              error
+	collectedAmounts   map[int64]*types.AggregatedAmounts
+	positions          []*sonex.Position
+	tokenPricesRecords map[string]*repository.TokenPriceRecord
+	err                error
 }
 
 func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp *PositionsResponseWrapper, err error) {
@@ -130,8 +130,8 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		prices, err := tokenPriceModel.GetCurrentPrices(append(token0Addresses, token1Addresses...))
-		results <- taskResult{tokenPrices: prices, err: err}
+		pricesRecords, err := tokenPriceModel.GetCurrentPrices(append(token0Addresses, token1Addresses...))
+		results <- taskResult{tokenPricesRecords: pricesRecords, err: err}
 	}()
 
 	// Close results channel after all goroutines complete
@@ -143,7 +143,7 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	// Collect results
 	var collectedAmounts map[int64]*types.AggregatedAmounts
 	var positions []*sonex.Position
-	var tokenPrices map[string]float64
+	var tokenPricesRecords map[string]*repository.TokenPriceRecord
 
 	for result := range results {
 		if result.err != nil {
@@ -161,8 +161,8 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 		if result.positions != nil {
 			positions = result.positions
 		}
-		if result.tokenPrices != nil {
-			tokenPrices = result.tokenPrices
+		if result.tokenPricesRecords != nil {
+			tokenPricesRecords = result.tokenPricesRecords
 		}
 	}
 
@@ -173,7 +173,7 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	// Collect results
 	for _, position := range positions {
 		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
-			convertedPosition := l.fillPosition(l.ctx, req, positionTransferItem, position, tokenPrices, collectedAmounts)
+			convertedPosition := l.fillPosition(l.ctx, req, positionTransferItem, position, tokenPricesRecords, collectedAmounts)
 			positionResponse.Positions = append(positionResponse.Positions, convertedPosition)
 			positionResponse.TotalPosition += convertedPosition.Position
 			positionResponse.Pnl += convertedPosition.PNL
@@ -196,13 +196,13 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	req *types.PositionsRequest,
 	position *types.Position,
 	innnerPosition *sonex.Position,
-	prices map[string]float64,
+	pricesRecords map[string]*repository.TokenPriceRecord,
 	collectedAmounts map[int64]*types.AggregatedAmounts) *types.Position {
 	price0 := new(big.Float).SetFloat64(0)
 	price1 := new(big.Float).SetFloat64(0)
 	// 优先获取从 db 中的价格，如果获取失败，则从链上获取
-	if price0Val, exists0 := prices[innnerPosition.Token0.Hex()]; exists0 {
-		price0 = price0.SetFloat64(price0Val)
+	if price0Record, exists0 := pricesRecords[innnerPosition.Token0.Hex()]; exists0 {
+		price0, _ = price0.SetString(price0Record.Price)
 	} else {
 		logx.Errorf("[convertPosition] Token0 price not found from db for address: %s", innnerPosition.Token0.Hex())
 
@@ -212,8 +212,8 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 		}
 	}
 
-	if price1Val, exists1 := prices[innnerPosition.Token1.Hex()]; exists1 {
-		price1 = price1.SetFloat64(price1Val)
+	if price1Record, exists1 := pricesRecords[innnerPosition.Token1.Hex()]; exists1 {
+		price1, _ = price1.SetString(price1Record.Price)
 	} else {
 		logx.Errorf("[convertPosition] Token1 price not found from db for address: %s", innnerPosition.Token1.Hex())
 
