@@ -114,7 +114,9 @@ func (chainScanner *ChainScanner) Start() {
 						if ok {
 							start = replay.Start
 							end = replay.End
-							isReplay = true
+							if end != nil {
+								isReplay = true
+							}
 						}
 					}
 
