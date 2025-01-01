@@ -202,6 +202,8 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	collectedAmounts map[int64]*types.AggregatedAmounts) *types.Position {
 	price0 := new(big.Float).SetFloat64(0)
 	price1 := new(big.Float).SetFloat64(0)
+	factorDai := new(big.Float).SetFloat64(math.Pow10(18))
+
 	// 优先获取从 db 中的价格，如果获取失败，则从链上获取
 	if price0Record, exists0 := pricesRecords[innnerPosition.Token0.Hex()]; exists0 {
 		price0, _ = price0.SetString(price0Record.Price)
@@ -228,12 +230,12 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	factor0 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token0.Decimals)))
 	factor1 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token1.Decimals)))
 
-	poolPrice0 := new(big.Float).Quo(price0, factor0)
+	poolPrice0 := new(big.Float).Quo(price0, factorDai)
 	position.Price0, _ = poolPrice0.Float64()
 	position.Pool.Token0Price = poolPrice0.String()
 
 	// 转换 price 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
-	poolPrice1 := new(big.Float).Quo(price1, factor1)
+	poolPrice1 := new(big.Float).Quo(price1, factorDai)
 	position.Price1, _ = poolPrice1.Float64()
 	position.Pool.Token1Price = poolPrice1.String()
 
@@ -245,19 +247,20 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	amount0Float := new(big.Float).SetInt(amount0)
 	amount1Float := new(big.Float).SetInt(amount1)
 
-	amount0Float.Quo(amount0Float, factor0)
-	amount1Float.Quo(amount1Float, factor1)
+	amount0Float = amount0Float.Quo(amount0Float, factor0)
+	amount1Float = amount1Float.Quo(amount1Float, factor1)
 
 	// 计算 amount0 和 amount1 的余额
-	amount0Balance := new(big.Float).Mul(amount0Float, poolPrice0)
-	amount1Balance := new(big.Float).Mul(amount1Float, poolPrice1)
+	positionValue0 := new(big.Float).Mul(amount0Float, poolPrice0)
+	positionValue1 := new(big.Float).Mul(amount1Float, poolPrice1)
 
-	position.Amount0, _ = amount0.Float64()
-	position.Amount1, _ = amount1.Float64()
+	// 1. 计算 amount0 和 amount1
+	position.Amount0, _ = amount0Float.Float64()
+	position.Amount1, _ = amount1Float.Float64()
 
-	// 计算总余额
-	totalBalance := new(big.Float).Add(amount0Balance, amount1Balance)
-	position.Position, _ = totalBalance.Float64()
+	// 2. 计算总 position
+	totalPosition := new(big.Float).Add(positionValue0, positionValue1)
+	position.Position, _ = totalPosition.Float64()
 
 	// 计算未结费用 unclaimedFee0 和 unclaimedFee1
 	position.UnclaimedFee0, _ = new(big.Float).SetInt(unclaimedFee0).Float64()
@@ -266,21 +269,23 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	// 计算 claimable fees
 	unclaimedFee0Float := new(big.Float).SetInt(unclaimedFee0)
 	unclaimedFee1Float := new(big.Float).SetInt(unclaimedFee1)
-	unclaimedFee0Float.Quo(unclaimedFee0Float, factor0)
-	unclaimedFee1Float.Quo(unclaimedFee1Float, factor1)
+	unclaimedFee0Float = unclaimedFee0Float.Quo(unclaimedFee0Float, factor0)
+	unclaimedFee1Float = unclaimedFee1Float.Quo(unclaimedFee1Float, factor1)
 
 	claimableFee0 := new(big.Float).Mul(unclaimedFee0Float, poolPrice0)
 	claimableFee1 := new(big.Float).Mul(unclaimedFee1Float, poolPrice1)
 
-	// 计算总的 claimableFees
+	// 3. claimableFees
 	claimableFees := new(big.Float).Add(claimableFee0, claimableFee1)
 	position.ClaimableFees, _ = claimableFees.Float64()
-
-	// PNL = claimableFees + collectedFees
+	position.UnclaimedFee0, _ = unclaimedFee0Float.Float64()
+	position.UnclaimedFee1, _ = unclaimedFee1Float.Float64()
+	// 4. PNL(Fee Revenue) = claimableFees + collectedFees
 	collectedFees, exists := collectedAmounts[position.TokenID]
 	if exists {
 		position.PNL = position.ClaimableFees + collectedFees.TotalAmount0 + collectedFees.TotalAmount1
+	} else {
+		position.PNL = position.ClaimableFees
 	}
-
 	return position
 }

@@ -265,7 +265,6 @@ type Position struct {
 	TickUpper     string           `json:"tickUpper"`
 	TickLower     string           `json:"tickLower"`
 	PNL           float64          `json:"pnl"`
-	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 	PositionAge   int              `json:"positionAge"`
