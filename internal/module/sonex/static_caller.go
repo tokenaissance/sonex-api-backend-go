@@ -196,7 +196,7 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 	positions := []*Position{}
 	for i, tokenId := range tokenIds {
 		if !multicallResults[i+1].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", multicallResults[i+1].ReturnData[4:]))
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", multicallResults[i+1].ReturnData[4:], tokenId.String()))
 		}
 		var position Position
 		err = positionManagerABI.UnpackIntoInterface(&position, "positions", multicallResults[i+1].ReturnData)

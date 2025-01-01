@@ -164,14 +164,14 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 		}
 
 		// Set cache
-		respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
-		if err != nil {
-			logx.Errorf("Marshal response error: %v", err)
-		}
-		err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
-		if err != nil {
-			logx.Errorf("Set cache error: %v", err)
-		}
+		// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
+		// if err != nil {
+		// 	logx.Errorf("Marshal response error: %v", err)
+		// }
+		// err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
+		// if err != nil {
+		// 	logx.Errorf("Set cache error: %v", err)
+		// }
 	}
 
 	// Update status
