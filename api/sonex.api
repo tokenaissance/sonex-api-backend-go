@@ -245,10 +245,6 @@ type Token_TokenInfo {
 	Additional interface{} `json:"additional"`
 }
 
-type PositionResponse {
-	Position *Position `json:"position"`
-}
-
 type NftDataResponse_Data {
 	Amount0         float64          `json:"amount0"`
 	Amount1         float64          `json:"amount1"`
@@ -309,6 +305,10 @@ type AggregatedAmounts {
 type PositionRequest {
 	TokenId int64 `path:"tokenId"`
 	ChainId int64 `form:"chainId,default=1946,optional"`
+}
+
+type PositionResponse {
+	Position *Position `json:"position"`
 }
 
 type SwapEventRequest {
