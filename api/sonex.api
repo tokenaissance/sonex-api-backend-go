@@ -376,7 +376,7 @@ type PoolVolume {
 	Amounts1 float64 `json:"amounts1"`
 }
 
-type PositionsRequest {
+type PositionValuesRequest {
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
 	ChainId  int64  `form:"chainId,default=1946,optional"`
@@ -407,7 +407,7 @@ type PositionValueRecord {
 	PositionValue float64 `json:"positionValue"`
 }
 
-type PositionsResponse {
+type PositionValuesResponse {
 	Pnl           	float64 `json:"pnl"`
 	PositionValues  []*PositionValueRecord `json:"positionValues"`
 	TotalPosition 	float64 `json:"totalPosition"`
@@ -470,7 +470,7 @@ service sonex_api_backend_go {
 	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)
 
 	@handler SonexPositionsHandler
-	get /pools/positions (PositionsRequest) returns (PositionsResponse)
+	get /pools/position_values (PositionValuesRequest) returns (PositionValuesResponse)
 
 	@handler SonexSwapHandler
 	get /swaps (SwapEventRequest) returns (SwapEventResponse)

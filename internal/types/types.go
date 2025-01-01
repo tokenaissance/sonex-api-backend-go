@@ -300,13 +300,13 @@ type PositionValueRecord struct {
 	PositionValue float64 `json:"positionValue"`
 }
 
-type PositionsRequest struct {
+type PositionValuesRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
 	ChainId  int64  `form:"chainId,default=1946,optional"`
 }
 
-type PositionsResponse struct {
+type PositionValuesResponse struct {
 	Pnl            float64                `json:"pnl"`
 	PositionValues []*PositionValueRecord `json:"positionValues"`
 	TotalPosition  float64                `json:"totalPosition"`

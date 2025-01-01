@@ -33,8 +33,8 @@ func NewSonexPositionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *So
 	}
 }
 
-type PositionsResponseWrapper struct {
-	*types.PositionsResponse
+type PositionValuesResponseWrapper struct {
+	*types.PositionValuesResponse
 }
 
 type taskResult struct {
@@ -44,14 +44,14 @@ type taskResult struct {
 	err                error
 }
 
-func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp *PositionsResponseWrapper, err error) {
-	cacheKey := fmt.Sprintf("sonex_dex:uniswap:positions:%s", req.Address)
+func (l *SonexPositionsLogic) SonexPositionValues(req *types.PositionValuesRequest) (resp *PositionValuesResponseWrapper, err error) {
+	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position_values:%s", req.Address)
 
 	// Check cache
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp PositionsResponseWrapper
+		var cachedResp PositionValuesResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			return &cachedResp, nil
 		}
@@ -152,7 +152,7 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 		}
 	}
 
-	positionResponse := &types.PositionsResponse{
+	positionResponse := &types.PositionValuesResponse{
 		PositionValues: make([]*types.PositionValueRecord, 0),
 	}
 
@@ -165,8 +165,8 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 		}
 	}
 
-	response := &PositionsResponseWrapper{
-		PositionsResponse: positionResponse,
+	response := &PositionValuesResponseWrapper{
+		PositionValuesResponse: positionResponse,
 	}
 
 	responseBytes, err := json.Marshal(response)
@@ -178,7 +178,7 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 }
 
 func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
-	req *types.PositionsRequest,
+	req *types.PositionValuesRequest,
 	position *types.Position,
 	innnerPosition *sonex.Position,
 	pricesRecords map[string]*repository.TokenPriceRecord,
