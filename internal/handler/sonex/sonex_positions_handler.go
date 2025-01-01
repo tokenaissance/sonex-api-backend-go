@@ -10,16 +10,16 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-func SonexMyPositionHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func SonexPositionsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.MyPositionRequest
+		var req types.PositionsRequest
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
 
-		l := sonex.NewSonexMyPositionLogic(r.Context(), svcCtx)
-		resp, err := l.SonexMyPosition(&req)
+		l := sonex.NewSonexPositionsLogic(r.Context(), svcCtx)
+		resp, err := l.SonexPositions(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

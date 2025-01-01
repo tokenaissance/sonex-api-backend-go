@@ -133,15 +133,6 @@ type MetaResponse struct {
 	ChainSyncPrograsses []ChainSyncPrograss `json:"chainSyncPrograsses"`
 }
 
-type MyPositionRequest struct {
-	Address    string `form:"address"`
-	FilterType string `form:"filterType,optional,default=none"`
-}
-
-type MyPositionResponse struct {
-	Position []*Position `json:"position"`
-}
-
 type NftDataResponse_Data struct {
 	Amount0         float64          `json:"amount0"`
 	Amount1         float64          `json:"amount1"`
@@ -310,6 +301,16 @@ type PositionValuesResponse struct {
 	Pnl            float64                `json:"pnl"`
 	PositionValues []*PositionValueRecord `json:"positionValues"`
 	TotalPosition  float64                `json:"totalPosition"`
+}
+
+type PositionsRequest struct {
+	Address    string `form:"address"`
+	FilterType string `form:"filterType,optional,default=none"`
+	ChainId    int64  `form:"chainId,default=1946,optional"`
+}
+
+type PositionsResponse struct {
+	Positions []*Position `json:"positions"`
 }
 
 type PriceComparisonResult struct {
