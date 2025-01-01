@@ -42,6 +42,7 @@ type sonexPositionResult struct {
 	transferItem  *types.Position
 	collectedItem *types.AggregatedAmounts
 	position      *sonex.Position
+	prices        map[string]*repository.TokenPriceRecord
 	err           error
 }
 
@@ -88,41 +89,24 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
 
-	var wg sync.WaitGroup
-	results := make(chan sonexPositionResult, 3)
+	var wg1 sync.WaitGroup
+	results1 := make(chan sonexPositionResult, 2)
 
 	// Task 1: Get transfer event
-	wg.Add(1)
+	wg1.Add(1)
 	go func() {
-		defer wg.Done()
+		defer wg1.Done()
 		transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 		item, err := transferModel.GetTransferEvent(l.ctx, req.TokenId)
-		results <- sonexPositionResult{transferItem: item, err: err}
+		results1 <- sonexPositionResult{transferItem: item, err: err}
 	}()
 
-	// Task 2: Get collected amounts (will be updated once we have transfer info)
-	wg.Add(1)
+	// Task 2: Get positions
+	wg1.Add(1)
 	go func() {
-		defer wg.Done()
-		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-		collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
-		// Wait for transfer result first
-		for result := range results {
-			if result.transferItem != nil {
-				item, err := collectModel.AggregateAmounts(l.ctx, req.ChainId, req.TokenId,
-					result.transferItem.Pool.Token0.Decimals,
-					result.transferItem.Pool.Token1.Decimals)
-				results <- sonexPositionResult{collectedItem: item, err: err}
-				break
-			}
-		}
-	}()
-
-	// Task 3: Get positions
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+		defer wg1.Done()
 		caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
 		positions, err := caller.BatchGetPositions(
 			l.ctx,
@@ -130,21 +114,22 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 			common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
 			[]*big.Int{big.NewInt(req.TokenId)},
 		)
-		results <- sonexPositionResult{position: positions[0], err: err}
+		results1 <- sonexPositionResult{position: positions[0], err: err}
 	}()
 
 	// Close results channel after all goroutines complete
 	go func() {
-		wg.Wait()
-		close(results)
+		wg1.Wait()
+		close(results1)
 	}()
 
 	// Collect results
 	var position = &types.Position{}
 	var collectedItem = &types.AggregatedAmounts{}
 	var innerPosition = &sonex.Position{}
+	var prices = make(map[string]*repository.TokenPriceRecord)
 
-	for result := range results {
+	for result := range results1 {
 		if result.err != nil {
 			logx.Errorf("[SonexPosition] waitgroup error: %s", result.err.Error())
 			return nil, result.err
@@ -152,20 +137,53 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 		if result.transferItem != nil {
 			position = result.transferItem
 		}
-		if result.collectedItem != nil {
-			collectedItem = result.collectedItem
-		}
 		if result.position != nil {
 			innerPosition = result.position
 		}
 	}
 
-	pricesRecords, err := tokenPriceModel.GetCurrentPrices([]string{innerPosition.Token0.Hex(), innerPosition.Token1.Hex()})
-	if err != nil {
-		logx.Errorf("[SonexPosition] GetCurrentPrices error: %s", err.Error())
+	var wg2 sync.WaitGroup
+	results2 := make(chan sonexPositionResult, 2)
+
+	// Task 1: Get collected amounts
+	wg1.Add(1)
+	go func() {
+		defer wg1.Done()
+		collectedItem, err := collectModel.AggregateAmounts(l.ctx, req.ChainId, req.TokenId,
+			position.Pool.Token0.Decimals,
+			position.Pool.Token1.Decimals)
+		results2 <- sonexPositionResult{collectedItem: collectedItem, err: err}
+	}()
+
+	// Task 4: Get current prices
+	wg1.Add(1)
+	go func() {
+		defer wg1.Done()
+		prices, err := tokenPriceModel.GetCurrentPrices([]string{innerPosition.Token0.Hex(), innerPosition.Token1.Hex()})
+		if err != nil {
+			logx.Errorf("[SonexPosition] GetCurrentPrices error: %s", err.Error())
+			results2 <- sonexPositionResult{prices: nil, err: err}
+			return
+		}
+		results2 <- sonexPositionResult{prices: prices, err: nil}
+	}()
+
+	go func() {
+		wg2.Wait()
+		close(results2)
+	}()
+
+	for result := range results2 {
+		if result.err != nil {
+			logx.Errorf("[SonexPosition] waitgroup error: %s", result.err.Error())
+			return nil, result.err
+		}
+		if result.prices != nil {
+			prices = result.prices
+		}
 	}
 
-	position = l.fillPosition(l.ctx, req, position, innerPosition, pricesRecords, collectedItem)
+	position = l.fillPosition(l.ctx, req, position, innerPosition, prices, collectedItem)
 
 	// Continue with the rest of the logic using transferItem, collectedItem, and positions
 	response := &PositionResponseWrapper{
