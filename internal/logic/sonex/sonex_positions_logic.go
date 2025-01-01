@@ -152,9 +152,9 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 	}()
 
 	// Collect results
-	var collectedAmounts map[int64]*types.AggregatedAmounts
-	var positions []*sonex.Position
-	var tokenPricesRecords map[string]*repository.TokenPriceRecord
+	var collectedAmounts = make(map[int64]*types.AggregatedAmounts)
+	var positions = make([]*sonex.Position, 0)
+	var tokenPricesRecords = make(map[string]*repository.TokenPriceRecord)
 
 	for result := range results {
 		if result.err != nil {
