@@ -63,6 +63,10 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 	if err != nil {
 		return nil, err
 	}
+	feeData, err := uniswapV3PoolABI.Pack("fee")
+	if err != nil {
+		return nil, err
+	}
 	for _, pool := range pools {
 		callDatas = append(callDatas, contract_common.Multicall3Call{
 			Target:   pool,
@@ -75,6 +79,10 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 		callDatas = append(callDatas, contract_common.Multicall3Call{
 			Target:   pool,
 			CallData: feeGrowthGlobal1X128Data,
+		})
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   pool,
+			CallData: feeData,
 		})
 	}
 	data, err := multicallABI.Pack("aggregate", callDatas)
@@ -102,11 +110,17 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 		if err != nil {
 			return nil, err
 		}
+		var fee *big.Int
+		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal1X128, "fee", multicallResult.ReturnData[i*3+3])
+		if err != nil {
+			return nil, err
+		}
 		pool := &Pool{
 			Address:              addr,
 			Slot0:                &slot0,
 			FeeGrowthGlobal0X128: feeGrowthGlobal0X128,
 			FeeGrowthGlobal1X128: feeGrowthGlobal1X128,
+			Fee:                  fee,
 		}
 		result = append(result, pool)
 	}

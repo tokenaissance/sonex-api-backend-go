@@ -41,8 +41,8 @@ func NewFarmPoolLiquidityLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 		Logger:          logger,
 		ctx:             ctx,
 		svcCtx:          svcCtx,
-		chainId:         svcCtx.Config.Farm[0].ChainId,
-		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
+		chainId:         svcCtx.Config.Farms[0].ChainId,
+		farmAddress:     common.HexToAddress(svcCtx.Config.Farms[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
 }

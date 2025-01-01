@@ -11,4 +11,5 @@ type Pool struct {
 	Slot0                *Slot0
 	FeeGrowthGlobal0X128 *big.Int
 	FeeGrowthGlobal1X128 *big.Int
+	Fee                  *big.Int
 }

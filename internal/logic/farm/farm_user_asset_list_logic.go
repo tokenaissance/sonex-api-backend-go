@@ -38,8 +38,8 @@ func NewFarmUserAssetListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 		Logger:          logger,
 		ctx:             ctx,
 		svcCtx:          svcCtx,
-		chainId:         svcCtx.Config.Farm[0].ChainId,
-		farmAddress:     common.HexToAddress(svcCtx.Config.Farm[0].Staker),
+		chainId:         svcCtx.Config.Farms[0].ChainId,
+		farmAddress:     common.HexToAddress(svcCtx.Config.Farms[0].Staker),
 		positionAddress: common.HexToAddress(svcCtx.Config.Sonexes[0].PositionManager),
 	}
 }
@@ -120,7 +120,7 @@ func (l *FarmUserAssetListLogic) FarmUserAssetDetail(req *types.FarmUserAssetDet
 		return nil, err
 	}
 
-	farm, err := farmContract.NewUniswapV3Staker(common.HexToAddress(l.svcCtx.Config.Farm[0].Staker), l.ethClient)
+	farm, err := farmContract.NewUniswapV3Staker(common.HexToAddress(l.svcCtx.Config.Farms[0].Staker), l.ethClient)
 	if err != nil {
 		return nil, err
 	}
