@@ -25,7 +25,7 @@ type (
 		Count(ctx context.Context) (int64, error)
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*FarmPools, error)
 		FindByChainId(ctx context.Context, chainId int64, limit, offset int) ([]*FarmPools, error)
-		GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]types.FarmPoolData, int64, error)
+		GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]*FarmPools, int64, error)
 		FindNotFreshPools(ctx context.Context, chainId int64, duration time.Duration) ([]*FarmPools, error)
 
 		FindByIncentiveId(ctx context.Context, chainId int64, incentiveId string) (*FarmPools, error)
@@ -104,8 +104,8 @@ func (m *customFarmPoolsModel) FindByChainId(ctx context.Context, chainId int64,
 	}
 }
 
-func (m *customFarmPoolsModel) GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]types.FarmPoolData, int64, error) {
-	query := "SELECT * FROM farm_pools WHERE chain_id = $1 AND end_time > NOW()"
+func (m *customFarmPoolsModel) GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]*FarmPools, int64, error) {
+	query := fmt.Sprintf("SELECT %s FROM farm_pools WHERE chain_id = $1 AND end_time > NOW()", farmPoolsRows)
 	countQuery := "SELECT COUNT(*) FROM farm_pools WHERE chain_id = $1 AND end_time > NOW()"
 	args := []interface{}{opts.ChainId}
 	argIndex := 2
@@ -158,13 +158,13 @@ func (m *customFarmPoolsModel) GetPoolList(ctx context.Context, opts *types.Farm
 		args = append(args, opts.Limit, opts.Offset)
 	}
 
-	var pools []types.FarmPoolData
+	var pools []*FarmPools
 	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
 	switch err {
 	case nil:
 		return pools, total, nil
 	case sqlx.ErrNotFound:
-		return []types.FarmPoolData{}, total, nil
+		return []*FarmPools{}, total, nil
 	default:
 		return nil, 0, err
 	}

@@ -56,6 +56,7 @@ type (
 		Token1Address       string       `db:"token1_address"`        // token1代币地址
 		Token1Symbol        string       `db:"token1_symbol"`         // token1符号
 		Token1Decimals      int64        `db:"token1_decimals"`       // token1精度
+		StakedLiquidity     string       `db:"staked_liquidity"`      // 质押池质押的流动性
 		StakedLiquidityUsd  string       `db:"staked_liquidity_usd"`  // 质押池质押的流动性的价值（USD）
 		TotalToken0Amount   string       `db:"total_token0_amount"`   // token0质押总量
 		TotalToken1Amount   string       `db:"total_token1_amount"`   // token1质押总量
@@ -109,14 +110,14 @@ func (m *defaultFarmPoolsModel) FindOneByIncentiveIdChainId(ctx context.Context,
 }
 
 func (m *defaultFarmPoolsModel) Insert(ctx context.Context, data *FarmPools) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)", m.table, farmPoolsRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.IncentiveId, data.StartTime, data.EndTime, data.RewardTokenAddress, data.RewardTokenDecimals, data.RewardTokenAmount, data.RewardTokenPrice, data.RefundeeAddress, data.PoolAddress, data.FeeRatio, data.Token0Address, data.Token0Symbol, data.Token0Decimals, data.Token1Address, data.Token1Symbol, data.Token1Decimals, data.StakedLiquidityUsd, data.TotalToken0Amount, data.TotalToken1Amount, data.Apr, data.JoinNum, data.TxHash)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)", m.table, farmPoolsRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.IncentiveId, data.StartTime, data.EndTime, data.RewardTokenAddress, data.RewardTokenDecimals, data.RewardTokenAmount, data.RewardTokenPrice, data.RefundeeAddress, data.PoolAddress, data.FeeRatio, data.Token0Address, data.Token0Symbol, data.Token0Decimals, data.Token1Address, data.Token1Symbol, data.Token1Decimals, data.StakedLiquidity, data.StakedLiquidityUsd, data.TotalToken0Amount, data.TotalToken1Amount, data.Apr, data.JoinNum, data.TxHash)
 	return ret, err
 }
 
 func (m *defaultFarmPoolsModel) Update(ctx context.Context, newData *FarmPools) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, farmPoolsRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.IncentiveId, newData.StartTime, newData.EndTime, newData.RewardTokenAddress, newData.RewardTokenDecimals, newData.RewardTokenAmount, newData.RewardTokenPrice, newData.RefundeeAddress, newData.PoolAddress, newData.FeeRatio, newData.Token0Address, newData.Token0Symbol, newData.Token0Decimals, newData.Token1Address, newData.Token1Symbol, newData.Token1Decimals, newData.StakedLiquidityUsd, newData.TotalToken0Amount, newData.TotalToken1Amount, newData.Apr, newData.JoinNum, newData.TxHash)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.IncentiveId, newData.StartTime, newData.EndTime, newData.RewardTokenAddress, newData.RewardTokenDecimals, newData.RewardTokenAmount, newData.RewardTokenPrice, newData.RefundeeAddress, newData.PoolAddress, newData.FeeRatio, newData.Token0Address, newData.Token0Symbol, newData.Token0Decimals, newData.Token1Address, newData.Token1Symbol, newData.Token1Decimals, newData.StakedLiquidity, newData.StakedLiquidityUsd, newData.TotalToken0Amount, newData.TotalToken1Amount, newData.Apr, newData.JoinNum, newData.TxHash)
 	return err
 }
 
