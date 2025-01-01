@@ -3,10 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
-
-	"sonex_api_backend_go/internal/types"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -25,7 +22,7 @@ type (
 		Count(ctx context.Context) (int64, error)
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*FarmPools, error)
 		FindByChainId(ctx context.Context, chainId int64, limit, offset int) ([]*FarmPools, error)
-		GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]*FarmPools, int64, error)
+		// GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]*FarmPools, int64, error)
 		FindNotFreshPools(ctx context.Context, chainId int64, duration time.Duration) ([]*FarmPools, error)
 
 		FindByIncentiveId(ctx context.Context, chainId int64, incentiveId string) (*FarmPools, error)
@@ -104,72 +101,67 @@ func (m *customFarmPoolsModel) FindByChainId(ctx context.Context, chainId int64,
 	}
 }
 
-func (m *customFarmPoolsModel) GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]*FarmPools, int64, error) {
-	query := fmt.Sprintf("SELECT %s FROM farm_pools WHERE chain_id = $1 AND end_time > NOW()", farmPoolsRows)
-	countQuery := "SELECT COUNT(*) FROM farm_pools WHERE chain_id = $1 AND end_time > NOW()"
-	args := []interface{}{opts.ChainId}
-	argIndex := 2
+// func (m *customFarmPoolsModel) GetPoolList(ctx context.Context, opts *types.FarmPoolListRequest) ([]*FarmPools, int64, error) {
+// 	query := fmt.Sprintf("SELECT %s FROM farm_pools WHERE chain_id = $1 AND end_time > NOW()", farmPoolsRows)
+// 	countQuery := "SELECT COUNT(*) FROM farm_pools WHERE chain_id = $1 AND end_time > NOW()"
+// 	args := []interface{}{opts.ChainId}
+// 	argIndex := 2
 
-	if opts.Keyword != "" {
-		query += fmt.Sprintf(" AND (token0_symbol ILIKE $%d OR token1_symbol ILIKE $%d)", argIndex, argIndex+1)
-		countQuery += fmt.Sprintf(" AND (token0_symbol ILIKE $%d OR token1_symbol ILIKE $%d)", argIndex, argIndex+1)
-		keyword := "%" + opts.Keyword + "%"
-		args = append(args, keyword, keyword)
-		argIndex += 2
-	}
+// 	if opts.Keyword != "" {
+// 		query += fmt.Sprintf(" AND (token0_symbol ILIKE $%d OR token1_symbol ILIKE $%d)", argIndex, argIndex+1)
+// 		countQuery += fmt.Sprintf(" AND (token0_symbol ILIKE $%d OR token1_symbol ILIKE $%d)", argIndex, argIndex+1)
+// 		keyword := "%" + opts.Keyword + "%"
+// 		args = append(args, keyword, keyword)
+// 		argIndex += 2
+// 	}
 
-	if strings.EqualFold(opts.StakedOnly, "true") {
-		query += fmt.Sprintf(` AND EXISTS (
-            SELECT 1 FROM farm_user_pools 
-            WHERE farm_user_pools.incentive_id = farm_pools.incentive_id 
-            AND farm_user_pools.chain_id = farm_pools.chain_id 
-            AND farm_user_pools.user_address = $%d 
-            AND farm_user_pools.status = 'stake'
-        )`, argIndex)
-		countQuery += fmt.Sprintf(` AND EXISTS (
-            SELECT 1 FROM farm_user_pools 
-            WHERE farm_user_pools.incentive_id = farm_pools.incentive_id 
-            AND farm_user_pools.chain_id = farm_pools.chain_id 
-            AND farm_user_pools.user_address = $%d 
-            AND farm_user_pools.status = 'stake'
-        )`, argIndex)
-		args = append(args, opts.UserAddress)
-		argIndex++
-	}
+// 	if strings.EqualFold(opts.StakedOnly, "true") {
+// 		query += fmt.Sprintf(` AND EXISTS (
+//             SELECT 1 FROM farm_user_pools
+//             WHERE farm_user_pools.incentive_id = farm_pools.incentive_id
+//             AND farm_user_pools.chain_id = farm_pools.chain_id
+//             AND farm_user_pools.user_address = $%d
+//             AND farm_user_pools.status = 'stake'
+//         )`, argIndex)
+// 		countQuery += fmt.Sprintf(` AND EXISTS (
+//             SELECT 1 FROM farm_user_pools
+//             WHERE farm_user_pools.incentive_id = farm_pools.incentive_id
+//             AND farm_user_pools.chain_id = farm_pools.chain_id
+//             AND farm_user_pools.user_address = $%d
+//             AND farm_user_pools.status = 'stake'
+//         )`, argIndex)
+// 		args = append(args, opts.UserAddress)
+// 		argIndex++
+// 	}
 
-	// 排序
-	switch opts.OrderBy {
-	case "hot":
-		query += " ORDER BY join_num DESC, apr DESC"
-	case "apr":
-		query += " ORDER BY apr DESC, id DESC"
-	default:
-		query += " ORDER BY created_at DESC, id DESC"
-	}
+// 	// 排序
+// 	switch opts.OrderBy {
+// 	case "hot":
+// 		query += " ORDER BY join_num DESC, apr DESC"
+// 	case "apr":
+// 		query += " ORDER BY apr DESC, id DESC"
+// 	default:
+// 		query += " ORDER BY created_at DESC, id DESC"
+// 	}
 
-	var total int64
-	err := m.conn.QueryRowCtx(ctx, &total, countQuery, args...)
-	if err != nil {
-		return nil, 0, err
-	}
+// 	var total int64
+// 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, args...)
+// 	if err != nil {
+// 		return nil, 0, err
+// 	}
 
-	if opts.Limit > 0 || opts.Offset > 0 {
-		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
-		args = append(args, opts.Limit, opts.Offset)
-	}
+// 	var pools []*FarmPools
+// 	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
+// 	switch err {
+// 	case nil:
+// 		return pools, total, nil
+// 	case sqlx.ErrNotFound:
+// 		return []*FarmPools{}, total, nil
+// 	default:
+// 		return nil, 0, err
+// 	}
 
-	var pools []*FarmPools
-	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
-	switch err {
-	case nil:
-		return pools, total, nil
-	case sqlx.ErrNotFound:
-		return []*FarmPools{}, total, nil
-	default:
-		return nil, 0, err
-	}
-
-}
+// }
 
 func (m *customFarmPoolsModel) FindByIncentiveId(ctx context.Context, chainId int64, incentiveId string) (*FarmPools, error) {
 	return m.FindOneByIncentiveIdChainId(ctx, incentiveId, chainId)

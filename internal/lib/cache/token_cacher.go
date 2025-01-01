@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
+	lib_common "sonex_api_backend_go/internal/lib/common"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/node_caller"
@@ -64,15 +65,6 @@ func NewTokenCacher(chainConf config.ChainConfig, sonexConf config.SonexConfig) 
 		prices:                  map[string]map[string]PriceCache{},
 		priceCacheExpireSeconds: DEFAULT_PRICE_CACHE_EXPIRE_SECONDS,
 	}
-}
-
-type Liquidity struct {
-	Value *big.Int
-}
-
-func (liquidity Liquidity) CompareTo(other linq.Comparable) int {
-	l, _ := other.(Liquidity)
-	return liquidity.Value.Cmp(l.Value)
 }
 
 func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, maxNumber int64) ([]quoter.Path, error) {
@@ -177,8 +169,8 @@ func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, m
 	}).ThenByDescendingT(func(item struct {
 		Path      quoter.Path
 		Liquidity *big.Int
-	}) Liquidity {
-		return Liquidity{Value: item.Liquidity}
+	}) lib_common.CompareableBigInt {
+		return lib_common.CompareableBigInt{Value: item.Liquidity}
 	}).Take(int(maxNumber)).SelectT(func(item struct {
 		Path      quoter.Path
 		Liquidity *big.Int
