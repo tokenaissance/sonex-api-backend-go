@@ -19,14 +19,14 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type SonexPositionsLogic struct {
+type SonexPositionValuesLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
 
-func NewSonexPositionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPositionsLogic {
-	return &SonexPositionsLogic{
+func NewSonexPositionValuesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPositionValuesLogic {
+	return &SonexPositionValuesLogic{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
@@ -44,7 +44,7 @@ type taskResult struct {
 	err                error
 }
 
-func (l *SonexPositionsLogic) SonexPositionValues(req *types.PositionValuesRequest) (resp *PositionValuesResponseWrapper, err error) {
+func (l *SonexPositionValuesLogic) SonexPositionValues(req *types.PositionValuesRequest) (resp *PositionValuesResponseWrapper, err error) {
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position_values:%s", req.Address)
 
 	// Check cache
@@ -177,7 +177,7 @@ func (l *SonexPositionsLogic) SonexPositionValues(req *types.PositionValuesReque
 	return response, nil
 }
 
-func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
+func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	req *types.PositionValuesRequest,
 	position *types.Position,
 	innnerPosition *sonex.Position,

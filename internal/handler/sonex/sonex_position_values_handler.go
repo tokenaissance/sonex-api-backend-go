@@ -17,7 +17,7 @@ func SonexPositionValuesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		l := sonex.NewSonexPositionsLogic(r.Context(), svcCtx)
+		l := sonex.NewSonexPositionValuesLogic(r.Context(), svcCtx)
 		resp, err := l.SonexPositionValues(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)

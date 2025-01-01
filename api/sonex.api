@@ -413,13 +413,14 @@ type PositionValuesResponse {
 	TotalPosition 	float64 `json:"totalPosition"`
 }
 
-type MyPositionRequest {
+type PositionsRequest {
 	Address    string `form:"address"`
 	FilterType string `form:"filterType,optional,default=none"`
+	ChainId    int64  `form:"chainId,default=1946,optional"`
 }
 
-type MyPositionResponse {
-	Position []*Position `json:"position"`
+type PositionsResponse {
+	Positions []*Position `json:"positions"`
 }
 
 type SonexTokenKlineRequest {
@@ -463,8 +464,8 @@ service sonex_api_backend_go {
 	@handler SonexPoolListHandler
 	get /pools (PoolsRequest) returns (PoolsResponse)
 
-	@handler SonexMyPositionHandler
-	get /pools/my_position (MyPositionRequest) returns (MyPositionResponse)
+	@handler SonexPositionsHandler
+	get /pools/positions (PositionsRequest) returns (PositionsResponse)
 	
 	@handler SonexPositionHandler
 	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)

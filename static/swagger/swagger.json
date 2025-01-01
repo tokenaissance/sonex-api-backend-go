@@ -398,40 +398,6 @@
         ]
       }
     },
-    "/sonex/pools/my_position": {
-      "get": {
-        "operationId": "SonexMyPositionHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/MyPositionResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "address",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "filterType",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "default": "none"
-          }
-        ],
-        "tags": [
-          "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
     "/sonex/pools/position/{tokenId}": {
       "get": {
         "operationId": "SonexPositionHandler",
@@ -491,6 +457,48 @@
             "required": false,
             "type": "string",
             "default": "1d"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/pools/positions": {
+      "get": {
+        "operationId": "SonexPositionsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PositionsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "filterType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "default": "none"
           },
           {
             "name": "chainId",
@@ -1629,37 +1637,6 @@
         "chainSyncPrograsses"
       ]
     },
-    "MyPositionRequest": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "filterType": {
-          "type": "string",
-          "default": "none"
-        }
-      },
-      "title": "MyPositionRequest",
-      "required": [
-        "address"
-      ]
-    },
-    "MyPositionResponse": {
-      "type": "object",
-      "properties": {
-        "position": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Position"
-          }
-        }
-      },
-      "title": "MyPositionResponse",
-      "required": [
-        "position"
-      ]
-    },
     "NftDataResponse_Data": {
       "type": "object",
       "properties": {
@@ -2326,6 +2303,42 @@
         "pnl",
         "positionValues",
         "totalPosition"
+      ]
+    },
+    "PositionsRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "filterType": {
+          "type": "string",
+          "default": "none"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "PositionsRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "PositionsResponse": {
+      "type": "object",
+      "properties": {
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Position"
+          }
+        }
+      },
+      "title": "PositionsResponse",
+      "required": [
+        "positions"
       ]
     },
     "PriceComparisonResult": {
