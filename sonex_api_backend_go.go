@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/chain_handler/farm"
 	"sonex_api_backend_go/internal/chain_handler/sonex"
 	"sonex_api_backend_go/internal/chain_handler/xpool"
@@ -119,10 +118,6 @@ func main() {
 	handler.RegisterHandlers(server, ctx)
 
 	// Register chain handler
-	chainHandlerManager, err := chain_handler.NewChainHandlerManager(ctx)
-	if err != nil {
-		panic(err)
-	}
 	for _, chain := range c.Chains {
 		// Sonex handler
 		{
@@ -137,7 +132,7 @@ func main() {
 				handler.OnPoolSwap(func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *contract_uniswap_v3.UniswapV3PoolSwap) {
 					sonex.SwapCallback(c, chainId, pool, tx, event)
 				})
-				chainHandlerManager.AddHandler(1946, handler)
+				global.AddChainHandler(1946, handler)
 			}
 		}
 
@@ -150,7 +145,7 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				chainHandlerManager.AddHandler(1946, handler)
+				global.AddChainHandler(1946, handler)
 			}
 		}
 
@@ -183,13 +178,13 @@ func main() {
 					farm.IncentiveEnded(c, chainId, tx, event)
 				})
 
-				chainHandlerManager.AddHandler(1946, handler)
+				global.AddChainHandler(1946, handler)
 			}
 		}
 	}
 
-	// Start chain listen
-	chainHandlerManager.Start()
+	// Start chain listen/cron ...
+	global.Start()
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()
