@@ -1622,25 +1622,16 @@
     "MyPositionResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
+        "position": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Position"
           }
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "MyPositionResponse",
       "required": [
-        "code",
-        "data",
-        "message"
+        "position"
       ]
     },
     "NftDataResponse_Data": {
@@ -2238,22 +2229,13 @@
     "PositionResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
         "position": {
           "$ref": "#/definitions/Position"
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "PositionResponse",
       "required": [
-        "code",
-        "position",
-        "message"
+        "position"
       ]
     },
     "PositionsRequest": {
@@ -2280,10 +2262,6 @@
     "PositionsResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
         "isNegative": {
           "type": "boolean",
           "format": "boolean"
@@ -2301,19 +2279,14 @@
         "totalPosition": {
           "type": "number",
           "format": "double"
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "PositionsResponse",
       "required": [
-        "code",
         "isNegative",
         "pnl",
         "positions",
-        "totalPosition",
-        "message"
+        "totalPosition"
       ]
     },
     "PriceComparisonResult": {

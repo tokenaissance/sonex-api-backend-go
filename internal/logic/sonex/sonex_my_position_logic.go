@@ -37,14 +37,6 @@ type MyPositionResponseWrapper struct {
 	*types.MyPositionResponse
 }
 
-func (p *MyPositionResponseWrapper) GetData() interface{} {
-	return p.Data
-}
-
-func (p *MyPositionResponseWrapper) GetCode() interface{} {
-	return p.Code
-}
-
 func (l *SonexMyPositionLogic) SonexMyPosition(req *types.MyPositionRequest) (resp *MyPositionResponseWrapper, err error) {
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:my-position:%s:%s", req.Address, req.FilterType)
 
@@ -91,12 +83,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacher
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	items, err := model.GetTransferEvents(ctx, req.Address)
 	if err != nil {
-		return &MyPositionResponseWrapper{
-			&types.MyPositionResponse{
-				Code:    400,
-				Message: err.Error(),
-			},
-		}, nil
+		return nil, err
 	}
 
 	var filteredTokenIDs []*big.Int
@@ -233,9 +220,7 @@ func (l *SonexMyPositionLogic) refreshCache(req *types.MyPositionRequest, cacher
 
 	response := &MyPositionResponseWrapper{
 		&types.MyPositionResponse{
-			Code:    200,
-			Message: "success",
-			Data:    filteredItems,
+			Position: filteredItems,
 		},
 	}
 

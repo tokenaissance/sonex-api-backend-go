@@ -139,9 +139,7 @@ type MyPositionRequest struct {
 }
 
 type MyPositionResponse struct {
-	Code    int         `json:"code"`
-	Data    []*Position `json:"data"`
-	Message string      `json:"message"`
+	Position []*Position `json:"position"`
 }
 
 type NftDataResponse_Data struct {
@@ -294,9 +292,7 @@ type PositionRequest struct {
 }
 
 type PositionResponse struct {
-	Code     int       `json:"code"`
 	Position *Position `json:"position"`
-	Message  string    `json:"message"`
 }
 
 type PositionsRequest struct {
@@ -306,12 +302,10 @@ type PositionsRequest struct {
 }
 
 type PositionsResponse struct {
-	Code          int         `json:"code"`
 	IsNegative    bool        `json:"isNegative"`
 	Pnl           float64     `json:"pnl"`
 	Positions     []*Position `json:"positions"`
 	TotalPosition float64     `json:"totalPosition"`
-	Message       string      `json:"message"`
 }
 
 type PriceComparisonResult struct {

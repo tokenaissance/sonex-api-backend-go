@@ -37,13 +37,6 @@ type PositionResponseWrapper struct {
 	*types.PositionResponse
 }
 
-func (p *PositionResponseWrapper) GetData() interface{} {
-	return p.Position
-}
-func (p *PositionResponseWrapper) GetCode() interface{} {
-	return p.Code
-}
-
 func (l *SonexPositionLogic) SonexPosition(req *types.PositionRequest) (resp *PositionResponseWrapper, err error) {
 	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position:%d", req.TokenId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
@@ -93,13 +86,8 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 	decreaseModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn)
 	transferItem, err := transferModel.GetTransferEvent(ctx, req.TokenId)
 	if err != nil {
-		return &PositionResponseWrapper{
-			&types.PositionResponse{
-				Code:     400,
-				Position: &types.Position{},
-				Message:  err.Error(),
-			},
-		}, nil
+		logx.Errorf("[SonexPositionLogic] GetTransferEvent error: %s", err.Error())
+		return nil, err
 	}
 
 	fees := types.Fees{
