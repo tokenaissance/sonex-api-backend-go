@@ -149,10 +149,10 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 	wg1.Add(1)
 	go func() {
 		defer wg1.Done()
-		collected, err := collectModel.AggregateAmounts(l.ctx, req.ChainId, req.TokenId,
+		collectedItem, err := collectModel.AggregateAmounts(l.ctx, req.ChainId, req.TokenId,
 			position.Pool.Token0.Decimals,
 			position.Pool.Token1.Decimals)
-		results2 <- sonexPositionResult{collectedItem: collected, err: err}
+		results2 <- sonexPositionResult{collectedItem: collectedItem, err: err}
 	}()
 
 	// Task 4: Get current prices
