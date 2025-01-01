@@ -69,7 +69,7 @@
             "name": "chainId",
             "description": " 链ID",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
             "format": "int64"
           },
@@ -79,24 +79,6 @@
             "in": "query",
             "required": false,
             "type": "string"
-          },
-          {
-            "name": "keyword",
-            "description": " 搜索关键字",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "stakedOnly",
-            "description": " 是否只显示用户参与的池子",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "true",
-              "false"
-            ]
           },
           {
             "name": "status",
@@ -121,21 +103,20 @@
             ]
           },
           {
-            "name": "offset",
-            "description": " 偏移量",
+            "name": "pageSize",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
-            "format": "int32"
+            "format": "int64",
+            "default": "20"
           },
           {
-            "name": "limit",
-            "description": " 每页数量",
+            "name": "pageIndex",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
-            "format": "int32",
-            "default": "10"
+            "format": "int64",
+            "default": "1"
           }
         ],
         "tags": [
@@ -1130,10 +1111,6 @@
     "FarmPoolData": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "integer",
-          "format": "int64"
-        },
         "chainId": {
           "type": "integer",
           "format": "int64",
@@ -1202,16 +1179,17 @@
           "type": "string",
           "description": " 运行状态（active or closed）"
         },
-        "createdAt": {
-          "type": "string"
+        "startAt": {
+          "type": "integer",
+          "format": "int64"
         },
-        "updatedAt": {
-          "type": "string"
+        "endAt": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "FarmPoolData",
       "required": [
-        "id",
         "chainId",
         "poolAddress",
         "feeRatio",
@@ -1228,8 +1206,8 @@
         "APR",
         "joinNum",
         "status",
-        "createdAt",
-        "updatedAt"
+        "startAt",
+        "endAt"
       ]
     },
     "FarmPoolLiquidityRequest": {
@@ -1327,18 +1305,6 @@
           "type": "string",
           "description": " 用户地址"
         },
-        "keyword": {
-          "type": "string",
-          "description": " 搜索关键字"
-        },
-        "stakedOnly": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": " 是否只显示用户参与的池子"
-        },
         "status": {
           "type": "string",
           "enum": [
@@ -1355,19 +1321,23 @@
           ],
           "description": " 排序字段"
         },
-        "offset": {
+        "pageSize": {
           "type": "integer",
-          "format": "int32",
-          "description": " 偏移量"
+          "format": "int64",
+          "default": "20"
         },
-        "limit": {
+        "pageIndex": {
           "type": "integer",
-          "format": "int32",
-          "default": "10",
-          "description": " 每页数量"
+          "format": "int64",
+          "default": "1"
         }
       },
-      "title": "FarmPoolListRequest"
+      "title": "FarmPoolListRequest",
+      "required": [
+        "chainId",
+        "pageSize",
+        "pageIndex"
+      ]
     },
     "FarmPoolListResponse": {
       "type": "object",
@@ -1381,22 +1351,12 @@
         "total": {
           "type": "integer",
           "format": "int64"
-        },
-        "offset": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "limit": {
-          "type": "integer",
-          "format": "int32"
         }
       },
       "title": "FarmPoolListResponse",
       "required": [
         "list",
-        "total",
-        "offset",
-        "limit"
+        "total"
       ]
     },
     "FarmPoolRoiRequest": {
@@ -2158,10 +2118,6 @@
           "type": "number",
           "format": "double"
         },
-        "isNegative": {
-          "type": "boolean",
-          "format": "boolean"
-        },
         "origin": {
           "type": "string"
         },
@@ -2206,7 +2162,6 @@
         "tickUpper",
         "tickLower",
         "pnl",
-        "isNegative",
         "origin",
         "pool",
         "positionAge",

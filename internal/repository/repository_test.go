@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"sonex_api_backend_go/internal/config"
-	"sonex_api_backend_go/internal/types"
 	"testing"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -48,14 +47,25 @@ func TestEventSonexPoolBurnModelPageQueryWithPool(t *testing.T) {
 	_ = total
 }
 
-func TestFarmPoolsModelGetPoolList(t *testing.T) {
+func TestPageQueryByChainIdStaker(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewFarmPoolsModel(NewConn(c.PostgreSQL.DateSource()))
-	records, total, err := model.GetPoolList(context.Background(), &types.FarmPoolListRequest{
-		ChainId: 1946,
-	})
+	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	records, total, err := model.PageQueryByChainIdStaker(context.Background(), 1946, "", 1, 10)
+	if err != nil {
+		t.Error(err)
+	}
+	_ = records
+	_ = total
+}
+
+func TestPageQueryByChainIdStakerWithPool(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+
+	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	records, total, err := model.PageQueryByChainIdStakerWithPool(context.Background(), 1946, "", 1, 10)
 	if err != nil {
 		t.Error(err)
 	}

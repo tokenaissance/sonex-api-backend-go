@@ -15,7 +15,6 @@ type ChainSyncPrograss struct {
 }
 
 type FarmPoolData struct {
-	Id             int64  `json:"id"`
 	ChainId        int64  `json:"chainId"`        // 链ID
 	PoolAddress    string `json:"poolAddress"`    // 池子合约地址
 	FeeRatio       string `json:"feeRatio"`       // 池子手续费率
@@ -32,8 +31,8 @@ type FarmPoolData struct {
 	APR            string `json:"APR"`            // 年化收益率
 	JoinNum        int64  `json:"joinNum"`        // 参与人数
 	Status         string `json:"status"`         // 运行状态（active or closed）
-	CreatedAt      string `json:"createdAt"`
-	UpdatedAt      string `json:"updatedAt"`
+	StartAt        int64  `json:"startAt"`
+	EndAt          int64  `json:"endAt"`
 }
 
 type FarmPoolLiquidityRequest struct {
@@ -56,21 +55,17 @@ type FarmPoolLiquidityResponse struct {
 }
 
 type FarmPoolListRequest struct {
-	ChainId     int64  `form:"chainId,optional"`                       // 链ID
-	UserAddress string `form:"userAddress,optional"`                   // 用户地址
-	Keyword     string `form:"keyword,optional"`                       // 搜索关键字
-	StakedOnly  string `form:"stakedOnly,optional,options=true|false"` // 是否只显示用户参与的池子
-	Status      string `form:"status,optional,options=active|closed"`  // 运行状态
-	OrderBy     string `form:"orderBy,optional,options=hot|apr"`       // 排序字段
-	Offset      int    `form:"offset,optional"`                        // 偏移量
-	Limit       int    `form:"limit,optional,default=10"`              // 每页数量
+	ChainId     int64  `form:"chainId"`                               // 链ID
+	UserAddress string `form:"userAddress,optional"`                  // 用户地址
+	Status      string `form:"status,optional,options=active|closed"` // 运行状态
+	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
+	PageSize    int64  `form:"pageSize,default=20"`
+	PageIndex   int64  `form:"pageIndex,default=1"`
 }
 
 type FarmPoolListResponse struct {
-	List   []FarmPoolData `json:"list"`
-	Total  int64          `json:"total"`
-	Offset int            `json:"offset"`
-	Limit  int            `json:"limit"`
+	List  []FarmPoolData `json:"list"`
+	Total int64          `json:"total"`
 }
 
 type FarmPoolRoiRequest struct {
@@ -265,7 +260,6 @@ type Position struct {
 	TickUpper     string           `json:"tickUpper"`
 	TickLower     string           `json:"tickLower"`
 	PNL           float64          `json:"pnl"`
-	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 	PositionAge   int              `json:"positionAge"`

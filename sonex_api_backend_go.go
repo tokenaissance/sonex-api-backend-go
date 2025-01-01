@@ -151,7 +151,7 @@ func main() {
 
 		// Farm handler
 		{
-			configA := linq.From(c.Farm).SingleWithT(func(item config.FarmConfig) bool { return item.ChainId == chain.ChainId })
+			configA := linq.From(c.Farms).SingleWithT(func(item config.FarmConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
 				config, _ := configA.(config.FarmConfig)
 				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
