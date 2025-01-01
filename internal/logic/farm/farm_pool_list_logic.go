@@ -3,6 +3,7 @@ package farm
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -12,6 +13,7 @@ import (
 
 	farmCbk "sonex_api_backend_go/internal/chain_handler/farm"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/redis/go-redis/v9"
@@ -88,8 +90,57 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 		return nil, err
 	}
 
+	tokenMap := map[string]struct{}{}
+	for _, pool := range pools {
+		tokenMap[pool.Token0Address] = struct{}{}
+		tokenMap[pool.Token1Address] = struct{}{}
+	}
+	tokens := []string{}
+	for key, _ := range tokenMap {
+		tokens = append(tokens, key)
+	}
+
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(l.conn)
+	prices, err := tokenPriceModel.GetLatestHistoryPrices(tokens)
+	if err != nil {
+		return nil, err
+	}
+
+	var list []types.FarmPoolData
+	linq.From(pools).SelectT(func(item *repository.FarmPools) types.FarmPoolData {
+		price0, ok := prices[item.Token0Address]
+		if !ok {
+			price0 = big.NewInt(0)
+		}
+		price1, ok := prices[item.Token1Address]
+		if !ok {
+			price1 = big.NewInt(0)
+		}
+		return types.FarmPoolData{
+			Id:             item.Id,
+			ChainId:        item.ChainId,
+			PoolAddress:    item.PoolAddress,
+			FeeRatio:       item.FeeRatio,
+			Token0Address:  item.Token0Address,
+			Token0Symbol:   item.Token0Symbol,
+			Token0Decimals: item.Token0Decimals,
+			Token0Price:    price0.String(),
+			Token1Address:  item.Token1Address,
+			Token1Symbol:   item.Token1Symbol,
+			Token1Decimals: item.Token1Decimals,
+			Token1Price:    price1.String(),
+			Liquidity:      item.StakedLiquidity,
+			LiquidityUSD:   item.StakedLiquidityUsd,
+			APR:            item.Apr,
+			JoinNum:        item.JoinNum,
+			Status:         "active",
+			CreatedAt:      item.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt:      item.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
+		}
+	}).ToSlice(&list)
+
 	resp = &types.FarmPoolListResponse{
-		List:   pools,
+		List:   list,
 		Total:  total,
 		Offset: req.Offset,
 		Limit:  req.Limit,
