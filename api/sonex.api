@@ -402,11 +402,15 @@ type Position {
 	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 }
 
+type PositionValueRecord {
+	TimeStamp int64 `json:"timeStamp"`
+	PositionValue float64 `json:"positionValue"`
+}
+
 type PositionsResponse {
-	IsNegative    bool        `json:"isNegative"`
-	Pnl           float64     `json:"pnl"`
-	Positions     []*Position `json:"positions"`
-	TotalPosition float64     `json:"totalPosition"`
+	Pnl           	float64 `json:"pnl"`
+	PositionValues  []*PositionValueRecord `json:"positionValues"`
+	TotalPosition 	float64 `json:"totalPosition"`
 }
 
 type MyPositionRequest {

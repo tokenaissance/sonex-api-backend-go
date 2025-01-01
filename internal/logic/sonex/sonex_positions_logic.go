@@ -153,14 +153,13 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	}
 
 	positionResponse := &types.PositionsResponse{
-		Positions: make([]*types.Position, 0),
+		PositionValues: make([]*types.PositionValueRecord, 0),
 	}
 
 	// Collect results
 	for _, position := range positions {
 		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
 			convertedPosition := l.fillPosition(l.ctx, req, positionTransferItem, position, tokenPricesRecords, collectedAmounts)
-			positionResponse.Positions = append(positionResponse.Positions, convertedPosition)
 			positionResponse.TotalPosition += convertedPosition.Position
 			positionResponse.Pnl += convertedPosition.PNL
 		}

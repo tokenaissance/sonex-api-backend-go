@@ -295,6 +295,11 @@ type PositionResponse struct {
 	Position *Position `json:"position"`
 }
 
+type PositionValueRecord struct {
+	TimeStamp     int64   `json:"timeStamp"`
+	PositionValue float64 `json:"positionValue"`
+}
+
 type PositionsRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
@@ -302,10 +307,9 @@ type PositionsRequest struct {
 }
 
 type PositionsResponse struct {
-	IsNegative    bool        `json:"isNegative"`
-	Pnl           float64     `json:"pnl"`
-	Positions     []*Position `json:"positions"`
-	TotalPosition float64     `json:"totalPosition"`
+	Pnl            float64                `json:"pnl"`
+	PositionValues []*PositionValueRecord `json:"positionValues"`
+	TotalPosition  float64                `json:"totalPosition"`
 }
 
 type PriceComparisonResult struct {
