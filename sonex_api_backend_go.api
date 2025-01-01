@@ -19,8 +19,19 @@ type MetaResponse {
 	ChainSyncPrograsses []ChainSyncPrograss `json:"chainSyncPrograsses"`
 }
 
+type ReplayRequest {
+	ChainId int64   `json:"chainId"`
+	Start   uint64  `json:"start"`
+	End     *uint64 `json:"end,optional"`
+}
+
+type ReplayResponse {}
+
 service sonex_api_backend_go {
 	@handler MetaHandler
 	get /meta (MetaRequest) returns (MetaResponse)
+
+	@handler ReplayHandler
+	post /replay (ReplayRequest) returns (ReplayResponse)
 }
 

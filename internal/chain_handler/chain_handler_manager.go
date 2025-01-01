@@ -1,20 +1,20 @@
 package chain_handler
 
 import (
+	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/chain_scanner"
-	"sonex_api_backend_go/internal/svc"
 )
 
 type ChainHandlerManager struct {
 	chainScanners map[int64]*chain_scanner.ChainScanner
 }
 
-func NewChainHandlerManager(serverCtx *svc.ServiceContext) (*ChainHandlerManager, error) {
+func NewChainHandlerManager(conf config.Config) (*ChainHandlerManager, error) {
 	manager := &ChainHandlerManager{
 		chainScanners: map[int64]*chain_scanner.ChainScanner{},
 	}
-	for _, chain := range serverCtx.Config.Chains {
-		chainScanner, err := chain_scanner.NewChainScanner(serverCtx.Config.PostgreSQL.DateSource(), chain)
+	for _, chain := range conf.Chains {
+		chainScanner, err := chain_scanner.NewChainScanner(conf.PostgreSQL.DateSource(), chain)
 		if err != nil {
 			return nil, err
 		}
@@ -41,4 +41,12 @@ func (manager *ChainHandlerManager) Stop() {
 	for _, chainScanner := range manager.chainScanners {
 		chainScanner.Stop()
 	}
+}
+
+func (manager *ChainHandlerManager) Replay(chainId int64, request chain_scanner.Replay) {
+	chainScanner, ok := manager.chainScanners[chainId]
+	if !ok {
+		return
+	}
+	chainScanner.Replay(request)
 }

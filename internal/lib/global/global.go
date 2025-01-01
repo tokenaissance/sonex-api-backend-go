@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
+	"sonex_api_backend_go/internal/lib/chain_scanner"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/id_generater"
@@ -24,22 +26,27 @@ import (
 )
 
 var c config.Config
+var chainHandlerManager *chain_handler.ChainHandlerManager
 var cronExecuter *cron.Cron
 var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
 var tokenCachersLock sync.RWMutex
 
-func init() {
-	cronExecuter = cron.New(cron.WithSeconds(), cron.WithLocation(time.UTC))
-	tokenCachers = map[int64]*cache.TokenCacher{}
-
-	cronExecuter.Start()
-}
-
 func Initialize(config config.Config) error {
 	c = config
 
+	// Initialize chain handler manager
+	manager, err := chain_handler.NewChainHandlerManager(c)
+	if err != nil {
+		panic(err)
+	}
+	chainHandlerManager = manager
+
+	// Initialize cron executer
+	cronExecuter = cron.New(cron.WithSeconds(), cron.WithLocation(time.UTC))
+
 	// Initialize token cacher
+	tokenCachers = map[int64]*cache.TokenCacher{}
 	for _, chain := range c.Chains {
 		sonexConf := c.GetSonexConfig(chain.ChainId)
 		if sonexConf == nil {
@@ -61,8 +68,26 @@ func Initialize(config config.Config) error {
 	return nil
 }
 
+func AddChainHandler(chainId int64, handler chain_scanner.IHandler) {
+	chainHandlerManager.AddHandler(chainId, handler)
+}
+
+func Replay(chainId int64, request chain_scanner.Replay) {
+	chainHandlerManager.Replay(chainId, request)
+}
+
 func AddCronJob(cron string, job func()) (cron.EntryID, error) {
 	return cronExecuter.AddFunc(cron, job)
+}
+
+func Start() {
+	chainHandlerManager.Start()
+	cronExecuter.Start()
+}
+
+func Stop() {
+	chainHandlerManager.Stop()
+	cronExecuter.Stop()
 }
 
 func InitIdGenerater(workerId int64) error {

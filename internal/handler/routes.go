@@ -22,6 +22,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/meta",
 				Handler: MetaHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/replay",
+				Handler: ReplayHandler(serverCtx),
+			},
 		},
 	)
 

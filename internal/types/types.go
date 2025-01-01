@@ -319,6 +319,15 @@ type PriceComparisonResult struct {
 	Percentage float64 `json:"percentage"`
 }
 
+type ReplayRequest struct {
+	ChainId int64   `json:"chainId"`
+	Start   uint64  `json:"start"`
+	End     *uint64 `json:"end,optional"`
+}
+
+type ReplayResponse struct {
+}
+
 type SonexTokenKlineRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
