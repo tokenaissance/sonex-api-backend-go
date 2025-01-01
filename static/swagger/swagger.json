@@ -469,7 +469,7 @@
     },
     "/sonex/pools/position_values": {
       "get": {
-        "operationId": "SonexPositionsHandler",
+        "operationId": "SonexPositionValuesHandler",
         "responses": {
           "200": {
             "description": "A successful response.",

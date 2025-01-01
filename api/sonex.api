@@ -465,11 +465,11 @@ service sonex_api_backend_go {
 
 	@handler SonexMyPositionHandler
 	get /pools/my_position (MyPositionRequest) returns (MyPositionResponse)
-
+	
 	@handler SonexPositionHandler
 	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)
 
-	@handler SonexPositionsHandler
+	@handler SonexPositionValuesHandler
 	get /pools/position_values (PositionValuesRequest) returns (PositionValuesResponse)
 
 	@handler SonexSwapHandler
