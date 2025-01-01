@@ -379,14 +379,49 @@
         ]
       }
     },
-    "/sonex/pools/my_position": {
+    "/sonex/pools/position/{tokenId}": {
       "get": {
-        "operationId": "SonexMyPositionHandler",
+        "operationId": "SonexPositionHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/MyPositionResponse"
+              "$ref": "#/definitions/PositionResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tokenId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/pools/position_values": {
+      "get": {
+        "operationId": "SonexPositionValuesHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PositionValuesResponse"
             }
           }
         },
@@ -398,38 +433,11 @@
             "type": "string"
           },
           {
-            "name": "filterType",
+            "name": "interval",
             "in": "query",
             "required": false,
             "type": "string",
-            "default": "none"
-          }
-        ],
-        "tags": [
-          "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
-    "/sonex/pools/position/{id}": {
-      "get": {
-        "operationId": "SonexPositionHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/NftDataResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
+            "default": "1d"
           },
           {
             "name": "chainId",
@@ -467,11 +475,11 @@
             "type": "string"
           },
           {
-            "name": "interval",
+            "name": "filterType",
             "in": "query",
             "required": false,
             "type": "string",
-            "default": "1d"
+            "default": "none"
           },
           {
             "name": "chainId",
@@ -1554,17 +1562,6 @@
         "feeAmount1"
       ]
     },
-    "GetNftDataRequest": {
-      "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
-      "title": "GetNftDataRequest"
-    },
     "Invested": {
       "type": "object",
       "properties": {
@@ -1598,67 +1595,6 @@
       "title": "MetaResponse",
       "required": [
         "chainSyncPrograsses"
-      ]
-    },
-    "MyPositionRequest": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "filterType": {
-          "type": "string",
-          "default": "none"
-        }
-      },
-      "title": "MyPositionRequest",
-      "required": [
-        "address"
-      ]
-    },
-    "MyPositionResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Position"
-          }
-        },
-        "message": {
-          "type": "string"
-        }
-      },
-      "title": "MyPositionResponse",
-      "required": [
-        "code",
-        "data",
-        "message"
-      ]
-    },
-    "NftDataResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
-          "$ref": "#/definitions/NftDataResponse_Data"
-        },
-        "message": {
-          "type": "string"
-        }
-      },
-      "title": "NftDataResponse",
-      "required": [
-        "code",
-        "data",
-        "message"
       ]
     },
     "NftDataResponse_Data": {
@@ -2182,10 +2118,6 @@
           "type": "number",
           "format": "double"
         },
-        "isNegative": {
-          "type": "boolean",
-          "format": "boolean"
-        },
         "origin": {
           "type": "string"
         },
@@ -2230,7 +2162,6 @@
         "tickUpper",
         "tickLower",
         "pnl",
-        "isNegative",
         "origin",
         "pool",
         "positionAge",
@@ -2242,7 +2173,48 @@
         "unclaimedFee1"
       ]
     },
-    "PositionsRequest": {
+    "PositionRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "PositionRequest"
+    },
+    "PositionResponse": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "$ref": "#/definitions/Position"
+        }
+      },
+      "title": "PositionResponse",
+      "required": [
+        "position"
+      ]
+    },
+    "PositionValueRecord": {
+      "type": "object",
+      "properties": {
+        "timeStamp": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "positionValue": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PositionValueRecord",
+      "required": [
+        "timeStamp",
+        "positionValue"
+      ]
+    },
+    "PositionValuesRequest": {
       "type": "object",
       "properties": {
         "address": {
@@ -2258,6 +2230,52 @@
           "default": "1946"
         }
       },
+      "title": "PositionValuesRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "PositionValuesResponse": {
+      "type": "object",
+      "properties": {
+        "pnl": {
+          "type": "number",
+          "format": "double"
+        },
+        "positionValues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PositionValueRecord"
+          }
+        },
+        "totalPosition": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PositionValuesResponse",
+      "required": [
+        "pnl",
+        "positionValues",
+        "totalPosition"
+      ]
+    },
+    "PositionsRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "filterType": {
+          "type": "string",
+          "default": "none"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
       "title": "PositionsRequest",
       "required": [
         "address"
@@ -2266,40 +2284,16 @@
     "PositionsResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "isNegative": {
-          "type": "boolean",
-          "format": "boolean"
-        },
-        "pnl": {
-          "type": "number",
-          "format": "double"
-        },
         "positions": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Position"
           }
-        },
-        "totalPosition": {
-          "type": "number",
-          "format": "double"
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "PositionsResponse",
       "required": [
-        "code",
-        "isNegative",
-        "pnl",
-        "positions",
-        "totalPosition",
-        "message"
+        "positions"
       ]
     },
     "PriceComparisonResult": {

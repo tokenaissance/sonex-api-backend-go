@@ -178,15 +178,18 @@ func batchAggregateAmounts(ctx context.Context, conn sqlx.SqlConn, tableName str
 			totalAmount1.Add(totalAmount1, amount1)
 		}
 
-		factor0 := math.Pow(10, float64(pair.Decimal0))
-		factor1 := math.Pow(10, float64(pair.Decimal1))
+		factor0 := new(big.Float).SetFloat64(math.Pow10(pair.Decimal0))
+		factor1 := new(big.Float).SetFloat64(math.Pow10(pair.Decimal1))
 
-		totalAmount0Float, _ := new(big.Float).SetInt(totalAmount0).Float64()
-		totalAmount1Float, _ := new(big.Float).SetInt(totalAmount1).Float64()
-
+		totalAmount0Float := new(big.Float).SetInt(totalAmount0)
+		totalAmount1Float := new(big.Float).SetInt(totalAmount1)
+		totalAmount0Float = totalAmount0Float.Quo(totalAmount0Float, factor0)
+		totalAmount1Float = totalAmount1Float.Quo(totalAmount1Float, factor1)
+		totalAmount0FloatValue, _ := totalAmount0Float.Float64()
+		totalAmount1FloatValue, _ := totalAmount1Float.Float64()
 		results[pair.EventTokenId] = &types.AggregatedAmounts{
-			TotalAmount0: totalAmount0Float / factor0,
-			TotalAmount1: totalAmount1Float / factor1,
+			TotalAmount0: totalAmount0FloatValue,
+			TotalAmount1: totalAmount1FloatValue,
 		}
 	}
 

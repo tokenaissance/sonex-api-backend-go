@@ -116,11 +116,6 @@ type Fees struct {
 	FeeAmount1 string `json:"feeAmount1"`
 }
 
-type GetNftDataRequest struct {
-	Id      int64 `path:"id"`
-	ChainId int64 `form:"chainId,default=1946,optional"`
-}
-
 type Invested struct {
 	InvestedAmount0 string `json:"investedAmount0"`
 	InvestedAmount1 string `json:"investedAmount1"`
@@ -131,23 +126,6 @@ type MetaRequest struct {
 
 type MetaResponse struct {
 	ChainSyncPrograsses []ChainSyncPrograss `json:"chainSyncPrograsses"`
-}
-
-type MyPositionRequest struct {
-	Address    string `form:"address"`
-	FilterType string `form:"filterType,optional,default=none"`
-}
-
-type MyPositionResponse struct {
-	Code    int         `json:"code"`
-	Data    []*Position `json:"data"`
-	Message string      `json:"message"`
-}
-
-type NftDataResponse struct {
-	Code    int                   `json:"code"`
-	Data    *NftDataResponse_Data `json:"data"`
-	Message string                `json:"message"`
 }
 
 type NftDataResponse_Data struct {
@@ -282,7 +260,6 @@ type Position struct {
 	TickUpper     string           `json:"tickUpper"`
 	TickLower     string           `json:"tickLower"`
 	PNL           float64          `json:"pnl"`
-	IsNegative    bool             `json:"isNegative"`
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 	PositionAge   int              `json:"positionAge"`
@@ -294,19 +271,40 @@ type Position struct {
 	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 }
 
-type PositionsRequest struct {
+type PositionRequest struct {
+	TokenId int64 `path:"tokenId"`
+	ChainId int64 `form:"chainId,default=1946,optional"`
+}
+
+type PositionResponse struct {
+	Position *Position `json:"position"`
+}
+
+type PositionValueRecord struct {
+	TimeStamp     int64   `json:"timeStamp"`
+	PositionValue float64 `json:"positionValue"`
+}
+
+type PositionValuesRequest struct {
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
 	ChainId  int64  `form:"chainId,default=1946,optional"`
 }
 
+type PositionValuesResponse struct {
+	Pnl            float64                `json:"pnl"`
+	PositionValues []*PositionValueRecord `json:"positionValues"`
+	TotalPosition  float64                `json:"totalPosition"`
+}
+
+type PositionsRequest struct {
+	Address    string `form:"address"`
+	FilterType string `form:"filterType,optional,default=none"`
+	ChainId    int64  `form:"chainId,default=1946,optional"`
+}
+
 type PositionsResponse struct {
-	Code          int         `json:"code"`
-	IsNegative    bool        `json:"isNegative"`
-	Pnl           float64     `json:"pnl"`
-	Positions     []*Position `json:"positions"`
-	TotalPosition float64     `json:"totalPosition"`
-	Message       string      `json:"message"`
+	Positions []*Position `json:"positions"`
 }
 
 type PriceComparisonResult struct {

@@ -75,13 +75,13 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/pools/my_position",
-				Handler: sonex.SonexMyPositionHandler(serverCtx),
+				Path:    "/pools/position/:tokenId",
+				Handler: sonex.SonexPositionHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/pools/position/:id",
-				Handler: sonex.SonexPositionHandler(serverCtx),
+				Path:    "/pools/position_values",
+				Handler: sonex.SonexPositionValuesHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
