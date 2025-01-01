@@ -27,8 +27,9 @@ func TestGetPrices(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	Initialize(c)
+	token := common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062")
 	stablecoin := "0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"
-	bestPrice, prices, err := GetPrices(context.Background(), nil, 1946, (common.Address{}).Hex(), false, 2, &stablecoin)
+	bestPrice, prices, err := GetPrices(context.Background(), nil, 1946, token.Hex(), false, 2, &stablecoin)
 	if err != nil {
 		t.Error(err)
 		return
@@ -59,7 +60,7 @@ func TestQuote(t *testing.T) {
 	token, _ := GetToken(1946, "0x8879309d4002b8C98163Ece3f58653F774de8416")
 	amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
 	st := time.Now()
-	prices, err := QuoteExactInput(context.Background(), nil, 1946, "0x8879309d4002b8C98163Ece3f58653F774de8416", "0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", amountIn, 2)
+	prices, err := QuoteExactInput(context.Background(), nil, 1946, "0x8879309d4002b8C98163Ece3f58653F774de8416", "0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062", amountIn, 2)
 	if err != nil {
 		t.Error(err)
 		return

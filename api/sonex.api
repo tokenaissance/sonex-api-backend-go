@@ -376,7 +376,7 @@ type PoolVolume {
 	Amounts1 float64 `json:"amounts1"`
 }
 
-type PositionsRequest {
+type PositionValuesRequest {
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
 	ChainId  int64  `form:"chainId,default=1946,optional"`
@@ -402,20 +402,25 @@ type Position {
 	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 }
 
-type PositionsResponse {
-	IsNegative    bool        `json:"isNegative"`
-	Pnl           float64     `json:"pnl"`
-	Positions     []*Position `json:"positions"`
-	TotalPosition float64     `json:"totalPosition"`
+type PositionValueRecord {
+	TimeStamp int64 `json:"timeStamp"`
+	PositionValue float64 `json:"positionValue"`
 }
 
-type MyPositionRequest {
+type PositionValuesResponse {
+	Pnl           	float64 `json:"pnl"`
+	PositionValues  []*PositionValueRecord `json:"positionValues"`
+	TotalPosition 	float64 `json:"totalPosition"`
+}
+
+type PositionsRequest {
 	Address    string `form:"address"`
 	FilterType string `form:"filterType,optional,default=none"`
+	ChainId    int64  `form:"chainId,default=1946,optional"`
 }
 
-type MyPositionResponse {
-	Position []*Position `json:"position"`
+type PositionsResponse {
+	Positions []*Position `json:"positions"`
 }
 
 type SonexTokenKlineRequest {
@@ -459,14 +464,14 @@ service sonex_api_backend_go {
 	@handler SonexPoolListHandler
 	get /pools (PoolsRequest) returns (PoolsResponse)
 
-	@handler SonexMyPositionHandler
-	get /pools/my_position (MyPositionRequest) returns (MyPositionResponse)
-
+	@handler SonexPositionsHandler
+	get /pools/positions (PositionsRequest) returns (PositionsResponse)
+	
 	@handler SonexPositionHandler
 	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)
 
-	@handler SonexPositionsHandler
-	get /pools/positions (PositionsRequest) returns (PositionsResponse)
+	@handler SonexPositionValuesHandler
+	get /pools/position_values (PositionValuesRequest) returns (PositionValuesResponse)
 
 	@handler SonexSwapHandler
 	get /swaps (SwapEventRequest) returns (SwapEventResponse)

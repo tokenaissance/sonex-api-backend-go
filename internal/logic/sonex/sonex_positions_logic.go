@@ -37,15 +37,8 @@ type PositionsResponseWrapper struct {
 	*types.PositionsResponse
 }
 
-type taskResult struct {
-	collectedAmounts   map[int64]*types.AggregatedAmounts
-	positions          []*sonex.Position
-	tokenPricesRecords map[string]*repository.TokenPriceRecord
-	err                error
-}
-
 func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp *PositionsResponseWrapper, err error) {
-	cacheKey := fmt.Sprintf("sonex_dex:uniswap:positions:%s", req.Address)
+	cacheKey := fmt.Sprintf("sonex_dex:uniswap:positions:%s:%s", req.Address, req.FilterType)
 
 	// Check cache
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
@@ -53,11 +46,38 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp PositionsResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
 			return &cachedResp, nil
 		}
 	}
 
-	// Fetch from database if not cached
+	return l.refreshCache(req, redisCache, cacheKey, nil)
+}
+
+func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionsResponseWrapper) (resp *PositionsResponseWrapper, err error) {
+	lockKey := fmt.Sprintf("lock:%s", cacheKey)
+
+	var lockAcquired bool
+
+	if cachedResp != nil {
+		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
+		if err != nil {
+			return cachedResp, nil
+		}
+
+		if !success {
+			return cachedResp, nil
+		}
+
+		lockAcquired = true
+	}
+
+	defer func() {
+		if lockAcquired {
+			cacher.Del(lockKey)
+		}
+	}()
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
@@ -152,27 +172,23 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 		}
 	}
 
-	positionResponse := &types.PositionsResponse{
-		Positions: make([]*types.Position, 0),
+	response := &PositionsResponseWrapper{
+		PositionsResponse: &types.PositionsResponse{
+			Positions: make([]*types.Position, 0),
+		},
 	}
 
 	// Collect results
 	for _, position := range positions {
 		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
 			convertedPosition := l.fillPosition(l.ctx, req, positionTransferItem, position, tokenPricesRecords, collectedAmounts)
-			positionResponse.Positions = append(positionResponse.Positions, convertedPosition)
-			positionResponse.TotalPosition += convertedPosition.Position
-			positionResponse.Pnl += convertedPosition.PNL
+			response.Positions = append(response.Positions, convertedPosition)
 		}
-	}
-
-	response := &PositionsResponseWrapper{
-		PositionsResponse: positionResponse,
 	}
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
-		redisCache.Set(cacheKey, responseBytes, 10*time.Second)
+		cacher.Set(cacheKey, responseBytes, 0) // TODO: cache for xxx seconds??
 	}
 
 	return response, nil
