@@ -81,11 +81,7 @@ func (chainScanner *ChainScanner) Start() {
 			}
 		}()
 
-		initEnd := uint64(0)
-		opt := &bind.FilterOpts{
-			Start: 0,
-			End:   &initEnd,
-		}
+		opt := &bind.FilterOpts{}
 		for {
 			select {
 			case <-ctx.Done():
@@ -114,15 +110,20 @@ func (chainScanner *ChainScanner) Start() {
 					var end *uint64
 					// Check replay
 					if replayA, ok := chainScanner.replays.Dequeue(); ok {
-						replay, _ := replayA.(uint64)
-						start = replay
-						end = &replay
-						isReplay = true
-					} else {
-						height, err := client.BlockNumber(ctx)
-						if err != nil {
-							return err
+						replay, ok := replayA.(Replay)
+						if ok {
+							start = replay.Start
+							end = replay.End
+							isReplay = true
 						}
+					}
+
+					// Check start and end
+					height, err := client.BlockNumber(ctx)
+					if err != nil {
+						return err
+					}
+					if start <= 0 {
 						model := repository.NewChainScannerPrograssModel(repository.NewConn(chainScanner.dataSource))
 						chainScannerPrograss, err := model.FindOneByChainId(ctx, chainScanner.config.ChainId)
 						switch err {
@@ -133,34 +134,38 @@ func (chainScanner *ChainScanner) Start() {
 							return err
 						}
 						start = uint64(chainScannerPrograss.Height)
+					}
+					if end == nil {
 						newEnd := height - uint64(chainScanner.config.MinConfirmations)
-						retrys := 0
-						err = retry.Do(func() error {
-							if newEnd > start {
-								return nil
-							}
-							newHeight, err := client.BlockNumber(ctx)
-							if err != nil {
-								return err
-							}
-							newEnd = newHeight - uint64(chainScanner.config.MinConfirmations)
-							return fmt.Errorf("%s", "Waiting block confirm...")
-						},
-							retry.RetryIf(func(err error) bool { return retrys < 5 }),
-							retry.Delay(time.Millisecond*time.Duration(chainScanner.config.MinDelayWaitMillisecond)),
-							retry.DelayType(retry.FixedDelay),
-							retry.OnRetry(func(n uint, err error) {
-								retrys += 1
-								logx.Infof("%s", err)
-							}),
-						)
+						end = &newEnd
+					}
+
+					retrys := 0
+					err = retry.Do(func() error {
+						if *end > start {
+							return nil
+						}
+						newHeight, err := client.BlockNumber(ctx)
 						if err != nil {
 							return err
 						}
-						if newEnd > start+uint64(chainScanner.config.MaxLogsNumber) {
-							newEnd = start + uint64(chainScanner.config.MaxLogsNumber)
-						}
+						newEnd := newHeight - uint64(chainScanner.config.MinConfirmations)
 						end = &newEnd
+						return fmt.Errorf("%s", "Waiting block confirm...")
+					},
+						retry.RetryIf(func(err error) bool { return retrys < 5 }),
+						retry.Delay(time.Millisecond*time.Duration(chainScanner.config.MinDelayWaitMillisecond)),
+						retry.DelayType(retry.FixedDelay),
+						retry.OnRetry(func(n uint, err error) {
+							retrys += 1
+							logx.Infof("%s", err)
+						}),
+					)
+					if err != nil {
+						return err
+					}
+					if *end > start+uint64(chainScanner.config.MaxLogsNumber) {
+						*end = start + uint64(chainScanner.config.MaxLogsNumber)
 					}
 					opt.Start = start
 					opt.End = end
@@ -227,7 +232,7 @@ func (chainScanner *ChainScanner) Start() {
 						logx.Errorf("Handler[%s] error: %s\n", reflect.TypeOf(result.Handler).String(), result.Err)
 					}
 				}
-				if len(chainScanner.waitForRetryHandlers) == 0 {
+				if !isReplay && len(chainScanner.waitForRetryHandlers) == 0 {
 					model := repository.NewChainScannerPrograssModel(repository.NewConn(chainScanner.dataSource))
 					err = model.UpdateHeightByChainId(ctx, chainScanner.config.ChainId, int64(*opt.End)+1)
 					if err != nil {
@@ -249,8 +254,15 @@ func (chainScanner *ChainScanner) Stop() {
 	chainScanner.cancel()
 }
 
+func (chainScanner *ChainScanner) Replay(request Replay) {
+	chainScanner.replays.Enqueue(request)
+}
+
 func (chainScanner *ChainScanner) ReplayByBlockNumber(number uint64) {
-	chainScanner.replays.Enqueue(number)
+	chainScanner.replays.Enqueue(Replay{
+		Start: number,
+		End:   &number,
+	})
 }
 
 func (chainScanner *ChainScanner) ReplayByTxHash(txHash string) error {
@@ -262,6 +274,10 @@ func (chainScanner *ChainScanner) ReplayByTxHash(txHash string) error {
 	if err != nil {
 		return err
 	}
-	chainScanner.ReplayByBlockNumber(receipt.BlockNumber.Uint64())
+	number := receipt.BlockNumber.Uint64()
+	chainScanner.replays.Enqueue(Replay{
+		Start: number,
+		End:   &number,
+	})
 	return nil
 }

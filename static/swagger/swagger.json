@@ -302,6 +302,32 @@
         ]
       }
     },
+    "/replay": {
+      "post": {
+        "operationId": "ReplayHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ReplayResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ReplayRequest"
+            }
+          }
+        ],
+        "tags": [
+          "sonex_api_backend_go"
+        ]
+      }
+    },
     "/sonex/pools": {
       "get": {
         "operationId": "SonexPoolListHandler",
@@ -2305,6 +2331,32 @@
         "comparison",
         "percentage"
       ]
+    },
+    "ReplayRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "start": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "end": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "ReplayRequest",
+      "required": [
+        "chainId",
+        "start"
+      ]
+    },
+    "ReplayResponse": {
+      "type": "object",
+      "title": "ReplayResponse"
     },
     "SonexTokenKlineRequest": {
       "type": "object",
