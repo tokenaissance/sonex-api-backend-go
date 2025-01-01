@@ -33,23 +33,23 @@ func NewSonexPositionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 	}
 }
 
-type NftDataResponseWrapper struct {
-	*types.NftDataResponse
+type PositionResponseWrapper struct {
+	*types.PositionResponse
 }
 
-func (p *NftDataResponseWrapper) GetData() interface{} {
-	return p.Data
+func (p *PositionResponseWrapper) GetData() interface{} {
+	return p.Position
 }
-func (p *NftDataResponseWrapper) GetCode() interface{} {
+func (p *PositionResponseWrapper) GetCode() interface{} {
 	return p.Code
 }
 
-func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *NftDataResponseWrapper, err error) {
-	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position:%d", req.Id)
+func (l *SonexPositionLogic) SonexPosition(req *types.PositionRequest) (resp *PositionResponseWrapper, err error) {
+	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position:%d", req.TokenId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp NftDataResponseWrapper
+		var cachedResp PositionResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
 			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
@@ -61,7 +61,7 @@ func (l *SonexPositionLogic) SonexPosition(req *types.GetNftDataRequest) (resp *
 	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher cache.ICache, cacheKey string, cachedResp *NftDataResponseWrapper) (resp *NftDataResponseWrapper, err error) {
+func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionResponseWrapper) (resp *PositionResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 
@@ -91,13 +91,13 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
 	increaseModel := repository.NewEventSonexPositionManagerIncreaseLiquidityModel(conn)
 	decreaseModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn)
-	transferItem, err := transferModel.GetTransferEvent(ctx, req.Id)
+	transferItem, err := transferModel.GetTransferEvent(ctx, req.TokenId)
 	if err != nil {
-		return &NftDataResponseWrapper{
-			&types.NftDataResponse{
-				Code:    400,
-				Data:    &types.NftDataResponse_Data{},
-				Message: err.Error(),
+		return &PositionResponseWrapper{
+			&types.PositionResponse{
+				Code:     400,
+				Position: &types.Position{},
+				Message:  err.Error(),
 			},
 		}, nil
 	}
@@ -106,7 +106,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 		FeeAmount0: "0",
 		FeeAmount1: "0",
 	}
-	collectedItem, err := collectModel.AggregateAmounts(ctx, l.svcCtx.Config.Chains[0].ChainId, req.Id, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
+	collectedItem, err := collectModel.AggregateAmounts(ctx, l.svcCtx.Config.Chains[0].ChainId, req.TokenId, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
 	if err == nil {
 		fees.FeeAmount0 = fmt.Sprintf("%f", collectedItem.TotalAmount0)
 		fees.FeeAmount1 = fmt.Sprintf("%f", collectedItem.TotalAmount1)
@@ -116,7 +116,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 		WithdrawnAmount0: "0",
 		WithdrawnAmount1: "0",
 	}
-	decreaseItem, err := decreaseModel.AggregateAmounts(ctx, l.svcCtx.Config.Chains[0].ChainId, req.Id, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
+	decreaseItem, err := decreaseModel.AggregateAmounts(ctx, l.svcCtx.Config.Chains[0].ChainId, req.TokenId, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
 	if err == nil {
 		withdrawn.WithdrawnAmount0 = fmt.Sprintf("%f", decreaseItem.TotalAmount0)
 		withdrawn.WithdrawnAmount1 = fmt.Sprintf("%f", decreaseItem.TotalAmount1)
@@ -126,49 +126,47 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 		InvestedAmount0: "0",
 		InvestedAmount1: "0",
 	}
-	increaseItem, err := increaseModel.AggregateAmounts(ctx, l.svcCtx.Config.Chains[0].ChainId, req.Id, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
+	increaseItem, err := increaseModel.AggregateAmounts(ctx, l.svcCtx.Config.Chains[0].ChainId, req.TokenId, transferItem.Pool.Token0.Decimals, transferItem.Pool.Token1.Decimals)
 	if err == nil {
 		invested.InvestedAmount0 = fmt.Sprintf("%f", increaseItem.TotalAmount0)
 		invested.InvestedAmount1 = fmt.Sprintf("%f", increaseItem.TotalAmount1)
 	}
 
-	response := &NftDataResponseWrapper{
-		&types.NftDataResponse{
-			Code: 200,
-			Data: &types.NftDataResponse_Data{
-				Amount0:         0,
-				Amount1:         0,
-				Amount0Price:    0,
-				Amount1Price:    0,
-				TickUpper:       transferItem.TickUpper,
-				TickLower:       transferItem.TickLower,
-				NftId:           int(req.Id),
-				UncollectedFees: 0.0,
-				Pnl30d:          "0",
-				Origin:          transferItem.Origin,
-				Pool:            transferItem.Pool,
-				PositionAge:     transferItem.PositionAge,
-				Invested:        invested,
-				Withdrawn:       withdrawn,
-				Fees:            fees,
-				Fee:             transferItem.Pool.FeeTier,
-				Token0:          transferItem.Pool.Token0.Address,
-				Token1:          transferItem.Pool.Token1.Address,
-				TokensOwed0:     0,
-				TokensOwed1:     0,
-				Liquidity:       "0.0",
-				Price:           "",
-				Token0Price:     "",
-				Token1Price:     "",
-				PoolAddress:     transferItem.Pool.Address,
-				IsNative:        0,
-				IsClosed:        false,
-				Decimals0:       transferItem.Pool.Token0.Decimals,
-				Decimals1:       transferItem.Pool.Token1.Decimals,
-				Ratio:           0,
-				IsNegative:      false,
+	response := &PositionResponseWrapper{
+		&types.PositionResponse{
+			Position: &types.Position{
+				Amount0: 0,
+				Amount1: 0,
+				// Amount0Price:    0,
+				// Amount1Price:    0,
+				// TickUpper:       transferItem.TickUpper,
+				// TickLower:       transferItem.TickLower,
+				// NftId:           int(req.Id),
+				// UncollectedFees: 0.0,
+				// Pnl30d:          "0",
+				// Origin:          transferItem.Origin,
+				// Pool:            transferItem.Pool,
+				// PositionAge:     transferItem.PositionAge,
+				// Invested:        invested,
+				// Withdrawn:       withdrawn,
+				// Fees:            fees,
+				// Fee:             transferItem.Pool.FeeTier,
+				// Token0:          transferItem.Pool.Token0.Address,
+				// Token1:          transferItem.Pool.Token1.Address,
+				// TokensOwed0:     0,
+				// TokensOwed1:     0,
+				// Liquidity:       "0.0",
+				// Price:           "",
+				// Token0Price:     "",
+				// Token1Price:     "",
+				// PoolAddress:     transferItem.Pool.Address,
+				// IsNative:        0,
+				// IsClosed:        false,
+				// Decimals0:       transferItem.Pool.Token0.Decimals,
+				// Decimals1:       transferItem.Pool.Token1.Decimals,
+				// Ratio:           0,
+				// IsNegative:      false,
 			},
-			Message: "success",
 		},
 	}
 
@@ -177,7 +175,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 		context.Background(),
 		req.ChainId,
 		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
-		[]*big.Int{big.NewInt(req.Id)},
+		[]*big.Int{big.NewInt(req.TokenId)},
 	)
 	if err == nil {
 		price0 := new(big.Float).SetFloat64(0)
@@ -219,10 +217,10 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 		amount0Price := new(big.Float).Mul(amount0Float, poolPrice0)
 		amount1Price := new(big.Float).Mul(amount1Float, poolPrice1)
 
-		response.Data.Amount0, _ = amount0.Float64()
-		response.Data.Amount1, _ = amount1.Float64()
-		response.Data.Amount0Price, _ = amount0Price.Float64()
-		response.Data.Amount1Price, _ = amount1Price.Float64()
+		response.Position.Amount0, _ = amount0.Float64()
+		response.Position.Amount1, _ = amount1.Float64()
+		// response.Position.Amount0Price, _ = amount0Price.Float64()
+		// response.Position.Amount1Price, _ = amount1Price.Float64()
 
 		// 计算总余额
 		totalBalance := new(big.Float).Add(amount0Price, amount1Price)
@@ -247,7 +245,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.GetNftDataRequest, cacher c
 		claimableFees := new(big.Float).Add(claimableFee0, claimableFee1)
 		transferItem.ClaimableFees, _ = claimableFees.Float64()
 
-		response.Data.UncollectedFees = transferItem.ClaimableFees
+		response.Position.ClaimableFees = transferItem.ClaimableFees
 	}
 
 	responseBytes, err := json.Marshal(response)

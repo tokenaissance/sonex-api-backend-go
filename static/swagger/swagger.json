@@ -406,20 +406,20 @@
         ]
       }
     },
-    "/sonex/pools/position/{id}": {
+    "/sonex/pools/position/{tokenId}": {
       "get": {
         "operationId": "SonexPositionHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/NftDataResponse"
+              "$ref": "#/definitions/PositionResponse"
             }
           }
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "tokenId",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1568,17 +1568,6 @@
         "feeAmount1"
       ]
     },
-    "GetNftDataRequest": {
-      "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
-      "title": "GetNftDataRequest"
-    },
     "Invested": {
       "type": "object",
       "properties": {
@@ -1648,27 +1637,6 @@
         }
       },
       "title": "MyPositionResponse",
-      "required": [
-        "code",
-        "data",
-        "message"
-      ]
-    },
-    "NftDataResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
-          "$ref": "#/definitions/NftDataResponse_Data"
-        },
-        "message": {
-          "type": "string"
-        }
-      },
-      "title": "NftDataResponse",
       "required": [
         "code",
         "data",
@@ -2254,6 +2222,38 @@
         "price1",
         "unclaimedFee0",
         "unclaimedFee1"
+      ]
+    },
+    "PositionRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "PositionRequest"
+    },
+    "PositionResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "position": {
+          "$ref": "#/definitions/Position"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "PositionResponse",
+      "required": [
+        "code",
+        "position",
+        "message"
       ]
     },
     "PositionsRequest": {
