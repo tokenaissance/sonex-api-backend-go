@@ -2264,6 +2264,24 @@
         "position"
       ]
     },
+    "PositionValueRecord": {
+      "type": "object",
+      "properties": {
+        "timeStamp": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "positionValue": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PositionValueRecord",
+      "required": [
+        "timeStamp",
+        "positionValue"
+      ]
+    },
     "PositionsRequest": {
       "type": "object",
       "properties": {
@@ -2288,18 +2306,14 @@
     "PositionsResponse": {
       "type": "object",
       "properties": {
-        "isNegative": {
-          "type": "boolean",
-          "format": "boolean"
-        },
         "pnl": {
           "type": "number",
           "format": "double"
         },
-        "positions": {
+        "positionValues": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Position"
+            "$ref": "#/definitions/PositionValueRecord"
           }
         },
         "totalPosition": {
@@ -2309,9 +2323,8 @@
       },
       "title": "PositionsResponse",
       "required": [
-        "isNegative",
         "pnl",
-        "positions",
+        "positionValues",
         "totalPosition"
       ]
     },
