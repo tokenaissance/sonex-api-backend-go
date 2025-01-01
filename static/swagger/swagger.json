@@ -406,20 +406,20 @@
         ]
       }
     },
-    "/sonex/pools/position/{id}": {
+    "/sonex/pools/position/{tokenId}": {
       "get": {
         "operationId": "SonexPositionHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/NftDataResponse"
+              "$ref": "#/definitions/PositionResponse"
             }
           }
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "tokenId",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1568,17 +1568,6 @@
         "feeAmount1"
       ]
     },
-    "GetNftDataRequest": {
-      "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
-      "title": "GetNftDataRequest"
-    },
     "Invested": {
       "type": "object",
       "properties": {
@@ -1633,46 +1622,16 @@
     "MyPositionResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
+        "position": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Position"
           }
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "MyPositionResponse",
       "required": [
-        "code",
-        "data",
-        "message"
-      ]
-    },
-    "NftDataResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
-          "$ref": "#/definitions/NftDataResponse_Data"
-        },
-        "message": {
-          "type": "string"
-        }
-      },
-      "title": "NftDataResponse",
-      "required": [
-        "code",
-        "data",
-        "message"
+        "position"
       ]
     },
     "NftDataResponse_Data": {
@@ -2256,6 +2215,29 @@
         "unclaimedFee1"
       ]
     },
+    "PositionRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "PositionRequest"
+    },
+    "PositionResponse": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "$ref": "#/definitions/Position"
+        }
+      },
+      "title": "PositionResponse",
+      "required": [
+        "position"
+      ]
+    },
     "PositionsRequest": {
       "type": "object",
       "properties": {
@@ -2280,10 +2262,6 @@
     "PositionsResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
         "isNegative": {
           "type": "boolean",
           "format": "boolean"
@@ -2301,19 +2279,14 @@
         "totalPosition": {
           "type": "number",
           "format": "double"
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "PositionsResponse",
       "required": [
-        "code",
         "isNegative",
         "pnl",
         "positions",
-        "totalPosition",
-        "message"
+        "totalPosition"
       ]
     },
     "PriceComparisonResult": {
