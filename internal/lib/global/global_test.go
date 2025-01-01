@@ -27,8 +27,9 @@ func TestGetPrices(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	Initialize(c)
+	token := common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062")
 	stablecoin := "0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"
-	bestPrice, prices, err := GetPrices(context.Background(), nil, 1946, (common.Address{}).Hex(), false, 2, &stablecoin)
+	bestPrice, prices, err := GetPrices(context.Background(), nil, 1946, token.Hex(), false, 2, &stablecoin)
 	if err != nil {
 		t.Error(err)
 		return

@@ -246,7 +246,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 			for _, pool := range price.Pools {
 				liquidity = new(big.Int).Add(liquidity, poolMap[pool.Address.Hex()])
 			}
-			if maxLiquidity.Cmp(liquidity) < 0 {
+			if maxLiquidity.Cmp(liquidity) <= 0 {
 				maxLiquidity = liquidity
 				bestPrice = &price
 			}
