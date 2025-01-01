@@ -37,10 +37,6 @@ type PositionsResponseWrapper struct {
 	*types.PositionsResponse
 }
 
-func (p *PositionsResponseWrapper) GetCode() interface{} {
-	return p.Code
-}
-
 type taskResult struct {
 	collectedAmounts   map[int64]*types.AggregatedAmounts
 	positions          []*sonex.Position
@@ -68,13 +64,8 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	items, err := transferModel.GetTransferEvents(l.ctx, req.Address)
 	if err != nil {
-		return &PositionsResponseWrapper{
-			&types.PositionsResponse{
-				Code:      400,
-				Positions: []*types.Position{},
-				Message:   err.Error(),
-			},
-		}, nil
+		logx.Errorf("[SonexPositionsLogic] GetTransferEvents error: %s", err.Error())
+		return nil, err
 	}
 
 	positionTokenIds := make([]int64, 0)
@@ -147,13 +138,8 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 
 	for result := range results {
 		if result.err != nil {
-			return &PositionsResponseWrapper{
-				&types.PositionsResponse{
-					Code:      400,
-					Positions: []*types.Position{},
-					Message:   result.err.Error(),
-				},
-			}, nil
+			logx.Errorf("[SonexPositions] waitgroup error: %s", result.err.Error())
+			return nil, result.err
 		}
 		if result.collectedAmounts != nil {
 			collectedAmounts = result.collectedAmounts

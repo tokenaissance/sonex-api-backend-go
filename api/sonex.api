@@ -245,10 +245,8 @@ type Token_TokenInfo {
 	Additional interface{} `json:"additional"`
 }
 
-type NftDataResponse {
-	Code    int                   `json:"code"`
-	Data    *NftDataResponse_Data `json:"data"`
-	Message string                `json:"message"`
+type PositionResponse {
+	Position *Position `json:"position"`
 }
 
 type NftDataResponse_Data {
@@ -308,8 +306,8 @@ type AggregatedAmounts {
 	TotalAmount1 float64 `json:"totalAmount1"`
 }
 
-type GetNftDataRequest {
-	Id      int64 `path:"id"`
+type PositionRequest {
+	TokenId int64 `path:"tokenId"`
 	ChainId int64 `form:"chainId,default=1946,optional"`
 }
 
@@ -405,12 +403,10 @@ type Position {
 }
 
 type PositionsResponse {
-	Code          int         `json:"code"`
 	IsNegative    bool        `json:"isNegative"`
 	Pnl           float64     `json:"pnl"`
 	Positions     []*Position `json:"positions"`
 	TotalPosition float64     `json:"totalPosition"`
-	Message       string      `json:"message"`
 }
 
 type MyPositionRequest {
@@ -419,9 +415,7 @@ type MyPositionRequest {
 }
 
 type MyPositionResponse {
-	Code    int         `json:"code"`
-	Data    []*Position `json:"data"`
-	Message string      `json:"message"`
+	Position []*Position `json:"position"`
 }
 
 type SonexTokenKlineRequest {
@@ -469,7 +463,7 @@ service sonex_api_backend_go {
 	get /pools/my_position (MyPositionRequest) returns (MyPositionResponse)
 
 	@handler SonexPositionHandler
-	get /pools/position/:id (GetNftDataRequest) returns (NftDataResponse)
+	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)
 
 	@handler SonexPositionsHandler
 	get /pools/positions (PositionsRequest) returns (PositionsResponse)
