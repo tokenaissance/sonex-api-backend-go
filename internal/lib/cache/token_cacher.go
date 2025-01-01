@@ -75,7 +75,7 @@ func (liquidity Liquidity) CompareTo(other linq.Comparable) int {
 	return liquidity.Value.Cmp(l.Value)
 }
 
-func (cacher *TokenCacher) filterPath(ctx context.Context, paths []quoter.Path, maxNumber int64) ([]quoter.Path, error) {
+func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, maxNumber int64) ([]quoter.Path, error) {
 	poolMap := map[string]*struct {
 		Liquidity *big.Int
 		Slot0     *sonex.Slot0
@@ -169,7 +169,12 @@ func (cacher *TokenCacher) filterPath(ctx context.Context, paths []quoter.Path, 
 			Path      quoter.Path
 			Liquidity *big.Int
 		}{Path: path, Liquidity: liquidity}
-	}).OrderByDescendingT(func(item struct {
+	}).OrderByT(func(item struct {
+		Path      quoter.Path
+		Liquidity *big.Int
+	}) int {
+		return len(item.Path.Pools)
+	}).ThenByDescendingT(func(item struct {
 		Path      quoter.Path
 		Liquidity *big.Int
 	}) Liquidity {
@@ -336,7 +341,7 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 		return nil, fmt.Errorf("%s", "No available path")
 	}
 	// Filter paths
-	paths, err = cacher.filterPath(ctx, paths, maxNumber)
+	paths, err = cacher.sortPaths(ctx, paths, maxNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +394,7 @@ func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.
 		return nil, fmt.Errorf("%s", "No available path")
 	}
 	// Filter paths
-	paths, err = cacher.filterPath(ctx, paths, maxNumber)
+	paths, err = cacher.sortPaths(ctx, paths, maxNumber)
 	if err != nil {
 		return nil, err
 	}
