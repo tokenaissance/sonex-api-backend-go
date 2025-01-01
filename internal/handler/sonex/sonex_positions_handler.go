@@ -11,14 +11,14 @@ import (
 
 func SonexPositionsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.PositionsRequest
+		var req types.PositionValuesRequest
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
 
 		l := sonex.NewSonexPositionsLogic(r.Context(), svcCtx)
-		resp, err := l.SonexPositions(&req)
+		resp, err := l.SonexPositionValues(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

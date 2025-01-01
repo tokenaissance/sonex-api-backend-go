@@ -467,14 +467,14 @@
         ]
       }
     },
-    "/sonex/pools/positions": {
+    "/sonex/pools/position_values": {
       "get": {
         "operationId": "SonexPositionsHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/PositionsResponse"
+              "$ref": "#/definitions/PositionValuesResponse"
             }
           }
         },
@@ -2282,7 +2282,7 @@
         "positionValue"
       ]
     },
-    "PositionsRequest": {
+    "PositionValuesRequest": {
       "type": "object",
       "properties": {
         "address": {
@@ -2298,12 +2298,12 @@
           "default": "1946"
         }
       },
-      "title": "PositionsRequest",
+      "title": "PositionValuesRequest",
       "required": [
         "address"
       ]
     },
-    "PositionsResponse": {
+    "PositionValuesResponse": {
       "type": "object",
       "properties": {
         "pnl": {
@@ -2321,7 +2321,7 @@
           "format": "double"
         }
       },
-      "title": "PositionsResponse",
+      "title": "PositionValuesResponse",
       "required": [
         "pnl",
         "positionValues",
