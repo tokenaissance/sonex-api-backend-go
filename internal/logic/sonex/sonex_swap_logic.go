@@ -111,7 +111,7 @@ func (l *SonexSwapLogic) refreshCache(req *types.SwapEventRequest, cacher cache.
 		go func(item *types.SwapEvent) {
 			defer wg.Done()
 
-			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, item.Token1.Address, true, 2, &l.svcCtx.Config.Chains[0].USD)
+			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, item.Token1.Address, true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
 			if err == nil && bestPrice != nil {
 				factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 

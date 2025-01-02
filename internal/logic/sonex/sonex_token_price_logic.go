@@ -35,7 +35,7 @@ func (l *SonexTokenPriceLogic) SonexTokenPrice(req *types.TokenPriceRequest) (re
 	}
 	token := common.HexToAddress(req.Token)
 
-	bestPrice, prices, err := global.GetPrices(l.ctx, nil, req.ChainId, token.Hex(), req.IsCache, 3, req.WantStablecoin)
+	bestPrice, prices, err := global.GetPrices(l.ctx, nil, req.ChainId, token.Hex(), req.IsCache, 2, req.WantStablecoin)
 	if err != nil {
 		return nil, err
 	}

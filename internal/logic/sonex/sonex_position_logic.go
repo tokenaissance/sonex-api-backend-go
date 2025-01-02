@@ -249,7 +249,7 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 			}
 
 			logx.Errorf("[convertPosition] Token price not found from db for address: %s", tokenAddr.Hex())
-			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, tokenAddr.Hex(), true, 2, nil)
+			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, tokenAddr.Hex(), true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
 			if err == nil && bestPrice != nil {
 				p := new(big.Float).SetInt(bestPrice.Value)
 				resultChan <- priceResult{index: index, price: p}
