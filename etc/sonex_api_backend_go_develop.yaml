@@ -49,6 +49,7 @@ Sonexes:
 Xpools:
   - ChainId: 1946
     Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531
+    BlockTime: 2000
 Farms:
   - ChainId: 1946
     Staker: 0x340DDa144116366300254409b25934Ff88b111b8
