@@ -184,6 +184,7 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 		}
 		return item
 	}).ToSlice(&resp.List)
+	resp.Total = int64(len(resp.List))
 
 	// Filter
 	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
