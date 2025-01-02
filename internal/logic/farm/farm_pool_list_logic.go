@@ -214,7 +214,7 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 		}).ToSlice(&resp.List)
 	}
 	if req.OrderBy != "" {
-		switch req.Status {
+		switch req.OrderBy {
 		case "hot":
 			linq.From(resp.List).OrderByDescendingT(func(item types.FarmPoolData) int64 {
 				return item.JoinNum
