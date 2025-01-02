@@ -80,7 +80,7 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithPool(ctx 
 			F.event_pool,F.event_start_time,F.event_end_time,F.event_refundee,F.event_reward,F.event_incentive_id,
 			P.event_token0,P.event_token1,P.event_fee,P.event_tick_spacing
 		FROM %s F
-		LEFT JOIN %s P ON P.event_pool = F.event_pool 
+		JOIN %s P ON P.event_pool = F.event_pool 
 		WHERE F.chain_id = $1 AND F.to_ = $2
 	`, m.table, eventSonexFactoryPoolCreatedModel.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, staker)
@@ -115,7 +115,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithPool(
 			F.event_pool,F.event_start_time,F.event_end_time,F.event_refundee,F.event_reward,F.event_incentive_id,
 			P.event_token0,P.event_token1,P.event_fee,P.event_tick_spacing
 		FROM %s F
-		LEFT JOIN %s P ON P.event_pool = F.event_pool 
+		JOIN %s P ON P.event_pool = F.event_pool 
 		WHERE F.chain_id = $1 AND F.to_ = $2
 		ORDER BY tx_at DESC OFFSET $3 LIMIT $4
 	`, m.table, eventSonexFactoryPoolCreatedModel.table)
@@ -127,7 +127,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithPool(
 	query = fmt.Sprintf(`
 		SELECT COUNT(*) 
 		FROM %s F
-		LEFT JOIN %s P ON P.event_pool = F.event_pool 
+		JOIN %s P ON P.event_pool = F.event_pool 
 		WHERE F.chain_id = $1 AND F.to_ = $2
 	`, m.table, eventSonexFactoryPoolCreatedModel.table)
 	err = m.conn.QueryRowCtx(ctx, &total, query, chainId, staker)
@@ -146,7 +146,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWith
 			F.event_pool,F.event_start_time,F.event_end_time,F.event_refundee,F.event_reward,F.event_incentive_id,
 			P.event_token0,P.event_token1,P.event_fee,P.event_tick_spacing
 		FROM %s F
-		LEFT JOIN %s P ON P.event_pool = F.event_pool 
+		JOIN %s P ON P.event_pool = F.event_pool 
 		WHERE F.chain_id = $1 AND F.to_ = $2 AND F.event_pool = ANY($3)
 		ORDER BY tx_at DESC OFFSET $4 LIMIT $5
 	`, m.table, eventSonexFactoryPoolCreatedModel.table)
@@ -158,7 +158,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWith
 	query = fmt.Sprintf(`
 		SELECT COUNT(*) 
 		FROM %s F
-		LEFT JOIN %s P ON P.event_pool = F.event_pool 
+		JOIN %s P ON P.event_pool = F.event_pool 
 		WHERE F.chain_id = $1 AND F.to_ = $2
 	`, m.table, eventSonexFactoryPoolCreatedModel.table)
 	err = m.conn.QueryRowCtx(ctx, &total, query, chainId, staker)

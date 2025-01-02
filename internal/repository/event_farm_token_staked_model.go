@@ -56,7 +56,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainId(ctx context.Contex
 	query := fmt.Sprintf(`
 		SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_token_id, S.event_incentive_id, S.event_liquidity 
 		FROM %s S
-		LEFT JOIN %s C ON S.event_incentive_id = C.event_incentive_id
+		JOIN %s C ON S.event_incentive_id = C.event_incentive_id
 		WHERE S.event_token_id NOT IN (
 			SELECT event_token_id FROM %s WHERE event_incentive_id = S.event_incentive_id
 		)
@@ -76,7 +76,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserAddress(ctx con
 	query := fmt.Sprintf(`
 		SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_token_id, S.event_incentive_id, S.event_liquidity 
 		FROM %s S
-		LEFT JOIN %s C ON S.event_incentive_id = C.event_incentive_id
+		JOIN %s C ON S.event_incentive_id = C.event_incentive_id
 		WHERE S.event_token_id NOT IN (
 			SELECT event_token_id FROM %s WHERE event_incentive_id = S.event_incentive_id
 		)
