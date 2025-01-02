@@ -63,17 +63,17 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE chain_id = $1 AND status = 'active'", m.table)
 	args := []interface{}{opts.ChainId}
 
-	if strings.EqualFold(opts.StakedOnly, "true") && len(userPools) > 0 {
-		subQuery := fmt.Sprintf("'%s'", strings.Join(userPools, "','"))
-		query += fmt.Sprintf(" AND pool_address IN (%s)", subQuery)
-		countQuery += fmt.Sprintf(" AND pool_address IN (%s)", subQuery)
-	}
+	// if strings.EqualFold(opts.StakedOnly, "true") && len(userPools) > 0 {
+	// 	subQuery := fmt.Sprintf("'%s'", strings.Join(userPools, "','"))
+	// 	query += fmt.Sprintf(" AND pool_address IN (%s)", subQuery)
+	// 	countQuery += fmt.Sprintf(" AND pool_address IN (%s)", subQuery)
+	// }
 
-	if opts.Keyword != "" {
-		query += fmt.Sprintf(" AND staking_token_symbol LIKE $%d", len(args)+1)
-		countQuery += fmt.Sprintf(" AND staking_token_symbol LIKE $%d", len(args)+1)
-		args = append(args, "%"+opts.Keyword+"%")
-	}
+	// if opts.Keyword != "" {
+	// 	query += fmt.Sprintf(" AND staking_token_symbol LIKE $%d", len(args)+1)
+	// 	countQuery += fmt.Sprintf(" AND staking_token_symbol LIKE $%d", len(args)+1)
+	// 	args = append(args, "%"+opts.Keyword+"%")
+	// }
 
 	switch strings.ToLower(opts.OrderBy) {
 	case "hot":
@@ -94,7 +94,7 @@ func (m *customXpoolPoolsModel) GetPoolList(ctx context.Context, opts *types.Xpo
 	}
 
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
-	args = append(args, opts.Limit, opts.Offset)
+	// args = append(args, opts.Limit, opts.Offset)
 
 	err = m.conn.QueryRowsCtx(ctx, &pools, query, args...)
 	switch err {

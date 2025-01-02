@@ -89,10 +89,10 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional,
 			CASE WHEN m.extra_pool IS NULL THEN true ELSE false END AS is_closed
 		FROM %s t
-		LEFT JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
-		LEFT JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
-		LEFT JOIN sonex_token token0 ON f.event_token0 = token0.address
-		LEFT JOIN sonex_token token1 ON f.event_token1 = token1.address
+		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
+		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
+		JOIN sonex_token token0 ON f.event_token0 = token0.address
+		JOIN sonex_token token1 ON f.event_token1 = token1.address
 		WHERE t.event_from = $1 OR t.event_to = $1
 	`, m.table)
 
@@ -188,10 +188,10 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
 			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional
 		FROM %s t
-		LEFT JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
-		LEFT JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
-		LEFT JOIN sonex_token token0 ON f.event_token0 = token0.address
-		LEFT JOIN sonex_token token1 ON f.event_token1 = token1.address
+		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
+		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
+		JOIN sonex_token token0 ON f.event_token0 = token0.address
+		JOIN sonex_token token1 ON f.event_token1 = token1.address
 		WHERE t.event_token_id = $1 AND t.event_from = $2
 		LIMIT 1
 	`, m.table)

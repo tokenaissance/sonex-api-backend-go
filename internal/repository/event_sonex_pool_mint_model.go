@@ -84,8 +84,8 @@ func (m *customEventSonexPoolMintModel) PageQueryWithPool(ctx context.Context, p
 			C.event_tick_spacing AS tick_spacing,
 			T.event_token_id AS token_id
 		FROM %s S 
-		LEFT JOIN %s C ON S.extra_pool = C.event_pool 
-		LEFT JOIN %s T ON S.tx_hash = T.tx_hash 
+		JOIN %s C ON S.extra_pool = C.event_pool 
+		JOIN %s T ON S.tx_hash = T.tx_hash 
 		ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), eventSonexPositionManagerTransferModel.tableName())
 	var resp []EventSonexPoolMintWithPool
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
@@ -94,7 +94,7 @@ func (m *customEventSonexPoolMintModel) PageQueryWithPool(ctx context.Context, p
 	}
 	var total int64 = 0
 	query = fmt.Sprintf(
-		"SELECT COUNT(*) FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool LEFT JOIN %s T ON S.tx_hash = T.tx_hash",
+		"SELECT COUNT(*) FROM %s S JOIN %s C ON S.extra_pool = C.event_pool JOIN %s T ON S.tx_hash = T.tx_hash",
 		m.table, eventSonexFactoryPoolCreatedModel.tableName(),
 		eventSonexPositionManagerTransferModel.tableName(),
 	)

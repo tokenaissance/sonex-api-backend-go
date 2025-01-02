@@ -65,14 +65,14 @@ func (m *customEventSonexPoolSwapModel) New(ctx context.Context, id int64, chain
 
 func (m *defaultEventSonexPoolSwapModel) PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
-	query := fmt.Sprintf("SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, S.extra_pool, C.event_token0 AS token0, C.event_token1 AS token1, C.event_fee AS fee, C.event_tick_spacing AS tick_spacing FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2", m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	query := fmt.Sprintf("SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, S.extra_pool, C.event_token0 AS token0, C.event_token1 AS token1, C.event_fee AS fee, C.event_tick_spacing AS tick_spacing FROM %s S JOIN %s C ON S.extra_pool = C.event_pool ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2", m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	var resp []EventSonexPoolSwapWithPool
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
 	var total int64 = 0
-	query = fmt.Sprintf("SELECT COUNT(*) FROM %s S LEFT JOIN %s C ON S.extra_pool = C.event_pool", m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	query = fmt.Sprintf("SELECT COUNT(*) FROM %s S JOIN %s C ON S.extra_pool = C.event_pool", m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	err = m.conn.QueryRowCtx(ctx, &total, query)
 	if err != nil {
 		return nil, 0, err
@@ -142,9 +142,9 @@ func (m *customEventSonexPoolSwapModel) GetSwapEvents(ctx context.Context, opts 
 	var totalCount int64
 
 	swapQuery := fmt.Sprintf(`FROM %s AS S
-		LEFT JOIN event_sonex_factory_pool_created AS pool ON S.extra_pool = pool.event_pool
-		LEFT JOIN sonex_token AS token0 ON pool.event_token0 = token0.address
-		LEFT JOIN sonex_token AS token1 ON pool.event_token1 = token1.address
+		JOIN event_sonex_factory_pool_created AS pool ON S.extra_pool = pool.event_pool
+		JOIN sonex_token AS token0 ON pool.event_token0 = token0.address
+		JOIN sonex_token AS token1 ON pool.event_token1 = token1.address
 		WHERE S.chain_id = $1 AND pool.chain_id = $1 `, m.table)
 
 	args := []interface{}{opts.ChainId}
@@ -302,9 +302,9 @@ func (m *customEventSonexPoolSwapModel) GetSwapVolumes(ctx context.Context, opts
 	now := time.Now()
 
 	swapQuery := fmt.Sprintf(`FROM %s AS S
-		LEFT JOIN event_sonex_factory_pool_created AS pool ON S.extra_pool = pool.event_pool
-		LEFT JOIN sonex_token AS token0 ON pool.event_token0 = token0.address
-		LEFT JOIN sonex_token AS token1 ON pool.event_token1 = token1.address
+		JOIN event_sonex_factory_pool_created AS pool ON S.extra_pool = pool.event_pool
+		JOIN sonex_token AS token0 ON pool.event_token0 = token0.address
+		JOIN sonex_token AS token1 ON pool.event_token1 = token1.address
 		WHERE S.chain_id = $1 AND pool.chain_id = $1
 		AND LOWER(pool.event_pool) = LOWER($2)
 		AND S.created_at >= (NOW() - INTERVAL '%s')`, m.table, intervalDuration)
