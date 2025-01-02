@@ -18,6 +18,7 @@ type (
 		withSession(session sqlx.Session) EventXpoolFactoryPoolCreatedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, pool string, stakingToken string, rewardToken string, rewardPreBlcok string) error
 		QueryByChainIdFactory(ctx context.Context, chainId int64, factory string) ([]EventXpoolFactoryPoolCreated, error)
+		QueryAvailablePoolsByChainIdFactory(ctx context.Context, chainId int64, factory string) ([]EventXpoolFactoryPoolCreated, error)
 	}
 
 	customEventXpoolFactoryPoolCreatedModel struct {
@@ -45,6 +46,23 @@ func (m *customEventXpoolFactoryPoolCreatedModel) New(ctx context.Context, id in
 func (m *customEventXpoolFactoryPoolCreatedModel) QueryByChainIdFactory(ctx context.Context, chainId int64, factory string) ([]EventXpoolFactoryPoolCreated, error) {
 	var resp []EventXpoolFactoryPoolCreated
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND to_ = $2", eventXpoolFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, factory)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customEventXpoolFactoryPoolCreatedModel) QueryAvailablePoolsByChainIdFactory(ctx context.Context, chainId int64, factory string) ([]EventXpoolFactoryPoolCreated, error) {
+	eventXpoolFactoryPoolDestroiedModel := newEventXpoolFactoryPoolDestroiedModel(m.conn)
+	var resp []EventXpoolFactoryPoolCreated
+	query := fmt.Sprintf(`
+		SELECT %s FROM %s C
+		WHERE chain_id = $1 AND to_ = $2
+		AND C.event_pool NOT IN (
+			SELECT event_pool FROM %s WHERE to_ = C.to_
+		)
+	`, eventXpoolFactoryPoolCreatedRows, m.table, eventXpoolFactoryPoolDestroiedModel.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, factory)
 	if err != nil {
 		return nil, err

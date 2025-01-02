@@ -2,493 +2,229 @@ package xpool
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"sonex_api_backend_go/internal/lib/cache"
-	"sonex_api_backend_go/internal/module/xpool/utils"
+	lib_common "sonex_api_backend_go/internal/lib/common"
+	"sonex_api_backend_go/internal/module/xpool"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/shopspring/decimal"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
-	"golang.org/x/sync/errgroup"
 )
 
 type XpoolPoolListLogic struct {
 	logx.Logger
-	ctx            context.Context
-	svcCtx         *svc.ServiceContext
-	chainId        int64
-	ethClient      *ethclient.Client
-	cacher         cache.ICache
-	conn           sqlx.SqlConn
-	factoryAddress common.Address
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
 }
 
+type CacheWarpper struct {
+	List       []types.XpoolPoolDate
+	LastUpdate time.Time
+}
+
+type GetPoolInfoResult struct {
+	StakingToken         common.Address `json:"stakingToken"`
+	StakingTokenName     common.Hash    `json:"stakingTokenName"`
+	StakingTokenSymbol   common.Hash    `json:"stakingTokenSymbol"`
+	StakingTokenDecimals uint8          `json:"stakingTokenDecimals"`
+	RewardToken          common.Address `json:"rewardToken"`
+	RewardTokenName      common.Hash    `json:"rewardTokenName"`
+	RewardTokenSymbol    common.Hash    `json:"rewardTokenSymbol"`
+	RewardTokenDecimals  uint8          `json:"rewardTokenDecimals"`
+	RewardPerBlock       *big.Int       `json:"rewardPerBlock"`
+}
+
+// Xpool list
 func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolListLogic {
-	logger := logx.WithContext(ctx).WithFields(logx.Field("module", "Xpool"))
 	return &XpoolPoolListLogic{
-		Logger:         logger,
-		ctx:            ctx,
-		svcCtx:         svcCtx,
-		chainId:        svcCtx.Config.Xpools[0].ChainId,
-		factoryAddress: common.HexToAddress(svcCtx.Config.Xpools[0].Factory),
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
 	}
 }
 
-func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp []*types.XpoolPoolListResponse, total int64, err error) {
+func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *types.XpoolPoolListResponse, err error) {
 	if req.ChainId == 0 {
-		req.ChainId = l.chainId
+		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
-	if req.UserAddress != "" && !common.IsHexAddress(req.UserAddress) {
-		return nil, 0, fmt.Errorf("invalid parameter: user_address")
+	if req.PageSize < 1 {
+		req.PageSize = 20
 	}
-	if req.Limit < 0 {
-		req.Limit = 0
-	}
-	if req.Offset < 0 {
-		req.Offset = 0
+	if req.PageIndex < 1 {
+		req.PageIndex = 1
 	}
 
-	resp = make([]*types.XpoolPoolListResponse, 0)
-
-	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
-	if err != nil {
-		return nil, 0, err
-	}
-	l.ethClient = client
+	cacheKey := fmt.Sprintf("xpool:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-	l.cacher = redisCache
-	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 
-	// 检查缓存中的池子列表
-	if err := l.checkAndUpdatePoolListCache(); err != nil {
-		logx.Errorf("failed to check and update pool list cache: %v", err)
-	}
-
-	// 更新池子的实时信息
-	if err := l.updatePoolRealTimeInfo(); err != nil {
-		logx.Errorf("failed to update pool real-time info: %v", err)
-	}
-
-	// 如果需要,更新用户质押池数据和资产
-	if req.UserAddress != "" {
-		if err := l.updateUserPoolsData(req.UserAddress); err != nil {
-			logx.Errorf("failed to update user data: %v", err)
-		}
-	}
-
-	userPools := make([]string, 0)
-	if req.StakedOnly == "true" && req.UserAddress != "" {
-		// 从缓存中获取用户的质押池列表
-		poolListKey := fmt.Sprintf("sonex_dex:xpool:user_pools:%s", req.UserAddress)
-		cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolListKey).Result()
-		if err == nil && len(cachedPoolAddresses) > 0 {
-			userPools = cachedPoolAddresses
-		} else {
-			userPools = []string{}
-		}
-	}
-
-	// 获取池子列表
-	model := repository.NewXpoolPoolsModel(l.conn)
-	results, total, err := model.GetPoolList(l.ctx, req, userPools)
-	if err != nil {
-		if err == sqlx.ErrNotFound {
-			return
-		}
-		return nil, 0, err
-	}
-	linq.From(results).SelectT(func(item repository.XpoolPools) types.XpoolPoolListResponse {
-		updatedAt := ""
-		if item.UpdatedAt.Valid {
-			updatedAt = item.UpdatedAt.Time.Format(time.RFC3339)
-		}
-		return types.XpoolPoolListResponse{
-			Id:                   item.Id,
-			ChainId:              item.ChainId,
-			StakingTokenName:     item.StakingTokenName,
-			StakingTokenSymbol:   item.StakingTokenSymbol,
-			StakingTokenAddress:  item.StakingTokenAddress,
-			StakingTokenDecimals: item.StakingTokenDecimals,
-			StakingTokenPrice:    item.StakingTokenPrice,
-			RewardTokenName:      item.RewardTokenName,
-			RewardTokenSymbol:    item.RewardTokenSymbol,
-			RewardTokenAddress:   item.RewardTokenAddress,
-			RewardTokenDecimals:  item.RewardTokenDecimals,
-			RewardTokenPrice:     item.RewardTokenPrice,
-			PoolAddress:          item.PoolAddress,
-			RewardPerBlock:       item.RewardPerBlock,
-			TotalStaked:          item.TotalStaked,
-			BlockTime:            item.BlockTime,
-			TVL:                  item.Tvl,
-			APR:                  item.Apr,
-			JoinNum:              item.JoinNum,
-			Status:               item.Status,
-			CreatedAt:            item.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:            updatedAt,
-		}
-	}).ToSlice(&resp)
-
-	return resp, total, nil
-}
-
-// 检查并更新池子列表缓存
-func (l *XpoolPoolListLogic) checkAndUpdatePoolListCache() error {
-	const cacheKeyPrefix = "sonex_dex:xpool:"
-	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
-	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolAddressesKey).Result()
-	if err != nil || len(cachedPoolAddresses) == 0 {
-		if err := l.updatePoolBasicInfo(); err != nil {
-			return fmt.Errorf("failed to update pool basic info: %v", err)
-		}
-	} else {
-		// 检查是否需要增量更新
-		lastUpdateKey := cacheKeyPrefix + "last_update_time_basic"
-		lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
+	// Check cache
+	lastUpdate, err := redisCache.Get(cacheKey)
+	if err == nil && lastUpdate != "" {
+		var cacheWarpper CacheWarpper
+		err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
 		if err == nil {
-			lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
-			if err == nil && time.Since(lastUpdate) >= 30*time.Minute {
-				if err := l.updatePoolBasicInfo(); err != nil {
-					return fmt.Errorf("failed to update pool basic info: %v", err)
-				}
+			resp = &types.XpoolPoolListResponse{
+				List: cacheWarpper.List,
 			}
 		}
 	}
-	return nil
+
+	// No cache
+	if resp == nil {
+		resp, err = l.getResponse(req)
+		if err != nil {
+			return nil, err
+		}
+
+		// Set cache
+		// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
+		// if err != nil {
+		// 	logx.Errorf("Marshal response error: %v", err)
+		// }
+		// err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
+		// if err != nil {
+		// 	logx.Errorf("Set cache error: %v", err)
+		// }
+	}
+
+	resp.Total = int64(len(resp.List))
+
+	// Filter
+	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
+		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
+		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserAddress(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
+		if err != nil {
+			return nil, err
+		}
+		_ = validStakeRecords
+		// userTokenIds := []int64{}
+		// linq.From(validStakeRecords).ForEachT(func(item repository.EventFarmTokenStaked) {
+		// 	userTokenIds = append(userTokenIds, item.EventTokenId)
+		// })
+		// linq.From(resp.List).WhereT(func(item types.FarmPoolData) bool {
+		// 	poolTokenIds, ok := tokenIds[item.PoolAddress]
+		// 	if !ok {
+		// 		return false
+		// 	}
+		// 	return linq.From(userTokenIds).AnyWithT(func(tokenId int64) bool {
+		// 		return linq.From(poolTokenIds).Contains(tokenId)
+		// 	})
+		// }).ToSlice(&resp.List)
+	}
+	if req.OrderBy != "" {
+		switch req.OrderBy {
+		case "hot":
+			linq.From(resp.List).OrderByDescendingT(func(item types.FarmPoolData) int64 {
+				return item.JoinNum
+			}).ToSlice(&resp.List)
+		case "apr":
+			linq.From(resp.List).OrderByDescendingT(func(item types.FarmPoolData) lib_common.CompareableBigInt {
+				apr, _ := new(big.Int).SetString(item.APR, 10)
+				return lib_common.CompareableBigInt{Value: apr}
+			}).ToSlice(&resp.List)
+		}
+	}
+
+	// Page
+	linq.From(resp.List).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&resp.List)
+
+	return resp, nil
 }
 
-// 更新池子的基本信息
-func (l *XpoolPoolListLogic) updatePoolBasicInfo() error {
-	const updateInterval = 30 * time.Minute
-	const cacheKeyPrefix = "sonex_dex:xpool:"
-
-	// 检查是否需要更新
-	lastUpdateKey := cacheKeyPrefix + "last_update_time_basic"
-	lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
-	if err == nil {
-		lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
-		if err == nil && time.Since(lastUpdate) < updateInterval {
-			return nil
-		}
+func (l *XpoolPoolListLogic) getResponse(req *types.XpoolPoolListRequest) (resp *types.XpoolPoolListResponse, err error) {
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if sonexConf == nil {
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
+	}
+	xpoolConf := l.svcCtx.Config.GetXpoolConfig(req.ChainId)
+	if xpoolConf == nil {
+		return nil, fmt.Errorf("%s", "Miss xpool configure")
 	}
 
-	factory, err := getFactoryContract(l.ctx, l.ethClient, l.factoryAddress)
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(conn)
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+
+	availablePools, err := eventXpoolFactoryPoolCreatedModel.QueryAvailablePoolsByChainIdFactory(l.ctx, req.ChainId, common.HexToAddress(xpoolConf.Factory).Hex())
 	if err != nil {
-		return fmt.Errorf("failed to get staking factory: %v", err)
+		return nil, err
 	}
+	var poolAddresses []common.Address
+	linq.From(availablePools).SelectT(func(item repository.EventXpoolFactoryPoolCreated) common.Address {
+		return common.HexToAddress(item.EventPool)
+	}).ToSlice(&poolAddresses)
 
-	poolAddresses, err := factory.GetAllPools(nil)
+	staticCaller, err := xpool.NewStaticCaller(l.svcCtx.Config)
 	if err != nil {
-		return fmt.Errorf("failed to get all pools: %v", err)
+		return nil, err
 	}
-
-	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
-	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolAddressesKey).Result()
-	if err == nil && len(cachedPoolAddresses) > 0 {
-		newPoolAddresses := findNewAddresses(cachedPoolAddresses, poolAddresses)
-		if len(newPoolAddresses) == 0 {
-			return nil
-		}
-		poolAddresses = newPoolAddresses
-	}
-
-	// 增量更新池子的基本信息
-	var wg sync.WaitGroup
-	pools := make([]*repository.XpoolPools, len(poolAddresses))
-	for i, poolAddress := range poolAddresses {
-		wg.Add(1)
-		go func(i int, poolAddress common.Address) {
-			defer wg.Done()
-			pool, err := l.getPoolInfo(l.ethClient, poolAddress)
-			if err != nil {
-				logx.Errorf("failed to get pool full info for %s: %v", poolAddress.Hex(), err)
-				return
-			}
-			pools[i] = pool
-		}(i, poolAddress)
-	}
-	wg.Wait()
-
-	if len(pools) > 0 {
-		model := repository.NewXpoolPoolsModel(l.conn)
-		if err := model.BatchUpdatePools(l.ctx, pools); err != nil {
-			return fmt.Errorf("failed to update pools: %v", err)
-		}
-	}
-
-	poolAddressesStr := make([]string, 0, len(poolAddresses))
-	for _, addr := range poolAddresses {
-		poolAddressesStr = append(poolAddressesStr, addr.Hex())
-	}
-
-	l.cacher.Set(lastUpdateKey, time.Now().Format(time.RFC3339), 0)
-	l.cacher.SAdd(l.ctx, poolAddressesKey, poolAddressesStr)
-
-	return nil
-}
-
-// 更新池子的实时信息
-func (l *XpoolPoolListLogic) updatePoolRealTimeInfo() error {
-	const updateInterval = 2 * time.Minute
-	const cacheKeyPrefix = "sonex_dex:xpool:"
-
-	// 检查是否需要更新
-	lastUpdateKey := cacheKeyPrefix + "last_update_time_realtime"
-	lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
-	if err == nil {
-		lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
-		if err == nil && time.Since(lastUpdate) < updateInterval {
-			return nil
-		}
-	}
-
-	// 从缓存中获取池子列表
-	poolAddressesKey := cacheKeyPrefix + "pool_addresses"
-	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolAddressesKey).Result()
+	poolInfos, err := staticCaller.BatchGetPoolInfos(l.ctx, req.ChainId, poolAddresses)
 	if err != nil {
-		return fmt.Errorf("failed to get cached pool addresses: %v", err)
+		return nil, err
 	}
 
-	// 更新池子的实时信息
-	var g errgroup.Group
-	pools := make([]*repository.XpoolPools, len(cachedPoolAddresses))
-	for i, poolAddress := range cachedPoolAddresses {
-		i, poolAddress := i, poolAddress
-		g.Go(func() error {
-			pool, err := l.getPoolRealTimeInfo(l.ethClient, common.HexToAddress(poolAddress))
-			if err != nil {
-				logx.Errorf("failed to get pool real-time info for %s: %v", poolAddress, err)
-				return err
-			}
-			pools[i] = pool
-			return nil
+	prices, err := tokenPriceModel.GetAllLatestHistoryPrices()
+	if err != nil {
+		return nil, err
+	}
+	list := []types.XpoolPoolDate{}
+	for _, pool := range availablePools {
+		info, ok := poolInfos[common.HexToAddress(pool.EventPool).Hex()]
+		if !ok {
+			continue
+		}
+
+		stakingTokenPrice := prices[info.StakingToken.Hex()]
+		stakingTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(info.StakingTokenDecimals), nil)
+		rewardTokenPrice := prices[info.RewardToken.Hex()]
+		rewardTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(info.RewardTokenDecimals), nil)
+		tvl := new(big.Int).Div(new(big.Int).Mul(info.TotalStaked, stakingTokenPrice), stakingTokenAccuracy)
+		if xpoolConf.BlockTime <= 0 {
+			return nil, fmt.Errorf("%s", "Invalid block time configure")
+		}
+		blockNumberPerYear := new(big.Int).Div(new(big.Int).Mul(big.NewInt(365*24*60*60), big.NewInt(1000)), big.NewInt(xpoolConf.BlockTime))
+		totalReward := new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(info.RewardPerBlock, blockNumberPerYear), rewardTokenPrice), rewardTokenAccuracy)
+		apr := new(big.Int).Div(totalReward, tvl)
+
+		var status string
+		if info.IsDestroied {
+			status = "closed"
+		} else {
+			status = "active"
+		}
+
+		list = append(list, types.XpoolPoolDate{
+			StakingToken:         info.StakingToken.Hex(),
+			StakingTokenName:     info.StakingTokenName,
+			StakingTokenSymbol:   info.StakingTokenSymbol,
+			StakingTokenDecimals: info.StakingTokenDecimals,
+			RewardToken:          info.RewardToken.Hex(),
+			RewardTokenName:      info.RewardTokenName,
+			RewardTokenSymbol:    info.RewardTokenSymbol,
+			RewardTokenDecimals:  info.RewardTokenDecimals,
+			RewardPerBlock:       info.RewardPerBlock.String(),
+			TotalStaked:          info.TotalStaked.String(),
+			BlockTime:            xpoolConf.BlockTime,
+			TVL:                  tvl.String(),
+			APR:                  apr.String(),
+			Status:               status,
 		})
 	}
-	if err := g.Wait(); err != nil {
-		return err
-	}
 
-	// 批量更新数据库
-	if len(pools) > 0 {
-		model := repository.NewXpoolPoolsModel(l.conn)
-		if err := model.BatchUpdatePools(l.ctx, pools); err != nil {
-			return fmt.Errorf("failed to update pools: %v", err)
-		}
-	}
-
-	// 更新缓存时间
-	l.cacher.Set(lastUpdateKey, time.Now().Format(time.RFC3339), 0)
-
-	return nil
-}
-
-// 获取池子的信息
-func (l *XpoolPoolListLogic) getPoolInfo(ethClient *ethclient.Client, poolAddress common.Address) (*repository.XpoolPools, error) {
-	factory, err := getFactoryContract(l.ctx, ethClient, l.factoryAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	info, err := factory.GetPoolInfo(nil, poolAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取代币价格
-	stakingTokenPriceBig, err := getTokenPrice(l.chainId, info.StakingToken.Hex())
-	if err != nil {
-		return nil, err
-	}
-
-	rewardTokenBig, err := getTokenPrice(l.chainId, info.RewardToken.Hex())
-	if err != nil {
-		return nil, err
-	}
-
-	// 计算TVL
-	stakingTokenPrice := decimal.NewFromBigInt(stakingTokenPriceBig, 0)
-	rewardTokenPrice := decimal.NewFromBigInt(rewardTokenBig, 0)
-	tvl := decimal.NewFromBigInt(big.NewInt(0), 0).Mul(stakingTokenPrice)
-
-	return &repository.XpoolPools{
-		ChainId:              int64(l.chainId),
-		StakingTokenName:     info.StakingTokenName,
-		StakingTokenSymbol:   info.StakingTokenSymbol,
-		StakingTokenAddress:  info.StakingToken.Hex(),
-		StakingTokenDecimals: int64(info.StakingTokenDecimals),
-		StakingTokenPrice:    stakingTokenPrice.String(),
-		RewardTokenName:      info.RewardTokenName,
-		RewardTokenSymbol:    info.RewardTokenSymbol,
-		RewardTokenAddress:   info.RewardToken.Hex(),
-		RewardTokenDecimals:  int64(info.RewardTokenDecimals),
-		RewardTokenPrice:     rewardTokenPrice.String(),
-		PoolAddress:          poolAddress.Hex(),
-		RewardPerBlock:       info.RewardPerBlock.String(),
-		BlockTime:            blockTime,
-		Tvl:                  tvl.String(),
-		Status:               "active",
+	return &types.XpoolPoolListResponse{
+		List: list,
 	}, nil
-}
-
-// 获取池子的实时信息
-func (l *XpoolPoolListLogic) getPoolRealTimeInfo(ethClient *ethclient.Client, poolAddress common.Address) (*repository.XpoolPools, error) {
-	pool, err := getPoolContract(l.ctx, ethClient, poolAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	// 实时数据
-	totalStaked, err := pool.TotalStaked(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	claimed, err := pool.TotalClaimed(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	joinNum, err := pool.StakedNumber(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	factory, err := getFactoryContract(l.ctx, ethClient, l.factoryAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	poolInfo, err := factory.GetPoolInfo(nil, poolAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取代币价格
-	stakingTokenPriceBig, err := getTokenPrice(l.chainId, poolInfo.StakingToken.Hex())
-	if err != nil {
-		return nil, err
-	}
-
-	rewardTokenPriceBig, err := getTokenPrice(l.chainId, poolInfo.RewardToken.Hex())
-	if err != nil {
-		return nil, err
-	}
-
-	// 计算TVL和APR
-	stakingTokenPrice := decimal.NewFromBigInt(stakingTokenPriceBig, 0)
-	tvl := decimal.NewFromBigInt(totalStaked, 0).Mul(stakingTokenPrice)
-
-	apr, _ := utils.CalculateAPR(
-		rewardTokenPriceBig,
-		big.NewInt(0),
-		blockTime,
-		stakingTokenPriceBig,
-		totalStaked,
-	)
-
-	return &repository.XpoolPools{
-		TotalStaked:  totalStaked.String(),
-		TotalClaimed: claimed.TotalClaimed.String(),
-		Tvl:          tvl.String(),
-		Apr:          apr.String(),
-		JoinNum:      joinNum.Int64(),
-	}, nil
-}
-
-func (l *XpoolPoolListLogic) updateUserPoolsData(userAddr string) error {
-	const cacheKeyPrefix = "sonex_dex:xpool:"
-	const cacheExpiration = 2 * time.Minute
-
-	// 检查缓存中是否存在用户的质押池数据
-	poolListKey := fmt.Sprintf("%suser_pools:%s", cacheKeyPrefix, userAddr)
-	cachedPoolAddresses, err := l.cacher.SMembers(l.ctx, poolListKey).Result()
-	if err == nil && len(cachedPoolAddresses) > 0 {
-		// 检查更新时间
-		lastUpdateKey := fmt.Sprintf("%suser_pools_last_update:%s", cacheKeyPrefix, userAddr)
-		lastUpdateStr, err := l.cacher.Get(lastUpdateKey)
-		if err == nil {
-			lastUpdate, err := time.Parse(time.RFC3339, lastUpdateStr)
-			if err == nil && time.Since(lastUpdate) < cacheExpiration {
-				return nil
-			}
-		}
-	}
-
-	factory, err := getFactoryContract(l.ctx, l.ethClient, l.factoryAddress)
-	if err != nil {
-		return err
-	}
-
-	pools, err := factory.GetPools(nil, common.HexToAddress(userAddr))
-	if err != nil {
-		return err
-	}
-
-	poolAddrs := make([]string, len(pools))
-	for i, addr := range pools {
-		poolAddrs[i] = addr.Hex()
-	}
-	l.cacher.SAdd(l.ctx, poolListKey, poolAddrs)
-
-	// 更新用户质押池数据的更新时间
-	lastUpdateKey := fmt.Sprintf("%suser_pools_last_update:%s", cacheKeyPrefix, userAddr)
-	l.cacher.Set(lastUpdateKey, time.Now().Format(time.RFC3339), cacheExpiration)
-
-	// 计算用户总资产
-	totalStaked := decimal.NewFromInt(0)
-	totalEarned := decimal.NewFromInt(0)
-
-	for _, pool := range pools {
-		stakingPool, err := getPoolContract(l.ctx, l.ethClient, pool)
-		if err != nil {
-			continue
-		}
-
-		// 获取质押金额
-		staked, err := stakingPool.Staked(nil, common.HexToAddress(userAddr))
-		if err != nil {
-			continue
-		}
-		totalStaked = totalStaked.Add(decimal.NewFromBigInt(staked, 0))
-
-		// 获取未领取收益
-		unclaimed, err := stakingPool.Unclaimed(nil)
-		if err != nil {
-			continue
-		}
-		totalEarned = totalEarned.Add(decimal.NewFromBigInt(unclaimed.Unclaimed, 0))
-	}
-
-	// 缓存用户资产数据
-	assetsKey := fmt.Sprintf("%suser_assets:%s", cacheKeyPrefix, userAddr)
-	l.cacher.HSet(assetsKey, "balance", totalStaked.Add(totalEarned).String())
-	l.cacher.HSet(assetsKey, "staked", totalStaked.String())
-	l.cacher.HSet(assetsKey, "earned", totalEarned.String())
-	l.cacher.Expire(assetsKey, cacheExpiration)
-
-	return nil
-}
-
-func findNewAddresses(cachedAddresses []string, newAddresses []common.Address) []common.Address {
-	cachedMap := make(map[string]struct{})
-	for _, addr := range cachedAddresses {
-		cachedMap[addr] = struct{}{}
-	}
-
-	var result []common.Address
-	for _, addr := range newAddresses {
-		if _, exists := cachedMap[addr.Hex()]; !exists {
-			result = append(result, addr)
-		}
-	}
-	return result
 }
