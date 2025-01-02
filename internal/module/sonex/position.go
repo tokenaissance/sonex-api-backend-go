@@ -2,6 +2,7 @@ package sonex
 
 import (
 	"math/big"
+	"sonex_api_backend_go/internal/types"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -94,4 +95,11 @@ func (position *Position) UnclaimedFees() (*big.Int, *big.Int) {
 	fee1 = new(big.Int).Div(fee1, Q128)
 
 	return fee0, fee1
+}
+
+type PositionValues struct {
+	Pnl            float64                      `json:"pnl"`
+	PositionValues []*types.PositionValueRecord `json:"positionValues"`
+	TotalPosition  float64                      `json:"totalPosition"`
+	TotalClaimable float64                      `json:"totalClaimable"`
 }

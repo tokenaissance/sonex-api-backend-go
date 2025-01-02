@@ -252,6 +252,16 @@ type PoolsResponse_Volume struct {
 	Volume       string `json:"volume"`
 }
 
+type PortfolioRequest struct {
+	Address string `form:"address"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type PortfolioResponse struct {
+	TotalPosition float64 `json:"totalPosition"`
+	ClaimableFees float64 `json:"claimableFees"`
+}
+
 type Position struct {
 	TokenID       int64            `json:"tokenId"`
 	Position      float64          `json:"position"`
