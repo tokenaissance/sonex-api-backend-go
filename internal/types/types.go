@@ -33,6 +33,8 @@ type FarmPoolData struct {
 	Status         string `json:"status"`         // 运行状态（active or closed）
 	StartAt        int64  `json:"startAt"`
 	EndAt          int64  `json:"endAt"`
+	Balance        int64  `json:"balance"`
+	Staked         int64  `json:"staked"`
 }
 
 type FarmPoolLiquidityRequest struct {
@@ -59,6 +61,7 @@ type FarmPoolListRequest struct {
 	UserAddress string `form:"userAddress,optional"`                  // 用户地址
 	Status      string `form:"status,optional,options=active|closed"` // 运行状态
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
+	KeyWord     string `form:"keyWord,optional"`
 	PageSize    int64  `form:"pageSize,default=20"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
 }
@@ -568,39 +571,42 @@ type Withdrawn struct {
 	WithdrawnAmount1 string `json:"withdrawnAmount1"`
 }
 
-type XpoolPoolListRequest struct {
-	ChainId     int64  `form:"chainId,optional"`
-	UserAddress string `form:"userAddress,optional"`
-	Keyword     string `form:"keyword,optional"`
-	StakedOnly  string `form:"stakedOnly,optional,options=true|false"`
-	OrderBy     string `form:"orderBy,optional,options=hot|apr"`
-	Offset      int    `form:"offset,optional"`
-	Limit       int    `form:"limit,optional,default=10"`
-}
-
-type XpoolPoolListResponse struct {
-	Id                   int64  `json:"id"`
-	ChainId              int64  `json:"chainId"`              // 链ID
+type XpoolPoolDate struct {
+	StakingToken         string `json:"stakingToken"`
 	StakingTokenName     string `json:"stakingTokenName"`     // 质押的代币名称
 	StakingTokenSymbol   string `json:"stakingTokenSymbol"`   // 质押的代币符号
 	StakingTokenAddress  string `json:"stakingTokenAddress"`  // 质押的代币合约地址
 	StakingTokenDecimals int64  `json:"stakingTokenDecimals"` // 质押的代币合约精度
 	StakingTokenPrice    string `json:"stakingTokenPrice"`    // 质押的代币价格
-	RewardTokenName      string `json:"rewardTokenName"`      // 奖励的代币名称
-	RewardTokenSymbol    string `json:"rewardTokenSymbol"`    // 奖励的代币符号
-	RewardTokenAddress   string `json:"rewardTokenAddress"`   // 奖励的代币合约地址
-	RewardTokenDecimals  int64  `json:"rewardTokenDecimals"`  // 奖励的代币合约精度
-	RewardTokenPrice     string `json:"rewardTokenPrice"`     // 奖励的代币价格
-	PoolAddress          string `json:"poolAddress"`          // 质押池合约地址
-	RewardPerBlock       string `json:"rewardPerBlock"`       // 出块奖励
-	TotalStaked          string `json:"totalStaked"`          // 质押池的质押币总数量
-	BlockTime            int64  `json:"blockTime"`            // 出块时长 单位s
-	TVL                  string `json:"tvl"`                  // 质押池的质押总价值（USD）
-	APR                  string `json:"apr"`                  // 年化收益率
-	JoinNum              int64  `json:"joinNum"`              // 参与人数
-	Status               string `json:"status"`               // 运行状态
+	RewardToken          string `json:"rewardToken"`
+	RewardTokenName      string `json:"rewardTokenName"`     // 奖励的代币名称
+	RewardTokenSymbol    string `json:"rewardTokenSymbol"`   // 奖励的代币符号
+	RewardTokenAddress   string `json:"rewardTokenAddress"`  // 奖励的代币合约地址
+	RewardTokenDecimals  int64  `json:"rewardTokenDecimals"` // 奖励的代币合约精度
+	RewardTokenPrice     string `json:"rewardTokenPrice"`    // 奖励的代币价格
+	PoolAddress          string `json:"poolAddress"`         // 质押池合约地址
+	RewardPerBlock       string `json:"rewardPerBlock"`      // 出块奖励
+	TotalStaked          string `json:"totalStaked"`         // 质押池的质押币总数量
+	BlockTime            int64  `json:"blockTime"`           // 出块时长 单位ms
+	TVL                  string `json:"tvl"`                 // 质押池的质押总价值（USD）
+	APR                  string `json:"apr"`                 // 年化收益率
+	JoinNum              int64  `json:"joinNum"`             // 参与人数
+	Status               string `json:"status"`              // 运行状态
 	CreatedAt            string `json:"createdAt"`
 	UpdatedAt            string `json:"updatedAt"`
+}
+
+type XpoolPoolListRequest struct {
+	ChainId     int64  `form:"chainId,optional"`
+	UserAddress string `form:"userAddress,optional"`
+	OrderBy     string `form:"orderBy,optional,options=hot|apr"`
+	PageSize    int64  `form:"pageSize,default=20"`
+	PageIndex   int64  `form:"pageIndex,default=1"`
+}
+
+type XpoolPoolListResponse struct {
+	List  []XpoolPoolDate `json:"list"`
+	Total int64           `json:"total"`
 }
 
 type XpoolPoolStatsRequest struct {
