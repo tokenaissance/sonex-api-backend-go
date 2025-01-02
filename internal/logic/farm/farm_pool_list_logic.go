@@ -236,11 +236,6 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 func (l *FarmPoolListLogic) getResponse(req *types.FarmPoolListRequest) (resp *types.FarmPoolListResponse, tokenIds map[string][]int64, err error) {
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
-	stablecoin := common.HexToAddress(l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
-	stablecoinToken, err := global.GetToken(req.ChainId, stablecoin.Hex())
-	if err != nil {
-		return nil, nil, err
-	}
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
@@ -332,13 +327,21 @@ func (l *FarmPoolListLogic) getResponse(req *types.FarmPoolListRequest) (resp *t
 			for _, position := range positions {
 				totalLiquidity.Add(totalLiquidity, position.Liquidity)
 				amount0, amount1 := position.Amounts()
-				totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount0, price0), new(big.Int).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)))
-				totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount1, price1), new(big.Int).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)))
+				totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount0, price0), new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil)))
+				totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount1, price1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil)))
+			}
+			rewardToken, err := global.GetToken(req.ChainId, record.EventRewardToken)
+			if err != nil {
+				logx.Errorf("GetToken error: %v", err)
+				return
 			}
 			reward, _ := new(big.Int).SetString(record.EventReward, 10)
+			rewardTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
+
 			startTime := time.Unix(record.EventStartTime, 0)
 			endTime := time.Unix(record.EventEndTime, 0)
-			apr := new(big.Int).Div(new(big.Int).Mul(reward, big.NewInt(365*24*60*60)), big.NewInt(endTime.Unix()-startTime.Unix()))
+			totalReward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(reward, big.NewInt(365*24*60*60)), big.NewInt(endTime.Unix()-startTime.Unix())), rewardTokenAccuracy)
+			apr := new(big.Int).Div(totalReward, totalLiquidityUSD)
 			var tids []int64
 			linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 			ch <- struct {
