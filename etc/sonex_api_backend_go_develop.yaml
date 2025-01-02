@@ -34,6 +34,10 @@ Chains:
         IsStableCoin: true
       - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
         IsStableCoin: true
+    ETH:
+      Name: Ethereum
+      Symbol: ETH
+      Decimals: 18
     WETH: 0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C
     USD: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
 Sonexes:
