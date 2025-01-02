@@ -504,6 +504,41 @@
         ]
       }
     },
+    "/sonex/portfolio": {
+      "get": {
+        "operationId": "SonexPortfolioHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PortfolioResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/swaps": {
       "get": {
         "operationId": "SonexSwapHandler",
@@ -2091,6 +2126,41 @@
         "volumeToken0",
         "volumeToken1",
         "volume"
+      ]
+    },
+    "PortfolioRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "PortfolioRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "PortfolioResponse": {
+      "type": "object",
+      "properties": {
+        "totalPosition": {
+          "type": "number",
+          "format": "double"
+        },
+        "claimableFees": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PortfolioResponse",
+      "required": [
+        "totalPosition",
+        "claimableFees"
       ]
     },
     "Position": {

@@ -440,6 +440,16 @@ type SonexTokenKlineResponse {
 	Records []SonexTokenPriceRecord `json:"records"`
 }
 
+type PortfolioRequest {
+	Address string `form:"address"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type PortfolioResponse {
+	TotalPosition 	float64 `json:"totalPosition"`
+	ClaimableFees 	float64 `json:"claimableFees"`
+}
+
 @server (
 	prefix: /sonex
 	group:  sonex
@@ -480,4 +490,7 @@ service sonex_api_backend_go {
 
 	@handler TokensKlineHandler
 	get /tokens/kline (SonexTokenKlineRequest) returns (SonexTokenKlineResponse)
+
+	@handler SonexPortfolioHandler
+	get /portfolio (PortfolioRequest) returns (PortfolioResponse)
 }
