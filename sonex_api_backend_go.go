@@ -5,12 +5,19 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"sonex_api_backend_go/internal/chain_handler/farm"
+	"sonex_api_backend_go/internal/chain_handler/sonex"
+	"sonex_api_backend_go/internal/chain_handler/xpool"
 	"sonex_api_backend_go/internal/config"
+	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
+	contract_uniswap_v3 "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/task"
+	"sonex_api_backend_go/internal/lib/node_caller"
+	"sonex_api_backend_go/internal/svc"
 
 	"github.com/ahmetb/go-linq/v3"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -44,9 +51,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	global.AddCronJob("@every 1m", func() {
-		task.HandleRecordTokenPrice(&c)
-	})
+	// global.AddCronJob("@every 1m", func() {
+	// 	task.HandleRecordTokenPrice(&c)
+	// })
 
 	opts := []rest.RunOption{}
 	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders())
@@ -105,8 +112,8 @@ func main() {
 		return http.StatusOK, resp
 	})
 
-	// ctx := svc.NewServiceContext(c)
-	// handler.RegisterHandlers(server, ctx)
+	ctx := svc.NewServiceContext(c)
+	handler.RegisterHandlers(server, ctx)
 
 	// Register chain handler
 	for _, chain := range c.Chains {
@@ -114,16 +121,16 @@ func main() {
 		{
 			configA := linq.From(c.Sonexes).SingleWithT(func(item config.SonexConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
-				// config, _ := configA.(config.SonexConfig)
-				// handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, config)
-				// if err != nil {
-				// 	panic(err)
-				// }
-				// // Swap callback demo
-				// handler.OnPoolSwap(func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *contract_uniswap_v3.UniswapV3PoolSwap) {
-				// 	sonex.SwapCallback(c, chainId, pool, tx, event)
-				// })
-				// global.AddChainHandler(1946, handler)
+				config, _ := configA.(config.SonexConfig)
+				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, config)
+				if err != nil {
+					panic(err)
+				}
+				// Swap callback demo
+				handler.OnPoolSwap(func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *contract_uniswap_v3.UniswapV3PoolSwap) {
+					sonex.SwapCallback(c, chainId, pool, tx, event)
+				})
+				global.AddChainHandler(1946, handler)
 			}
 		}
 
@@ -131,12 +138,12 @@ func main() {
 		{
 			configA := linq.From(c.Xpools).SingleWithT(func(item config.XpoolConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
-				// config, _ := configA.(config.XpoolConfig)
-				// handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, config)
-				// if err != nil {
-				// 	panic(err)
-				// }
-				// global.AddChainHandler(1946, handler)
+				config, _ := configA.(config.XpoolConfig)
+				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, config)
+				if err != nil {
+					panic(err)
+				}
+				global.AddChainHandler(1946, handler)
 			}
 		}
 
@@ -144,12 +151,12 @@ func main() {
 		{
 			configA := linq.From(c.Farms).SingleWithT(func(item config.FarmConfig) bool { return item.ChainId == chain.ChainId })
 			if configA != nil {
-				// config, _ := configA.(config.FarmConfig)
-				// handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
-				// if err != nil {
-				// 	panic(err)
-				// }
-				// global.AddChainHandler(1946, handler)
+				config, _ := configA.(config.FarmConfig)
+				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
+				if err != nil {
+					panic(err)
+				}
+				global.AddChainHandler(1946, handler)
 			}
 		}
 	}
