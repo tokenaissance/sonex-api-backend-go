@@ -16,8 +16,15 @@ type ChainConfig struct {
 	MaxLogsNumber           int64            `json:",default=10000"`
 	Multicall               string           `json:",optional"`
 	Tokens                  []TokenConfig    `json:",optional"`
+	ETH                     *ETHConfig       `json:",optional"`
 	WETH                    string           `json:",optional"`
 	USD                     string           `json:",optional"`
+}
+
+type ETHConfig struct {
+	Name     string
+	Symbol   string
+	Decimals int64
 }
 
 type TokenConfig struct {
