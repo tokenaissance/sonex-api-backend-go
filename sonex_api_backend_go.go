@@ -157,26 +157,6 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-
-				// handler.OnIncentiveCreated(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerIncentiveCreated) {
-				// 	farm.IncentiveCreated(c, chainId, tx, event)
-				// })
-				// handler.OnTokenStaked(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerTokenStaked) {
-				// 	farm.TokenStaked(c, chainId, tx, event)
-				// })
-				// handler.OnTokenUnstaked(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerTokenUnstaked) {
-				// 	farm.TokenUnstaked(c, chainId, tx, event)
-				// })
-				// handler.OnRewardClaimed(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerRewardClaimed) {
-				// 	farm.RewardClaimed(c, chainId, tx, event)
-				// })
-				// handler.OnDepositTransferred(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerDepositTransferred) {
-				// 	farm.DepositTransferred(c, chainId, tx, event)
-				// })
-				// handler.OnIncentiveEnded(func(chainId int64, tx *node_caller.Transaction, event *contract_farm.UniswapV3StakerIncentiveEnded) {
-				// 	farm.IncentiveEnded(c, chainId, tx, event)
-				// })
-
 				global.AddChainHandler(1946, handler)
 			}
 		}

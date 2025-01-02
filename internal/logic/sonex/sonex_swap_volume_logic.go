@@ -37,7 +37,7 @@ func (l *SonexSwapVolumeLogic) SonexSwapVolume(req *types.SwapVolumeRequest) (re
 	}
 
 	priceFloat := new(big.Float)
-	if bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, token0.Address, true, 2, nil); err == nil && bestPrice != nil {
+	if bestPrice, _, err := global.GetPrices(l.ctx, nil, req.ChainId, token0.Address, true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD); err == nil && bestPrice != nil {
 		priceFloat = priceFloat.SetInt(bestPrice.Value)
 	}
 	resp = &types.SwapVolumeResponse{}

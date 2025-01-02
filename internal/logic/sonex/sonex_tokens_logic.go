@@ -153,7 +153,7 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacher cach
 				price := new(big.Float).SetFloat64(0)
 				factorDai := new(big.Float).SetFloat64(math.Pow10(18))
 
-				bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, &l.svcCtx.Config.Chains[0].USD)
+				bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, address, true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
 
 				if err == nil && bestPrice != nil {
 					price.SetInt(bestPrice.Value)
