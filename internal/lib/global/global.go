@@ -508,7 +508,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 
 	var tokenIds []*big.Int
 	for _, item := range items {
-		if item.IsClosed {
+		if item.IsBurnt {
 			continue
 		}
 		tokenIds = append(tokenIds, big.NewInt(item.TokenID))
@@ -560,7 +560,7 @@ func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId i
 
 	var tokenIds []*big.Int
 	for _, item := range items {
-		if !item.IsClosed {
+		if !item.IsBurnt {
 			continue
 		}
 		tokenIds = append(tokenIds, big.NewInt(item.TokenID))

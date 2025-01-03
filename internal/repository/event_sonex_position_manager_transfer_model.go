@@ -23,7 +23,7 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
 		QueryValidPositionsByChainIdAddress(ctx context.Context, chainId int64, address string) ([]EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, address string, filterBurnt bool) ([]*types.Position, error)
-		GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error)
+		GetTransferEvent(ctx context.Context, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
 	}
 
 	customEventSonexPositionManagerTransferModel struct {
@@ -70,6 +70,7 @@ type transferData struct {
 	EventTickLower   sql.NullString `db:"event_tick_lower"`
 	EventTickUpper   sql.NullString `db:"event_tick_upper"`
 	TxAt             sql.NullTime   `db:"tx_at"`
+	IsBurnt          sql.NullBool   `db:"is_burnt"`
 }
 
 func (m *customEventSonexPositionManagerTransferModel) QueryValidPositionsByChainIdAddress(ctx context.Context, chainId int64, address string) ([]EventSonexPositionManagerTransfer, error) {
@@ -175,7 +176,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 					Tick:        "0",
 					Volume:      "0",
 				},
-				IsClosed: false,
+				IsBurnt: false,
 			}
 
 			positionMap[item.TokenId.Int64] = position
@@ -186,7 +187,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 
 	for tokenId := range closedPositionMap {
 		if position, exists := positionMap[tokenId]; exists {
-			position.IsClosed = true
+			position.IsBurnt = true
 		}
 	}
 
@@ -198,7 +199,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 	return events, nil
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx context.Context, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error) {
 	var item transferData
 
 	query := fmt.Sprintf(`
@@ -213,8 +214,11 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			m.event_tick_lower,
 			m.event_tick_upper,
 			token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
-			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional
-		FROM %s t
+			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional,
+			CASE EXISTS (
+				SELECT 1 FROM %[1]s WHERE event_token_id = $1 AND event_to = '0x0000000000000000000000000000000000000000'
+			) THEN true ELSE false END AS is_burnt
+		FROM %[1]s t
 		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		JOIN sonex_token token0 ON f.event_token0 = token0.address
@@ -226,6 +230,12 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 	err := m.conn.QueryRowCtx(ctx, &item, query, eventTokenId, "0x0000000000000000000000000000000000000000")
 	if err != nil {
 		return nil, err
+	}
+	result := make(map[int64]*types.Position)
+
+	// return empty map if filterBurnt and the position is burnt
+	if filterBurnt && item.IsBurnt.Bool {
+		return result, nil
 	}
 
 	var token0Additional, token1Additional map[string]interface{}
@@ -270,7 +280,9 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			Tick:        "0",
 			Volume:      "0",
 		},
+		IsBurnt: item.IsBurnt.Bool,
 	}
+	result[eventTokenId] = position
 
-	return position, nil
+	return result, nil
 }

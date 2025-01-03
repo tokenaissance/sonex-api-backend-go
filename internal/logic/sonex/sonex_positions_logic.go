@@ -95,7 +95,7 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 	token1Decimals := make([]int, 0)
 	token1Addresses := make([]string, 0)
 	for _, item := range items {
-		if !item.IsClosed {
+		if !item.IsBurnt {
 			tokenId := item.TokenID
 			positionTokenIds = append(positionTokenIds, tokenId)
 			positionTransferItemMap[tokenId] = item

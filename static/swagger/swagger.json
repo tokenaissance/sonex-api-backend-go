@@ -2129,7 +2129,7 @@
           "type": "number",
           "format": "double"
         },
-        "isClosed": {
+        "isBurnt": {
           "type": "boolean",
           "format": "boolean"
         },
@@ -2183,7 +2183,7 @@
         "tokenId",
         "position",
         "claimableFees",
-        "isClosed",
+        "isBurnt",
         "tickUpper",
         "tickLower",
         "pnl",

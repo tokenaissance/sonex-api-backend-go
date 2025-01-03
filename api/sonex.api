@@ -386,7 +386,7 @@ type Position {
 	TokenID       int64            `json:"tokenId"`
 	Position      float64          `json:"position"`
 	ClaimableFees float64          `json:"claimableFees"`
-	IsClosed      bool             `json:"isClosed"`
+	IsBurnt      bool              `json:"isBurnt"`
 	TickUpper     string           `json:"tickUpper"`
 	TickLower     string           `json:"tickLower"`
 	PNL           float64          `json:"pnl"`
