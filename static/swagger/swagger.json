@@ -15,52 +15,15 @@
     "application/json"
   ],
   "paths": {
-    "/farm/pool/liquidity": {
+    "/farm/incentives": {
       "get": {
-        "summary": "Farm pool liquidity",
-        "operationId": "FarmPoolLiquidity",
+        "summary": "Farm incentive list",
+        "operationId": "FarmIncentivesHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/FarmPoolLiquidityResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "chainId",
-            "description": " 链ID",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64"
-          },
-          {
-            "name": "incentiveId",
-            "description": " 质押池ID",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "farm"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
-    "/farm/pool/list": {
-      "get": {
-        "summary": "Farm pool list",
-        "operationId": "FarmPoolListHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/FarmPoolListResponse"
+              "$ref": "#/definitions/FarmIncentivesResponse"
             }
           }
         },
@@ -123,6 +86,43 @@
             "type": "integer",
             "format": "int64",
             "default": "1"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/farm/pool/liquidity": {
+      "get": {
+        "summary": "Farm pool liquidity",
+        "operationId": "FarmPoolLiquidity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmPoolLiquidityResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chainId",
+            "description": " 链ID",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "incentiveId",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -219,43 +219,6 @@
             "in": "query",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "userAddress",
-            "description": " 用户地址",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "farm"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
-    "/farm/user/asset/list": {
-      "get": {
-        "summary": "Farm user's asset list in pools",
-        "operationId": "FarmUserAssetListHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/FarmUserAssetListResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "chainId",
-            "description": " 链ID",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64"
           },
           {
             "name": "userAddress",
@@ -1134,9 +1097,82 @@
         "updateAt"
       ]
     },
-    "FarmPoolData": {
+    "FarmIncentivesRequest": {
       "type": "object",
       "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 链ID"
+        },
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "closed"
+          ],
+          "description": " 运行状态"
+        },
+        "orderBy": {
+          "type": "string",
+          "enum": [
+            "hot",
+            "apr"
+          ],
+          "description": " 排序字段"
+        },
+        "keyWord": {
+          "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "FarmIncentivesRequest",
+      "required": [
+        "chainId",
+        "pageSize",
+        "pageIndex"
+      ]
+    },
+    "FarmIncentivesResponse": {
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FarmIncentivesResponse_Data"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "FarmIncentivesResponse",
+      "required": [
+        "list",
+        "total"
+      ]
+    },
+    "FarmIncentivesResponse_Data": {
+      "type": "object",
+      "properties": {
+        "incentiveId": {
+          "type": "integer",
+          "format": "int64"
+        },
         "chainId": {
           "type": "integer",
           "format": "int64",
@@ -1149,6 +1185,19 @@
         "feeRatio": {
           "type": "string",
           "description": " 池子手续费率"
+        },
+        "rewardTokenAddress": {
+          "type": "string"
+        },
+        "rewardTokensymbol": {
+          "type": "string"
+        },
+        "rewardTokenDecimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "rewardTokenPrice": {
+          "type": "string"
         },
         "token0Address": {
           "type": "string",
@@ -1209,10 +1258,6 @@
           "type": "integer",
           "format": "int64"
         },
-        "endAt": {
-          "type": "integer",
-          "format": "int64"
-        },
         "balance": {
           "type": "integer",
           "format": "int64"
@@ -1220,13 +1265,21 @@
         "staked": {
           "type": "integer",
           "format": "int64"
+        },
+        "earned": {
+          "type": "string"
         }
       },
-      "title": "FarmPoolData",
+      "title": "FarmIncentivesResponse_Data",
       "required": [
+        "incentiveId",
         "chainId",
         "poolAddress",
         "feeRatio",
+        "rewardTokenAddress",
+        "rewardTokensymbol",
+        "rewardTokenDecimals",
+        "rewardTokenPrice",
         "token0Address",
         "token0symbol",
         "token0Decimals",
@@ -1241,9 +1294,9 @@
         "joinNum",
         "status",
         "startAt",
-        "endAt",
         "balance",
-        "staked"
+        "staked",
+        "earned"
       ]
     },
     "FarmPoolLiquidityRequest": {
@@ -1327,75 +1380,6 @@
         "token1Decimals",
         "token0Symbol",
         "token1Symbol"
-      ]
-    },
-    "FarmPoolListRequest": {
-      "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
-        },
-        "userAddress": {
-          "type": "string",
-          "description": " 用户地址"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "active",
-            "closed"
-          ],
-          "description": " 运行状态"
-        },
-        "orderBy": {
-          "type": "string",
-          "enum": [
-            "hot",
-            "apr"
-          ],
-          "description": " 排序字段"
-        },
-        "keyWord": {
-          "type": "string"
-        },
-        "pageSize": {
-          "type": "integer",
-          "format": "int64",
-          "default": "20"
-        },
-        "pageIndex": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1"
-        }
-      },
-      "title": "FarmPoolListRequest",
-      "required": [
-        "chainId",
-        "pageSize",
-        "pageIndex"
-      ]
-    },
-    "FarmPoolListResponse": {
-      "type": "object",
-      "properties": {
-        "list": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/FarmPoolData"
-          }
-        },
-        "total": {
-          "type": "integer",
-          "format": "int64"
-        }
-      },
-      "title": "FarmPoolListResponse",
-      "required": [
-        "list",
-        "total"
       ]
     },
     "FarmPoolRoiRequest": {
@@ -1550,39 +1534,6 @@
         "decimals",
         "lpBalance",
         "lpStakedNum"
-      ]
-    },
-    "FarmUserAssetListRequest": {
-      "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
-        },
-        "userAddress": {
-          "type": "string",
-          "description": " 用户地址"
-        }
-      },
-      "title": "FarmUserAssetListRequest",
-      "required": [
-        "userAddress"
-      ]
-    },
-    "FarmUserAssetListResponse": {
-      "type": "object",
-      "properties": {
-        "userAssets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/UserAssetData"
-          }
-        }
-      },
-      "title": "FarmUserAssetListResponse",
-      "required": [
-        "userAssets"
       ]
     },
     "Fees": {

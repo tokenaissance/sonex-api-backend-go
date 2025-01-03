@@ -61,19 +61,6 @@ func TestPageQueryByChainIdStaker(t *testing.T) {
 	_ = total
 }
 
-func TestPageQueryByChainIdStakerWithPool(t *testing.T) {
-	var c config.Config
-	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
-
-	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
-	records, total, err := model.PageQueryByChainIdStakerWithPool(context.Background(), 1946, "", 1, 10)
-	if err != nil {
-		t.Error(err)
-	}
-	_ = records
-	_ = total
-}
-
 func TestQueryValidPositionsByChainIdAddress(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)

@@ -19,7 +19,7 @@ import (
 var (
 	eventFarmIncentiveCreatedFieldNames          = builder.RawFieldNames(&EventFarmIncentiveCreated{}, true)
 	eventFarmIncentiveCreatedRows                = strings.Join(eventFarmIncentiveCreatedFieldNames, ",")
-	eventFarmIncentiveCreatedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventFarmIncentiveCreatedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
+	eventFarmIncentiveCreatedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventFarmIncentiveCreatedFieldNames, "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
 	eventFarmIncentiveCreatedRowsWithPlaceHolder = builder.PostgreSqlJoin(stringx.Remove(eventFarmIncentiveCreatedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"))
 )
 
@@ -27,7 +27,8 @@ type (
 	eventFarmIncentiveCreatedModel interface {
 		Insert(ctx context.Context, data *EventFarmIncentiveCreated) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventFarmIncentiveCreated, error)
-		FindOneByEventIncentiveIdChainId(ctx context.Context, eventIncentiveId string, chainId int64) (*EventFarmIncentiveCreated, error)
+		FindOneByChainIdEventIncentiveId(ctx context.Context, chainId int64, eventIncentiveId int64) (*EventFarmIncentiveCreated, error)
+		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventFarmIncentiveCreated, error)
 		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmIncentiveCreated, error)
 		Update(ctx context.Context, data *EventFarmIncentiveCreated) error
 		Delete(ctx context.Context, id int64) error
@@ -50,13 +51,11 @@ type (
 		From             string    `db:"from_"`
 		To               string    `db:"to_"`
 		Value            string    `db:"value"`
-		EventRewardToken string    `db:"event_reward_token"` // 奖励代币地址
-		EventPool        string    `db:"event_pool"`         // V3池子地址
-		EventStartTime   int64     `db:"event_start_time"`   // 质押池开放时间
-		EventEndTime     int64     `db:"event_end_time"`     // 质押池结束时间
-		EventRefundee    string    `db:"event_refundee"`     // 剩余奖励代币接收地址
-		EventReward      string    `db:"event_reward"`       // 奖励代币数量
-		EventIncentiveId string    `db:"event_incentive_id"` // 质押池ID
+		EventRewardToken string    `db:"event_reward_token"`
+		EventPool        string    `db:"event_pool"`
+		EventStartTime   int64     `db:"event_start_time"`
+		EventWeight      int64     `db:"event_weight"`
+		EventIncentiveId int64     `db:"event_incentive_id"`
 	}
 )
 
@@ -87,10 +86,24 @@ func (m *defaultEventFarmIncentiveCreatedModel) FindOne(ctx context.Context, id 
 	}
 }
 
-func (m *defaultEventFarmIncentiveCreatedModel) FindOneByEventIncentiveIdChainId(ctx context.Context, eventIncentiveId string, chainId int64) (*EventFarmIncentiveCreated, error) {
+func (m *defaultEventFarmIncentiveCreatedModel) FindOneByChainIdEventIncentiveId(ctx context.Context, chainId int64, eventIncentiveId int64) (*EventFarmIncentiveCreated, error) {
 	var resp EventFarmIncentiveCreated
-	query := fmt.Sprintf("select %s from %s where event_incentive_id = $1 and chain_id = $2 limit 1", eventFarmIncentiveCreatedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, eventIncentiveId, chainId)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and event_incentive_id = $2 limit 1", eventFarmIncentiveCreatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, eventIncentiveId)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *defaultEventFarmIncentiveCreatedModel) FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventFarmIncentiveCreated, error) {
+	var resp EventFarmIncentiveCreated
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 limit 1", eventFarmIncentiveCreatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash)
 	switch err {
 	case nil:
 		return &resp, nil
@@ -116,14 +129,14 @@ func (m *defaultEventFarmIncentiveCreatedModel) FindOneByTxHashChainId(ctx conte
 }
 
 func (m *defaultEventFarmIncentiveCreatedModel) Insert(ctx context.Context, data *EventFarmIncentiveCreated) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", m.table, eventFarmIncentiveCreatedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventRewardToken, data.EventPool, data.EventStartTime, data.EventEndTime, data.EventRefundee, data.EventReward, data.EventIncentiveId)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventFarmIncentiveCreatedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventRewardToken, data.EventPool, data.EventStartTime, data.EventWeight, data.EventIncentiveId)
 	return ret, err
 }
 
 func (m *defaultEventFarmIncentiveCreatedModel) Update(ctx context.Context, newData *EventFarmIncentiveCreated) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventFarmIncentiveCreatedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventRewardToken, newData.EventPool, newData.EventStartTime, newData.EventEndTime, newData.EventRefundee, newData.EventReward, newData.EventIncentiveId)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventRewardToken, newData.EventPool, newData.EventStartTime, newData.EventWeight, newData.EventIncentiveId)
 	return err
 }
 
