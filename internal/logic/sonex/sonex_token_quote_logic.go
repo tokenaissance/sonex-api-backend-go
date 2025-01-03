@@ -40,8 +40,8 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		req.Stablecoin == "" || !common.IsHexAddress(req.Stablecoin) {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
-	amount, _ := new(big.Int).SetString(req.Amount, 10)
-	if amount.Cmp(big.NewInt(0)) <= 0 {
+	amount, ok := new(big.Int).SetString(req.Amount, 10)
+	if !ok {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
 
@@ -81,62 +81,6 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		}
 	}(results)
 
-	// wg.Add(1)
-	// go func(ch chan error) {
-	// 	defer wg.Done()
-	// 	defer func() {
-	// 		if err := recover(); err != nil {
-	// 			ch <- fmt.Errorf("%s(panic)", err)
-	// 		}
-	// 	}()
-
-	// 	if fromAddress.Hex() == stablecoinAddress.Hex() {
-	// 		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
-	// 		if err != nil {
-	// 			ch <- err
-	// 			return
-	// 		}
-	// 		fromPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
-	// 	} else {
-	// 		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.From, true, 2, &req.Stablecoin)
-	// 		if err != nil {
-	// 			ch <- err
-	// 			return
-	// 		}
-	// 		if price != nil {
-	// 			fromPriceUSD = price.Value
-	// 		}
-	// 	}
-	// }(results)
-
-	// wg.Add(1)
-	// go func(ch chan error) {
-	// 	defer wg.Done()
-	// 	defer func() {
-	// 		if err := recover(); err != nil {
-	// 			ch <- fmt.Errorf("%s(panic)", err)
-	// 		}
-	// 	}()
-
-	// 	if toAddress.Hex() == stablecoinAddress.Hex() {
-	// 		stablecoinToken, err := global.GetToken(req.ChainId, req.Stablecoin)
-	// 		if err != nil {
-	// 			ch <- err
-	// 			return
-	// 		}
-	// 		toPriceUSD = big.NewInt(1).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)
-	// 	} else {
-	// 		price, _, err := global.GetPrices(l.ctx, nil, req.ChainId, req.To, true, 2, &req.Stablecoin)
-	// 		if err != nil {
-	// 			ch <- err
-	// 			return
-	// 		}
-	// 		if price != nil {
-	// 			toPriceUSD = price.Value
-	// 		}
-	// 	}
-	// }(results)
-
 	wg.Add(1)
 	go func(ch chan error) {
 		defer wg.Done()
@@ -145,23 +89,26 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				ch <- fmt.Errorf("%s(panic)", err)
 			}
 		}()
-
-		switch req.Type {
-		case "INPUT":
-			prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
-			if err != nil {
-				ch <- err
+		if amount.Cmp(big.NewInt(0)) > 0 {
+			switch req.Type {
+			case "INPUT":
+				prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+				if err != nil {
+					ch <- err
+					return
+				}
+			case "OUTPUT":
+				prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+				if err != nil {
+					ch <- err
+					return
+				}
+			default:
+				err = fmt.Errorf("%s", "Invalid type")
 				return
 			}
-		case "OUTPUT":
-			prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
-			if err != nil {
-				ch <- err
-				return
-			}
-		default:
-			err = fmt.Errorf("%s", "Invalid type")
-			return
+		} else {
+			prices = []cache.Price{}
 		}
 	}(results)
 
