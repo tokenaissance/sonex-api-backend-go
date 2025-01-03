@@ -72,6 +72,13 @@
             "type": "string"
           },
           {
+            "name": "stakedOnly",
+            "in": "query",
+            "required": true,
+            "type": "boolean",
+            "format": "boolean"
+          },
+          {
             "name": "pageSize",
             "in": "query",
             "required": true,
@@ -1128,6 +1135,10 @@
         "keyWord": {
           "type": "string"
         },
+        "stakedOnly": {
+          "type": "boolean",
+          "format": "boolean"
+        },
         "pageSize": {
           "type": "integer",
           "format": "int64",
@@ -1142,6 +1153,7 @@
       "title": "FarmIncentivesRequest",
       "required": [
         "chainId",
+        "stakedOnly",
         "pageSize",
         "pageIndex"
       ]
