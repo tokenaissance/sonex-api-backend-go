@@ -15,7 +15,6 @@ import (
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/svc"
-	"sonex_api_backend_go/internal/task"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
@@ -53,7 +52,7 @@ func main() {
 		panic(err)
 	}
 	global.AddCronJob("@every 1m", func() {
-		task.HandleRecordTokenPrice(&c)
+		// task.HandleRecordTokenPrice(&c)
 	})
 
 	opts := []rest.RunOption{}
@@ -163,7 +162,7 @@ func main() {
 	}
 
 	// Start chain listen/cron ...
-	global.Start()
+	// global.Start()
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()

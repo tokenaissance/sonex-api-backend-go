@@ -501,14 +501,14 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
-	items, err := model.GetTransferEvents(ctx, userAddress.Hex())
+	items, err := model.GetTransferEvents(ctx, userAddress.Hex(), true)
 	if err != nil {
 		return nil, err
 	}
 
 	var tokenIds []*big.Int
 	for _, item := range items {
-		if item.IsClosed {
+		if item.IsBurnt {
 			continue
 		}
 		tokenIds = append(tokenIds, big.NewInt(item.TokenID))
@@ -553,14 +553,14 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
-	items, err := model.GetTransferEvents(ctx, userAddress.Hex())
+	items, err := model.GetTransferEvents(ctx, userAddress.Hex(), false)
 	if err != nil {
 		return nil, err
 	}
 
 	var tokenIds []*big.Int
 	for _, item := range items {
-		if !item.IsClosed {
+		if !item.IsBurnt {
 			continue
 		}
 		tokenIds = append(tokenIds, big.NewInt(item.TokenID))
