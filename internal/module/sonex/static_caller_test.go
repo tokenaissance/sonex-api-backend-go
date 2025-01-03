@@ -18,7 +18,10 @@ func TestBatchGetPools(t *testing.T) {
 	caller, _ := NewStaticCaller(c)
 	pools, err := caller.BatchGetPools(
 		context.Background(), 1946,
-		[]common.Address{common.HexToAddress("0x3737901eF7D29C51C00C3B897c24B6B65aFb42b2")},
+		[]common.Address{
+			common.HexToAddress("0x3737901eF7D29C51C00C3B897c24B6B65aFb42b2"),
+			common.HexToAddress("0xBb39F97BbaBFb460a77c9Be89F3e491353BAbE48"),
+		},
 	)
 	if err != nil {
 		t.Error(err)
@@ -39,7 +42,7 @@ func TestBatchGetPositions(t *testing.T) {
 	positions, err := caller.BatchGetPositions(
 		context.Background(), 1946,
 		common.HexToAddress("0xeC816FCdc262601C0E23902c679FDd87CFb24077"),
-		[]*big.Int{big.NewInt(199)},
+		[]*big.Int{big.NewInt(199), big.NewInt(200), big.NewInt(201), big.NewInt(202), big.NewInt(203), big.NewInt(204), big.NewInt(205), big.NewInt(206), big.NewInt(207)},
 	)
 	if err != nil {
 		t.Error(err)

@@ -45,12 +45,9 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 	if err != nil {
 		return nil, err
 	}
-	var multicallResult struct {
-		BlockNumber *big.Int `json:"blockNumber"`
-		ReturnData  [][]byte `json:"returnData"`
-	}
+	var multicallResults []contract_common.Multicall3Result
 
-	callDatas := []contract_common.Multicall3Call{}
+	callDatas := []contract_common.Multicall3Call3{}
 	slot0Data, err := uniswapV3PoolABI.Pack("slot0")
 	if err != nil {
 		return nil, err
@@ -68,52 +65,71 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 		return nil, err
 	}
 	for _, pool := range pools {
-		callDatas = append(callDatas, contract_common.Multicall3Call{
-			Target:   pool,
-			CallData: slot0Data,
+		x := pool.Hex()
+		_ = x
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       pool,
+			AllowFailure: true,
+			CallData:     slot0Data,
 		})
-		callDatas = append(callDatas, contract_common.Multicall3Call{
-			Target:   pool,
-			CallData: feeGrowthGlobal0X128Data,
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       pool,
+			AllowFailure: true,
+			CallData:     feeGrowthGlobal0X128Data,
 		})
-		callDatas = append(callDatas, contract_common.Multicall3Call{
-			Target:   pool,
-			CallData: feeGrowthGlobal1X128Data,
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       pool,
+			AllowFailure: true,
+			CallData:     feeGrowthGlobal1X128Data,
 		})
-		callDatas = append(callDatas, contract_common.Multicall3Call{
-			Target:   pool,
-			CallData: feeData,
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       pool,
+			AllowFailure: true,
+			CallData:     feeData,
 		})
 	}
-	data, err := multicallABI.Pack("aggregate", callDatas)
+	data, err := multicallABI.Pack("aggregate3", callDatas)
 	if err != nil {
 		return nil, err
 	}
-	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate", data, &multicallResult)
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &multicallResults)
 	if err != nil {
 		return nil, err
 	}
 	result := []*Pool{}
+	fieldNumber := 4
 	for i, addr := range pools {
 		var slot0 Slot0
-		err = uniswapV3PoolABI.UnpackIntoInterface(&slot0, "slot0", multicallResult.ReturnData[i*3])
+		err = uniswapV3PoolABI.UnpackIntoInterface(&slot0, "slot0", multicallResults[i*fieldNumber].ReturnData)
 		if err != nil {
 			return nil, err
+		}
+		if !multicallResults[i*fieldNumber].Success {
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall slot0 failed: %s, pool: %s", multicallResults[i*fieldNumber].ReturnData[4:], addr))
 		}
 		var feeGrowthGlobal0X128 *big.Int
-		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal0X128, "feeGrowthGlobal0X128", multicallResult.ReturnData[i*3+1])
+		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal0X128, "feeGrowthGlobal0X128", multicallResults[i*fieldNumber+1].ReturnData)
 		if err != nil {
 			return nil, err
+		}
+		if !multicallResults[i*fieldNumber+1].Success {
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall feeGrowthGlobal0X128 failed: %s, pool: %s", multicallResults[i*fieldNumber+1].ReturnData[4:], addr))
 		}
 		var feeGrowthGlobal1X128 *big.Int
-		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal1X128, "feeGrowthGlobal1X128", multicallResult.ReturnData[i*3+2])
+		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal1X128, "feeGrowthGlobal1X128", multicallResults[i*fieldNumber+2].ReturnData)
 		if err != nil {
 			return nil, err
 		}
+		if !multicallResults[i*fieldNumber+2].Success {
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall feeGrowthGlobal1X128 failed: %s, pool: %s", multicallResults[i*fieldNumber+2].ReturnData[4:], addr))
+		}
 		var fee *big.Int
-		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal1X128, "fee", multicallResult.ReturnData[i*3+3])
+		err = uniswapV3PoolABI.UnpackIntoInterface(&fee, "fee", multicallResults[i*fieldNumber+3].ReturnData)
 		if err != nil {
 			return nil, err
+		}
+		if !multicallResults[i*fieldNumber+3].Success {
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall fee failed: %s, pool: %s", multicallResults[i*fieldNumber+3].ReturnData[4:], addr))
 		}
 		pool := &Pool{
 			Address:              addr,
