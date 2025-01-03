@@ -18,10 +18,16 @@ type (
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenStaked, error)
 		QueryValidByChainId(ctx context.Context, chainId int64) ([]EventFarmTokenStaked, error)
 		QueryValidByChainIdUserAddress(ctx context.Context, chainId int64, userAddress string) ([]EventFarmTokenStaked, error)
+		QueryValidByChainIdUserAddressWithPool(ctx context.Context, chainId int64, userAddress string) ([]EventFarmTokenStakedWithPool, error)
 	}
 
 	customEventFarmTokenStakedModel struct {
 		*defaultEventFarmTokenStakedModel
+	}
+
+	EventFarmTokenStakedWithPool struct {
+		EventFarmTokenStaked
+		Pool string `db:"event_pool"`
 	}
 )
 
@@ -56,7 +62,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainId(ctx context.Contex
 	query := fmt.Sprintf(`
 		SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_token_id, S.event_incentive_id, S.event_liquidity 
 		FROM %s S
-		LEFT JOIN %s C ON S.event_incentive_id = C.event_incentive_id
+		JOIN %s C ON S.event_incentive_id = C.event_incentive_id
 		WHERE S.event_token_id NOT IN (
 			SELECT event_token_id FROM %s WHERE event_incentive_id = S.event_incentive_id
 		)
@@ -76,13 +82,33 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserAddress(ctx con
 	query := fmt.Sprintf(`
 		SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_token_id, S.event_incentive_id, S.event_liquidity 
 		FROM %s S
-		LEFT JOIN %s C ON S.event_incentive_id = C.event_incentive_id
+		JOIN %s C ON S.event_incentive_id = C.event_incentive_id
 		WHERE S.event_token_id NOT IN (
 			SELECT event_token_id FROM %s WHERE event_incentive_id = S.event_incentive_id
 		)
 		AND C.chain_id = $1 AND S.from_ = $2
 	`, m.table, eventFarmIncentiveCreatedModel.table, eventFarmTokenUnstakedModel.table)
 	var resp []EventFarmTokenStaked
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, userAddress)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserAddressWithPool(ctx context.Context, chainId int64, userAddress string) ([]EventFarmTokenStakedWithPool, error) {
+	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
+	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_token_id, S.event_incentive_id, S.event_liquidity, C.event_pool 
+		FROM %s S
+		JOIN %s C ON S.event_incentive_id = C.event_incentive_id
+		WHERE S.event_token_id NOT IN (
+			SELECT event_token_id FROM %s WHERE event_incentive_id = S.event_incentive_id
+		)
+		AND C.chain_id = $1 AND S.from_ = $2
+	`, m.table, eventFarmIncentiveCreatedModel.table, eventFarmTokenUnstakedModel.table)
+	var resp []EventFarmTokenStakedWithPool
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, userAddress)
 	if err != nil {
 		return nil, err

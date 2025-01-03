@@ -182,6 +182,20 @@ func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, m
 }
 
 func (cacher *TokenCacher) Get(address string) (*Token, error) {
+	if address == "" || common.HexToAddress(address).Hex() == (common.Address{}).Hex() {
+		eth := cacher.chainConf.ETH
+		if eth == nil {
+			return nil, fmt.Errorf("%s", "Miss ETH configure")
+		}
+		return &Token{
+			Address:      (common.Address{}).Hex(),
+			Name:         eth.Name,
+			Symbol:       eth.Symbol,
+			Decimals:     eth.Decimals,
+			IsStablecoin: false,
+		}, nil
+	}
+
 	cacher.tokensLock.RLock()
 	token, ok := cacher.tokens[address]
 	cacher.tokensLock.RUnlock()

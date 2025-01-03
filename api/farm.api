@@ -8,6 +8,7 @@ type FarmPoolListRequest {
 	UserAddress string `form:"userAddress,optional"`                  // 用户地址
 	Status      string `form:"status,optional,options=active|closed"` // 运行状态
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
+	KeyWord     string `form:"keyWord,optional"`
 	PageSize    int64  `form:"pageSize,default=20"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
 }
@@ -36,6 +37,8 @@ type FarmPoolData {
 	Status         string `json:"status"`         // 运行状态（active or closed）
 	StartAt        int64  `json:"startAt"`
 	EndAt          int64  `json:"endAt"`
+	Balance        int64  `json:"balance"`
+	Staked         int64  `json:"staked"`
 }
 
 type FarmUserAssetListRequest {

@@ -90,6 +90,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/portfolio",
+				Handler: sonex.SonexPortfolioHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/swaps",
 				Handler: sonex.SonexSwapHandler(serverCtx),
 			},

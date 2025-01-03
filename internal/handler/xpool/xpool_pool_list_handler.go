@@ -3,21 +3,13 @@ package xpool
 import (
 	"net/http"
 
-	"sonex_api_backend_go/internal/handler/response"
+	"github.com/zeromicro/go-zero/rest/httpx"
 	"sonex_api_backend_go/internal/logic/xpool"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
-
-	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-type PoolListResponse struct {
-	List   []*types.XpoolPoolListResponse `json:"list"`
-	Limit  int                            `json:"limit"`
-	Offset int                            `json:"offset"`
-	Total  int64                          `json:"total"`
-}
-
+// Xpool list
 func XpoolPoolListHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.XpoolPoolListRequest
@@ -27,20 +19,11 @@ func XpoolPoolListHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := xpool.NewXpoolPoolListLogic(r.Context(), svcCtx)
-		resp, total, err := l.XpoolPoolList(&req)
+		resp, err := l.XpoolPoolList(&req)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, response.BaseError{
-				Code: response.XpoolErrorCode,
-				Err:  err,
-			})
+			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, PoolListResponse{
-				List:   resp,
-				Limit:  req.Limit,
-				Offset: req.Offset,
-				Total:  total,
-			})
+			httpx.OkJsonCtx(r.Context(), w, resp)
 		}
-		httpx.OkJson(w, resp)
 	}
 }

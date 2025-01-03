@@ -22,9 +22,8 @@ Chains:
     Name: Minato
     Nodes:
       # URL:Weight
-      # http://10.1.30.103:8545: 90
-      # http://10.1.30.104:8545: 10
-      http://10.1.30.105:8545: 100
+      http://10.1.30.103:8545: 90
+      http://10.1.30.104:8545: 10
     MinConfirmations: 5
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
@@ -34,6 +33,10 @@ Chains:
         IsStableCoin: true
       - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
         IsStableCoin: true
+    ETH:
+      Name: Ethereum
+      Symbol: ETH
+      Decimals: 18
     WETH: 0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C
     USD: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
 Sonexes:
@@ -45,6 +48,7 @@ Sonexes:
 Xpools:
   - ChainId: 1946
     Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531
+    BlockTime: 2000
 Farms:
   - ChainId: 1946
     Staker: 0x340DDa144116366300254409b25934Ff88b111b8

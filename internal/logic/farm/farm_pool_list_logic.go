@@ -11,6 +11,7 @@ import (
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"strings"
 	"sync"
 	"time"
 
@@ -190,22 +191,49 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
 		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
-		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserAddress(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
+		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserAddressWithPool(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
 		if err != nil {
 			return nil, err
 		}
-		userTokenIds := []int64{}
-		linq.From(validStakeRecords).ForEachT(func(item repository.EventFarmTokenStaked) {
-			userTokenIds = append(userTokenIds, item.EventTokenId)
+		userTokenIds := map[string][]int64{}
+		linq.From(validStakeRecords).GroupByT(
+			func(item repository.EventFarmTokenStakedWithPool) string { return item.Pool },
+			func(item repository.EventFarmTokenStakedWithPool) repository.EventFarmTokenStakedWithPool {
+				return item
+			},
+		).ForEachT(func(item linq.Group) {
+			tids := []int64{}
+			linq.From(item.Group).ForEachT(func(recordA interface{}) {
+				record := recordA.(repository.EventFarmTokenStakedWithPool)
+				tids = append(tids, record.EventTokenId)
+			})
+			userTokenIds[item.Key.(string)] = tids
 		})
+		staked := map[string]int64{}
 		linq.From(resp.List).WhereT(func(item types.FarmPoolData) bool {
 			poolTokenIds, ok := tokenIds[item.PoolAddress]
 			if !ok {
 				return false
 			}
-			return linq.From(userTokenIds).AnyWithT(func(tokenId int64) bool {
-				return linq.From(poolTokenIds).Contains(tokenId)
-			})
+			isStaked := false
+			for _, idItem := range userTokenIds[item.PoolAddress] {
+				if linq.From(poolTokenIds).Contains(idItem) {
+					isStaked = true
+					staked[item.PoolAddress]++
+				}
+			}
+			return isStaked
+		}).ToSlice(&resp.List)
+		for i, item := range resp.List {
+			if val, ok := staked[item.PoolAddress]; ok {
+				resp.List[i].Staked = val
+				resp.List[i].Balance = int64(len(userTokenIds[item.PoolAddress])) - val
+			}
+		}
+	}
+	if req.KeyWord != "" {
+		linq.From(resp.List).WhereT(func(item types.FarmPoolData) bool {
+			return strings.Contains(item.Token0Symbol, req.KeyWord) || strings.Contains(item.Token1Symbol, req.KeyWord)
 		}).ToSlice(&resp.List)
 	}
 	if req.Status != "" && (req.Status == "active" || req.Status == "closed") {
@@ -236,11 +264,6 @@ func (l *FarmPoolListLogic) FarmPoolList(req *types.FarmPoolListRequest) (resp *
 func (l *FarmPoolListLogic) getResponse(req *types.FarmPoolListRequest) (resp *types.FarmPoolListResponse, tokenIds map[string][]int64, err error) {
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
-	stablecoin := common.HexToAddress(l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
-	stablecoinToken, err := global.GetToken(req.ChainId, stablecoin.Hex())
-	if err != nil {
-		return nil, nil, err
-	}
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
@@ -282,6 +305,7 @@ func (l *FarmPoolListLogic) getResponse(req *types.FarmPoolListRequest) (resp *t
 	results := make(chan struct {
 		Data     types.FarmPoolData
 		TokenIds []int64
+		Err      error
 	}, len(incentiveCreatedRecords))
 
 	for _, incincentiveCreatedRecord := range incentiveCreatedRecords {
@@ -289,63 +313,77 @@ func (l *FarmPoolListLogic) getResponse(req *types.FarmPoolListRequest) (resp *t
 		go func(record *repository.EventFarmIncentiveCreatedWithPool, ch chan struct {
 			Data     types.FarmPoolData
 			TokenIds []int64
+			Err      error
 		}) {
 			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct {
+						Data     types.FarmPoolData
+						TokenIds []int64
+						Err      error
+					}{
+						Err: fmt.Errorf("%s %s", incincentiveCreatedRecord.EventIncentiveId, err),
+					}
+				}
+			}()
 
 			token0, err := global.GetToken(req.ChainId, record.Token0)
 			if err != nil {
-				logx.Errorf("GetToken error: %v", err)
-				return
+				panic(fmt.Sprintf("GetToken error: %v", err))
 			}
 			token1, err := global.GetToken(req.ChainId, record.Token1)
 			if err != nil {
-				logx.Errorf("GetToken error: %v", err)
-				return
+				panic(fmt.Sprintf("GetToken error: %v", err))
 			}
 			price0 := prices[token0.Address]
 			price1 := prices[token1.Address]
 
-			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
-			if !ok {
-				logx.Errorf("ValidStakeRecord not found: %s", record.EventIncentiveId)
-				return
-			}
-			tokenIds := []*big.Int{}
-			userAddressesMap := map[string]struct{}{}
-			linq.From(validStakeRecords).ForEachT(func(item repository.EventFarmTokenStaked) {
-				tokenIds = append(tokenIds, big.NewInt(item.EventTokenId))
-				userAddressesMap[item.From] = struct{}{}
-			})
-
-			staticCaller, err := sonex.NewStaticCaller(l.svcCtx.Config)
+			rewardToken, err := global.GetToken(req.ChainId, record.EventRewardToken)
 			if err != nil {
-				logx.Errorf("NewStaticCaller error: %v", err)
-				return
-			}
-			positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
-			if err != nil {
-				logx.Errorf("BatchGetPositions error: %v", err)
-				return
-			}
-			totalLiquidity := big.NewInt(0)
-			totalLiquidityUSD := big.NewInt(0)
-			for _, position := range positions {
-				totalLiquidity.Add(totalLiquidity, position.Liquidity)
-				amount0, amount1 := position.Amounts()
-				totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount0, price0), new(big.Int).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)))
-				totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount1, price1), new(big.Int).Exp(big.NewInt(10), big.NewInt(stablecoinToken.Decimals), nil)))
+				panic(fmt.Sprintf("GetToken error: %v", err))
 			}
 			reward, _ := new(big.Int).SetString(record.EventReward, 10)
+			rewardPrice := prices[rewardToken.Address]
+			rewardUSD := new(big.Int).Mul(reward, rewardPrice)
+			rewardTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
 			startTime := time.Unix(record.EventStartTime, 0)
 			endTime := time.Unix(record.EventEndTime, 0)
-			apr := new(big.Int).Div(new(big.Int).Mul(reward, big.NewInt(365*24*60*60)), big.NewInt(endTime.Unix()-startTime.Unix()))
-			var tids []int64
-			linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
-			ch <- struct {
-				Data     types.FarmPoolData
-				TokenIds []int64
-			}{
-				Data: types.FarmPoolData{
+			totalRewardUSD := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(rewardUSD, big.NewInt(365*24*60*60)), big.NewInt(endTime.Unix()-startTime.Unix())), rewardTokenAccuracy)
+
+			var dataResult types.FarmPoolData
+			tokenIdsResult := []int64{}
+			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
+			if ok {
+				tokenIds := []*big.Int{}
+				userAddressesMap := map[string]struct{}{}
+				linq.From(validStakeRecords).ForEachT(func(item repository.EventFarmTokenStaked) {
+					tokenIds = append(tokenIds, big.NewInt(item.EventTokenId))
+					userAddressesMap[item.From] = struct{}{}
+				})
+
+				staticCaller, err := sonex.NewStaticCaller(l.svcCtx.Config)
+				if err != nil {
+					panic(fmt.Sprintf("NewStaticCaller error: %v", err))
+				}
+				positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
+				if err != nil {
+					panic(fmt.Sprintf("BatchGetPositions error: %v", err))
+				}
+				totalLiquidity := big.NewInt(0)
+				totalLiquidityUSD := big.NewInt(0)
+				for _, position := range positions {
+					totalLiquidity.Add(totalLiquidity, position.Liquidity)
+					amount0, amount1 := position.Amounts()
+					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount0, price0), new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil)))
+					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount1, price1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil)))
+				}
+
+				apr := new(big.Int).Div(totalRewardUSD, totalLiquidityUSD)
+				var tids []int64
+				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
+
+				dataResult = types.FarmPoolData{
 					ChainId:        incincentiveCreatedRecord.ChainId,
 					PoolAddress:    record.EventPool,
 					FeeRatio:       record.Fee,
@@ -363,8 +401,39 @@ func (l *FarmPoolListLogic) getResponse(req *types.FarmPoolListRequest) (resp *t
 					JoinNum:        int64(len(userAddressesMap)),
 					StartAt:        record.EventStartTime,
 					EndAt:          record.EventEndTime,
-				},
-				TokenIds: tids,
+				}
+				tokenIdsResult = tids
+			} else {
+				apr := new(big.Int).Div(totalRewardUSD, big.NewInt(1))
+
+				dataResult = types.FarmPoolData{
+					ChainId:        incincentiveCreatedRecord.ChainId,
+					PoolAddress:    record.EventPool,
+					FeeRatio:       record.Fee,
+					Token0Address:  token0.Address,
+					Token0Decimals: token0.Decimals,
+					Token0Symbol:   token0.Symbol,
+					Token0Price:    price0.String(),
+					Token1Address:  token1.Address,
+					Token1Decimals: token1.Decimals,
+					Token1Symbol:   token1.Symbol,
+					Token1Price:    price1.String(),
+					Liquidity:      big.NewInt(0).String(),
+					LiquidityUSD:   big.NewInt(0).String(),
+					APR:            apr.String(),
+					JoinNum:        0,
+					StartAt:        record.EventStartTime,
+					EndAt:          record.EventEndTime,
+				}
+			}
+
+			ch <- struct {
+				Data     types.FarmPoolData
+				TokenIds []int64
+				Err      error
+			}{
+				Data:     dataResult,
+				TokenIds: tokenIdsResult,
 			}
 		}(&incincentiveCreatedRecord, results)
 	}
@@ -374,6 +443,9 @@ func (l *FarmPoolListLogic) getResponse(req *types.FarmPoolListRequest) (resp *t
 	list := []types.FarmPoolData{}
 	tokenIds = map[string][]int64{}
 	for result := range results {
+		if result.Err != nil {
+			return nil, nil, result.Err
+		}
 		list = append(list, result.Data)
 		tokenIds[result.Data.PoolAddress] = result.TokenIds
 	}
