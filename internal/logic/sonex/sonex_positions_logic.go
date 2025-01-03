@@ -82,7 +82,7 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
-	items, err := transferModel.GetTransferEvents(l.ctx, req.Address)
+	items, err := transferModel.GetTransferEvents(l.ctx, req.Address, true)
 	if err != nil {
 		logx.Errorf("[SonexPositionsLogic] GetTransferEvents error: %s", err.Error())
 		return nil, err

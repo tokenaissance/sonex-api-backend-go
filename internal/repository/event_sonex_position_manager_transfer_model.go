@@ -22,7 +22,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
 		QueryValidPositionsByChainIdAddress(ctx context.Context, chainId int64, address string) ([]EventSonexPositionManagerTransfer, error)
-		GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error)
+		GetTransferEvents(ctx context.Context, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error)
 	}
 
@@ -90,7 +90,9 @@ func (m *customEventSonexPositionManagerTransferModel) QueryValidPositionsByChai
 	return resp, nil
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error) {
+// GetTransferEvents get transfer events by address
+// filterBurnt: true if filter burnt positions
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string, filterBurnt bool) ([]*types.Position, error) {
 	var items []*transferData
 
 	query := fmt.Sprintf(`
@@ -112,14 +114,13 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		JOIN sonex_token token0 ON f.event_token0 = token0.address
 		JOIN sonex_token token1 ON f.event_token1 = token1.address
-		WHERE (t.event_from = $1 OR t.event_to = $1) 
-			AND t.event_token_id NOT IN (
-				SELECT event_token_id 
-				FROM %s 
-				WHERE event_from = $1
-				AND event_to = '0x0000000000000000000000000000000000000000'
-			)
-	`, m.table, m.table)
+		WHERE (t.event_from = $1 OR t.event_to = $1)
+	`, m.table)
+
+	// filter burnt positions
+	if filterBurnt {
+		query += fmt.Sprintf(" AND t.event_token_id NOT IN (SELECT event_token_id FROM %s WHERE event_from = $1 AND event_to = '0x0000000000000000000000000000000000000000')", m.table)
+	}
 
 	address = common.HexToAddress(address).Hex()
 	err := m.conn.QueryRowsCtx(ctx, &items, query, address)
