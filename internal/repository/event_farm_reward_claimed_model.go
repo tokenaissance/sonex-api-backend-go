@@ -18,7 +18,7 @@ type (
 		eventFarmRewardClaimedModel
 		withSession(session sqlx.Session) EventFarmRewardClaimedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, incentiveId int64, amount string) error
-		SummarizeTotalClaimedByChainIdUserAddress(ctx context.Context, chainId int64, userAddress string) (*big.Int, error)
+		SummarizeTotalClaimedByChainIdIncentiveIdUser(ctx context.Context, chainId int64, incentiveId int64, user string) (*big.Int, error)
 	}
 
 	customEventFarmRewardClaimedModel struct {
@@ -43,10 +43,10 @@ func (m *customEventFarmRewardClaimedModel) New(ctx context.Context, id int64, c
 	return err
 }
 
-func (m *customEventFarmRewardClaimedModel) SummarizeTotalClaimedByChainIdUserAddress(ctx context.Context, chainId int64, userAddress string) (*big.Int, error) {
-	query := fmt.Sprintf("SELECT COALESCE(SUM(event_reward::NUMERIC),0)::VARCHAR AS total_claimed FROM %s WHERE chain_id = $1 AND event_to = $2", m.table)
+func (m *customEventFarmRewardClaimedModel) SummarizeTotalClaimedByChainIdIncentiveIdUser(ctx context.Context, chainId int64, incentiveId int64, user string) (*big.Int, error) {
+	query := fmt.Sprintf("SELECT COALESCE(SUM(event_amount::NUMERIC),0)::VARCHAR AS total_claimed FROM %s WHERE chain_id = $1 AND event_incentive_id = $2 AND event_user = $3", m.table)
 	var totalClaimed string
-	err := m.conn.QueryRowCtx(ctx, &totalClaimed, query, chainId, userAddress)
+	err := m.conn.QueryRowCtx(ctx, &totalClaimed, query, chainId, incentiveId, user)
 	switch err {
 	case nil:
 		value, _ := new(big.Int).SetString(totalClaimed, 10)

@@ -27,8 +27,8 @@ func TestExecute(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	var start uint64 = 6344789
-	var end uint64 = 6344789
+	var start uint64 = 6347385
+	var end uint64 = 6347591
 	err, _ = handler.Execute(client, &bind.FilterOpts{Context: context.Background(), Start: start, End: &end}, false)
 	if err != nil {
 		t.Error(err)

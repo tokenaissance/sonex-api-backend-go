@@ -14,27 +14,47 @@ type ChainSyncPrograss struct {
 	UpdatedAt string `json:"updateAt"`
 }
 
-type FarmPoolData struct {
-	ChainId        int64  `json:"chainId"`        // 链ID
-	PoolAddress    string `json:"poolAddress"`    // 池子合约地址
-	FeeRatio       string `json:"feeRatio"`       // 池子手续费率
-	Token0Address  string `json:"token0Address"`  // token0合约地址
-	Token0Symbol   string `json:"token0symbol"`   // token0代币符号
-	Token0Decimals int64  `json:"token0Decimals"` // token0精度
-	Token0Price    string `json:"token0Price"`    // token0价格
-	Token1Address  string `json:"token1Address"`  // token1合约地址
-	Token1Symbol   string `json:"token1Symbol"`   // token1代币符号
-	Token1Decimals int64  `json:"token1Decimals"` // token1精度
-	Token1Price    string `json:"token1Price"`    // token1价格
-	Liquidity      string `json:"liquidity"`      // 池子的流动性
-	LiquidityUSD   string `json:"liquidityUsd"`   // 池子的流动性价值（USD）
-	APR            string `json:"APR"`            // 年化收益率
-	JoinNum        int64  `json:"joinNum"`        // 参与人数
-	Status         string `json:"status"`         // 运行状态（active or closed）
-	StartAt        int64  `json:"startAt"`
-	EndAt          int64  `json:"endAt"`
-	Balance        int64  `json:"balance"`
-	Staked         int64  `json:"staked"`
+type FarmIncentivesRequest struct {
+	ChainId     int64  `form:"chainId"`                               // 链ID
+	UserAddress string `form:"userAddress,optional"`                  // 用户地址
+	Status      string `form:"status,optional,options=active|closed"` // 运行状态
+	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
+	KeyWord     string `form:"keyWord,optional"`
+	PageSize    int64  `form:"pageSize,default=20"`
+	PageIndex   int64  `form:"pageIndex,default=1"`
+}
+
+type FarmIncentivesResponse struct {
+	List  []FarmIncentivesResponse_Data `json:"list"`
+	Total int64                         `json:"total"`
+}
+
+type FarmIncentivesResponse_Data struct {
+	IncentiveId         int64  `json:"incentiveId"`
+	ChainId             int64  `json:"chainId"`     // 链ID
+	PoolAddress         string `json:"poolAddress"` // 池子合约地址
+	FeeRatio            string `json:"feeRatio"`    // 池子手续费率
+	RewardTokenAddress  string `json:"rewardTokenAddress"`
+	RewardTokenSymbol   string `json:"rewardTokensymbol"`
+	RewardTokenDecimals int64  `json:"rewardTokenDecimals"`
+	RewardTokenPrice    string `json:"rewardTokenPrice"`
+	Token0Address       string `json:"token0Address"`  // token0合约地址
+	Token0Symbol        string `json:"token0symbol"`   // token0代币符号
+	Token0Decimals      int64  `json:"token0Decimals"` // token0精度
+	Token0Price         string `json:"token0Price"`    // token0价格
+	Token1Address       string `json:"token1Address"`  // token1合约地址
+	Token1Symbol        string `json:"token1Symbol"`   // token1代币符号
+	Token1Decimals      int64  `json:"token1Decimals"` // token1精度
+	Token1Price         string `json:"token1Price"`    // token1价格
+	Liquidity           string `json:"liquidity"`      // 池子的流动性
+	LiquidityUSD        string `json:"liquidityUsd"`   // 池子的流动性价值（USD）
+	APR                 string `json:"APR"`            // 年化收益率
+	JoinNum             int64  `json:"joinNum"`        // 参与人数
+	Status              string `json:"status"`         // 运行状态（active or closed）
+	StartAt             int64  `json:"startAt"`
+	Balance             int64  `json:"balance"`
+	Staked              int64  `json:"staked"`
+	Earned              string `json:"earned"`
 }
 
 type FarmPoolLiquidityRequest struct {
@@ -54,21 +74,6 @@ type FarmPoolLiquidityResponse struct {
 	Token1Decimals         int64  `json:"token1Decimals"`        // token1精度
 	Token0Symbol           string `json:"token0Symbol"`          // token0符号
 	Token1Symbol           string `json:"token1Symbol"`          // token0符号
-}
-
-type FarmPoolListRequest struct {
-	ChainId     int64  `form:"chainId"`                               // 链ID
-	UserAddress string `form:"userAddress,optional"`                  // 用户地址
-	Status      string `form:"status,optional,options=active|closed"` // 运行状态
-	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
-	KeyWord     string `form:"keyWord,optional"`
-	PageSize    int64  `form:"pageSize,default=20"`
-	PageIndex   int64  `form:"pageIndex,default=1"`
-}
-
-type FarmPoolListResponse struct {
-	List  []FarmPoolData `json:"list"`
-	Total int64          `json:"total"`
 }
 
 type FarmPoolRoiRequest struct {
@@ -103,15 +108,6 @@ type FarmUserAssetDetailResponse struct {
 	Decimals              int64  `json:"decimals"`              // 手续费token的精度
 	LPBalance             int64  `json:"lpBalance"`             // 用户的LP token ID余额
 	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户参与质押的LP token ID数量
-}
-
-type FarmUserAssetListRequest struct {
-	ChainId     int64  `form:"chainId,optional"` // 链ID
-	UserAddress string `form:"userAddress"`      // 用户地址
-}
-
-type FarmUserAssetListResponse struct {
-	UserAssets []UserAssetData `json:"userAssets"`
 }
 
 type Fees struct {

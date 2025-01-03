@@ -51,7 +51,7 @@ type (
 		To               string    `db:"to_"`
 		Value            string    `db:"value"`
 		EventUser        string    `db:"event_user"`
-		EventIncentiveId string    `db:"event_incentive_id"`
+		EventIncentiveId int64     `db:"event_incentive_id"`
 		EventAmount      string    `db:"event_amount"`
 	}
 )

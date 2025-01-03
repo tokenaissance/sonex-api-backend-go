@@ -19,22 +19,25 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, startTime int64, weight int64, incentiveId int64) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmIncentiveCreated, error)
 		QueryByChainIdStaker(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreated, error)
-		QueryByChainIdStakerWithPool(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithPool, error)
+		QueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithExtra, error)
 		PageQueryByChainIdStaker(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreated, int64, error)
-		PageQueryByChainIdStakerWithPool(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithPool, int64, error)
-		PageQueryByChainIdStakerPoolsWithPool(ctx context.Context, chainId int64, staker string, pools []string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithPool, int64, error)
+		PageQueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithExtra, int64, error)
+		PageQueryByChainIdStakerPoolsWithExtra(ctx context.Context, chainId int64, staker string, pools []string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithExtra, int64, error)
 	}
 
 	customEventFarmIncentiveCreatedModel struct {
 		*defaultEventFarmIncentiveCreatedModel
 	}
 
-	EventFarmIncentiveCreatedWithPool struct {
+	EventFarmIncentiveCreatedWithExtra struct {
 		EventFarmIncentiveCreated
-		Token0      string `db:"event_token0"`
-		Token1      string `db:"event_token1"`
-		Fee         string `db:"event_fee"`
-		TickSpacing string `db:"event_tick_spacing"`
+		ExtraToken0      string `db:"extra_token0"`
+		ExtraToken1      string `db:"extra_token1"`
+		ExtraFee         string `db:"extra_fee"`
+		ExtraTickSpacing string `db:"extra_tick_spacing"`
+		ExtraRewardToken string `db:"extra_reward_token"`
+		ExtraRate        string `db:"extra_rate"`
+		ExtraEnded       bool   `db:"extra_ended"`
 	}
 )
 
@@ -79,18 +82,33 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStaker(ctx context.
 	return resp, nil
 }
 
-func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithPool(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithPool, error) {
+func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithExtra, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
-	var resp []EventFarmIncentiveCreatedWithPool
+	eventFarmRewardRateUpdatedModel := newEventFarmRewardRateUpdatedModel(m.conn)
+	var resp []EventFarmIncentiveCreatedWithExtra
 	query := fmt.Sprintf(`
-		SELECT 
-			F.id,F.created_at,F.updated_at,F.chain_id,F.block_number,F.tx_index,F.tx_hash,F.tx_at,F.from_,F.to_,F.value,F.event_reward_token,
-			F.event_pool,F.event_start_time,F.event_end_time,F.event_refundee,F.event_reward,F.event_incentive_id,
-			P.event_token0,P.event_token1,P.event_fee,P.event_tick_spacing
-		FROM %s F
-		JOIN %s P ON P.event_pool = F.event_pool 
-		WHERE F.chain_id = $1 AND F.to_ = $2
-	`, m.table, eventSonexFactoryPoolCreatedModel.table)
+		WITH SelectTemp AS (
+			SELECT 
+				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
+				F.event_reward_token, F.event_pool, F.event_start_time, F.event_weight, F.event_incentive_id,
+				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
+				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
+				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
+			FROM %s F
+			JOIN %s P ON P.event_pool = F.event_pool 
+			JOIN %s U ON U.to_ = F.to_ 
+			WHERE F.chain_id = $1 AND F.to_ = $2
+		)
+
+		SELECT  
+			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
+			event_reward_token, event_pool, event_start_time, event_weight, event_incentive_id,
+			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
+			extra_reward_token, extra_rate,
+			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
+		FROM SelectTemp
+		WHERE rn = 1
+	`, m.table, eventSonexFactoryPoolCreatedModel.table, eventFarmRewardRateUpdatedModel.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, staker)
 	if err != nil {
 		return nil, err
@@ -114,30 +132,42 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStaker(ctx cont
 	return resp, total, err
 }
 
-func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithPool(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithPool, int64, error) {
+func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithExtra, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
-	var resp []EventFarmIncentiveCreatedWithPool
+	eventFarmRewardRateUpdatedModel := newEventFarmRewardRateUpdatedModel(m.conn)
+	var resp []EventFarmIncentiveCreatedWithExtra
 	query := fmt.Sprintf(`
-		SELECT 
-			F.id,F.created_at,F.updated_at,F.chain_id,F.block_number,F.tx_index,F.tx_hash,F.tx_at,F.from_,F.to_,F.value,F.event_reward_token,
-			F.event_pool,F.event_start_time,F.event_end_time,F.event_refundee,F.event_reward,F.event_incentive_id,
-			P.event_token0,P.event_token1,P.event_fee,P.event_tick_spacing
-		FROM %s F
-		JOIN %s P ON P.event_pool = F.event_pool 
-		WHERE F.chain_id = $1 AND F.to_ = $2
+		WITH SelectTemp AS (
+			SELECT 
+				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
+				F.event_reward_token, F.event_pool, F.event_start_time, F.event_weight, F.event_incentive_id,
+				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
+				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
+				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
+			FROM %s F
+			JOIN %s P ON P.event_pool = F.event_pool 
+			JOIN %s U ON U.to_ = F.to_ 
+			WHERE F.chain_id = $1 AND F.to_ = $2
+		)
+
+		SELECT  
+			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
+			event_reward_token, event_pool, event_start_time, event_weight, event_incentive_id,
+			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
+			extra_reward_token, extra_rate,
+			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
+		FROM SelectTemp
+		WHERE rn = 1
 		ORDER BY tx_at DESC OFFSET $3 LIMIT $4
-	`, m.table, eventSonexFactoryPoolCreatedModel.table)
+	`, m.table, eventSonexFactoryPoolCreatedModel.table, eventFarmRewardRateUpdatedModel.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, staker, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
 	var total int64 = 0
 	query = fmt.Sprintf(`
-		SELECT COUNT(*) 
-		FROM %s F
-		JOIN %s P ON P.event_pool = F.event_pool 
-		WHERE F.chain_id = $1 AND F.to_ = $2
-	`, m.table, eventSonexFactoryPoolCreatedModel.table)
+		SELECT COUNT(*) FROM %s F WHERE F.chain_id = $1 AND F.to_ = $2
+	`, m.table)
 	err = m.conn.QueryRowCtx(ctx, &total, query, chainId, staker)
 	if err != nil {
 		return nil, 0, err
@@ -145,31 +175,43 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithPool(
 	return resp, total, err
 }
 
-func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWithPool(ctx context.Context, chainId int64, staker string, pools []string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithPool, int64, error) {
+func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWithExtra(ctx context.Context, chainId int64, staker string, pools []string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithExtra, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
-	var resp []EventFarmIncentiveCreatedWithPool
+	eventFarmRewardRateUpdatedModel := newEventFarmRewardRateUpdatedModel(m.conn)
+	var resp []EventFarmIncentiveCreatedWithExtra
 	query := fmt.Sprintf(`
-		SELECT 
-			F.id,F.created_at,F.updated_at,F.chain_id,F.block_number,F.tx_index,F.tx_hash,F.tx_at,F.from_,F.to_,F.value,F.event_reward_token,
-			F.event_pool,F.event_start_time,F.event_end_time,F.event_refundee,F.event_reward,F.event_incentive_id,
-			P.event_token0,P.event_token1,P.event_fee,P.event_tick_spacing
-		FROM %s F
-		JOIN %s P ON P.event_pool = F.event_pool 
-		WHERE F.chain_id = $1 AND F.to_ = $2 AND F.event_pool = ANY($3)
+		WITH SelectTemp AS (
+			SELECT 
+				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
+				F.event_reward_token, F.event_pool, F.event_start_time, F.event_weight, F.event_incentive_id,
+				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
+				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
+				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
+			FROM %s F
+			JOIN %s P ON P.event_pool = F.event_pool 
+			JOIN %s U ON U.to_ = F.to_ 
+			WHERE F.chain_id = $1 AND F.to_ = $2 AND F.event_pool = ANY($3)
+		)
+
+		SELECT  
+			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
+			event_reward_token, event_pool, event_start_time, event_weight, event_incentive_id,
+			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
+			extra_reward_token, extra_rate,
+			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
+		FROM SelectTemp
+		WHERE rn = 1
 		ORDER BY tx_at DESC OFFSET $4 LIMIT $5
-	`, m.table, eventSonexFactoryPoolCreatedModel.table)
+	`, m.table, eventSonexFactoryPoolCreatedModel.table, eventFarmRewardRateUpdatedModel.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, staker, pools, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
 	var total int64 = 0
 	query = fmt.Sprintf(`
-		SELECT COUNT(*) 
-		FROM %s F
-		JOIN %s P ON P.event_pool = F.event_pool 
-		WHERE F.chain_id = $1 AND F.to_ = $2
-	`, m.table, eventSonexFactoryPoolCreatedModel.table)
-	err = m.conn.QueryRowCtx(ctx, &total, query, chainId, staker)
+		SELECT COUNT(*) FROM %s F WHERE F.chain_id = $1 AND F.to_ = $2 AND F.event_pool = ANY($3)
+	`, m.table)
+	err = m.conn.QueryRowCtx(ctx, &total, query, chainId, staker, pools)
 	if err != nil {
 		return nil, 0, err
 	}

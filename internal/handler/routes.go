@@ -33,16 +33,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// Farm incentive list
+				Method:  http.MethodGet,
+				Path:    "/incentives",
+				Handler: farm.FarmIncentivesHandler(serverCtx),
+			},
+			{
 				// Farm pool liquidity
 				Method:  http.MethodGet,
 				Path:    "/pool/liquidity",
 				Handler: farm.FarmPoolLiquidityHandler(serverCtx),
-			},
-			{
-				// Farm pool list
-				Method:  http.MethodGet,
-				Path:    "/pool/list",
-				Handler: farm.FarmPoolListHandler(serverCtx),
 			},
 			{
 				// Farm pool roi
@@ -55,12 +55,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/user/asset/detail",
 				Handler: farm.FarmUserAssetDetailHandler(serverCtx),
-			},
-			{
-				// Farm user's asset list in pools
-				Method:  http.MethodGet,
-				Path:    "/user/asset/list",
-				Handler: farm.FarmUserAssetListHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/farm"),

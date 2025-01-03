@@ -52,7 +52,7 @@ type (
 		Value            string    `db:"value"`
 		EventUser        string    `db:"event_user"`
 		EventTokenId     int64     `db:"event_token_id"`
-		EventIncentiveId string    `db:"event_incentive_id"`
+		EventIncentiveId int64     `db:"event_incentive_id"`
 	}
 )
 
