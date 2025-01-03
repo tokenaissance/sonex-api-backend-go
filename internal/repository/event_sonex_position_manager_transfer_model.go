@@ -215,8 +215,11 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			m.event_tick_upper,
 			token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
 			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional,
-			CASE EXISTS (
-				SELECT 1 FROM %[1]s WHERE event_token_id = $1 AND event_to = '0x0000000000000000000000000000000000000000'
+			CASE WHEN EXISTS (
+				SELECT 1 
+				FROM %[1]s 
+				WHERE event_token_id = $1 
+				AND event_to = '0x0000000000000000000000000000000000000000'
 			) THEN true ELSE false END AS is_burnt
 		FROM %[1]s t
 		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
