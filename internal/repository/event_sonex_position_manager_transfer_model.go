@@ -49,8 +49,8 @@ func (m *customEventSonexPositionManagerTransferModel) New(ctx context.Context, 
 }
 
 type transferData struct {
-	EventFrom        sql.NullString `db:"eventFrom"`
-	EventTo          sql.NullString `db:"eventTo"`
+	EventFrom        sql.NullString `db:"event_from"`
+	EventTo          sql.NullString `db:"event_to"`
 	TokenId          sql.NullInt64  `db:"event_token_id"`
 	Pool             sql.NullString `db:"extra_pool"`
 	PoolId           sql.NullInt64  `db:"pool_id"`
@@ -112,10 +112,17 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		JOIN sonex_token token0 ON f.event_token0 = token0.address
 		JOIN sonex_token token1 ON f.event_token1 = token1.address
-		WHERE t.event_from = $1 OR t.event_to = $1
-	`, m.table)
+		WHERE (t.event_from = $1 OR t.event_to = $1) 
+			AND t.event_token_id NOT IN (
+				SELECT event_token_id 
+				FROM %s 
+				WHERE event_from = $1
+				AND event_to = '0x0000000000000000000000000000000000000000'
+			)
+	`, m.table, m.table)
 
-	err := m.conn.QueryRowsCtx(ctx, &items, query, common.HexToAddress(address).Hex())
+	address = common.HexToAddress(address).Hex()
+	err := m.conn.QueryRowsCtx(ctx, &items, query, address)
 	if err != nil {
 		return nil, err
 	}
