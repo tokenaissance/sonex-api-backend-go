@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -15,6 +16,7 @@ type (
 	EventFarmIncentiveEndedModel interface {
 		eventFarmIncentiveEndedModel
 		withSession(session sqlx.Session) EventFarmIncentiveEndedModel
+		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, incentiveId int64, refund string) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmIncentiveEnded, error)
 	}
 
@@ -32,6 +34,12 @@ func NewEventFarmIncentiveEndedModel(conn sqlx.SqlConn) EventFarmIncentiveEndedM
 
 func (m *customEventFarmIncentiveEndedModel) withSession(session sqlx.Session) EventFarmIncentiveEndedModel {
 	return NewEventFarmIncentiveEndedModel(sqlx.NewSqlConnFromSession(session))
+}
+
+func (m *customEventFarmIncentiveEndedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, incentiveId int64, refund string) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", m.table, eventFarmIncentiveEndedRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, incentiveId, refund)
+	return err
 }
 
 func (m *customEventFarmIncentiveEndedModel) FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmIncentiveEnded, error) {

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -15,6 +16,7 @@ type (
 	EventFarmIncentiveCreatedModel interface {
 		eventFarmIncentiveCreatedModel
 		withSession(session sqlx.Session) EventFarmIncentiveCreatedModel
+		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, startTime int64, weight int64, incentiveId int64) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmIncentiveCreated, error)
 		QueryByChainIdStaker(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreated, error)
 		QueryByChainIdStakerWithPool(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithPool, error)
@@ -45,6 +47,12 @@ func NewEventFarmIncentiveCreatedModel(conn sqlx.SqlConn) EventFarmIncentiveCrea
 
 func (m *customEventFarmIncentiveCreatedModel) withSession(session sqlx.Session) EventFarmIncentiveCreatedModel {
 	return NewEventFarmIncentiveCreatedModel(sqlx.NewSqlConnFromSession(session))
+}
+
+func (m *customEventFarmIncentiveCreatedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, startTime int64, weight int64, incentiveId int64) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", m.table, eventFarmIncentiveCreatedRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, rewardToken, pool, startTime, weight, incentiveId)
+	return err
 }
 
 func (m *customEventFarmIncentiveCreatedModel) FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmIncentiveCreated, error) {

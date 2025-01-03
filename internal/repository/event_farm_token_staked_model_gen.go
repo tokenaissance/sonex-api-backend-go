@@ -19,7 +19,7 @@ import (
 var (
 	eventFarmTokenStakedFieldNames          = builder.RawFieldNames(&EventFarmTokenStaked{}, true)
 	eventFarmTokenStakedRows                = strings.Join(eventFarmTokenStakedFieldNames, ",")
-	eventFarmTokenStakedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventFarmTokenStakedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
+	eventFarmTokenStakedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventFarmTokenStakedFieldNames, "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
 	eventFarmTokenStakedRowsWithPlaceHolder = builder.PostgreSqlJoin(stringx.Remove(eventFarmTokenStakedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"))
 )
 
@@ -27,6 +27,7 @@ type (
 	eventFarmTokenStakedModel interface {
 		Insert(ctx context.Context, data *EventFarmTokenStaked) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventFarmTokenStaked, error)
+		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventFarmTokenStaked, error)
 		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmTokenStaked, error)
 		Update(ctx context.Context, data *EventFarmTokenStaked) error
 		Delete(ctx context.Context, id int64) error
@@ -49,9 +50,9 @@ type (
 		From             string    `db:"from_"`
 		To               string    `db:"to_"`
 		Value            string    `db:"value"`
-		EventTokenId     int64     `db:"event_token_id"` // 质押的LP Token ID
+		EventUser        string    `db:"event_user"`
+		EventTokenId     int64     `db:"event_token_id"`
 		EventIncentiveId string    `db:"event_incentive_id"`
-		EventLiquidity   string    `db:"event_liquidity"` // 质押的流动性数量
 	}
 )
 
@@ -82,6 +83,20 @@ func (m *defaultEventFarmTokenStakedModel) FindOne(ctx context.Context, id int64
 	}
 }
 
+func (m *defaultEventFarmTokenStakedModel) FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventFarmTokenStaked, error) {
+	var resp EventFarmTokenStaked
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 limit 1", eventFarmTokenStakedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
 func (m *defaultEventFarmTokenStakedModel) FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmTokenStaked, error) {
 	var resp EventFarmTokenStaked
 	query := fmt.Sprintf("select %s from %s where tx_hash = $1 and chain_id = $2 limit 1", eventFarmTokenStakedRows, m.table)
@@ -97,14 +112,14 @@ func (m *defaultEventFarmTokenStakedModel) FindOneByTxHashChainId(ctx context.Co
 }
 
 func (m *defaultEventFarmTokenStakedModel) Insert(ctx context.Context, data *EventFarmTokenStaked) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", m.table, eventFarmTokenStakedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventTokenId, data.EventIncentiveId, data.EventLiquidity)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, eventFarmTokenStakedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventTokenId, data.EventIncentiveId)
 	return ret, err
 }
 
 func (m *defaultEventFarmTokenStakedModel) Update(ctx context.Context, newData *EventFarmTokenStaked) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventFarmTokenStakedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventTokenId, newData.EventIncentiveId, newData.EventLiquidity)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventUser, newData.EventTokenId, newData.EventIncentiveId)
 	return err
 }
 
