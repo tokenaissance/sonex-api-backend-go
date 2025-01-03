@@ -358,10 +358,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 			rewardPrice := prices[rewardToken.Address]
 			rewardUSD := new(big.Int).Mul(reward, rewardPrice)
 			rewardTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
-			startTime := time.Unix(record.EventStartTime, 0)
-			endTime := time.Unix(0, 0)
-			// endTime := time.Unix(record.EventEndTime, 0)
-			totalRewardUSD := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(rewardUSD, big.NewInt(365*24*60*60)), big.NewInt(endTime.Unix()-startTime.Unix())), rewardTokenAccuracy)
+			totalRewardUSD := new(big.Int).Div(new(big.Int).Mul(rewardUSD, big.NewInt(365*24*60*60)), rewardTokenAccuracy)
 
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
