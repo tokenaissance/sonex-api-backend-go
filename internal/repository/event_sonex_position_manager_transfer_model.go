@@ -21,6 +21,7 @@ type (
 		eventSonexPositionManagerTransferModel
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
+		QueryValidPositionsByChainIdAddress(ctx context.Context, chainId int64, address string) ([]EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error)
 	}
@@ -69,6 +70,24 @@ type transferData struct {
 	EventTickLower   sql.NullString `db:"event_tick_lower"`
 	EventTickUpper   sql.NullString `db:"event_tick_upper"`
 	TxAt             sql.NullTime   `db:"tx_at"`
+}
+
+func (m *customEventSonexPositionManagerTransferModel) QueryValidPositionsByChainIdAddress(ctx context.Context, chainId int64, address string) ([]EventSonexPositionManagerTransfer, error) {
+	query := fmt.Sprintf(`
+		SELECT * FROM %s
+		WHERE
+			chain_id = $1 AND event_from = '0x0000000000000000000000000000000000000000' AND event_to = $2
+		 	AND event_token_id NOT IN (
+				SELECT event_token_id FROM %s WHERE event_from = $3 AND event_to = '0x0000000000000000000000000000000000000000'
+			)
+	 
+	`, m.table, m.table)
+	var resp []EventSonexPositionManagerTransfer
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address, address)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error) {
