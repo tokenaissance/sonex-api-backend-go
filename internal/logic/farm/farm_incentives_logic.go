@@ -31,7 +31,7 @@ type FarmIncentivesLogic struct {
 
 type CacheWarpper struct {
 	List       []types.FarmIncentivesResponse_Data
-	TokenIds   map[string][]int64
+	TokenIds   map[int64][]int64
 	LastUpdate time.Time
 }
 
@@ -58,7 +58,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 	cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
-	tokenIds := map[string][]int64{}
+	tokenIds := map[int64][]int64{}
 	// Check cache
 	lastUpdate, err := redisCache.Get(cacheKey)
 	if err == nil && lastUpdate != "" {
@@ -185,9 +185,9 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 			return nil, err
 		}
 
-		userTokenIds := map[string][]int64{}
+		userTokenIds := map[int64][]int64{}
 		linq.From(validStakeRecords).GroupByT(
-			func(item repository.EventFarmTokenStakedWithExtra) string { return item.ExtraPool },
+			func(item repository.EventFarmTokenStakedWithExtra) int64 { return item.EventIncentiveId },
 			func(item repository.EventFarmTokenStakedWithExtra) repository.EventFarmTokenStakedWithExtra {
 				return item
 			},
@@ -197,23 +197,20 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 				record := recordA.(repository.EventFarmTokenStakedWithExtra)
 				tids = append(tids, record.EventTokenId)
 			})
-			userTokenIds[item.Key.(string)] = tids
+			userTokenIds[item.Key.(int64)] = tids
 		})
-		staked := map[string]int64{}
-		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
-			poolTokenIds, ok := tokenIds[item.PoolAddress]
+		staked := map[int64]int64{}
+		for _, data := range resp.List {
+			poolTokenIds, ok := tokenIds[data.IncentiveId]
 			if !ok {
-				return false
+				continue
 			}
-			isStaked := false
-			for _, idItem := range userTokenIds[item.PoolAddress] {
+			for _, idItem := range userTokenIds[data.IncentiveId] {
 				if linq.From(poolTokenIds).Contains(idItem) {
-					isStaked = true
-					staked[item.PoolAddress]++
+					staked[data.IncentiveId]++
 				}
 			}
-			return isStaked
-		}).ToSlice(&resp.List)
+		}
 
 		var incentiveIds []int64
 		linq.From(resp.List).SelectT(func(item types.FarmIncentivesResponse_Data) int64 { return item.IncentiveId }).ToSlice(&incentiveIds)
@@ -227,9 +224,9 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 		}
 
 		for i, item := range resp.List {
-			if val, ok := staked[item.PoolAddress]; ok {
+			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
-				resp.List[i].Balance = int64(len(userTokenIds[item.PoolAddress])) - val
+				resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
 			}
 			if val, ok := unclaimeds[item.IncentiveId]; ok {
 				rewardTokenPrice, _ := new(big.Int).SetString(item.RewardTokenPrice, 10)
@@ -237,6 +234,11 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 				resp.List[i].Earned = unclaimedUSD.String()
 			}
 		}
+	}
+	if req.StakedOnly {
+		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
+			return item.Staked > 0
+		}).ToSlice(&resp.List)
 	}
 	if req.KeyWord != "" {
 		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
@@ -269,7 +271,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 	return resp, nil
 }
 
-func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (resp *types.FarmIncentivesResponse, tokenIds map[string][]int64, err error) {
+func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 
@@ -472,13 +474,13 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 	close(results)
 
 	list := []types.FarmIncentivesResponse_Data{}
-	tokenIds = map[string][]int64{}
+	tokenIds = map[int64][]int64{}
 	for result := range results {
 		if result.Err != nil {
 			return nil, nil, result.Err
 		}
 		list = append(list, result.Data)
-		tokenIds[result.Data.PoolAddress] = result.TokenIds
+		tokenIds[result.Data.IncentiveId] = result.TokenIds
 	}
 
 	return &types.FarmIncentivesResponse{
