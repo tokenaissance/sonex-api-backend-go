@@ -163,26 +163,14 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	}
 
 	// 获取token信息
-	tokenOSymbol := ""
-	token1Symbol := ""
-	token0Decimals := int64(defaultDecimals)
-	token1Decimals := int64(defaultDecimals)
 	token0Info, err := global.GetToken(l.chainId, pool.Token0Address)
 	if err != nil {
 		logx.Errorf("failed to get token0 info: %v", err)
-	}
-	if token0Info != nil {
-		tokenOSymbol = token0Info.Symbol
-		token0Decimals = token0Info.Decimals
 	}
 
 	token1Info, err := global.GetToken(l.chainId, pool.Token1Address)
 	if err != nil {
 		logx.Errorf("failed to get token1 info: %v", err)
-	}
-	if token1Info != nil {
-		token1Symbol = token1Info.Symbol
-		token1Decimals = token1Info.Decimals
 	}
 
 	resp = &types.FarmPoolLiquidityResponse{
@@ -193,10 +181,10 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 		TotalToken1Amount:      totalToken1Amount.String(),
 		Token0Price:            token0PriceValue.String(),
 		Token1Price:            token1PriceValue.String(),
-		Token0Decimals:         token0Decimals,
-		Token1Decimals:         token1Decimals,
-		Token0Symbol:           tokenOSymbol,
-		Token1Symbol:           token1Symbol,
+		Token0Decimals:         token0Info.Decimals,
+		Token1Decimals:         token1Info.Decimals,
+		Token0Symbol:           token0Info.Symbol,
+		Token1Symbol:           token1Info.Symbol,
 	}
 
 	return
