@@ -54,16 +54,17 @@ func (l *SonexPositionLogic) SonexPosition(req *types.PositionRequest) (resp *Po
 		var cachedResp PositionResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
-			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
+			ctx := context.Background()
+			go l.refreshCache(ctx, req, redisCache, cacheKey, &cachedResp)
 			// Return the cached response immediately
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, redisCache, cacheKey, nil)
+	return l.refreshCache(l.ctx, req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionResponseWrapper) (resp *PositionResponseWrapper, err error) {
+func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.PositionRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionResponseWrapper) (resp *PositionResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 
 	var lockAcquired bool
@@ -93,7 +94,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 
 	// Task 1: Get transfer event
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
-	itemM, err := transferModel.GetTransferEvent(l.ctx, req.TokenId, true)
+	itemM, err := transferModel.GetTransferEvent(ctx, req.TokenId, true)
 	if err != nil {
 		logx.Errorf("[SonexPosition] GetTransferEvent error: %s", err.Error())
 		return nil, err
@@ -116,7 +117,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 	// Task 2: Get positions
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
 	positions, err := caller.BatchGetPositions(
-		l.ctx,
+		ctx,
 		req.ChainId,
 		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
 		[]*big.Int{big.NewInt(req.TokenId)},
@@ -141,7 +142,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		collectedItem, err := collectModel.AggregateAmounts(l.ctx, req.ChainId, req.TokenId,
+		collectedItem, err := collectModel.AggregateAmounts(ctx, req.ChainId, req.TokenId,
 			position.Pool.Token0.Decimals,
 			position.Pool.Token1.Decimals)
 		results <- sonexPositionResult{collectedItem: collectedItem, err: err}
@@ -175,7 +176,7 @@ func (l *SonexPositionLogic) refreshCache(req *types.PositionRequest, cacher cac
 		}
 	}
 
-	position = l.fillPosition(l.ctx, req, position, innerPosition, prices, collectedItem)
+	position = l.fillPosition(ctx, req, position, innerPosition, prices, collectedItem)
 
 	response.Position = position
 
