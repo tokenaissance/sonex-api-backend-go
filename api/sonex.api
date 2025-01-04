@@ -171,8 +171,8 @@ type PoolsResponse_Pool {
 	Liquidity          string              `json:"liquidity"`
 	Token0             PoolsResponse_Token `json:"token0"`
 	Token1             PoolsResponse_Token `json:"token1"`
-	Token0Price        string              `json:"token0Price"`
-	Token1Price        string              `json:"token1Price"`
+	Token0Price        *Token_TokenPrice    `json:"token0Price"`
+	Token1Price        *Token_TokenPrice    `json:"token1Price"`
 	Tick               string              `json:"tick"`
 	Volume             string              `json:"volume"`
 	TvlUSD             string              `json:"tvlUSD"`
@@ -245,11 +245,29 @@ type Token_TokenInfo {
 	Additional interface{} `json:"additional"`
 }
 
+// TokenValue represents a token amount with its price information
+// - Amount: Token amount as a string with full precision integer
+// - Decimals: Token decimal places
+// - Price: Optional token price as a string with full precision
+// - PriceDecimals: Optional decimal places for the price
+//
+// When Price is present, the actual token value can be calculated as:
+// tokenValue = (Amount / 10^Decimals) * (Price / 10^PriceDecimals)
+//
+// Note: If Token_TokenPrice is not initialized, the corresponding JSON tags 
+// (price and priceDecimals) will not be included in the output
 type Token_TokenValue {
 	Amount string `json:"amount"`
 	Decimals int `json:"decimals"`
+	*Token_TokenPrice // Embedded field for flat JSON output
+}
+
+// TokenPrice represents price information for a token
+// - Price: Token price as a string with full precision
+// - Decimals: Decimal places for the price
+type Token_TokenPrice {
 	Price string `json:"price"`
-	PriceDecimals int `json:"priceDecimals"`
+	Decimals int `json:"priceDecimals"`
 }
 
 type NftDataResponse_Data {

@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"sync"
-	"time"
-
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -39,11 +38,11 @@ type PositionResponseWrapper struct {
 }
 
 type sonexPositionResult struct {
-	transferItem  *types.Position
-	collectedItem *types.AggregatedAmounts
-	position      *sonex.Position
-	prices        map[string]*repository.TokenPriceRecord
-	err           error
+	transferItem   *types.Position
+	collectedPairs map[int64]*sonex.TokenPair
+	position       *sonex.Position
+	prices         map[string]*repository.TokenPriceRecord
+	err            error
 }
 
 func (l *SonexPositionLogic) SonexPosition(req *types.PositionRequest) (resp *PositionResponseWrapper, err error) {
@@ -133,7 +132,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	innerPosition := positions[0]
 
 	// Collect results
-	var collectedItem = &types.AggregatedAmounts{}
+	var collectedPairs = make(map[int64]*sonex.TokenPair)
 	var prices = make(map[string]*repository.TokenPriceRecord)
 
 	var wg sync.WaitGroup
@@ -142,10 +141,10 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		collectedItem, err := collectModel.AggregateAmounts(ctx, req.ChainId, req.TokenId,
+		collectedPairs, err := collectModel.AggregateAmounts(ctx, req.ChainId, req.TokenId,
 			position.Pool.Token0.Decimals,
 			position.Pool.Token1.Decimals)
-		results <- sonexPositionResult{collectedItem: collectedItem, err: err}
+		results <- sonexPositionResult{collectedPairs: collectedPairs, err: err}
 	}()
 
 	// Task 4: Get current prices
@@ -176,7 +175,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		}
 	}
 
-	position = l.fillPosition(ctx, req, position, innerPosition, prices, collectedItem)
+	position = l.fillPosition(ctx, req, position, innerPosition, prices, collectedPairs)
 
 	response.Position = position
 
@@ -203,7 +202,7 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	position *types.Position,
 	innnerPosition *sonex.Position,
 	pricesRecords map[string]*repository.TokenPriceRecord,
-	collectedAmounts *types.AggregatedAmounts) *types.Position {
+	collectedPairs map[int64]*sonex.TokenPair) *types.Position {
 	position.TokenID = innnerPosition.TokenId.Int64()
 	position.TickUpper = innnerPosition.TickUpper.String()
 	position.TickLower = innnerPosition.TickLower.String()
@@ -322,21 +321,33 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	position.UnclaimedFee0, _ = unclaimedFee0Float.Float64()
 	position.UnclaimedFee1, _ = unclaimedFee1Float.Float64()
 
-	// 4. PNL = claimableFees + collectedFees
-	position.PNL = position.ClaimableFees + collectedAmounts.TotalAmount0 + collectedAmounts.TotalAmount1
+	pnl := claimableFees
+
+	if collectedPair, ok := collectedPairs[req.TokenId]; ok {
+		// set collected token price
+		collectedPair.Token0().SetTokenPrice(price0String, daiDecimals)
+		collectedPair.Token1().SetTokenPrice(price1String, daiDecimals)
+		collectedFees, _ := new(big.Float).SetString(collectedPair.Value())
+		pnl = pnl.Add(claimableFees, collectedFees)
+	}
+	position.PNL, _ = pnl.Float64()
 
 	// 5. fill tokenValue0, tokenValue1
 	position.TokenValue0 = types.Token_TokenValue{
-		Amount:        amount0.String(),
-		Decimals:      position.Pool.Token0.Decimals,
-		Price:         price0String,
-		PriceDecimals: daiDecimals,
+		Amount:   amount0.String(),
+		Decimals: position.Pool.Token0.Decimals,
+		Token_TokenPrice: &types.Token_TokenPrice{
+			Price:    price0String,
+			Decimals: daiDecimals,
+		},
 	}
 	position.TokenValue1 = types.Token_TokenValue{
-		Amount:        amount1.String(),
-		Decimals:      position.Pool.Token1.Decimals,
-		Price:         price1String,
-		PriceDecimals: daiDecimals,
+		Amount:   amount1.String(),
+		Decimals: position.Pool.Token1.Decimals,
+		Token_TokenPrice: &types.Token_TokenPrice{
+			Price:    price1String,
+			Decimals: daiDecimals,
+		},
 	}
 
 	return position

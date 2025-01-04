@@ -211,8 +211,8 @@ type PoolsResponse_Pool struct {
 	Liquidity          string              `json:"liquidity"`
 	Token0             PoolsResponse_Token `json:"token0"`
 	Token1             PoolsResponse_Token `json:"token1"`
-	Token0Price        string              `json:"token0Price"`
-	Token1Price        string              `json:"token1Price"`
+	Token0Price        *Token_TokenPrice   `json:"token0Price"`
+	Token1Price        *Token_TokenPrice   `json:"token1Price"`
 	Tick               string              `json:"tick"`
 	Volume             string              `json:"volume"`
 	TvlUSD             string              `json:"tvlUSD"`
@@ -552,11 +552,15 @@ type Token_TokenInfo struct {
 	Additional interface{} `json:"additional"`
 }
 
+type Token_TokenPrice struct {
+	Price    string `json:"price"`
+	Decimals int    `json:"priceDecimals"`
+}
+
 type Token_TokenValue struct {
-	Amount        string `json:"amount"`
-	Decimals      int    `json:"decimals"`
-	Price         string `json:"price"`
-	PriceDecimals int    `json:"priceDecimals"`
+	Amount            string `json:"amount"`
+	Decimals          int    `json:"decimals"`
+	*Token_TokenPrice        // Embedded Field For Flat JSON Output
 }
 
 type TokensRequest struct {

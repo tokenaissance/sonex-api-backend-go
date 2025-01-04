@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
-	"sonex_api_backend_go/internal/types"
+	"sonex_api_backend_go/internal/module/sonex"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -18,7 +18,7 @@ type (
 		eventSonexPositionManagerDecreaseLiquidityModel
 		withSession(session sqlx.Session) EventSonexPositionManagerDecreaseLiquidityModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error
-		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*types.AggregatedAmounts, error)
+		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error)
 	}
 
 	customEventSonexPositionManagerDecreaseLiquidityModel struct {
@@ -43,6 +43,6 @@ func (m *customEventSonexPositionManagerDecreaseLiquidityModel) New(ctx context.
 	return err
 }
 
-func (m *customEventSonexPositionManagerDecreaseLiquidityModel) AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*types.AggregatedAmounts, error) {
+func (m *customEventSonexPositionManagerDecreaseLiquidityModel) AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error) {
 	return aggregateAmounts(ctx, m.conn, m.table, chainId, eventTokenId, decimal0, decimal1)
 }
