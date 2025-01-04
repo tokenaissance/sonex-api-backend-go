@@ -13,6 +13,7 @@ import (
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
+	module_sonex "sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -217,11 +218,11 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			balance0 := big.NewInt(0)
 			balance1 := big.NewInt(0)
 
-			err = erc20ABI.UnpackIntoInterface(&balance0, "factory", multicallResults[0].ReturnData)
+			err = erc20ABI.UnpackIntoInterface(&balance0, "balanceOf", multicallResults[0].ReturnData)
 			if err != nil {
 				return
 			}
-			err = erc20ABI.UnpackIntoInterface(&balance1, "factory", multicallResults[1].ReturnData)
+			err = erc20ABI.UnpackIntoInterface(&balance1, "balanceOf", multicallResults[1].ReturnData)
 			if err != nil {
 				return
 			}
@@ -240,15 +241,26 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 				price1 = bestPrice1.Value
 			}
 			pool.Price1 = price1.String()
-
-			token0Balance := new(big.Int).Div(new(big.Int).Mul(balance0, price0), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(pool.Token0.Decimals)), nil))
-			token1Balance := new(big.Int).Div(new(big.Int).Mul(balance1, price1), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(pool.Token1.Decimals)), nil))
-			tvlUSD := new(big.Int).Add(token0Balance, token1Balance)
+			daiDecimals := 18
+			token0, _ := module_sonex.NewTokenValue(balance0.String(), pool.Token0.Decimals)
+			token1, _ := module_sonex.NewTokenValue(balance1.String(), pool.Token1.Decimals)
+			token0.SetTokenPrice(price0.String(), daiDecimals)
+			token1.SetTokenPrice(price1.String(), daiDecimals)
+			tokenPair := module_sonex.NewTokenPair(token0, token1)
 
 			mu.Lock()
-			pool.Token0Balance = token0Balance.String()
-			pool.Token1Balance = token1Balance.String()
-			pool.TvlUSD = tvlUSD.String()
+			pool.Token0Balance = token0.Value()
+			pool.Token1Balance = token1.Value()
+			pool.TvlUSD = tokenPair.Value()
+			pool.Token0Price = &types.Token_TokenPrice{
+				Price:    token0.Price(),
+				Decimals: token0.PriceDecimals(),
+			}
+			pool.Token1Price = &types.Token_TokenPrice{
+				Price:    token1.Price(),
+				Decimals: token1.PriceDecimals(),
+			}
+
 			pool.Stablecoin = stablecoinToken.Address
 			pool.StablecoinDecimals = stablecoinToken.Decimals
 			mu.Unlock()

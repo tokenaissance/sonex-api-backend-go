@@ -1934,10 +1934,10 @@
           "$ref": "#/definitions/PoolsResponse_Token"
         },
         "token0Price": {
-          "type": "string"
+          "$ref": "#/definitions/Token_TokenPrice"
         },
         "token1Price": {
-          "type": "string"
+          "$ref": "#/definitions/Token_TokenPrice"
         },
         "tick": {
           "type": "string"
@@ -3235,6 +3235,23 @@
         "additional"
       ]
     },
+    "Token_TokenPrice": {
+      "type": "object",
+      "properties": {
+        "price": {
+          "type": "string"
+        },
+        "priceDecimals": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "Token_TokenPrice",
+      "required": [
+        "price",
+        "priceDecimals"
+      ]
+    },
     "Token_TokenValue": {
       "type": "object",
       "properties": {
@@ -3244,21 +3261,12 @@
         "decimals": {
           "type": "integer",
           "format": "int32"
-        },
-        "price": {
-          "type": "string"
-        },
-        "priceDecimals": {
-          "type": "integer",
-          "format": "int32"
         }
       },
       "title": "Token_TokenValue",
       "required": [
         "amount",
-        "decimals",
-        "price",
-        "priceDecimals"
+        "decimals"
       ]
     },
     "TokensRequest": {

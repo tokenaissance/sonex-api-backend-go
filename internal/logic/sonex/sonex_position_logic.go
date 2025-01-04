@@ -334,16 +334,20 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 
 	// 5. fill tokenValue0, tokenValue1
 	position.TokenValue0 = types.Token_TokenValue{
-		Amount:        amount0.String(),
-		Decimals:      position.Pool.Token0.Decimals,
-		Price:         price0String,
-		PriceDecimals: daiDecimals,
+		Amount:   amount0.String(),
+		Decimals: position.Pool.Token0.Decimals,
+		Token_TokenPrice: &types.Token_TokenPrice{
+			Price:    price0String,
+			Decimals: daiDecimals,
+		},
 	}
 	position.TokenValue1 = types.Token_TokenValue{
-		Amount:        amount1.String(),
-		Decimals:      position.Pool.Token1.Decimals,
-		Price:         price1String,
-		PriceDecimals: daiDecimals,
+		Amount:   amount1.String(),
+		Decimals: position.Pool.Token1.Decimals,
+		Token_TokenPrice: &types.Token_TokenPrice{
+			Price:    price1String,
+			Decimals: daiDecimals,
+		},
 	}
 
 	return position
