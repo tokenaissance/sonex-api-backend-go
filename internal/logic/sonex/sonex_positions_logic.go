@@ -203,28 +203,34 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	collectedAmounts map[int64]*types.AggregatedAmounts) *types.Position {
 	price0 := new(big.Float).SetFloat64(0)
 	price1 := new(big.Float).SetFloat64(0)
-	factorDai := new(big.Float).SetFloat64(math.Pow10(18))
-
+	daiDecimals := 18
+	factorDai := new(big.Float).SetFloat64(math.Pow10(daiDecimals))
+	price0String := ""
+	price1String := ""
 	// 优先获取从 db 中的价格，如果获取失败，则从链上获取
 	if price0Record, exists0 := pricesRecords[innnerPosition.Token0.Hex()]; exists0 {
 		price0, _ = price0.SetString(price0Record.Price)
+		price0String = price0Record.Price
 	} else {
 		logx.Errorf("[convertPosition] Token0 price not found from db for address: %s", innnerPosition.Token0.Hex())
 
 		bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token0.Hex(), true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
 		if err == nil && bestPrice0 != nil {
 			price0.SetInt(bestPrice0.Value)
+			price0String = bestPrice0.Value.String()
 		}
 	}
 
 	if price1Record, exists1 := pricesRecords[innnerPosition.Token1.Hex()]; exists1 {
 		price1, _ = price1.SetString(price1Record.Price)
+		price1String = price1Record.Price
 	} else {
 		logx.Errorf("[convertPosition] Token1 price not found from db for address: %s", innnerPosition.Token1.Hex())
 
 		bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token1.Hex(), true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
 		if err == nil && bestPrice1 != nil {
 			price1.SetInt(bestPrice1.Value)
+			price1String = bestPrice1.Value.String()
 		}
 	}
 
@@ -287,6 +293,20 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 		position.PNL = position.ClaimableFees + collectedFees.TotalAmount0 + collectedFees.TotalAmount1
 	} else {
 		position.PNL = position.ClaimableFees
+	}
+
+	// 5. fill tokenValue0, tokenValue1
+	position.TokenValue0 = types.Token_TokenValue{
+		Amount:        amount0.String(),
+		Decimals:      position.Pool.Token0.Decimals,
+		Price:         price0String,
+		PriceDecimals: daiDecimals,
+	}
+	position.TokenValue1 = types.Token_TokenValue{
+		Amount:        amount1.String(),
+		Decimals:      position.Pool.Token1.Decimals,
+		Price:         price1String,
+		PriceDecimals: daiDecimals,
 	}
 	return position
 }

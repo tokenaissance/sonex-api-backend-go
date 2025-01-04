@@ -273,12 +273,14 @@ type Position struct {
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 	PositionAge   int              `json:"positionAge"`
-	Amount0       float64          `json:"amount0"`
-	Amount1       float64          `json:"amount1"`
-	Price0        float64          `json:"price0"`
-	Price1        float64          `json:"price1"`
+	Amount0       float64          `json:"amount0, deprecated"` // Deprecated: use tokenValue0 instead
+	Amount1       float64          `json:"amount1, deprecated"` // Deprecated: use tokenValue1 instead
+	Price0        float64          `json:"price0, deprecated"`  // Deprecated: use tokenValue0.Price instead
+	Price1        float64          `json:"price1, deprecated"`  // Deprecated: use tokenValue1.Price instead
 	UnclaimedFee0 float64          `json:"unclaimedFee0"`
 	UnclaimedFee1 float64          `json:"unclaimedFee1"`
+	TokenValue0   Token_TokenValue `json:"tokenValue0"`
+	TokenValue1   Token_TokenValue `json:"tokenValue1"`
 }
 
 type PositionRequest struct {
@@ -548,6 +550,13 @@ type Token_TokenInfo struct {
 	Decimals   int         `json:"decimals"`
 	Logo       string      `json:"logo"`
 	Additional interface{} `json:"additional"`
+}
+
+type Token_TokenValue struct {
+	Amount        string `json:"amount"`
+	Decimals      int    `json:"decimals"`
+	Price         string `json:"price"`
+	PriceDecimals int    `json:"priceDecimals"`
 }
 
 type TokensRequest struct {
