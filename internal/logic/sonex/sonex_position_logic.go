@@ -192,9 +192,10 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 }
 
 type priceResult struct {
-	index int
-	price *big.Float
-	err   error
+	index       int
+	price       *big.Float
+	priceString string
+	err         error
 }
 
 func (l *SonexPositionLogic) fillPosition(ctx context.Context,
@@ -206,7 +207,8 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	position.TokenID = innnerPosition.TokenId.Int64()
 	position.TickUpper = innnerPosition.TickUpper.String()
 	position.TickLower = innnerPosition.TickLower.String()
-	factorDai := new(big.Float).SetFloat64(math.Pow10(18))
+	daiDecimals := 18
+	factorDai := new(big.Float).SetFloat64(math.Pow10(daiDecimals))
 	prices := []*big.Float{
 		new(big.Float).SetFloat64(0), // price0
 		new(big.Float).SetFloat64(0), // price1
@@ -215,7 +217,10 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 		innnerPosition.Token0,
 		innnerPosition.Token1,
 	}
-
+	priceStrings := []string{
+		"",
+		"",
+	}
 	var wg sync.WaitGroup
 	resultChan := make(chan priceResult, len(tokens))
 
@@ -227,7 +232,7 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 
 			if priceRecord, exists := pricesRecords[tokenAddr.Hex()]; exists {
 				if p, ok := new(big.Float).SetString(priceRecord.Price); ok {
-					resultChan <- priceResult{index: index, price: p}
+					resultChan <- priceResult{index: index, price: p, priceString: priceRecord.Price}
 					return
 				}
 			}
@@ -236,7 +241,7 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 			bestPrice, _, err := global.GetPrices(ctx, nil, req.ChainId, tokenAddr.Hex(), true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
 			if err == nil && bestPrice != nil {
 				p := new(big.Float).SetInt(bestPrice.Value)
-				resultChan <- priceResult{index: index, price: p}
+				resultChan <- priceResult{index: index, price: p, priceString: bestPrice.Value.String()}
 				return
 			}
 			resultChan <- priceResult{
@@ -256,10 +261,12 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	for result := range resultChan {
 		if result.err == nil {
 			prices[result.index] = result.price
+			priceStrings[result.index] = result.priceString
 		}
 	}
 
 	price0, price1 := prices[0], prices[1]
+	price0String, price1String := priceStrings[0], priceStrings[1]
 
 	factor0 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token0.Decimals)))
 	factor1 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token1.Decimals)))
@@ -317,6 +324,20 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 
 	// 4. PNL = claimableFees + collectedFees
 	position.PNL = position.ClaimableFees + collectedAmounts.TotalAmount0 + collectedAmounts.TotalAmount1
+
+	// 5. fill tokenValue0, tokenValue1
+	position.TokenValue0 = types.Token_TokenValue{
+		Amount:        amount0.String(),
+		Decimals:      position.Pool.Token0.Decimals,
+		Price:         price0String,
+		PriceDecimals: daiDecimals,
+	}
+	position.TokenValue1 = types.Token_TokenValue{
+		Amount:        amount1.String(),
+		Decimals:      position.Pool.Token1.Decimals,
+		Price:         price1String,
+		PriceDecimals: daiDecimals,
+	}
 
 	return position
 }
