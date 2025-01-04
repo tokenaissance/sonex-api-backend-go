@@ -249,19 +249,6 @@ func NewTokenPair(tokens ...*TokenValue) *TokenPair {
 	return pair
 }
 
-// SetTokenPrice 设置 token 的价格，需要传入两个 TokenValueOption 分别设置 token0 和 token1 的价格
-func (tp *TokenPair) SetTokenPrice(token0Opt, token1Opt TokenValueOption) error {
-	err := token0Opt(tp.token0)
-	if err != nil {
-		return err
-	}
-	err = token1Opt(tp.token1)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // value 返回 token 的净值，用于内部计算
 func (tp *TokenPair) value() *big.Float {
 	token0Value := tp.token0.value()

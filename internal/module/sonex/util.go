@@ -1,15 +1,9 @@
 package sonex
 
 import (
-	"context"
-	"fmt"
 	"math"
 	"math/big"
-	"sonex_api_backend_go/internal/config"
-	"sonex_api_backend_go/internal/repository"
-	"sonex_api_backend_go/internal/types"
 
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -349,23 +343,24 @@ func Pow(z *big.Float, w *big.Float) *big.Float {
 
 }
 
-func FilterPoolsByWriteList(ctx context.Context, conf config.Config, chainId int64) ([]common.Address, error) {
-	sonexConf := conf.GetSonexConfig(chainId)
-	if sonexConf == nil {
-		return nil, fmt.Errorf("%s", "Miss sonex configure")
-	}
+// // repository 的调用应该在 logic 层，这里不应该有 repository 的调用，先注释掉
+// func FilterPoolsByWriteList(ctx context.Context, conf config.Config, chainId int64) ([]common.Address, error) {
+// 	sonexConf := conf.GetSonexConfig(chainId)
+// 	if sonexConf == nil {
+// 		return nil, fmt.Errorf("%s", "Miss sonex configure")
+// 	}
 
-	conn := repository.NewConn(conf.PostgreSQL.DateSource())
-	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	sonexTokenModel := repository.NewSonexTokenModel(conn)
-	tokens, _, err := sonexTokenModel.GetTokens(ctx, &types.TokenListRequest{Take: 99999999, Page: 1, ChainId: chainId}, sonexConf.PositionManager)
-	if err != nil {
-		return nil, err
-	}
-	var tokenAddresses []string
-	linq.From(tokens).SelectT(func(item *types.Token_TokenDetail) string { return item.Address }).ToSlice(&tokenAddresses)
-	_ = eventSonexFactoryPoolCreatedModel
-	_ = tokens
+// 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
+// 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+// 	sonexTokenModel := repository.NewSonexTokenModel(conn)
+// 	tokens, _, err := sonexTokenModel.GetTokens(ctx, &types.TokenListRequest{Take: 99999999, Page: 1, ChainId: chainId}, sonexConf.PositionManager)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var tokenAddresses []string
+// 	linq.From(tokens).SelectT(func(item *types.Token_TokenDetail) string { return item.Address }).ToSlice(&tokenAddresses)
+// 	_ = eventSonexFactoryPoolCreatedModel
+// 	_ = tokens
 
-	return nil, nil
-}
+// 	return nil, nil
+// }

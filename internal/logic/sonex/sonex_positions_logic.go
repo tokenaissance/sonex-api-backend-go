@@ -114,8 +114,8 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		amounts, err := collectModel.BatchAggregateAmounts(ctx, req.ChainId, positionTokenIds, token0Decimals, token1Decimals)
-		results <- taskResult{collectedAmounts: amounts, err: err}
+		pairs, err := collectModel.BatchAggregateAmounts(ctx, req.ChainId, positionTokenIds, token0Decimals, token1Decimals)
+		results <- taskResult{collectedPairs: pairs, err: err}
 	}()
 
 	// Task 2: Get positions
@@ -153,7 +153,7 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	}()
 
 	// Collect results
-	var collectedAmounts = make(map[int64]*types.AggregatedAmounts)
+	var collectedPairs = make(map[int64]*sonex.TokenPair)
 	var positions = make([]*sonex.Position, 0)
 	var tokenPricesRecords = make(map[string]*repository.TokenPriceRecord)
 
@@ -162,8 +162,8 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 			logx.Errorf("[SonexPositions] waitgroup error: %s", result.err.Error())
 			return nil, result.err
 		}
-		if result.collectedAmounts != nil {
-			collectedAmounts = result.collectedAmounts
+		if result.collectedPairs != nil {
+			collectedPairs = result.collectedPairs
 		}
 		if result.positions != nil {
 			positions = result.positions
@@ -182,7 +182,7 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	// Collect results
 	for _, position := range positions {
 		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
-			convertedPosition := l.fillPosition(ctx, req, positionTransferItem, position, tokenPricesRecords, collectedAmounts)
+			convertedPosition := l.fillPosition(ctx, req, positionTransferItem, position, tokenPricesRecords, collectedPairs)
 			response.Positions = append(response.Positions, convertedPosition)
 		}
 	}
@@ -200,7 +200,7 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	position *types.Position,
 	innnerPosition *sonex.Position,
 	pricesRecords map[string]*repository.TokenPriceRecord,
-	collectedAmounts map[int64]*types.AggregatedAmounts) *types.Position {
+	collectedPairs map[int64]*sonex.TokenPair) *types.Position {
 	price0 := new(big.Float).SetFloat64(0)
 	price1 := new(big.Float).SetFloat64(0)
 	daiDecimals := 18
@@ -288,9 +288,13 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	position.UnclaimedFee0, _ = unclaimedFee0Float.Float64()
 	position.UnclaimedFee1, _ = unclaimedFee1Float.Float64()
 	// 4. PNL(Fee Revenue) = claimableFees + collectedFees
-	collectedFees, exists := collectedAmounts[position.TokenID]
+	collectedPair, exists := collectedPairs[position.TokenID]
 	if exists {
-		position.PNL = position.ClaimableFees + collectedFees.TotalAmount0 + collectedFees.TotalAmount1
+		collectedPair.Token0().SetTokenPrice(price0String, daiDecimals)
+		collectedPair.Token1().SetTokenPrice(price1String, daiDecimals)
+		collectedFees, _ := new(big.Float).SetString(collectedPair.Value())
+		pnl := new(big.Float).Add(claimableFees, collectedFees)
+		position.PNL, _ = pnl.Float64()
 	} else {
 		position.PNL = position.ClaimableFees
 	}
