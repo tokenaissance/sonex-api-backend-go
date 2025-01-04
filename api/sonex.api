@@ -245,6 +245,14 @@ type Token_TokenInfo {
 	Additional interface{} `json:"additional"`
 }
 
+// TokenValue represents a token amount with its price information
+// - Amount: Token amount as a string with full precision integer
+// - Decimals: Token decimal places
+// - Price: Optional token price as a string with full precision
+// - PriceDecimals: Decimal places for the price
+//
+// When Price is present, the actual token value can be calculated as:
+// tokenValue = (Amount / 10^Decimals) * (Price / 10^PriceDecimals)
 type Token_TokenValue {
 	Amount string `json:"amount"`
 	Decimals int `json:"decimals"`
