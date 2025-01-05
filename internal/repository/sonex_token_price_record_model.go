@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -50,6 +52,92 @@ type TokenPriceRecord struct {
 	CreatedAt    string `db:"created_at"`
 }
 
+// downsampleRecords performs time-based downsampling of price records
+func (m *customSonexTokenPriceRecordModel) downsampleRecords(records []*TokenPriceRecord, interval string) []*TokenPriceRecord {
+	if len(records) == 0 {
+		return records
+	}
+
+	// Define desired number of K-lines
+	var targetKLines int
+	switch interval {
+	case "1h":
+		targetKLines = 60 // 60 K-lines per hour
+	case "1d":
+		targetKLines = 144 // 144 K-lines per day
+	case "1w":
+		targetKLines = 168 // 168 K-lines per week
+	case "1m":
+		targetKLines = 780 // 780 K-lines per month
+	case "1y":
+		targetKLines = 365 // 365 K-lines per year
+	default:
+		return records
+	}
+
+	// If we have fewer records than target K-lines, return all records
+	if len(records) <= targetKLines {
+		return records
+	}
+
+	// Calculate time range
+	firstTime, _ := gtime.StrToTime(records[0].CreatedAt)
+	lastTime, _ := gtime.StrToTime(records[len(records)-1].CreatedAt)
+	totalDuration := lastTime.Sub(firstTime)
+
+	// Calculate ideal time interval between samples
+	timeInterval := totalDuration / time.Duration(targetKLines-1)
+
+	var result []*TokenPriceRecord
+	result = append(result, records[0]) // Always include first record
+
+	nextTargetTime := firstTime.Add(timeInterval)
+	lastAddedTime := firstTime
+
+	// Find closest records to each target time
+	for i := 1; i < len(records)-1; i++ {
+		currentTime, err := gtime.StrToTime(records[i].CreatedAt)
+		if err != nil {
+			logx.Errorf("[downsampleRecords]: time convert err: %v", err)
+			continue
+		}
+
+		if currentTime.After(nextTargetTime) || currentTime.Equal(nextTargetTime) {
+			// Find closest record to target time
+			if i > 0 {
+				prev := gtime.New(records[i-1].CreatedAt)
+				curr := currentTime
+				if curr.Sub(nextTargetTime) > nextTargetTime.Sub(prev) {
+					result = append(result, records[i-1])
+					lastAddedTime = prev
+				} else {
+					result = append(result, records[i])
+					lastAddedTime = curr
+				}
+			} else {
+				result = append(result, records[i])
+				lastAddedTime = currentTime
+			}
+			nextTargetTime = firstTime.Add(timeInterval * time.Duration(len(result)))
+		}
+	}
+
+	// Always include last record if it's not too close to the last added record
+	lastRecord := records[len(records)-1]
+	lastRecordTime, _ := gtime.StrToTime(lastRecord.CreatedAt)
+	if lastRecordTime.Sub(lastAddedTime) > timeInterval/2 {
+		result = append(result, lastRecord)
+	}
+
+	return result
+}
+
+// minutesDifference calculates the difference in minutes between two times
+func minutesDifference(t1, t2 *gtime.Time) int {
+	minutes := t2.Sub(t1) / time.Minute
+	return int(minutes)
+}
+
 func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string) ([]*TokenPriceRecord, error) {
 	// 获取时间范围
 	//intervalDuration := getIntervalDuration(interval)
@@ -63,7 +151,8 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 		for _, v := range resp {
 			v.CreatedAt = gtime.New(v.CreatedAt).Format("Y-m-d H:i:s")
 		}
-		return resp, nil
+		// downsample
+		return m.downsampleRecords(resp, interval), nil
 	case sqlx.ErrNotFound:
 		return nil, ErrNotFound
 	default:
