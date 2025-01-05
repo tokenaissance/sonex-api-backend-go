@@ -175,7 +175,7 @@ type PaginationMeta struct {
 }
 
 type Pool struct {
-	Address string `json:"sddress"`
+	Address string `json:"address"`
 	Token0  Token  `json:"token0"`
 	Token1  Token  `json:"token1"`
 	Fee     string `json:"fee"`
@@ -421,7 +421,7 @@ type SwapVolumeResponse struct {
 }
 
 type Token struct {
-	Address  string `json:"sddress"`
+	Address  string `json:"address"`
 	Symbol   string `json:"symbol"`
 	Decimals int64  `json:"decimals"`
 	Price    string `json:"price"`

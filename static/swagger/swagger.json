@@ -1875,7 +1875,7 @@
     "Pool": {
       "type": "object",
       "properties": {
-        "sddress": {
+        "address": {
           "type": "string"
         },
         "token0": {
@@ -1890,7 +1890,7 @@
       },
       "title": "Pool",
       "required": [
-        "sddress",
+        "address",
         "token0",
         "token1",
         "fee"
@@ -2793,7 +2793,7 @@
     "Token": {
       "type": "object",
       "properties": {
-        "sddress": {
+        "address": {
           "type": "string"
         },
         "symbol": {
@@ -2809,7 +2809,7 @@
       },
       "title": "Token",
       "required": [
-        "sddress",
+        "address",
         "symbol",
         "decimals",
         "price"
