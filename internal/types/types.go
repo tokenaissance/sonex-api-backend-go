@@ -593,7 +593,7 @@ type TransactionsRequest struct {
 	Pool      string `form:"poolAddress,optional"`
 	Token0    string `form:"token0Address,optional"`
 	Token1    string `form:"token1Address,optional"`
-	OrderBy   string `form:"orderBy,default=ASC"`
+	OrderBy   string `form:"orderBy,optional,options=ASC|DESC,default=DESC"`
 	PageSize  int64  `form:"pageSize,default=20"`
 	PageIndex int64  `form:"pageIndex,default=1"`
 }

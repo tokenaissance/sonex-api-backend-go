@@ -988,9 +988,13 @@
           {
             "name": "orderBy",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "string",
-            "default": "ASC"
+            "enum": [
+              "ASC",
+              "DESC"
+            ],
+            "default": "DESC"
           },
           {
             "name": "pageSize",
@@ -3451,7 +3455,11 @@
         },
         "orderBy": {
           "type": "string",
-          "default": "ASC"
+          "enum": [
+            "ASC",
+            "DESC"
+          ],
+          "default": "DESC"
         },
         "pageSize": {
           "type": "integer",
@@ -3467,7 +3475,6 @@
       "title": "TransactionsRequest",
       "required": [
         "chainId",
-        "orderBy",
         "pageSize",
         "pageIndex"
       ]
