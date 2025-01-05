@@ -280,10 +280,6 @@ type Position struct {
 	Origin        string           `json:"origin"`
 	Pool          Token_PoolDetail `json:"pool"`
 	PositionAge   int              `json:"positionAge"`
-	Amount0       float64          `json:"amount0, deprecated"` // Deprecated: use tokenValue0 instead
-	Amount1       float64          `json:"amount1, deprecated"` // Deprecated: use tokenValue1 instead
-	Price0        float64          `json:"price0, deprecated"`  // Deprecated: use tokenValue0.Price instead
-	Price1        float64          `json:"price1, deprecated"`  // Deprecated: use tokenValue1.Price instead
 	UnclaimedFee0 float64          `json:"unclaimedFee0"`
 	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 	TokenValue0   Token_TokenValue `json:"tokenValue0"`
