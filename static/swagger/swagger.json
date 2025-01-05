@@ -778,7 +778,7 @@
     },
     "/sonex/tokens": {
       "get": {
-        "operationId": "SonexTokensHandler",
+        "operationId": "TokensHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -789,38 +789,34 @@
         },
         "parameters": [
           {
-            "name": "order",
-            "description": " Sorting order, default is \"ASC\"",
+            "name": "chainId",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "orderBy",
             "in": "query",
             "required": true,
             "type": "string",
             "default": "ASC"
           },
           {
-            "name": "page",
-            "description": " Current page number, default is 1",
+            "name": "pageSize",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "20"
+          },
+          {
+            "name": "pageIndex",
             "in": "query",
             "required": true,
             "type": "integer",
             "format": "int64",
             "default": "1"
-          },
-          {
-            "name": "take",
-            "description": " Number of items per page, default is 10",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "10"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           }
         ],
         "tags": [
@@ -2776,6 +2772,9 @@
         "address": {
           "type": "string"
         },
+        "name": {
+          "type": "string"
+        },
         "symbol": {
           "type": "string"
         },
@@ -2790,6 +2789,7 @@
       "title": "Token",
       "required": [
         "address",
+        "name",
         "symbol",
         "decimals",
         "price"
@@ -3376,62 +3376,51 @@
     "TokensRequest": {
       "type": "object",
       "properties": {
-        "order": {
-          "type": "string",
-          "default": "ASC",
-          "description": " Sorting order, default is \"ASC\""
-        },
-        "page": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1",
-          "description": " Current page number, default is 1"
-        },
-        "take": {
-          "type": "integer",
-          "format": "int64",
-          "default": "10",
-          "description": " Number of items per page, default is 10"
-        },
         "chainId": {
           "type": "integer",
+          "format": "int64"
+        },
+        "orderBy": {
+          "type": "string",
+          "default": "ASC"
+        },
+        "pageSize": {
+          "type": "integer",
           "format": "int64",
-          "default": "1946"
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "TokensRequest",
       "required": [
-        "order",
-        "page",
-        "take"
+        "chainId",
+        "orderBy",
+        "pageSize",
+        "pageIndex"
       ]
     },
     "TokensResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
         "data": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Token_TokenDetail"
           }
         },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        },
-        "message": {
-          "type": "string"
+        "total": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "TokensResponse",
       "required": [
-        "code",
         "data",
-        "meta",
-        "message"
+        "total"
       ]
     },
     "TransactionsRequest": {

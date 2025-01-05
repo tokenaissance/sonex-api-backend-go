@@ -183,12 +183,14 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 				Address: poolAddress.Hex(),
 				Token0: types.Token{
 					Address:  token0.Address,
+					Name:     token0.Name,
 					Symbol:   token0.Symbol,
 					Decimals: token0.Decimals,
 					Price:    price0.String(),
 				},
 				Token1: types.Token{
 					Address:  token1.Address,
+					Name:     token1.Name,
 					Symbol:   token1.Symbol,
 					Decimals: token1.Decimals,
 					Price:    price1.String(),

@@ -2,6 +2,7 @@ syntax = "v1"
 
 type Token {
 	Address  string `json:"address"`
+	Name     string `json:"name"`
 	Symbol   string `json:"symbol"`
 	Decimals int64  `json:"decimals"`
 	Price    string `json:"price"`
