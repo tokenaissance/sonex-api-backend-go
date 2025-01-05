@@ -1,3 +1,27 @@
+// Memory Layout:
+//
+// TokenPair
+// ├── token0 *TokenValue
+// │   ├── TokenAmount
+// │   │   ├── amount string   // Raw amount with decimals
+// │   │   └── decimals int    // Number of decimal places
+// │   └── TokenPrice
+// │       ├── price string    // Raw price with decimals
+// │       └── decimals int    // Number of decimal places
+// │
+// └── token1 *TokenValue
+//     ├── TokenAmount
+//     │   ├── amount string   // Raw amount with decimals
+//     │   └── decimals int    // Number of decimal places
+//     └── TokenPrice
+//         ├── price string    // Raw price with decimals
+//         └── decimals int    // Number of decimal places
+//
+// Example:
+// For a token with 18 decimals:
+// - amount "1000000000000000000" represents 1.0 tokens
+// - price "2000000000" with 9 decimals represents $2.0
+
 package sonex
 
 import (
