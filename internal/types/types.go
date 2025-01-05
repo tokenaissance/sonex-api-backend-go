@@ -14,6 +14,11 @@ type ChainSyncPrograss struct {
 	UpdatedAt string `json:"updateAt"`
 }
 
+type Comparison struct {
+	Comparison string  `json:"comparison"` // UP、DOWN、SAME
+	Percentage float64 `json:"percentage"`
+}
+
 type FarmIncentivesRequest struct {
 	ChainId     int64  `form:"chainId"`                               // 链ID
 	UserAddress string `form:"userAddress,optional"`                  // 用户地址
@@ -121,6 +126,11 @@ type Invested struct {
 	InvestedAmount1 string `json:"investedAmount1"`
 }
 
+type Kline struct {
+	Price     string `json:"price"`
+	TimeStamp int64  `json:"timeStamp"`
+}
+
 type MetaRequest struct {
 }
 
@@ -178,7 +188,7 @@ type Pool struct {
 	Address string `json:"address"`
 	Token0  Token  `json:"token0"`
 	Token1  Token  `json:"token1"`
-	Fee     string `json:"fee"`
+	Fee     int64  `json:"fee"`
 }
 
 type PoolPositionData struct {
@@ -418,6 +428,7 @@ type SwapVolumeResponse struct {
 
 type Token struct {
 	Address  string `json:"address"`
+	Name     string `json:"name"`
 	Symbol   string `json:"symbol"`
 	Decimals int64  `json:"decimals"`
 	Price    string `json:"price"`
@@ -511,6 +522,16 @@ type TokenVolume struct {
 	Amounts float64 `json:"amounts"`
 }
 
+type TokenWithExtra struct {
+	Token
+	Logo       string     `json:"logo"`
+	Pools      []Pool     `json:"pools"`
+	Volume     string     `json:"volume"`
+	Kline      []Kline    `json:"kline"`
+	RiseFall1H Comparison `json:"riseRall1H"`
+	RiseFall1D Comparison `json:"riseRall1D"`
+}
+
 type Token_Kline struct {
 	Price     string `json:"price"`
 	TimeStamp int64  `json:"timeStamp"`
@@ -574,17 +595,15 @@ type Token_TokenValue struct {
 }
 
 type TokensRequest struct {
-	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946,optional"`
+	ChainId   int64  `form:"chainId"`
+	OrderBy   string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
+	PageSize  int64  `form:"pageSize,default=20"`
+	PageIndex int64  `form:"pageIndex,default=1"`
 }
 
 type TokensResponse struct {
-	Code    int                  `json:"code"`
-	Data    []*Token_TokenDetail `json:"data"`
-	Meta    *PaginationMeta      `json:"meta"`
-	Message string               `json:"message"`
+	Data  []TokenWithExtra `json:"tokens"`
+	Total int64            `json:"total"`
 }
 
 type TransactionsRequest struct {
@@ -599,7 +618,7 @@ type TransactionsRequest struct {
 }
 
 type TransactionsResponse struct {
-	Data  []TransactionsResponse_Transaction `json:"data"`
+	Data  []TransactionsResponse_Transaction `json:"transactions"`
 	Total int64                              `json:"total"`
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
 	"sonex_api_backend_go/internal/types"
 	"sort"
 	"time"
@@ -28,6 +29,7 @@ type (
 		PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
 		PageQueryOrderByTxAtWithExtra(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
 		PageQueryByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
+		SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 		GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
@@ -41,7 +43,7 @@ type (
 		EventSonexPoolSwap
 		ExtraToken0      string `db:"extra_token0"`
 		ExtraToken1      string `db:"extra_token1"`
-		ExtraFee         string `db:"extra_fee"`
+		ExtraFee         int64  `db:"extra_fee"`
 		ExtraTickSpacing string `db:"extra_tick_spacing"`
 	}
 
@@ -69,7 +71,7 @@ func (m *customEventSonexPoolSwapModel) New(ctx context.Context, id int64, chain
 	return err
 }
 
-func (m *defaultEventSonexPoolSwapModel) QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error) {
+func (m *customEventSonexPoolSwapModel) QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	query := fmt.Sprintf(`
 		SELECT 
@@ -88,7 +90,7 @@ func (m *defaultEventSonexPoolSwapModel) QueryByWalletWithExtra(ctx context.Cont
 	return resp, err
 }
 
-func (m *defaultEventSonexPoolSwapModel) QueryByPoolWithExtra(ctx context.Context, pool string) ([]EventSonexPoolSwapWithExtra, error) {
+func (m *customEventSonexPoolSwapModel) QueryByPoolWithExtra(ctx context.Context, pool string) ([]EventSonexPoolSwapWithExtra, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	query := fmt.Sprintf(`
 		SELECT 
@@ -107,7 +109,7 @@ func (m *defaultEventSonexPoolSwapModel) QueryByPoolWithExtra(ctx context.Contex
 	return resp, err
 }
 
-func (m *defaultEventSonexPoolSwapModel) QueryByTokensWithExtra(ctx context.Context, tokens []string) ([]EventSonexPoolSwapWithExtra, error) {
+func (m *customEventSonexPoolSwapModel) QueryByTokensWithExtra(ctx context.Context, tokens []string) ([]EventSonexPoolSwapWithExtra, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	query := fmt.Sprintf(`
 		SELECT 
@@ -126,7 +128,7 @@ func (m *defaultEventSonexPoolSwapModel) QueryByTokensWithExtra(ctx context.Cont
 	return resp, err
 }
 
-func (m *defaultEventSonexPoolSwapModel) PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
+func (m *customEventSonexPoolSwapModel) PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	query := fmt.Sprintf(`
 		SELECT 
@@ -151,7 +153,7 @@ func (m *defaultEventSonexPoolSwapModel) PageQueryWithExtra(ctx context.Context,
 	return resp, total, err
 }
 
-func (m *defaultEventSonexPoolSwapModel) PageQueryOrderByTxAtWithExtra(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
+func (m *customEventSonexPoolSwapModel) PageQueryOrderByTxAtWithExtra(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	if !linq.From([]string{"ASC", "DESC"}).Contains(orderBy) {
 		orderBy = "DESC"
@@ -179,7 +181,7 @@ func (m *defaultEventSonexPoolSwapModel) PageQueryOrderByTxAtWithExtra(ctx conte
 	return resp, total, err
 }
 
-func (m *defaultEventSonexPoolSwapModel) PageQueryByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
+func (m *customEventSonexPoolSwapModel) PageQueryByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	query := fmt.Sprintf(`
 		SELECT 
@@ -205,7 +207,43 @@ func (m *defaultEventSonexPoolSwapModel) PageQueryByWalletWithExtra(ctx context.
 	return resp, total, err
 }
 
-func (m *defaultEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error) {
+func (m *customEventSonexPoolSwapModel) SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error) {
+	mventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+			token, volume 
+		FROM (
+			SELECT event_token0 AS token, SUM(ABS(COALESCE(S.event_amount0::NUMERIC,0)))::VARCHAR AS volume
+			FROM %s S
+			JOIN %s C ON S.extra_pool = C.event_pool 
+			WHERE S.chain_id = $1 
+			GROUP BY event_token0
+			UNION
+			SELECT event_token1 AS token, SUM(ABS(COALESCE(S.event_amount1::NUMERIC,0)))::VARCHAR  AS volume
+			FROM %s S
+			JOIN %s C ON S.extra_pool = C.event_pool
+			WHERE S.chain_id = $2 
+			GROUP BY event_token1
+		)
+	`, m.table, mventSonexFactoryPoolCreatedModel.table, m.table, mventSonexFactoryPoolCreatedModel.table)
+	var resp []struct {
+		Token  string `db:"token"`
+		Volume string `db:"volume"`
+	}
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, chainId)
+	if err != nil {
+		return nil, err
+	}
+	result := map[string]*big.Int{}
+	for _, item := range resp {
+		val, _ := new(big.Int).SetString(item.Volume, 10)
+		result[item.Token] = val
+	}
+
+	return result, nil
+}
+
+func (m *customEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error) {
 	volumeQuery := fmt.Sprintf(`
 		SELECT
 			sp.extra_pool AS address,

@@ -1,0 +1,355 @@
+package sonex
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"math/big"
+	"sync"
+	"time"
+
+	"sonex_api_backend_go/internal/lib/cache"
+	lib_common "sonex_api_backend_go/internal/lib/common"
+	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/repository"
+	"sonex_api_backend_go/internal/svc"
+	"sonex_api_backend_go/internal/types"
+
+	"github.com/ahmetb/go-linq/v3"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/zeromicro/go-zero/core/logx"
+)
+
+type TokensLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+type CacheWarpper struct {
+	Data       []types.TokenWithExtra
+	LastUpdate time.Time
+}
+
+func NewTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *TokensLogic {
+	return &TokensLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensResponse, err error) {
+	if req.ChainId == 0 {
+		return nil, fmt.Errorf("%s", "Invalid parameter")
+	}
+
+	cacheKey := fmt.Sprintf("sonex:tokens:%d", req.ChainId)
+	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+
+	// Check cache
+	lastUpdate, err := redisCache.Get(cacheKey)
+	if err == nil && lastUpdate != "" {
+		var cacheWarpper CacheWarpper
+		err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+		if err == nil {
+			resp = &types.TokensResponse{Data: cacheWarpper.Data}
+
+			// TODO
+			// 出现新池子时应更新缓存
+		}
+	}
+
+	// No cache
+	if resp == nil {
+		data, err := l.getData(req)
+		if err != nil {
+			return nil, err
+		}
+		resp = &types.TokensResponse{Data: data}
+
+		// Set cache
+		respBytes, err := json.Marshal(CacheWarpper{Data: data, LastUpdate: time.Now().UTC()})
+		if err != nil {
+			logx.Errorf("Marshal response error: %v", err)
+		}
+		err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
+		if err != nil {
+			logx.Errorf("Set cache error: %v", err)
+		}
+	}
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+
+	// Update price
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
+	if err != nil {
+		return nil, err
+	}
+	volumes, err := eventSonexPoolSwapModel.SummarizeVolumesByChainId(l.ctx, req.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	var results = make(chan struct {
+		Data types.TokenWithExtra
+		Err  error
+	}, len(resp.Data))
+
+	for _, item := range resp.Data {
+		wg.Add(1)
+		go func(item types.TokenWithExtra, ch chan struct {
+			Data types.TokenWithExtra
+			Err  error
+		}) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct {
+						Data types.TokenWithExtra
+						Err  error
+					}{
+						Err: fmt.Errorf("%s %s(panic)", item.Address, err),
+					}
+				}
+			}()
+
+			price, ok := prices[item.Address]
+			if !ok {
+				price = big.NewInt(0)
+			}
+			item.Price = price.String()
+			for i, pool := range item.Pools {
+				price0, ok := prices[pool.Token0.Address]
+				if !ok {
+					price0 = big.NewInt(0)
+				}
+				item.Pools[i].Token0.Price = price0.String()
+				price1, ok := prices[pool.Token1.Address]
+				if !ok {
+					price1 = big.NewInt(0)
+				}
+				item.Pools[i].Token1.Price = price1.String()
+			}
+
+			volume, ok := volumes[item.Address]
+			if !ok {
+				volume = big.NewInt(0)
+			}
+			item.Volume = volume.String()
+
+			kline1D, err := tokenPriceModel.Kline(item.Address, "1d")
+			if err != nil {
+				ch <- struct {
+					Data types.TokenWithExtra
+					Err  error
+				}{
+					Err: err,
+				}
+				return
+			}
+			item.Kline = []types.Kline{}
+			currentPrice := big.NewInt(0)
+			var currentTimestamp int64 = 0
+			last1DPrice := big.NewInt(0)
+			if len(kline1D) > 0 {
+				currentPrice, _ = new(big.Int).SetString(kline1D[len(kline1D)-1].Price, 10)
+				t, _ := time.Parse("2006-01-02 15:04:05", kline1D[len(kline1D)-1].CreatedAt)
+				currentTimestamp = t.Unix()
+				last1DPrice, _ = new(big.Int).SetString(kline1D[len(kline1D)-1].Price, 10)
+			}
+			last1HPrice := big.NewInt(0)
+			for _, tick := range kline1D {
+				t, _ := time.Parse("2006-01-02 15:04:05", tick.CreatedAt)
+				item.Kline = append(item.Kline, types.Kline{
+					Price:     tick.Price,
+					TimeStamp: t.Unix(),
+				})
+
+				if last1HPrice.Cmp(big.NewInt(0)) == 0 && (t.Unix()-currentTimestamp)/3600 > 1 {
+					last1HPrice, _ = new(big.Int).SetString(tick.Price, 10)
+				}
+			}
+			comparison1H := l.comparePrices(currentPrice, last1HPrice)
+			comparison1D := l.comparePrices(currentPrice, last1DPrice)
+			item.RiseFall1H = types.Comparison{Comparison: comparison1H.Comparison, Percentage: comparison1H.Percentage}
+			item.RiseFall1D = types.Comparison{Comparison: comparison1D.Comparison, Percentage: comparison1D.Percentage}
+
+			ch <- struct {
+				Data types.TokenWithExtra
+				Err  error
+			}{
+				Data: item,
+			}
+		}(item, results)
+	}
+	wg.Wait()
+	close(results)
+
+	// Handle results
+	resp.Data = []types.TokenWithExtra{}
+	for result := range results {
+		if result.Err != nil {
+			return nil, result.Err
+		}
+		resp.Data = append(resp.Data, result.Data)
+	}
+
+	// Sorts
+	if req.OrderBy != "" {
+		switch req.OrderBy {
+		case "1H_ASC":
+			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) float64 {
+				return item.RiseFall1H.Percentage
+			}).ToSlice(&resp.Data)
+		case "1H_DESC":
+			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+				return item.RiseFall1H.Percentage
+			}).ToSlice(&resp.Data)
+		case "1D_ASC":
+			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) float64 {
+				return item.RiseFall1D.Percentage
+			}).ToSlice(&resp.Data)
+		case "1D_DESC":
+			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+				return item.RiseFall1D.Percentage
+			}).ToSlice(&resp.Data)
+		case "Volume_ASC":
+			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) lib_common.CompareableBigInt {
+				apr, _ := new(big.Int).SetString(item.Volume, 10)
+				return lib_common.CompareableBigInt{Value: apr}
+			}).ToSlice(&resp.Data)
+		case "Volume_DESC":
+			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) lib_common.CompareableBigInt {
+				apr, _ := new(big.Int).SetString(item.Volume, 10)
+				return lib_common.CompareableBigInt{Value: apr}
+			}).ToSlice(&resp.Data)
+		}
+	}
+
+	// Page
+	resp.Total = int64(len(resp.Data))
+	linq.From(resp.Data).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&resp.Data)
+
+	return resp, nil
+}
+
+func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra, error) {
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+	usdToken, err := global.GetToken(req.ChainId, common.HexToAddress(chainConf.USD).Hex())
+	if err != nil {
+		return nil, err
+	}
+	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
+	_ = usdAccuracy
+
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+	sonexTokenModel := repository.NewSonexTokenModel(conn)
+
+	tokenInfos, err := sonexTokenModel.FindAllToMap(l.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	dateResult := []types.TokenWithExtra{}
+
+	poolRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(l.ctx, req.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	tokenMap := map[string]types.TokenWithExtra{}
+	tokenPoolsMap := map[string][]types.Pool{}
+	for _, record := range poolRecords {
+		pool := types.Pool{
+			Address: record.EventPool,
+			Fee:     record.EventFee,
+		}
+
+		if _, ok := tokenMap[record.EventToken0]; !ok {
+			token, err := global.GetToken(req.ChainId, record.EventToken0)
+			if err != nil {
+				return nil, err
+			}
+			info, ok := tokenInfos[record.EventToken0]
+			if !ok {
+				info = repository.SonexToken{}
+			}
+			tokenMap[record.EventToken0] = types.TokenWithExtra{
+				Token: types.Token{
+					Address:  token.Address,
+					Name:     token.Name,
+					Symbol:   token.Symbol,
+					Decimals: token.Decimals,
+				},
+				Logo: info.Logo.String,
+			}
+
+			tokenPoolsMap[record.EventToken0] = []types.Pool{}
+		}
+		pool.Token0 = tokenMap[record.EventToken0].Token
+
+		if _, ok := tokenPoolsMap[record.EventToken1]; !ok {
+			token, err := global.GetToken(req.ChainId, record.EventToken1)
+			if err != nil {
+				return nil, err
+			}
+			info, ok := tokenInfos[record.EventToken0]
+			if !ok {
+				info = repository.SonexToken{}
+			}
+			tokenMap[record.EventToken1] = types.TokenWithExtra{
+				Token: types.Token{
+					Address:  token.Address,
+					Name:     token.Name,
+					Symbol:   token.Symbol,
+					Decimals: token.Decimals,
+				},
+				Logo: info.Logo.String,
+			}
+
+			tokenPoolsMap[record.EventToken1] = []types.Pool{}
+		}
+		pool.Token1 = tokenMap[record.EventToken1].Token
+
+		tokenPoolsMap[record.EventToken0] = append(tokenPoolsMap[record.EventToken0], pool)
+		tokenPoolsMap[record.EventToken1] = append(tokenPoolsMap[record.EventToken1], pool)
+	}
+
+	for key, value := range tokenMap {
+		if pools, ok := tokenPoolsMap[key]; ok {
+			value.Pools = pools
+		}
+		dateResult = append(dateResult, value)
+	}
+
+	return dateResult, nil
+}
+
+func (l *TokensLogic) comparePrices(currentPrice, comparePrice *big.Int) types.Comparison {
+	currentPriceF := new(big.Float).SetInt(currentPrice)
+	comparePriceF := new(big.Float).SetInt(comparePrice)
+	var comparison string
+	var diff *big.Float
+	if currentPrice.Cmp(comparePrice) > 0 {
+		comparison = "UP"
+	} else if currentPrice.Cmp(comparePrice) < 0 {
+		comparison = "DOWN"
+	} else {
+		comparison = "SAME"
+	}
+	diff = new(big.Float).Sub(currentPriceF, comparePriceF)
+	if comparePriceF.Cmp(big.NewFloat(0)) == 0 {
+		comparePriceF = big.NewFloat(1)
+	}
+	percentage, _ := new(big.Float).Quo(diff, comparePriceF).Float64()
+	return types.Comparison{
+		Comparison: comparison,
+		Percentage: percentage,
+	}
+}

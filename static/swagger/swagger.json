@@ -778,7 +778,7 @@
     },
     "/sonex/tokens": {
       "get": {
-        "operationId": "SonexTokensHandler",
+        "operationId": "TokensHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -789,38 +789,42 @@
         },
         "parameters": [
           {
-            "name": "order",
-            "description": " Sorting order, default is \"ASC\"",
+            "name": "chainId",
             "in": "query",
             "required": true,
-            "type": "string",
-            "default": "ASC"
+            "type": "integer",
+            "format": "int64"
           },
           {
-            "name": "page",
-            "description": " Current page number, default is 1",
+            "name": "orderBy",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "1H_ASC",
+              "1H_DESC",
+              "1D_ASC",
+              "1D_DESC",
+              "Volume_ASC",
+              "Volume_DESC"
+            ],
+            "default": "Volume_DESC"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "20"
+          },
+          {
+            "name": "pageIndex",
             "in": "query",
             "required": true,
             "type": "integer",
             "format": "int64",
             "default": "1"
-          },
-          {
-            "name": "take",
-            "description": " Number of items per page, default is 10",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "10"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           }
         ],
         "tags": [
@@ -1181,6 +1185,24 @@
         "chainId",
         "height",
         "updateAt"
+      ]
+    },
+    "Comparison": {
+      "type": "object",
+      "properties": {
+        "comparison": {
+          "type": "string",
+          "description": " UP、DOWN、SAME"
+        },
+        "percentage": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "Comparison",
+      "required": [
+        "comparison",
+        "percentage"
       ]
     },
     "FarmIncentivesRequest": {
@@ -1659,6 +1681,23 @@
         "investedAmount1"
       ]
     },
+    "Kline": {
+      "type": "object",
+      "properties": {
+        "price": {
+          "type": "string"
+        },
+        "timeStamp": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "Kline",
+      "required": [
+        "price",
+        "timeStamp"
+      ]
+    },
     "MetaRequest": {
       "type": "object",
       "title": "MetaRequest"
@@ -1889,7 +1928,8 @@
           "$ref": "#/definitions/Token"
         },
         "fee": {
-          "type": "string"
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "Pool",
@@ -2776,6 +2816,9 @@
         "address": {
           "type": "string"
         },
+        "name": {
+          "type": "string"
+        },
         "symbol": {
           "type": "string"
         },
@@ -2790,6 +2833,7 @@
       "title": "Token",
       "required": [
         "address",
+        "name",
         "symbol",
         "decimals",
         "price"
@@ -3144,6 +3188,60 @@
         "amounts"
       ]
     },
+    "TokenWithExtra": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "price": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "pools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Pool"
+          }
+        },
+        "volume": {
+          "type": "string"
+        },
+        "kline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Kline"
+          }
+        },
+        "riseRall1H": {
+          "$ref": "#/definitions/Comparison"
+        },
+        "riseRall1D": {
+          "$ref": "#/definitions/Comparison"
+        }
+      },
+      "title": "TokenWithExtra",
+      "required": [
+        "logo",
+        "pools",
+        "volume",
+        "kline",
+        "riseRall1H",
+        "riseRall1D"
+      ]
+    },
     "Token_Kline": {
       "type": "object",
       "properties": {
@@ -3376,62 +3474,58 @@
     "TokensRequest": {
       "type": "object",
       "properties": {
-        "order": {
-          "type": "string",
-          "default": "ASC",
-          "description": " Sorting order, default is \"ASC\""
-        },
-        "page": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1",
-          "description": " Current page number, default is 1"
-        },
-        "take": {
-          "type": "integer",
-          "format": "int64",
-          "default": "10",
-          "description": " Number of items per page, default is 10"
-        },
         "chainId": {
           "type": "integer",
+          "format": "int64"
+        },
+        "orderBy": {
+          "type": "string",
+          "enum": [
+            "1H_ASC",
+            "1H_DESC",
+            "1D_ASC",
+            "1D_DESC",
+            "Volume_ASC",
+            "Volume_DESC"
+          ],
+          "default": "Volume_DESC"
+        },
+        "pageSize": {
+          "type": "integer",
           "format": "int64",
-          "default": "1946"
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "TokensRequest",
       "required": [
-        "order",
-        "page",
-        "take"
+        "chainId",
+        "pageSize",
+        "pageIndex"
       ]
     },
     "TokensResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
+        "tokens": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Token_TokenDetail"
+            "$ref": "#/definitions/TokenWithExtra"
           }
         },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        },
-        "message": {
-          "type": "string"
+        "total": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "TokensResponse",
       "required": [
-        "code",
-        "data",
-        "meta",
-        "message"
+        "tokens",
+        "total"
       ]
     },
     "TransactionsRequest": {
@@ -3482,7 +3576,7 @@
     "TransactionsResponse": {
       "type": "object",
       "properties": {
-        "data": {
+        "transactions": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/TransactionsResponse_Transaction"
@@ -3495,7 +3589,7 @@
       },
       "title": "TransactionsResponse",
       "required": [
-        "data",
+        "transactions",
         "total"
       ]
     },
