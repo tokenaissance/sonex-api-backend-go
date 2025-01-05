@@ -66,6 +66,9 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			if err != nil {
 				return nil, err
 			}
+			if swapRecords == nil {
+				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
+			}
 		} else {
 			linq.From(swapRecords).
 				WhereT(func(item repository.EventSonexPoolSwapWithExtra) bool { return item.From == walletAddress.Hex() }).
@@ -79,22 +82,42 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			if err != nil {
 				return nil, err
 			}
+			if swapRecords == nil {
+				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
+			}
 		} else {
 			linq.From(swapRecords).
 				WhereT(func(item repository.EventSonexPoolSwapWithExtra) bool { return item.ExtraPool == poolAddress.Hex() }).
 				ToSlice(&swapRecords)
 		}
 	}
-	if (req.Token0 != "" && common.IsHexAddress(req.Token0)) || (req.Token1 != "" && common.IsHexAddress(req.Token1)) {
-		tokens := []string{
-			common.HexToAddress(req.Token0).Hex(),
-			common.HexToAddress(req.Token1).Hex(),
-		}
-		linq.From(tokens).Distinct().WhereT(func(item string) bool { return item != (common.Address{}).Hex() }).ToSlice(&tokens)
+	if req.Token0 != "" && common.IsHexAddress(req.Token0) {
+		tokens := []string{common.HexToAddress(req.Token0).Hex()}
 		if swapRecords == nil {
 			swapRecords, err = eventSonexPoolSwapModel.QueryByTokensWithExtra(l.ctx, tokens)
 			if err != nil {
 				return nil, err
+			}
+			if swapRecords == nil {
+				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
+			}
+		} else {
+			linq.From(swapRecords).
+				WhereT(func(item repository.EventSonexPoolSwapWithExtra) bool {
+					return linq.From(tokens).Contains(item.ExtraToken0) || linq.From(tokens).Contains(item.ExtraToken1)
+				}).
+				ToSlice(&swapRecords)
+		}
+	}
+	if req.Token1 != "" && common.IsHexAddress(req.Token1) {
+		tokens := []string{common.HexToAddress(req.Token1).Hex()}
+		if swapRecords == nil {
+			swapRecords, err = eventSonexPoolSwapModel.QueryByTokensWithExtra(l.ctx, tokens)
+			if err != nil {
+				return nil, err
+			}
+			if swapRecords == nil {
+				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
 			}
 		} else {
 			linq.From(swapRecords).
