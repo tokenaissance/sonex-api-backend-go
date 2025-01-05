@@ -104,19 +104,14 @@ func (m *customSonexTokenPriceRecordModel) downsampleRecords(records []*TokenPri
 
 		if currentTime.After(nextTargetTime) || currentTime.Equal(nextTargetTime) {
 			// Find closest record to target time
-			if i > 0 {
-				prev := gtime.New(records[i-1].CreatedAt)
-				curr := currentTime
-				if curr.Sub(nextTargetTime) > nextTargetTime.Sub(prev) {
-					result = append(result, records[i-1])
-					lastAddedTime = prev
-				} else {
-					result = append(result, records[i])
-					lastAddedTime = curr
-				}
+			prev := gtime.New(records[i-1].CreatedAt)
+			curr := currentTime
+			if curr.Sub(nextTargetTime) > nextTargetTime.Sub(prev) {
+				result = append(result, records[i-1])
+				lastAddedTime = prev
 			} else {
 				result = append(result, records[i])
-				lastAddedTime = currentTime
+				lastAddedTime = curr
 			}
 			nextTargetTime = firstTime.Add(timeInterval * time.Duration(len(result)))
 		}
