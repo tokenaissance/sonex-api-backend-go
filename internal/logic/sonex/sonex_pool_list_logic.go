@@ -291,7 +291,10 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			num.SetString(pool.Address, 16)
 			result := new(big.Int).Mod(num, big.NewInt(10))
 			digit2 := int(result.Int64())
-			pool.Yield24h = fmt.Sprintf("%.2f%%", mockYields[digit2]*100)
+			yield24h, _ := big.NewFloat(0).SetString(pool.TvlUSD)
+			yield24h.Mul(yield24h, big.NewFloat(mockYields[digit2]))
+			yield24hFloat, _ := yield24h.Float64()
+			pool.Yield24h = fmt.Sprintf("%f", yield24hFloat)
 
 			rand.Seed(time.Now().UnixNano())
 
