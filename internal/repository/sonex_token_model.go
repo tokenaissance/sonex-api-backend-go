@@ -23,6 +23,7 @@ type (
 		GetTokens(ctx context.Context, opts *types.TokenListRequest, positionManager string) ([]*types.Token_TokenDetail, *types.PaginationMeta, error)
 		GetTokenVolumes(ctx context.Context) ([]types.TokenVolume, error)
 		FindAllToMap(ctx context.Context) (map[string]SonexToken, error)
+		QueryLogo(ctx context.Context) (map[string]string, error)
 	}
 
 	customSonexTokenModel struct {
@@ -336,7 +337,7 @@ func (m *customSonexTokenModel) GetTokenVolumes(ctx context.Context) ([]types.To
 }
 
 func (m *customSonexTokenModel) FindAllToMap(ctx context.Context) (map[string]SonexToken, error) {
-	query := fmt.Sprintf("select %s from %s", sonexTokenRows, m.table)
+	query := fmt.Sprintf(`select id,created_at,updated_at,deleted_at,name,symbol,address,decimals,logo,sort,"recommendOrder","isHidden",volume,additional from %s`, m.table)
 	var resp []SonexToken
 	err := m.conn.QueryRowsCtx(ctx, &resp, query)
 	if err != nil {
@@ -345,7 +346,25 @@ func (m *customSonexTokenModel) FindAllToMap(ctx context.Context) (map[string]So
 
 	tokenMap := make(map[string]SonexToken)
 	for _, token := range resp {
-		tokenMap[token.Address.String] = token
+		tokenMap[token.Address] = token
+	}
+	return tokenMap, nil
+}
+
+func (m *customSonexTokenModel) QueryLogo(ctx context.Context) (map[string]string, error) {
+	query := fmt.Sprintf(`select address, logo from %s`, m.table)
+	var resp []struct {
+		Address string         `db:"address"`
+		Logo    sql.NullString `db:"logo"`
+	}
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenMap := make(map[string]string)
+	for _, token := range resp {
+		tokenMap[token.Address] = token.Logo.String
 	}
 	return tokenMap, nil
 }

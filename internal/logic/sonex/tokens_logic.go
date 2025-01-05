@@ -252,7 +252,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	sonexTokenModel := repository.NewSonexTokenModel(conn)
 
-	tokenInfos, err := sonexTokenModel.FindAllToMap(l.ctx)
+	logos, err := sonexTokenModel.QueryLogo(l.ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -276,10 +276,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 			if err != nil {
 				return nil, err
 			}
-			info, ok := tokenInfos[record.EventToken0]
-			if !ok {
-				info = repository.SonexToken{}
-			}
+			logo := logos[record.EventToken0]
 			tokenMap[record.EventToken0] = types.TokenWithExtra{
 				Token: types.Token{
 					Address:  token.Address,
@@ -287,7 +284,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 					Symbol:   token.Symbol,
 					Decimals: token.Decimals,
 				},
-				Logo: info.Logo.String,
+				Logo: logo,
 			}
 
 			tokenPoolsMap[record.EventToken0] = []types.Pool{}
@@ -299,10 +296,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 			if err != nil {
 				return nil, err
 			}
-			info, ok := tokenInfos[record.EventToken0]
-			if !ok {
-				info = repository.SonexToken{}
-			}
+			logo := logos[record.EventToken0]
 			tokenMap[record.EventToken1] = types.TokenWithExtra{
 				Token: types.Token{
 					Address:  token.Address,
@@ -310,7 +304,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 					Symbol:   token.Symbol,
 					Decimals: token.Decimals,
 				},
-				Logo: info.Logo.String,
+				Logo: logo,
 			}
 
 			tokenPoolsMap[record.EventToken1] = []types.Pool{}
