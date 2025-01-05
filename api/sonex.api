@@ -171,8 +171,8 @@ type PoolsResponse_Pool {
 	Liquidity          string              `json:"liquidity"`
 	Token0             PoolsResponse_Token `json:"token0"`
 	Token1             PoolsResponse_Token `json:"token1"`
-	Token0Price        *Token_TokenPrice    `json:"token0Price"`
-	Token1Price        *Token_TokenPrice    `json:"token1Price"`
+	Token0Price        *Token_TokenPrice   `json:"token0Price"`
+	Token1Price        *Token_TokenPrice   `json:"token1Price"`
 	Tick               string              `json:"tick"`
 	Volume             string              `json:"volume"`
 	TvlUSD             string              `json:"tvlUSD"`
@@ -254,20 +254,20 @@ type Token_TokenInfo {
 // When Price is present, the actual token value can be calculated as:
 // tokenValue = (Amount / 10^Decimals) * (Price / 10^PriceDecimals)
 //
-// Note: If Token_TokenPrice is not initialized, the corresponding JSON tags 
+// Note: If Token_TokenPrice is not initialized, the corresponding JSON tags
 // (price and priceDecimals) will not be included in the output
 type Token_TokenValue {
-	Amount string `json:"amount"`
-	Decimals int `json:"decimals"`
-	*Token_TokenPrice // Embedded field for flat JSON output
+	Amount            string `json:"amount"`
+	Decimals          int    `json:"decimals"`
+	*Token_TokenPrice        // Embedded field for flat JSON output
 }
 
 // TokenPrice represents price information for a token
 // - Price: Token price as a string with full precision
 // - Decimals: Decimal places for the price
 type Token_TokenPrice {
-	Price string `json:"price"`
-	Decimals int `json:"priceDecimals"`
+	Price    string `json:"price"`
+	Decimals int    `json:"priceDecimals"`
 }
 
 type NftDataResponse_Data {
@@ -411,7 +411,7 @@ type Position {
 	TokenID       int64            `json:"tokenId"`
 	Position      float64          `json:"position"`
 	ClaimableFees float64          `json:"claimableFees"`
-	IsBurnt      bool              `json:"isBurnt"`
+	IsBurnt       bool             `json:"isBurnt"`
 	TickUpper     string           `json:"tickUpper"`
 	TickLower     string           `json:"tickLower"`
 	PNL           float64          `json:"pnl"`
@@ -420,8 +420,8 @@ type Position {
 	PositionAge   int              `json:"positionAge"`
 	Amount0       float64          `json:"amount0, deprecated"` // Deprecated: use tokenValue0 instead
 	Amount1       float64          `json:"amount1, deprecated"` // Deprecated: use tokenValue1 instead
-	Price0        float64          `json:"price0, deprecated"` // Deprecated: use tokenValue0.Price instead
-	Price1        float64          `json:"price1, deprecated"` // Deprecated: use tokenValue1.Price instead
+	Price0        float64          `json:"price0, deprecated"`  // Deprecated: use tokenValue0.Price instead
+	Price1        float64          `json:"price1, deprecated"`  // Deprecated: use tokenValue1.Price instead
 	UnclaimedFee0 float64          `json:"unclaimedFee0"`
 	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 	TokenValue0   Token_TokenValue `json:"tokenValue0"`
@@ -429,14 +429,14 @@ type Position {
 }
 
 type PositionValueRecord {
-	TimeStamp int64 `json:"timeStamp"`
+	TimeStamp     int64   `json:"timeStamp"`
 	PositionValue float64 `json:"positionValue"`
 }
 
 type PositionValuesResponse {
-	Pnl           	float64 `json:"pnl"`
-	PositionValues  []*PositionValueRecord `json:"positionValues"`
-	TotalPosition 	float64 `json:"totalPosition"`
+	Pnl            float64                `json:"pnl"`
+	PositionValues []*PositionValueRecord `json:"positionValues"`
+	TotalPosition  float64                `json:"totalPosition"`
 }
 
 type PositionsRequest {
@@ -473,8 +473,8 @@ type PortfolioRequest {
 }
 
 type PortfolioResponse {
-	TotalPosition 	float64 `json:"totalPosition"`
-	ClaimableFees 	float64 `json:"claimableFees"`
+	TotalPosition float64 `json:"totalPosition"`
+	ClaimableFees float64 `json:"claimableFees"`
 }
 
 @server (
@@ -502,7 +502,7 @@ service sonex_api_backend_go {
 
 	@handler SonexPositionsHandler
 	get /pools/positions (PositionsRequest) returns (PositionsResponse)
-	
+
 	@handler SonexPositionHandler
 	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)
 

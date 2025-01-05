@@ -16,7 +16,7 @@ type (
 	EventFarmIncentiveCreatedModel interface {
 		eventFarmIncentiveCreatedModel
 		withSession(session sqlx.Session) EventFarmIncentiveCreatedModel
-		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, startTime int64, weight int64, incentiveId int64) error
+		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, incentiveId int64, startTime int64, weight int64, timestamp int64) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmIncentiveCreated, error)
 		QueryByChainIdStaker(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreated, error)
 		QueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithExtra, error)
@@ -52,9 +52,9 @@ func (m *customEventFarmIncentiveCreatedModel) withSession(session sqlx.Session)
 	return NewEventFarmIncentiveCreatedModel(sqlx.NewSqlConnFromSession(session))
 }
 
-func (m *customEventFarmIncentiveCreatedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, startTime int64, weight int64, incentiveId int64) error {
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", m.table, eventFarmIncentiveCreatedRows)
-	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, rewardToken, pool, startTime, weight, incentiveId)
+func (m *customEventFarmIncentiveCreatedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, incentiveId int64, startTime int64, weight int64, timestamp int64) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)", m.table, eventFarmIncentiveCreatedRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, rewardToken, pool, incentiveId, startTime, weight, timestamp)
 	return err
 }
 
@@ -90,7 +90,7 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 		WITH SelectTemp AS (
 			SELECT 
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
-				F.event_reward_token, F.event_pool, F.event_start_time, F.event_weight, F.event_incentive_id,
+				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
 				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
@@ -102,7 +102,7 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 
 		SELECT  
 			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
-			event_reward_token, event_pool, event_start_time, event_weight, event_incentive_id,
+			event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp
 			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
 			extra_reward_token, extra_rate,
 			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
@@ -140,7 +140,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithExtra
 		WITH SelectTemp AS (
 			SELECT 
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
-				F.event_reward_token, F.event_pool, F.event_start_time, F.event_weight, F.event_incentive_id,
+				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
 				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
@@ -152,7 +152,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithExtra
 
 		SELECT  
 			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
-			event_reward_token, event_pool, event_start_time, event_weight, event_incentive_id,
+			event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp
 			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
 			extra_reward_token, extra_rate,
 			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
@@ -183,7 +183,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWith
 		WITH SelectTemp AS (
 			SELECT 
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
-				F.event_reward_token, F.event_pool, F.event_start_time, F.event_weight, F.event_incentive_id,
+				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
 				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
@@ -195,7 +195,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWith
 
 		SELECT  
 			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
-			event_reward_token, event_pool, event_start_time, event_weight, event_incentive_id,
+			event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp
 			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
 			extra_reward_token, extra_rate,
 			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended

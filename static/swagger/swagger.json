@@ -1161,6 +1161,9 @@
     "FarmIncentivesResponse": {
       "type": "object",
       "properties": {
+        "usd": {
+          "$ref": "#/definitions/FarmIncentivesResponse_Token"
+        },
         "list": {
           "type": "array",
           "items": {
@@ -1174,6 +1177,7 @@
       },
       "title": "FarmIncentivesResponse",
       "required": [
+        "usd",
         "list",
         "total"
       ]
@@ -1187,84 +1191,39 @@
         },
         "chainId": {
           "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
-        },
-        "poolAddress": {
-          "type": "string",
-          "description": " 池子合约地址"
-        },
-        "feeRatio": {
-          "type": "string",
-          "description": " 池子手续费率"
-        },
-        "rewardTokenAddress": {
-          "type": "string"
-        },
-        "rewardTokensymbol": {
-          "type": "string"
-        },
-        "rewardTokenDecimals": {
-          "type": "integer",
           "format": "int64"
         },
-        "rewardTokenPrice": {
+        "poolAddress": {
           "type": "string"
         },
-        "token0Address": {
-          "type": "string",
-          "description": " token0合约地址"
+        "feeRatio": {
+          "type": "string"
         },
-        "token0symbol": {
-          "type": "string",
-          "description": " token0代币符号"
+        "rewardToken": {
+          "$ref": "#/definitions/FarmIncentivesResponse_Token"
         },
-        "token0Decimals": {
-          "type": "integer",
-          "format": "int64",
-          "description": " token0精度"
+        "token0": {
+          "$ref": "#/definitions/FarmIncentivesResponse_Token"
         },
-        "token0Price": {
-          "type": "string",
-          "description": " token0价格"
-        },
-        "token1Address": {
-          "type": "string",
-          "description": " token1合约地址"
-        },
-        "token1Symbol": {
-          "type": "string",
-          "description": " token1代币符号"
-        },
-        "token1Decimals": {
-          "type": "integer",
-          "format": "int64",
-          "description": " token1精度"
-        },
-        "token1Price": {
-          "type": "string",
-          "description": " token1价格"
+        "token1": {
+          "$ref": "#/definitions/FarmIncentivesResponse_Token"
         },
         "liquidity": {
-          "type": "string",
-          "description": " 池子的流动性"
+          "type": "string"
         },
         "liquidityUsd": {
-          "type": "string",
-          "description": " 池子的流动性价值（USD）"
+          "type": "number",
+          "format": "double"
         },
         "APR": {
-          "type": "string",
-          "description": " 年化收益率"
+          "type": "string"
         },
         "joinNum": {
           "type": "integer",
-          "format": "int64",
-          "description": " 参与人数"
+          "format": "int64"
         },
         "status": {
-          "type": "string",
-          "description": " 运行状态（active or closed）"
+          "type": "string"
         },
         "startAt": {
           "type": "integer",
@@ -1279,7 +1238,8 @@
           "format": "int64"
         },
         "earned": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -1288,18 +1248,9 @@
         "chainId",
         "poolAddress",
         "feeRatio",
-        "rewardTokenAddress",
-        "rewardTokensymbol",
-        "rewardTokenDecimals",
-        "rewardTokenPrice",
-        "token0Address",
-        "token0symbol",
-        "token0Decimals",
-        "token0Price",
-        "token1Address",
-        "token1Symbol",
-        "token1Decimals",
-        "token1Price",
+        "rewardToken",
+        "token0",
+        "token1",
         "liquidity",
         "liquidityUsd",
         "APR",
@@ -1309,6 +1260,31 @@
         "balance",
         "staked",
         "earned"
+      ]
+    },
+    "FarmIncentivesResponse_Token": {
+      "type": "object",
+      "properties": {
+        "sddress": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "price": {
+          "type": "string"
+        }
+      },
+      "title": "FarmIncentivesResponse_Token",
+      "required": [
+        "sddress",
+        "symbol",
+        "decimals",
+        "price"
       ]
     },
     "FarmPoolLiquidityRequest": {

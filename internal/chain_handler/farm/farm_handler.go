@@ -23,10 +23,12 @@ type FarmHandler struct {
 
 	onIncentiveCreated  []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerIncentiveCreated)
 	onIncentiveEnded    []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerIncentiveEnded)
+	onIncentiveUpdated  []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerIncentiveUpdated)
 	onTokenStaked       []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenStaked)
 	onTokenUnstaked     []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenUnstaked)
 	onRewardClaimed     []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerRewardClaimed)
 	onRewardRateUpdated []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerRewardRateUpdated)
+	onRewardPoolUpdated []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerRewardPoolUpdated)
 	onTokenDeposited    []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenDeposited)
 	onPaused            []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerPaused)
 	onUnpaused          []func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerUnpaused)
@@ -48,6 +50,10 @@ func (handler *FarmHandler) OnIncentiveEnded(callback func(chainId int64, tx *no
 	handler.onIncentiveEnded = append(handler.onIncentiveEnded, callback)
 }
 
+func (handler *FarmHandler) OnIncentiveUpdated(callback func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerIncentiveUpdated)) {
+	handler.onIncentiveUpdated = append(handler.onIncentiveUpdated, callback)
+}
+
 func (handler *FarmHandler) OnTokenStaked(callback func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenStaked)) {
 	handler.onTokenStaked = append(handler.onTokenStaked, callback)
 }
@@ -62,6 +68,10 @@ func (handler *FarmHandler) OnRewardClaimed(callback func(chainId int64, tx *nod
 
 func (handler *FarmHandler) OnRewardRateUpdated(callback func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerRewardRateUpdated)) {
 	handler.onRewardRateUpdated = append(handler.onRewardRateUpdated, callback)
+}
+
+func (handler *FarmHandler) OnRewardPoolUpdated(callback func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerRewardPoolUpdated)) {
+	handler.onRewardPoolUpdated = append(handler.onRewardPoolUpdated, callback)
 }
 
 func (handler *FarmHandler) OnTokenDeposited(callback func(chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenDeposited)) {
@@ -115,6 +125,20 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 		}
 		numberSet[int64(incentiveEndedLogs.Event.Raw.BlockNumber)] = struct{}{}
 		incentiveEndedEvents = append(incentiveEndedEvents, incentiveEndedLogs.Event)
+	}
+
+	// 获取IncentiveUpdated事件
+	incentiveUpdatedLogs, err := farmContract.FilterIncentiveUpdated(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	incentiveUpdatedEvents := []*farm.UniswapV3StakerIncentiveUpdated{}
+	for incentiveUpdatedLogs.Next() {
+		if err = incentiveEndedLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(incentiveUpdatedLogs.Event.Raw.BlockNumber)] = struct{}{}
+		incentiveUpdatedEvents = append(incentiveUpdatedEvents, incentiveUpdatedLogs.Event)
 	}
 
 	// 获取TokenStaked事件
@@ -173,6 +197,20 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 		rewardRateUpdatedEvents = append(rewardRateUpdatedEvents, rewardRateUpdatedLogs.Event)
 	}
 
+	// 获取RewardPoolUpdated事件
+	rewardPoolUpdatedLogs, err := farmContract.FilterRewardPoolUpdated(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	rewardPoolUpdatedEvents := []*farm.UniswapV3StakerRewardPoolUpdated{}
+	for rewardPoolUpdatedLogs.Next() {
+		if err = rewardPoolUpdatedLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(rewardPoolUpdatedLogs.Event.Raw.BlockNumber)] = struct{}{}
+		rewardPoolUpdatedEvents = append(rewardPoolUpdatedEvents, rewardPoolUpdatedLogs.Event)
+	}
+
 	// 获取TokenDeposited事件
 	tokenDepositedLogs, err := farmContract.FilterTokenDeposited(opt, nil, nil)
 	if err != nil {
@@ -227,10 +265,12 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 	err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
 		eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmIncentiveEndedModel := repository.NewEventFarmIncentiveEndedModel(sqlx.NewSqlConnFromSession(s))
+		eventFarmIncentiveUpdatedModel := repository.NewEventFarmIncentiveUpdatedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmRewardClaimedModel := repository.NewEventFarmRewardClaimedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmRewardRateUpdatedModel := repository.NewEventFarmRewardRateUpdatedModel(sqlx.NewSqlConnFromSession(s))
+		eventFarmRewardPoolUpdatedModel := repository.NewEventFarmRewardPoolUpdatedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmTokenDepositedModel := repository.NewEventFarmTokenDepositedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmPausedModel := repository.NewEventFarmPausedModel(sqlx.NewSqlConnFromSession(s))
 		eventFarmUnpausedModel := repository.NewEventFarmUnpausedModel(sqlx.NewSqlConnFromSession(s))
@@ -247,9 +287,10 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			value := tx.Tx().Value().String()
 			eventRewardToken := event.RewardToken.String()
 			eventPool := event.Pool.String()
+			eventIncentiveId := event.IncentiveId.Int64()
 			eventStartTime := event.StartTime.Int64()
 			eventWeight := event.Weight.Int64()
-			eventIncentiveId := event.IncentiveId.Int64()
+			eventTimestamp := event.Timestamp.Int64()
 
 			// If handled, ignore
 			_, err := eventFarmIncentiveCreatedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
@@ -267,7 +308,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			}
 			err = eventFarmIncentiveCreatedModel.New(
 				ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
-				eventRewardToken, eventPool, eventStartTime, eventWeight, eventIncentiveId,
+				eventRewardToken, eventPool, eventIncentiveId, eventStartTime, eventWeight, eventTimestamp,
 			)
 			if err != nil {
 				return err
@@ -285,7 +326,8 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			to := tx.Tx().To().Hex()
 			value := tx.Tx().Value().String()
 			eventIncentiveId := event.IncentiveId.Int64()
-			eventRefund := event.Refund.String()
+			eventWeight := event.Weight.Int64()
+			eventTimestamp := event.Timestamp.Int64()
 
 			// If handled, ignore
 			_, err := eventFarmIncentiveEndedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
@@ -303,7 +345,45 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			}
 			err = eventFarmIncentiveEndedModel.New(
 				ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
-				eventIncentiveId, eventRefund,
+				eventIncentiveId, eventWeight, eventTimestamp,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		// IncentiveUpdated Event
+		for _, event := range incentiveUpdatedEvents {
+			blockNumber := int64(event.Raw.BlockNumber)
+			tx := transactions[event.Raw.TxHash.Hex()]
+			txIndex := int64(event.Raw.Index)
+			txHash := tx.Tx().Hash().Hex()
+			txAt := tx.TxAt
+			from := tx.From.Hex()
+			to := tx.Tx().To().Hex()
+			value := tx.Tx().Value().String()
+			eventIncentiveId := event.IncentiveId.Int64()
+			eventStartTime := event.StartTime.Int64()
+			eventWeight := event.Weight.Int64()
+			eventTotalLiquidity := event.TotalLiquidity.String()
+
+			// If handled, ignore
+			_, err := eventFarmIncentiveUpdatedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				continue
+			default:
+				return err
+			}
+
+			id, err := global.NewId()
+			if err != nil {
+				return err
+			}
+			err = eventFarmIncentiveUpdatedModel.New(
+				ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+				eventIncentiveId, eventStartTime, eventWeight, eventTotalLiquidity,
 			)
 			if err != nil {
 				return err
@@ -323,6 +403,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			eventUser := event.User.Hex()
 			eventTokenId := event.TokenId.Int64()
 			eventIncentiveId := event.IncentiveId.Int64()
+			eventLiquidity := event.Liquidity.String()
 
 			// If handled, ignore
 			_, err := eventFarmTokenStakedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
@@ -340,7 +421,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			}
 			err = eventFarmTokenStakedModel.New(
 				ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
-				eventUser, eventTokenId, eventIncentiveId,
+				eventUser, eventTokenId, eventIncentiveId, eventLiquidity,
 			)
 			if err != nil {
 				return err
@@ -360,6 +441,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			eventUser := event.User.Hex()
 			eventTokenId := event.TokenId.Int64()
 			eventIncentiveId := event.IncentiveId.Int64()
+			eventLiquidity := event.Liquidity.String()
 
 			// If handled, ignore
 			_, err := eventFarmTokenUnstakedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
@@ -377,7 +459,7 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			}
 			err = eventFarmTokenUnstakedModel.New(
 				ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
-				eventUser, eventTokenId, eventIncentiveId,
+				eventUser, eventTokenId, eventIncentiveId, eventLiquidity,
 			)
 			if err != nil {
 				return err
@@ -432,8 +514,8 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			to := tx.Tx().To().Hex()
 			value := tx.Tx().Value().String()
 			eventRewardToken := event.RewardToken.Hex()
-			eventOldRate := event.OldRate.String()
-			eventNewRate := event.NewRate.String()
+			eventOldRatePerSecond := event.OldRatePerSecond.String()
+			eventNewRatePerSecond := event.NewRatePerSecond.String()
 			eventTimestamp := event.Timestamp.Int64()
 
 			// If handled, ignore
@@ -452,7 +534,44 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 			}
 			err = eventFarmRewardRateUpdatedModel.New(
 				ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
-				eventRewardToken, eventOldRate, eventNewRate, eventTimestamp,
+				eventRewardToken, eventOldRatePerSecond, eventNewRatePerSecond, eventTimestamp,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		// RewardPoolUpdated Event
+		for _, event := range rewardPoolUpdatedEvents {
+			blockNumber := int64(event.Raw.BlockNumber)
+			tx := transactions[event.Raw.TxHash.Hex()]
+			txIndex := int64(event.Raw.Index)
+			txHash := tx.Tx().Hash().Hex()
+			txAt := tx.TxAt
+			from := tx.From.Hex()
+			to := tx.Tx().To().Hex()
+			value := tx.Tx().Value().String()
+			eventRewardToken := event.RewardToken.Hex()
+			eventTotalWeight := event.TotalWeight.String()
+			eventTimestamp := event.Timestamp.Int64()
+
+			// If handled, ignore
+			_, err := eventFarmRewardPoolUpdatedModel.FindOneByTxHashChainId(ctx, txHash, handler.chain.ChainId)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				continue
+			default:
+				return err
+			}
+
+			id, err := global.NewId()
+			if err != nil {
+				return err
+			}
+			err = eventFarmRewardPoolUpdatedModel.New(
+				ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value,
+				eventRewardToken, eventTotalWeight, eventTimestamp,
 			)
 			if err != nil {
 				return err
@@ -590,6 +709,12 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 				go callback(handler.chain.ChainId, tx, event)
 			}
 		}
+		for _, event := range incentiveUpdatedEvents {
+			for _, callback := range handler.onIncentiveUpdated {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
 		wg.Wait()
 		for _, event := range tokenStakedEvents {
 			for _, callback := range handler.onTokenStaked {
@@ -611,6 +736,12 @@ func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOp
 		}
 		for _, event := range rewardRateUpdatedEvents {
 			for _, callback := range handler.onRewardRateUpdated {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range rewardPoolUpdatedEvents {
+			for _, callback := range handler.onRewardPoolUpdated {
 				tx := transactions[event.Raw.TxHash.Hex()]
 				go callback(handler.chain.ChainId, tx, event)
 			}

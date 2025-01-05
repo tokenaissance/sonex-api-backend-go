@@ -177,6 +177,8 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 
 	// Filter
 	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
+		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
+
 		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
@@ -229,9 +231,10 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 				resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
 			}
 			if val, ok := unclaimeds[item.IncentiveId]; ok {
-				rewardTokenPrice, _ := new(big.Int).SetString(item.RewardTokenPrice, 10)
-				unclaimedUSD := new(big.Int).Div(new(big.Int).Mul(val, rewardTokenPrice), new(big.Int).Exp(big.NewInt(10), big.NewInt(item.RewardTokenDecimals), nil))
-				resp.List[i].Earned = unclaimedUSD.String()
+				rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
+				rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(item.RewardToken.Decimals), nil))
+				unclaimedUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(val), rewardTokenPrice), rewardTokenAccuracy), usdAccuracy)
+				resp.List[i].EarnedUSD, _ = unclaimedUSD.Float64()
 			}
 		}
 	}
@@ -242,7 +245,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 	}
 	if req.KeyWord != "" {
 		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
-			return strings.Contains(item.Token0Symbol, req.KeyWord) || strings.Contains(item.Token1Symbol, req.KeyWord)
+			return strings.Contains(item.Token0.Symbol, req.KeyWord) || strings.Contains(item.Token1.Symbol, req.KeyWord)
 		}).ToSlice(&resp.List)
 	}
 	if req.Status != "" && (req.Status == "active" || req.Status == "closed") {
@@ -272,8 +275,14 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 }
 
 func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
+	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
+	if err != nil {
+		return nil, nil, err
+	}
+	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
@@ -356,11 +365,11 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				logx.Errorf("%s", fmt.Sprintf("Get extra token error: %s %s", record.EventRewardToken, err))
 				return
 			}
-			reward, _ := new(big.Int).SetString(record.ExtraRate, 10)
-			rewardPrice := prices[rewardToken.Address]
-			rewardUSD := new(big.Int).Mul(reward, rewardPrice)
-			rewardTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
-			totalRewardUSD := new(big.Int).Div(new(big.Int).Mul(rewardUSD, big.NewInt(365*24*60*60)), rewardTokenAccuracy)
+			reward, _ := new(big.Float).SetString(record.ExtraRate)
+			rewardPrice := new(big.Float).SetInt(prices[rewardToken.Address])
+			rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil))
+			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(reward, rewardPrice), rewardTokenAccuracy), usdAccuracy)
+			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
 
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
@@ -392,71 +401,84 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 					return
 				}
 				totalLiquidity := big.NewInt(0)
-				totalLiquidityUSD := big.NewInt(0)
+				totalLiquidityUSD := big.NewFloat(0)
 				for _, position := range positions {
 					totalLiquidity.Add(totalLiquidity, position.Liquidity)
 					amount0, amount1 := position.Amounts()
-					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount0, price0), new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil)))
-					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Int).Div(new(big.Int).Mul(amount1, price1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil)))
+					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), new(big.Float).SetInt(price0)), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil))))
+					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), new(big.Float).SetInt(price1)), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil))))
 				}
 
-				apr := new(big.Int).Div(totalRewardUSD, totalLiquidityUSD)
+				apr := new(big.Float).Quo(totalRewardUSD, totalLiquidityUSD)
 				var tids []int64
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 
+				totalLiquidityUSDValue, _ := totalLiquidityUSD.Float64()
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
-					ChainId:             incincentiveCreatedRecord.ChainId,
-					PoolAddress:         record.EventPool,
-					FeeRatio:            record.ExtraFee,
-					RewardTokenAddress:  rewardToken.Address,
-					RewardTokenDecimals: rewardToken.Decimals,
-					RewardTokenSymbol:   rewardToken.Symbol,
-					RewardTokenPrice:    rewardPrice.String(),
-					Token0Address:       token0.Address,
-					Token0Decimals:      token0.Decimals,
-					Token0Symbol:        token0.Symbol,
-					Token0Price:         price0.String(),
-					Token1Address:       token1.Address,
-					Token1Decimals:      token1.Decimals,
-					Token1Symbol:        token1.Symbol,
-					Token1Price:         price1.String(),
-					Liquidity:           totalLiquidity.String(),
-					LiquidityUSD:        totalLiquidityUSD.String(),
-					APR:                 apr.String(),
-					JoinNum:             int64(len(userAddressesMap)),
-					Status:              status,
-					StartAt:             record.EventStartTime,
-					Earned:              big.NewInt(0).String(),
+					IncentiveId: incincentiveCreatedRecord.EventIncentiveId,
+					ChainId:     incincentiveCreatedRecord.ChainId,
+					PoolAddress: record.EventPool,
+					FeeRatio:    record.ExtraFee,
+					RewardToken: types.FarmIncentivesResponse_Token{
+						Address:  rewardToken.Address,
+						Decimals: rewardToken.Decimals,
+						Symbol:   rewardToken.Symbol,
+						Price:    rewardPrice.String(),
+					},
+					Token0: types.FarmIncentivesResponse_Token{
+						Address:  token0.Address,
+						Decimals: token0.Decimals,
+						Symbol:   token0.Symbol,
+						Price:    price0.String(),
+					},
+					Token1: types.FarmIncentivesResponse_Token{
+						Address:  token1.Address,
+						Decimals: token1.Decimals,
+						Symbol:   token1.Symbol,
+						Price:    price1.String(),
+					},
+					Liquidity:    totalLiquidity.String(),
+					LiquidityUSD: totalLiquidityUSDValue,
+					APR:          apr.String(),
+					JoinNum:      int64(len(userAddressesMap)),
+					Status:       status,
+					StartAt:      record.EventStartTime,
+					EarnedUSD:    0,
 				}
 				tokenIdsResult = tids
 			} else {
-				apr := new(big.Int).Div(totalRewardUSD, big.NewInt(1))
+				apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
-					ChainId:             incincentiveCreatedRecord.ChainId,
-					PoolAddress:         record.EventPool,
-					FeeRatio:            record.ExtraFee,
-					RewardTokenAddress:  rewardToken.Address,
-					RewardTokenDecimals: rewardToken.Decimals,
-					RewardTokenSymbol:   rewardToken.Symbol,
-					RewardTokenPrice:    rewardPrice.String(),
-					Token0Address:       token0.Address,
-					Token0Decimals:      token0.Decimals,
-					Token0Symbol:        token0.Symbol,
-					Token0Price:         price0.String(),
-					Token1Address:       token1.Address,
-					Token1Decimals:      token1.Decimals,
-					Token1Symbol:        token1.Symbol,
-					Token1Price:         price1.String(),
-					Liquidity:           big.NewInt(0).String(),
-					LiquidityUSD:        big.NewInt(0).String(),
-					APR:                 apr.String(),
-					JoinNum:             0,
-					Status:              status,
-					StartAt:             record.EventStartTime,
-					Earned:              big.NewInt(0).String(),
+					IncentiveId: incincentiveCreatedRecord.EventIncentiveId,
+					ChainId:     incincentiveCreatedRecord.ChainId,
+					PoolAddress: record.EventPool,
+					FeeRatio:    record.ExtraFee,
+					RewardToken: types.FarmIncentivesResponse_Token{
+						Address:  rewardToken.Address,
+						Decimals: rewardToken.Decimals,
+						Symbol:   rewardToken.Symbol,
+						Price:    rewardPrice.String(),
+					},
+					Token0: types.FarmIncentivesResponse_Token{
+						Address:  token0.Address,
+						Decimals: token0.Decimals,
+						Symbol:   token0.Symbol,
+						Price:    price0.String(),
+					},
+					Token1: types.FarmIncentivesResponse_Token{
+						Address:  token1.Address,
+						Decimals: token1.Decimals,
+						Symbol:   token1.Symbol,
+						Price:    price1.String(),
+					},
+					Liquidity:    big.NewInt(0).String(),
+					LiquidityUSD: 0,
+					APR:          apr.String(),
+					JoinNum:      0,
+					Status:       status,
+					StartAt:      record.EventStartTime,
+					EarnedUSD:    0,
 				}
 			}
 
@@ -484,6 +506,12 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 	}
 
 	return &types.FarmIncentivesResponse{
+		USD: types.FarmIncentivesResponse_Token{
+			Address:  usdToken.Address,
+			Decimals: usdToken.Decimals,
+			Symbol:   usdToken.Symbol,
+			Price:    usdAccuracy.String(),
+		},
 		List: list,
 	}, tokenIds, nil
 }
