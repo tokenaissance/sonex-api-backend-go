@@ -246,8 +246,8 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	// Page
 	if totalResult < 0 {
 		totalResult = int64(len(dataResult))
+		linq.From(dataResult).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&dataResult)
 	}
-	linq.From(dataResult).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&dataResult)
 
 	return &types.TransactionsResponse{
 		Data:  dataResult,
