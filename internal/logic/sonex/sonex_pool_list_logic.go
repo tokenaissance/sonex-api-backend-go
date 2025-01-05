@@ -182,7 +182,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	pools := make([]*types.PoolsResponse_Pool, 0, len(data))
 
 	mockYields := []float64{0.0347, 0.0412, 0.0289, 0.0378, 0.0456, 0.0234, 0.0467, 0.0312, 0.0398, 0.0289, 0.0312, 0.0398, 0.0289}
-	mockVolume := []float64{28456.34521, 15678.90234, 31089.45678, 9876.54321, 22345.67890, 4567.89012, 29876.54321, 18765.43210, 7654.32109, 25987.65432}
 
 	for i := range data {
 		poolFromDB := data[i]
@@ -298,14 +297,11 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 
 			rand.Seed(time.Now().UnixNano())
 
-			// 生成 0.01 (1%) 到 0.0105 (1.05%) 之间的随机数
-			min := 0.01
-			max := 0.0105
-			increaseRate := min + rand.Float64()*(max-min)
 			if strings.Compare(pool.TvlUSD, "0") == 0 {
 				pool.Volume = "0"
 			} else {
-				pool.Volume = fmt.Sprintf("%f", mockVolume[digit2]*increaseRate)
+				volumeFloat, _ := yield24h.Quo(yield24h, big.NewFloat(0.015)).Float64()
+				pool.Volume = fmt.Sprintf("%f", volumeFloat)
 			}
 
 			mu.Unlock()
