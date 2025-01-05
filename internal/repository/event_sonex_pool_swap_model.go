@@ -28,7 +28,7 @@ type (
 		PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
 		PageQueryOrderByTxAtWithExtra(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
 		PageQueryByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
-		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]PoolVolume, error)
+		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 		GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 	}
@@ -205,16 +205,16 @@ func (m *defaultEventSonexPoolSwapModel) PageQueryByWalletWithExtra(ctx context.
 	return resp, total, err
 }
 
-func (m *defaultEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]PoolVolume, error) {
+func (m *defaultEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error) {
 	volumeQuery := fmt.Sprintf(`
 		SELECT
 			sp.extra_pool AS address,
-			SUM(ABS(CAST(sp.event_amount0 AS numeric)))::VARCHER AS amount0,
-			SUM(ABS(CAST(sp.event_amount1 AS numeric)))::VARCHER AS amount1
+			SUM(ABS(CAST(sp.event_amount0 AS numeric)))::VARCHAR AS amount0,
+			SUM(ABS(CAST(sp.event_amount1 AS numeric)))::VARCHAR AS amount1
 		FROM
 			%s sp
-		WHERE sp.chain_id = %d
-	`, m.table, chainId)
+		WHERE sp.chain_id = $1
+	`, m.table)
 
 	if last24Hours {
 		// Assuming `transaction_time` is a timestamp column in your table
@@ -224,17 +224,19 @@ func (m *defaultEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Contex
 	// Complete the query with grouping
 	volumeQuery += " GROUP BY sp.extra_pool"
 
-	// Format the query with the chainId
-	volumeQuery = fmt.Sprintf(volumeQuery, chainId)
-
 	// Execute the query and scan results into poolVolumes slice
-	var poolVolumes []PoolVolume
-	err := m.conn.QueryRowsCtx(ctx, &poolVolumes, volumeQuery)
+	var poolVolumes []*PoolVolume
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumes, volumeQuery, chainId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute volume query: %w", err)
 	}
 
-	return poolVolumes, nil
+	poolVolumesMap := make(map[string]*PoolVolume)
+	for _, pv := range poolVolumes {
+		poolVolumesMap[pv.Address] = pv
+	}
+
+	return poolVolumesMap, nil
 }
 
 type SwapData struct {
