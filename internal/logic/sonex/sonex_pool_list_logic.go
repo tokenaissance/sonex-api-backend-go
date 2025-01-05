@@ -302,7 +302,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			min := 0.01
 			max := 0.0105
 			increaseRate := min + rand.Float64()*(max-min)
-			if pool.TvlUSD == "0" {
+			if strings.Compare(pool.TvlUSD, "0") == 0 {
 				pool.Volume = "0"
 			} else {
 				pool.Volume = fmt.Sprintf("%f", mockVolume[digit2]*increaseRate)
