@@ -798,9 +798,17 @@
           {
             "name": "orderBy",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "string",
-            "default": "ASC"
+            "enum": [
+              "1H_ASC",
+              "1H_DESC",
+              "1D_ASC",
+              "1D_DESC",
+              "Volume_ASC",
+              "Volume_DESC"
+            ],
+            "default": "Volume_DESC"
           },
           {
             "name": "pageSize",
@@ -1177,6 +1185,24 @@
         "chainId",
         "height",
         "updateAt"
+      ]
+    },
+    "Comparison": {
+      "type": "object",
+      "properties": {
+        "comparison": {
+          "type": "string",
+          "description": " UP、DOWN、SAME"
+        },
+        "percentage": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "Comparison",
+      "required": [
+        "comparison",
+        "percentage"
       ]
     },
     "FarmIncentivesRequest": {
@@ -1655,6 +1681,23 @@
         "investedAmount1"
       ]
     },
+    "Kline": {
+      "type": "object",
+      "properties": {
+        "price": {
+          "type": "string"
+        },
+        "timeStamp": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "Kline",
+      "required": [
+        "price",
+        "timeStamp"
+      ]
+    },
     "MetaRequest": {
       "type": "object",
       "title": "MetaRequest"
@@ -1885,7 +1928,8 @@
           "$ref": "#/definitions/Token"
         },
         "fee": {
-          "type": "string"
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "Pool",
@@ -3144,6 +3188,60 @@
         "amounts"
       ]
     },
+    "TokenWithExtra": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "price": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "pools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Pool"
+          }
+        },
+        "volume": {
+          "type": "string"
+        },
+        "kline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Kline"
+          }
+        },
+        "riseRall1H": {
+          "$ref": "#/definitions/Comparison"
+        },
+        "riseRall1D": {
+          "$ref": "#/definitions/Comparison"
+        }
+      },
+      "title": "TokenWithExtra",
+      "required": [
+        "logo",
+        "pools",
+        "volume",
+        "kline",
+        "riseRall1H",
+        "riseRall1D"
+      ]
+    },
     "Token_Kline": {
       "type": "object",
       "properties": {
@@ -3382,7 +3480,15 @@
         },
         "orderBy": {
           "type": "string",
-          "default": "ASC"
+          "enum": [
+            "1H_ASC",
+            "1H_DESC",
+            "1D_ASC",
+            "1D_DESC",
+            "Volume_ASC",
+            "Volume_DESC"
+          ],
+          "default": "Volume_DESC"
         },
         "pageSize": {
           "type": "integer",
@@ -3398,7 +3504,6 @@
       "title": "TokensRequest",
       "required": [
         "chainId",
-        "orderBy",
         "pageSize",
         "pageIndex"
       ]
@@ -3406,10 +3511,10 @@
     "TokensResponse": {
       "type": "object",
       "properties": {
-        "data": {
+        "tokens": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Token_TokenDetail"
+            "$ref": "#/definitions/TokenWithExtra"
           }
         },
         "total": {
@@ -3419,7 +3524,7 @@
       },
       "title": "TokensResponse",
       "required": [
-        "data",
+        "tokens",
         "total"
       ]
     },
@@ -3471,7 +3576,7 @@
     "TransactionsResponse": {
       "type": "object",
       "properties": {
-        "data": {
+        "transactions": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/TransactionsResponse_Transaction"
@@ -3484,7 +3589,7 @@
       },
       "title": "TransactionsResponse",
       "required": [
-        "data",
+        "transactions",
         "total"
       ]
     },

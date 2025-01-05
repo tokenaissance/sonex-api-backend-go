@@ -8,9 +8,29 @@ type Token {
 	Price    string `json:"price"`
 }
 
+type TokenWithExtra {
+	Token
+	Logo       string     `json:"logo"`
+	Pools      []Pool     `json:"pools"`
+	Volume     string     `json:"volume"`
+	Kline      []Kline    `json:"kline"`
+	RiseFall1H Comparison `json:"riseRall1H"`
+	RiseFall1D Comparison `json:"riseRall1D"`
+}
+
 type Pool {
 	Address string `json:"address"`
 	Token0  Token  `json:"token0"`
 	Token1  Token  `json:"token1"`
-	Fee     string `json:"fee"`
+	Fee     int64  `json:"fee"`
+}
+
+type Kline {
+	Price     string `json:"price"`
+	TimeStamp int64  `json:"timeStamp"`
+}
+
+type Comparison {
+	Comparison string  `json:"comparison"` // UP、DOWN、SAME
+	Percentage float64 `json:"percentage"`
 }

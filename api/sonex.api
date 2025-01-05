@@ -92,8 +92,20 @@ type TransactionsResponse_Transaction {
 }
 
 type TransactionsResponse {
-	Data  []TransactionsResponse_Transaction `json:"data"`
+	Data  []TransactionsResponse_Transaction `json:"transactions"`
 	Total int64                              `json:"total"`
+}
+
+type TokensRequest {
+	ChainId   int64  `form:"chainId"`
+	OrderBy   string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
+	PageSize  int64  `form:"pageSize,default=20"`
+	PageIndex int64  `form:"pageIndex,default=1"`
+}
+
+type TokensResponse {
+	Data  []TokenWithExtra `json:"tokens"`
+	Total int64            `json:"total"`
 }
 
 type TokenListRequest {
@@ -113,20 +125,6 @@ type PaginationMeta {
 }
 
 type TokenListResponse {
-	Code    int                  `json:"code"`
-	Data    []*Token_TokenDetail `json:"data"`
-	Meta    *PaginationMeta      `json:"meta"`
-	Message string               `json:"message"`
-}
-
-type TokensRequest {
-	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946,optional"`
-}
-
-type TokensResponse {
 	Code    int                  `json:"code"`
 	Data    []*Token_TokenDetail `json:"data"`
 	Meta    *PaginationMeta      `json:"meta"`
@@ -517,11 +515,11 @@ service sonex_api_backend_go {
 	@handler TransactionsHandler
 	get /transactions (TransactionsRequest) returns (TransactionsResponse)
 
+	@handler TokensHandler
+	get /tokens (TokensRequest) returns (TokensResponse)
+
 	@handler SonexTokenListHandler
 	get /tokens/list (TokenListRequest) returns (TokenListResponse)
-
-	@handler SonexTokensHandler
-	get /tokens (TokenListRequest) returns (TokensResponse)
 
 	@handler SonexTokenTopHandler
 	get /tokens/top returns (TokenTopResponse)

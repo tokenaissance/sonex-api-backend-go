@@ -168,7 +168,7 @@ func (l *XpoolPoolListLogic) getResponse(req *types.XpoolPoolListRequest) (resp 
 		return nil, err
 	}
 
-	prices, err := tokenPriceModel.GetAllLatestHistoryPrices()
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
 	if err != nil {
 		return nil, err
 	}

@@ -250,6 +250,8 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 			return item.Status == req.Status
 		}).ToSlice(&resp.List)
 	}
+
+	// Sorts
 	if req.OrderBy != "" {
 		switch req.OrderBy {
 		case "hot":
@@ -306,7 +308,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 			},
 		)
 
-	prices, err := tokenPriceModel.GetAllLatestHistoryPrices()
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
 	if err != nil {
 		return nil, nil, err
 	}

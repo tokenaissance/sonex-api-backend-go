@@ -110,7 +110,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				Method:  http.MethodGet,
 				Path:    "/tokens",
-				Handler: sonex.SonexTokensHandler(serverCtx),
+				Handler: sonex.TokensHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,

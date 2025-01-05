@@ -41,14 +41,6 @@ func (p *TokensResponseWrapper) GetData() interface{} {
 	return p.Data
 }
 
-func (p *TokensResponseWrapper) GetMeta() interface{} {
-	return p.Meta
-}
-
-func (p *TokensResponseWrapper) GetCode() interface{} {
-	return p.Code
-}
-
 func (l *SonexTokensLogic) SonexTokens(req *types.TokenListRequest) (resp *TokensResponseWrapper, err error) {
 	const cacheKey = "sonex_dex:uniswap:tokens"
 
@@ -97,15 +89,12 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacher cach
 
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
-	data, meta, err := model.GetTokens(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
+	data, _, err := model.GetTokens(ctx, req, l.svcCtx.Config.Sonexes[0].PositionManager)
 
 	if err != nil {
 		return &TokensResponseWrapper{
 			&types.TokensResponse{
-				Code:    400,
-				Data:    []*types.Token_TokenDetail{},
-				Meta:    &types.PaginationMeta{},
-				Message: err.Error(),
+				Data: []types.TokenWithExtra{},
 			},
 		}, nil
 	}
@@ -182,12 +171,7 @@ func (l *SonexTokensLogic) refreshCache(req *types.TokenListRequest, cacher cach
 	}
 
 	response := &TokensResponseWrapper{
-		&types.TokensResponse{
-			Code:    200,
-			Data:    data,
-			Meta:    meta,
-			Message: "success",
-		},
+		&types.TokensResponse{},
 	}
 
 	responseBytes, err := json.Marshal(response)

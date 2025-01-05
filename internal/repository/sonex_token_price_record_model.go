@@ -20,8 +20,8 @@ type (
 		sonexTokenPriceRecordModel
 		withSession(session sqlx.Session) SonexTokenPriceRecordModel
 		Kline(address string, interval string) ([]*TokenPriceRecord, error)
-		GetAllLatestHistoryPrices() (map[string]*big.Int, error)
-		GetLatestHistoryPrices(tokenAddresses []string) (map[string]*big.Int, error)
+		QueryLatestHistoryPrices() (map[string]*big.Int, error)
+		QueryLatestHistoryPricesByAddresses(addresses []string) (map[string]*big.Int, error)
 		GetCurrentPrice(tokenAddress string) (float64, error)
 		GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error)
 		GetLastHourPrice(tokenAddress string) (float64, error)
@@ -160,7 +160,7 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 	}
 }
 
-func (m *customSonexTokenPriceRecordModel) GetAllLatestHistoryPrices() (map[string]*big.Int, error) {
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices() (map[string]*big.Int, error) {
 	ctx := context.Background()
 
 	type PriceRecord struct {
@@ -189,7 +189,7 @@ func (m *customSonexTokenPriceRecordModel) GetAllLatestHistoryPrices() (map[stri
 	return result, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetLatestHistoryPrices(tokenAddresses []string) (map[string]*big.Int, error) {
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(tokenAddresses []string) (map[string]*big.Int, error) {
 	ctx := context.Background()
 
 	type PriceRecord struct {
