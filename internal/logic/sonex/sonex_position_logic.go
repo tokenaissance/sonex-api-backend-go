@@ -271,12 +271,10 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	factor1 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token1.Decimals)))
 
 	poolPrice0 := new(big.Float).Quo(price0, factorDai)
-	position.Price0, _ = poolPrice0.Float64()
 	position.Pool.Token0Price = poolPrice0.String()
 
 	// 转换 price 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
 	poolPrice1 := new(big.Float).Quo(price1, factorDai)
-	position.Price1, _ = poolPrice1.Float64()
 	position.Pool.Token1Price = poolPrice1.String()
 
 	// 获取 amount0, amount1 和 unclaimedFee0, unclaimedFee1
@@ -290,13 +288,9 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	amount0Float.Quo(amount0Float, factor0)
 	amount1Float.Quo(amount1Float, factor1)
 
-	// 计算 amount0 和 amount1 的余额
+	// 1. 计算 amount0 和 amount1 的余额
 	positionValue0 := new(big.Float).Mul(amount0Float, poolPrice0)
 	positinoValue1 := new(big.Float).Mul(amount1Float, poolPrice1)
-
-	// 1. 计算 amount0 和 amount1
-	position.Amount0, _ = amount0Float.Float64()
-	position.Amount1, _ = amount1Float.Float64()
 
 	// 2. 计算总 position
 	totalPosition := new(big.Float).Add(positionValue0, positinoValue1)

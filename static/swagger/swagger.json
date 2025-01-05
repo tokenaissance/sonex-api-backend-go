@@ -2264,26 +2264,6 @@
           "type": "integer",
           "format": "int32"
         },
-        "amount0": {
-          "type": "number",
-          "format": "double",
-          "description": " Deprecated: use tokenValue0 instead"
-        },
-        "amount1": {
-          "type": "number",
-          "format": "double",
-          "description": " Deprecated: use tokenValue1 instead"
-        },
-        "price0": {
-          "type": "number",
-          "format": "double",
-          "description": " Deprecated: use tokenValue0.Price instead"
-        },
-        "price1": {
-          "type": "number",
-          "format": "double",
-          "description": " Deprecated: use tokenValue1.Price instead"
-        },
         "unclaimedFee0": {
           "type": "number",
           "format": "double"
@@ -2311,10 +2291,6 @@
         "origin",
         "pool",
         "positionAge",
-        "amount0",
-        "amount1",
-        "price0",
-        "price1",
         "unclaimedFee0",
         "unclaimedFee1",
         "tokenValue0",
