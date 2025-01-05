@@ -174,6 +174,13 @@ type PaginationMeta struct {
 	HasNextPage     bool `json:"hasNextPage"`
 }
 
+type Pool struct {
+	Address string `json:"sddress"`
+	Token0  Token  `json:"token0"`
+	Token1  Token  `json:"token1"`
+	Fee     string `json:"fee"`
+}
+
 type PoolPositionData struct {
 	EventPool    string `json:"eventPool"`
 	EventToken0  string `json:"eventToken0"`
@@ -413,6 +420,13 @@ type SwapVolumeResponse struct {
 	Volumes []SwapVolume `json:"volumes"`
 }
 
+type Token struct {
+	Address  string `json:"sddress"`
+	Symbol   string `json:"symbol"`
+	Decimals int64  `json:"decimals"`
+	Price    string `json:"price"`
+}
+
 type TokenListRequest struct {
 	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
@@ -575,6 +589,34 @@ type TokensResponse struct {
 	Data    []*Token_TokenDetail `json:"data"`
 	Meta    *PaginationMeta      `json:"meta"`
 	Message string               `json:"message"`
+}
+
+type TransactionsRequest struct {
+	ChainId   int64  `form:"chainId"`
+	Wallet    string `form:"walletAddress,optional"`
+	Pool      string `form:"poolAddress,optional"`
+	Token0    string `form:"token0Address,optional"`
+	Token1    string `form:"token1Address,optional"`
+	OrderBy   string `form:"orderBy,default=ASC"`
+	PageSize  int64  `form:"pageSize,default=20"`
+	PageIndex int64  `form:"pageIndex,default=1"`
+}
+
+type TransactionsResponse struct {
+	Data  []TransactionsResponse_Transaction `json:"data"`
+	Total int64                              `json:"total"`
+}
+
+type TransactionsResponse_Transaction struct {
+	Wallet     string  `json:"wallet"`
+	Pool       Pool    `json:"pool"`
+	TxHash     string  `json:"txHash"`
+	TxAt       int64   `json:"txAt"`
+	From       string  `json:"from"`
+	To         string  `json:"to"`
+	FromAmount string  `json:"fromAmount"`
+	ToAmount   string  `json:"toAmount"`
+	ValueUSD   float64 `json:"valueUSD"`
 }
 
 type UserAssetData struct {

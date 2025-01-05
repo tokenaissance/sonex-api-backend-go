@@ -1,0 +1,15 @@
+syntax = "v1"
+
+type Token {
+	Address  string `json:"sddress"`
+	Symbol   string `json:"symbol"`
+	Decimals int64  `json:"decimals"`
+	Price    string `json:"price"`
+}
+
+type Pool {
+	Address string `json:"sddress"`
+	Token0  Token  `json:"token0"`
+	Token1  Token  `json:"token1"`
+	Fee     string `json:"fee"`
+}

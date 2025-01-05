@@ -21,7 +21,8 @@ type (
 		eventSonexPoolSwapModel
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
-		PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error)
+		PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
+		PageQueryByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]PoolVolume, error)
 		GetSwapEvents(ctx context.Context, opts *types.SwapEventRequest) ([]*types.SwapEvent, *types.PaginationMeta, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
@@ -31,12 +32,12 @@ type (
 		*defaultEventSonexPoolSwapModel
 	}
 
-	EventSonexPoolSwapWithPool struct {
+	EventSonexPoolSwapWithExtra struct {
 		EventSonexPoolSwap
-		Token0      string `db:"token0"`
-		Token1      string `db:"token1"`
-		Fee         string `db:"fee"`
-		TickSpacing string `db:"tick_spacing"`
+		ExtraToken0      string `db:"extra_token0"`
+		ExtraToken1      string `db:"extra_token1"`
+		ExtraFee         string `db:"extra_fee"`
+		ExtraTickSpacing string `db:"extra_tick_spacing"`
 	}
 
 	PoolVolume struct {
@@ -63,11 +64,45 @@ func (m *customEventSonexPoolSwapModel) New(ctx context.Context, id int64, chain
 	return err
 }
 
-func (m *defaultEventSonexPoolSwapModel) PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithPool, int64, error) {
+func (m *defaultEventSonexPoolSwapModel) PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
-	query := fmt.Sprintf("SELECT S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, S.extra_pool, C.event_token0 AS token0, C.event_token1 AS token1, C.event_fee AS fee, C.event_tick_spacing AS tick_spacing FROM %s S JOIN %s C ON S.extra_pool = C.event_pool ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2", m.table, eventSonexFactoryPoolCreatedModel.tableName())
-	var resp []EventSonexPoolSwapWithPool
+	query := fmt.Sprintf(`
+		SELECT 
+			S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
+			S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, 
+			S.extra_pool, C.event_token0 AS extra_token0, C.event_token1 AS extra_token1, C.event_fee AS extra_fee, C.event_tick_spacing AS extra_tick_spacing 
+		FROM %s S 
+		JOIN %s C ON S.extra_pool = C.event_pool 
+		ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2
+	`, m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	var resp []EventSonexPoolSwapWithExtra
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	var total int64 = 0
+	query = fmt.Sprintf("SELECT COUNT(*) FROM %s S JOIN %s C ON S.extra_pool = C.event_pool", m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	err = m.conn.QueryRowCtx(ctx, &total, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	return resp, total, err
+}
+
+func (m *defaultEventSonexPoolSwapModel) PageQueryByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error) {
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+			S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
+			S.event_sender, S.event_recipient, S.event_amount0, S.event_amount1, S.event_sqrt_price_x96, S.event_tick, 
+			S.extra_pool, C.event_token0 AS extra_token0, C.event_token1 AS extra_token1, C.event_fee AS extra_fee, C.event_tick_spacing AS extra_tick_spacing 
+		FROM %s S 
+		JOIN %s C ON S.extra_pool = C.event_pool 
+		WHERE S.from_ = $1
+		ORDER BY S.tx_at DESC OFFSET $2 LIMIT $3
+	`, m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	var resp []EventSonexPoolSwapWithExtra
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, wallet, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
 		return nil, 0, err
 	}

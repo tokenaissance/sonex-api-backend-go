@@ -17,7 +17,7 @@ type (
 		eventSonexPoolBurnModel
 		withSession(session sqlx.Session) EventSonexPoolBurnModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, owner string, tickLower string, tickUpper string, amount string, amount0 string, amount1 string, pool string) error
-		PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolBurnWithPool, int64, error)
+		PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolBurnWithExtra, int64, error)
 	}
 
 	customEventSonexPoolBurnModel struct {
@@ -29,7 +29,7 @@ type (
 		TokenId int64 `db:"token_id"`
 	}
 
-	EventSonexPoolBurnWithPool struct {
+	EventSonexPoolBurnWithExtra struct {
 		EventSonexPoolBurnWithTokenId
 		Token0      string `db:"token0"`
 		Token1      string `db:"token1"`
@@ -55,7 +55,7 @@ func (m *customEventSonexPoolBurnModel) New(ctx context.Context, id int64, chain
 	return err
 }
 
-func (m *customEventSonexPoolBurnModel) PageQueryWithPool(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolBurnWithPool, int64, error) {
+func (m *customEventSonexPoolBurnModel) PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolBurnWithExtra, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	eventSonexPositionManagerTransferModel := newEventSonexPositionManagerTransferModel(m.conn)
 	query := fmt.Sprintf(`
@@ -87,7 +87,7 @@ func (m *customEventSonexPoolBurnModel) PageQueryWithPool(ctx context.Context, p
 		JOIN %s C ON S.extra_pool = C.event_pool 
 		JOIN %s T ON S.tx_hash = T.tx_hash 
 		ORDER BY S.tx_at DESC OFFSET $1 LIMIT $2`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), eventSonexPositionManagerTransferModel.tableName())
-	var resp []EventSonexPoolBurnWithPool
+	var resp []EventSonexPoolBurnWithExtra
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
 		return nil, 0, err

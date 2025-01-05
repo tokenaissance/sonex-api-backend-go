@@ -942,6 +942,81 @@
         ]
       }
     },
+    "/sonex/transactions": {
+      "get": {
+        "operationId": "TransactionsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TransactionsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "walletAddress",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "poolAddress",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token0Address",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token1Address",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "default": "ASC"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "20"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/xpool/pool/list": {
       "get": {
         "summary": "Xpool list",
@@ -1795,6 +1870,30 @@
         "pageCount",
         "hasPreviousPage",
         "hasNextPage"
+      ]
+    },
+    "Pool": {
+      "type": "object",
+      "properties": {
+        "sddress": {
+          "type": "string"
+        },
+        "token0": {
+          "$ref": "#/definitions/Token"
+        },
+        "token1": {
+          "$ref": "#/definitions/Token"
+        },
+        "fee": {
+          "type": "string"
+        }
+      },
+      "title": "Pool",
+      "required": [
+        "sddress",
+        "token0",
+        "token1",
+        "fee"
       ]
     },
     "PoolPositionData": {
@@ -2691,6 +2790,31 @@
         "volumes"
       ]
     },
+    "Token": {
+      "type": "object",
+      "properties": {
+        "sddress": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "price": {
+          "type": "string"
+        }
+      },
+      "title": "Token",
+      "required": [
+        "sddress",
+        "symbol",
+        "decimals",
+        "price"
+      ]
+    },
     "TokenListRequest": {
       "type": "object",
       "properties": {
@@ -3328,6 +3452,114 @@
         "data",
         "meta",
         "message"
+      ]
+    },
+    "TransactionsRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "walletAddress": {
+          "type": "string"
+        },
+        "poolAddress": {
+          "type": "string"
+        },
+        "token0Address": {
+          "type": "string"
+        },
+        "token1Address": {
+          "type": "string"
+        },
+        "orderBy": {
+          "type": "string",
+          "default": "ASC"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "TransactionsRequest",
+      "required": [
+        "chainId",
+        "orderBy",
+        "pageSize",
+        "pageIndex"
+      ]
+    },
+    "TransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TransactionsResponse_Transaction"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "TransactionsResponse",
+      "required": [
+        "data",
+        "total"
+      ]
+    },
+    "TransactionsResponse_Transaction": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "type": "string"
+        },
+        "pool": {
+          "$ref": "#/definitions/Pool"
+        },
+        "txHash": {
+          "type": "string"
+        },
+        "txAt": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "fromAmount": {
+          "type": "string"
+        },
+        "toAmount": {
+          "type": "string"
+        },
+        "valueUSD": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "TransactionsResponse_Transaction",
+      "required": [
+        "wallet",
+        "pool",
+        "txHash",
+        "txAt",
+        "from",
+        "to",
+        "fromAmount",
+        "toAmount",
+        "valueUSD"
       ]
     },
     "UserAssetData": {
