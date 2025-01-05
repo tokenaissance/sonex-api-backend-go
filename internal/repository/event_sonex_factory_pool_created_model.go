@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/types"
 	"time"
 
@@ -22,7 +23,7 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) error
 		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
-		GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error)
+		GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error)
 		GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error)
 		FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error)
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error)
@@ -89,7 +90,8 @@ type PoolData struct {
 	Token1Decimals   sql.NullInt64  `db:"token1_decimals"`
 }
 
-func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, opts *types.PoolsRequest, positionManager string) ([]*types.PoolsResponse_Pool, *types.PaginationMeta, error) {
+// GetPoolList returns a map of pool data and pagination meta
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error) {
 	var poolData []PoolData
 	var totalCount int
 
@@ -98,23 +100,23 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		INNER JOIN sonex_token AS token0 ON pool.event_token0 = token0.address AND token0."isHidden" = false
 		INNER JOIN sonex_token AS token1 ON pool.event_token1 = token1.address AND token1."isHidden" = false
 		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
-	args := []interface{}{opts.ChainId, positionManager}
+	args := []interface{}{params.ChainId, params.PositionManager}
 
 	paramIndex := 3
 
-	if opts.Token0Address != "" {
+	if params.Token0Address != "" {
 		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
-		args = append(args, opts.Token0Address)
+		args = append(args, params.Token0Address)
 		paramIndex++
 	}
 
-	if opts.Token1Address != "" {
+	if params.Token1Address != "" {
 		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
-		args = append(args, opts.Token1Address)
+		args = append(args, params.Token1Address)
 		paramIndex++
 	}
 
-	if opts.Keywords != "" {
+	if params.Keywords != "" {
 		baseQuery += fmt.Sprintf(`
 			AND (pool.event_pool ILIKE $%d OR
 			token0.name ILIKE $%d OR
@@ -123,7 +125,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 			token1.symbol ILIKE $%d OR
 			token0.address ILIKE $%d OR
 			token1.address ILIKE $%d)`, paramIndex, paramIndex, paramIndex, paramIndex, paramIndex, paramIndex, paramIndex)
-		args = append(args, "%"+opts.Keywords+"%")
+		args = append(args, "%"+params.Keywords+"%")
 		paramIndex++
 	}
 
@@ -134,31 +136,32 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	}
 
 	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token0.decimals AS token0_decimals, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional, token1.decimals AS token1_decimals %s", baseQuery)
-	switch opts.Order {
+	switch params.Order {
 	case "ASC":
 		dataQuery += " ORDER BY pool.id ASC"
 	default:
 		dataQuery += " ORDER BY pool.id DESC"
 	}
-	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", opts.Take, (opts.Page-1)*opts.Take)
+	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
 	err = m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var pools []*types.PoolsResponse_Pool
+	pools := make(map[string]*sonex.PoolFromDB)
 	for _, pd := range poolData {
 		var token0Additional types.PoolsResponse_TokenAdditional
 		var token1Additional types.PoolsResponse_TokenAdditional
 		_ = json.Unmarshal([]byte(pd.Token0Additional.String), &token0Additional)
 		_ = json.Unmarshal([]byte(pd.Token1Additional.String), &token1Additional)
 
-		pool := &types.PoolsResponse_Pool{
+		pool := &sonex.PoolFromDB{
+			ChainId: params.ChainId,
 			Id:      pd.EventPool,
 			Address: pd.EventPool,
 			FeeTier: pd.EventFee,
-			Token0: types.PoolsResponse_Token{
+			Token0: &types.PoolsResponse_Token{
 				Address:    pd.Token0Address.String,
 				Symbol:     pd.Token0Symbol.String,
 				Name:       pd.Token0Name.String,
@@ -166,7 +169,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 				Decimals:   int(pd.Token0Decimals.Int64),
 				Additional: token0Additional,
 			},
-			Token1: types.PoolsResponse_Token{
+			Token1: &types.PoolsResponse_Token{
 				Address:    pd.Token1Address.String,
 				Symbol:     pd.Token1Symbol.String,
 				Name:       pd.Token1Name.String,
@@ -175,17 +178,17 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 				Additional: token1Additional,
 			},
 		}
-		pools = append(pools, pool)
+		pools[pool.Id] = pool
 	}
 
-	pageCount := (totalCount + int(opts.Take) - 1) / int(opts.Take)
+	pageCount := (totalCount + int(params.Take) - 1) / int(params.Take)
 	meta := &types.PaginationMeta{
-		Page:            int(opts.Page),
-		Take:            int(opts.Take),
+		Page:            int(params.Page),
+		Take:            int(params.Take),
 		ItemCount:       totalCount,
 		PageCount:       pageCount,
-		HasPreviousPage: opts.Page > 1,
-		HasNextPage:     int(opts.Page) < pageCount,
+		HasPreviousPage: params.Page > 1,
+		HasNextPage:     int(params.Page) < pageCount,
 	}
 
 	return pools, meta, nil
