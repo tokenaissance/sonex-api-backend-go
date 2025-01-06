@@ -15,6 +15,12 @@
  Date: 06/01/2025 21:46:02
 */
 
+CREATE SEQUENCE "public"."token_id"
+  INCREMENT 1
+  MINVALUE  1
+  MAXVALUE 9223372036854775807
+START 1
+CACHE 1;
 
 -- ----------------------------
 -- Table structure for token
@@ -45,10 +51,3 @@ CREATE UNIQUE INDEX "token_index_chain_id_address" ON "public"."token" USING btr
 -- Primary Key structure for table token
 -- ----------------------------
 ALTER TABLE "public"."token" ADD CONSTRAINT "token_pkey" PRIMARY KEY ("id");
-
-CREATE SEQUENCE "public"."token_id"
-  INCREMENT 1
-  MINVALUE  1
-  MAXVALUE 9223372036854775807
-START 1
-CACHE 1;
