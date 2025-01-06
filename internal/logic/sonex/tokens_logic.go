@@ -336,14 +336,8 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 	results := make(chan error)
 
 	for _, record := range poolRecords {
-		info0, ok0 := whitelistTokenMap[record.EventToken0]
-		info1, ok1 := whitelistTokenMap[record.EventToken1]
-		if !ok0 && !ok1 {
-			continue
-		}
-
 		wg.Add(1)
-		go func(record repository.EventSonexFactoryPoolCreated, info0 *repository.Token, info1 *repository.Token, ch chan error) {
+		go func(record repository.EventSonexFactoryPoolCreated, ch chan error) {
 			defer wg.Done()
 			defer func() {
 				if err := recover(); err != nil {
@@ -351,89 +345,78 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 				}
 			}()
 
+			extra0, ok := whitelistTokenMap[record.EventToken0]
+			if !ok {
+				return
+			}
+			extra1, ok := whitelistTokenMap[record.EventToken1]
+			if !ok {
+				return
+			}
+
 			pool := types.Pool{
 				Address: record.EventPool,
 				Fee:     record.EventFee,
 			}
+			tokenInfo0, err := global.GetToken(req.ChainId, record.EventToken0)
+			if err != nil {
+				ch <- err
+			}
+			tokenInfo1, err := global.GetToken(req.ChainId, record.EventToken1)
+			if err != nil {
+				ch <- err
+			}
 
 			dataLock.Lock()
 			token0, ok0 := tokenMap[record.EventToken0]
+			if !ok0 {
+				token0 = types.TokensResponse_Token{
+					TokenWithExtra: types.TokenWithExtra{
+						Token: types.Token{
+							Address:  tokenInfo0.Address,
+							Name:     tokenInfo0.Name,
+							Symbol:   tokenInfo0.Symbol,
+							Decimals: tokenInfo0.Decimals,
+						},
+					},
+					Logo:   extra0.Logo.String,
+					Sort:   extra0.Sort,
+					Hidden: extra0.Hidden,
+				}
+			}
 			_, pOk0 := tokenPoolsMap[record.EventToken0]
 			if !pOk0 {
 				tokenPoolsMap[record.EventToken0] = []types.Pool{}
 			}
+			pool.Token0 = token0.Token
+
 			token1, ok1 := tokenMap[record.EventToken1]
+			if !ok1 {
+				token1 = types.TokensResponse_Token{
+					TokenWithExtra: types.TokenWithExtra{
+						Token: types.Token{
+							Address:  tokenInfo1.Address,
+							Name:     tokenInfo1.Name,
+							Symbol:   tokenInfo1.Symbol,
+							Decimals: tokenInfo1.Decimals,
+						},
+					},
+					Logo:   extra1.Logo.String,
+					Sort:   extra1.Sort,
+					Hidden: extra1.Hidden,
+				}
+			}
 			_, pOk1 := tokenPoolsMap[record.EventToken1]
 			if !pOk1 {
 				tokenPoolsMap[record.EventToken1] = []types.Pool{}
 			}
-			dataLock.Unlock()
-
-			if !ok0 {
-				token, err := global.GetToken(req.ChainId, record.EventToken0)
-				if err != nil {
-					ch <- err
-				}
-				var logo string
-				var sort int64
-				var hidden bool
-				if info0 != nil {
-					logo = info0.Logo.String
-					sort = info0.Sort
-					hidden = info0.Hidden
-				}
-				token0 = types.TokensResponse_Token{
-					TokenWithExtra: types.TokenWithExtra{
-						Token: types.Token{
-							Address:  token.Address,
-							Name:     token.Name,
-							Symbol:   token.Symbol,
-							Decimals: token.Decimals,
-						},
-					},
-					Logo:   logo,
-					Sort:   sort,
-					Hidden: hidden,
-				}
-			}
-			pool.Token0 = token0.Token
-
-			if !ok1 {
-				token, err := global.GetToken(req.ChainId, record.EventToken1)
-				if err != nil {
-					ch <- err
-				}
-				var logo string
-				var sort int64
-				var hidden bool
-				if info1 != nil {
-					logo = info1.Logo.String
-					sort = info1.Sort
-					hidden = info1.Hidden
-				}
-				token1 = types.TokensResponse_Token{
-					TokenWithExtra: types.TokenWithExtra{
-						Token: types.Token{
-							Address:  token.Address,
-							Name:     token.Name,
-							Symbol:   token.Symbol,
-							Decimals: token.Decimals,
-						},
-					},
-					Logo:   logo,
-					Sort:   sort,
-					Hidden: hidden,
-				}
-			}
 			pool.Token1 = token1.Token
-
-			dataLock.Lock()
 			tokenMap[record.EventToken0] = token0
 			tokenMap[record.EventToken1] = token1
 			tokenPoolsMap[record.EventToken0] = append(tokenPoolsMap[record.EventToken0], pool)
 			tokenPoolsMap[record.EventToken1] = append(tokenPoolsMap[record.EventToken1], pool)
 			dataLock.Unlock()
-		}(record, &info0, &info1, results)
+		}(record, results)
 	}
 	wg.Wait()
 	close(results)
