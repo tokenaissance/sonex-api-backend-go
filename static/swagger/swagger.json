@@ -301,7 +301,7 @@
         },
         "parameters": [
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
             "required": true,
             "type": "integer",
@@ -522,7 +522,7 @@
         },
         "parameters": [
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
             "required": true,
             "type": "integer",
@@ -570,7 +570,7 @@
         },
         "parameters": [
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
             "required": true,
             "type": "integer",
@@ -635,7 +635,7 @@
         },
         "parameters": [
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
             "required": true,
             "type": "integer",
@@ -751,7 +751,7 @@
         },
         "parameters": [
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
             "required": true,
             "type": "integer",

@@ -9,7 +9,7 @@ type AggregatedAmounts struct {
 }
 
 type ChainRequest struct {
-	ChainId int64 `header:"chainId"`
+	ChainId int64 `header:"x-chain-id"`
 }
 
 type ChainSyncPrograss struct {
