@@ -616,3 +616,13 @@ func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId i
 		Details:         detailsResult,
 	}, nil
 }
+
+func BatchGetTotalSupplies(ctx context.Context, chainId int64, tokens []common.Address) (map[common.Address]*big.Int, error) {
+	tokenCachersLock.RLock()
+	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%s", "Miss token cacher")
+	}
+	return cacher.BatchGetTotalSupplies(ctx, tokens)
+}

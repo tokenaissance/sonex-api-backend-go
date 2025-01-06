@@ -103,6 +103,18 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	tokenModel := repository.NewTokenModel(conn)
+
+	whitelistTokens, err := tokenModel.QueryByChainId(l.ctx, req.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	whitelistTokenMap := map[string]repository.Token{}
+	linq.From(whitelistTokens).ToMapByT(
+		&whitelistTokenMap,
+		func(item repository.Token) string { return item.Address },
+		func(item repository.Token) repository.Token { return item },
+	)
 
 	// Filter
 	linq.From(dataResult).WhereT(func(item types.TokensResponse_Token) bool { return !item.Hidden }).ToSlice(&dataResult)
@@ -113,6 +125,13 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		return nil, err
 	}
 	volumes, err := eventSonexPoolSwapModel.SummarizeVolumesByChainId(l.ctx, req.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	var tokenAddresses []common.Address
+	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) common.Address { return common.HexToAddress(item.Address) }).ToSlice(&tokenAddresses)
+	totalSupplies, err := global.BatchGetTotalSupplies(l.ctx, req.ChainId, tokenAddresses)
 	if err != nil {
 		return nil, err
 	}
@@ -145,21 +164,51 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			if !ok {
 				priceI = big.NewInt(0)
 			}
-			price, _ := new(big.Float).Quo(new(big.Float).SetInt(priceI), usdAccuracy).Float64()
+			price, _ := global.PriceToUSD(req.ChainId, priceI)
 			item.PriceUSD = price
+
+			totalSupply, ok := totalSupplies[common.HexToAddress(item.Address)]
+			if !ok {
+				totalSupply = big.NewInt(0)
+			}
+			accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(item.Decimals), nil)
+			fdv, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply, priceI), accuracy))
+			item.FdvUSD = fdv
+
+			extra, ok := whitelistTokenMap[item.Address]
+			if ok {
+				item.Sort = extra.Sort
+				item.Hidden = extra.Hidden
+			}
+
 			for i, pool := range item.Pools {
 				price0I, ok := prices[pool.Token0.Address]
 				if !ok {
 					price0I = big.NewInt(0)
 				}
-				price0, _ := new(big.Float).Quo(new(big.Float).SetInt(price0I), usdAccuracy).Float64()
+				price0, _ := global.PriceToUSD(req.ChainId, price0I)
 				item.Pools[i].Token0.PriceUSD = price0
 				price1I, ok := prices[pool.Token1.Address]
 				if !ok {
 					price1I = big.NewInt(0)
 				}
-				price1, _ := new(big.Float).Quo(new(big.Float).SetInt(price1I), usdAccuracy).Float64()
+				price1, _ := global.PriceToUSD(req.ChainId, price1I)
 				item.Pools[i].Token1.PriceUSD = price1
+
+				totalSupply0, ok := totalSupplies[common.HexToAddress(pool.Token0.Address)]
+				if !ok {
+					totalSupply0 = big.NewInt(0)
+				}
+				accuracy0 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil)
+				fdv0, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply0, price0I), accuracy0))
+				item.Pools[i].Token0.FdvUSD = fdv0
+				totalSupply1, ok := totalSupplies[common.HexToAddress(pool.Token1.Address)]
+				if !ok {
+					totalSupply1 = big.NewInt(0)
+				}
+				accuracy1 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil)
+				fdv1, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply1, price1I), accuracy1))
+				item.Pools[i].Token1.FdvUSD = fdv1
 			}
 
 			volumeI, ok := volumes[item.Address]
@@ -379,9 +428,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 							Decimals: tokenInfo0.Decimals,
 						},
 					},
-					Logo:   extra0.Logo.String,
-					Sort:   extra0.Sort,
-					Hidden: extra0.Hidden,
+					Logo: extra0.Logo.String,
 				}
 			}
 			_, pOk0 := tokenPoolsMap[record.EventToken0]
@@ -401,9 +448,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 							Decimals: tokenInfo1.Decimals,
 						},
 					},
-					Logo:   extra1.Logo.String,
-					Sort:   extra1.Sort,
-					Hidden: extra1.Hidden,
+					Logo: extra1.Logo.String,
 				}
 			}
 			_, pOk1 := tokenPoolsMap[record.EventToken1]

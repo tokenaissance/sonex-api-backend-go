@@ -380,11 +380,13 @@ type SonexTokenPricesResponse struct {
 }
 
 type Token struct {
-	Address  string  `json:"address"`
-	Name     string  `json:"name"`
-	Symbol   string  `json:"symbol"`
-	Decimals int64   `json:"decimals"`
-	PriceUSD float64 `json:"priceUSD"`
+	Address     string  `json:"address"`
+	Name        string  `json:"name"`
+	Symbol      string  `json:"symbol"`
+	Decimals    int64   `json:"decimals"`
+	TotalSupply string  `json:"totalSupply"`
+	FdvUSD      float64 `json:"fdvUSD"`
+	PriceUSD    float64 `json:"priceUSD"`
 }
 
 type TokenPriceRequest struct {

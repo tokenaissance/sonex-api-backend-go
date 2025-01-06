@@ -653,8 +653,7 @@
               "1D_DESC",
               "Volume_ASC",
               "Volume_DESC"
-            ],
-            "default": "Volume_DESC"
+            ]
           },
           {
             "name": "pageSize",
@@ -673,9 +672,10 @@
           {
             "name": "noCache",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "boolean",
-            "format": "boolean"
+            "format": "boolean",
+            "default": "false"
           }
         ],
         "tags": [
@@ -2413,6 +2413,13 @@
           "type": "integer",
           "format": "int64"
         },
+        "totalSupply": {
+          "type": "string"
+        },
+        "fdvUSD": {
+          "type": "number",
+          "format": "double"
+        },
         "priceUSD": {
           "type": "number",
           "format": "double"
@@ -2424,6 +2431,8 @@
         "name",
         "symbol",
         "decimals",
+        "totalSupply",
+        "fdvUSD",
         "priceUSD"
       ]
     },
@@ -2721,6 +2730,13 @@
           "type": "integer",
           "format": "int64"
         },
+        "totalSupply": {
+          "type": "string"
+        },
+        "fdvUSD": {
+          "type": "number",
+          "format": "double"
+        },
         "priceUSD": {
           "type": "number",
           "format": "double"
@@ -2998,8 +3014,7 @@
             "1D_DESC",
             "Volume_ASC",
             "Volume_DESC"
-          ],
-          "default": "Volume_DESC"
+          ]
         },
         "pageSize": {
           "type": "integer",
@@ -3011,13 +3026,11 @@
         },
         "noCache": {
           "type": "boolean",
-          "format": "boolean"
+          "format": "boolean",
+          "default": "false"
         }
       },
-      "title": "TokensRequest",
-      "required": [
-        "noCache"
-      ]
+      "title": "TokensRequest"
     },
     "TokensResponse_Token": {
       "type": "object",
