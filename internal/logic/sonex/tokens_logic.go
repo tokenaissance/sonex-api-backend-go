@@ -44,6 +44,16 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
 
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+	usdToken, err := global.GetToken(req.ChainId, common.HexToAddress(chainConf.USD).Hex())
+	if err != nil {
+		return nil, err
+	}
+	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
+
 	cacheKey := fmt.Sprintf("sonex:tokens:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
@@ -116,22 +126,25 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 				}
 			}()
 
-			price, ok := prices[item.Address]
+			priceI, ok := prices[item.Address]
 			if !ok {
-				price = big.NewInt(0)
+				priceI = big.NewInt(0)
 			}
-			item.Price = price.String()
+			price, _ := new(big.Float).Quo(new(big.Float).SetInt(priceI), usdAccuracy).Float64()
+			item.PriceUSD = price
 			for i, pool := range item.Pools {
-				price0, ok := prices[pool.Token0.Address]
+				price0I, ok := prices[pool.Token0.Address]
 				if !ok {
-					price0 = big.NewInt(0)
+					price0I = big.NewInt(0)
 				}
-				item.Pools[i].Token0.Price = price0.String()
-				price1, ok := prices[pool.Token1.Address]
+				price0, _ := new(big.Float).Quo(new(big.Float).SetInt(price0I), usdAccuracy).Float64()
+				item.Pools[i].Token0.PriceUSD = price0
+				price1I, ok := prices[pool.Token1.Address]
 				if !ok {
-					price1 = big.NewInt(0)
+					price1I = big.NewInt(0)
 				}
-				item.Pools[i].Token1.Price = price1.String()
+				price1, _ := new(big.Float).Quo(new(big.Float).SetInt(price1I), usdAccuracy).Float64()
+				item.Pools[i].Token1.PriceUSD = price1
 			}
 
 			volume, ok := volumes[item.Address]
@@ -162,9 +175,11 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 			}
 			last1HPrice := big.NewInt(0)
 			for _, tick := range kline1D {
+				priceI, _ := new(big.Int).SetString(tick.Price, 10)
+				price, _ := new(big.Float).Quo(new(big.Float).SetInt(priceI), usdAccuracy).Float64()
 				t, _ := time.Parse("2006-01-02 15:04:05", tick.CreatedAt)
 				item.Kline = append(item.Kline, types.Kline{
-					Price:     tick.Price,
+					Price:     price,
 					TimeStamp: t.Unix(),
 				})
 
@@ -172,10 +187,12 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 					last1HPrice, _ = new(big.Int).SetString(tick.Price, 10)
 				}
 			}
-			comparison1H := l.comparePrices(currentPrice, last1HPrice)
-			comparison1D := l.comparePrices(currentPrice, last1DPrice)
-			item.RiseFall1H = types.Comparison{Comparison: comparison1H.Comparison, Percentage: comparison1H.Percentage}
-			item.RiseFall1D = types.Comparison{Comparison: comparison1D.Comparison, Percentage: comparison1D.Percentage}
+			comparison1H, percentage1HF := l.comparePrices(currentPrice, last1HPrice)
+			percentage1H, _ := new(big.Float).Quo(percentage1HF, usdAccuracy).Float64()
+			comparison1D, percentage1DF := l.comparePrices(currentPrice, last1DPrice)
+			percentage1D, _ := new(big.Float).Quo(percentage1DF, usdAccuracy).Float64()
+			item.RiseFall1H = types.Comparison{Comparison: comparison1H, Percentage: percentage1H}
+			item.RiseFall1D = types.Comparison{Comparison: comparison1D, Percentage: percentage1D}
 
 			ch <- struct {
 				Data types.TokenWithExtra
@@ -241,12 +258,6 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
 	}
-	usdToken, err := global.GetToken(req.ChainId, common.HexToAddress(chainConf.USD).Hex())
-	if err != nil {
-		return nil, err
-	}
-	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
-	_ = usdAccuracy
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
@@ -259,60 +270,107 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 
 	dateResult := []types.TokenWithExtra{}
 
+	sw := time.Now()
+
 	poolRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(l.ctx, req.ChainId)
 	if err != nil {
 		return nil, err
 	}
+
+	linq.From(poolRecords).GroupByT(
+		func(item repository.EventSonexFactoryPoolCreated) string { return item.EventPool },
+		func(item repository.EventSonexFactoryPoolCreated) repository.EventSonexFactoryPoolCreated {
+			return item
+		},
+	)
+
 	tokenMap := map[string]types.TokenWithExtra{}
 	tokenPoolsMap := map[string][]types.Pool{}
+	var dataLock sync.Mutex
+	var wg sync.WaitGroup
+	results := make(chan error, len(poolRecords))
+
 	for _, record := range poolRecords {
-		pool := types.Pool{
-			Address: record.EventPool,
-			Fee:     record.EventFee,
+		wg.Add(1)
+		go func(record repository.EventSonexFactoryPoolCreated, ch chan error) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- fmt.Errorf("%s %s(panic)", record.EventPool, err)
+				}
+			}()
+
+			pool := types.Pool{
+				Address: record.EventPool,
+				Fee:     record.EventFee,
+			}
+
+			dataLock.Lock()
+			token0, ok0 := tokenMap[record.EventToken0]
+			_, pOk0 := tokenPoolsMap[record.EventToken0]
+			if !pOk0 {
+				tokenPoolsMap[record.EventToken0] = []types.Pool{}
+			}
+			token1, ok1 := tokenMap[record.EventToken1]
+			_, pOk1 := tokenPoolsMap[record.EventToken1]
+			if !pOk1 {
+				tokenPoolsMap[record.EventToken1] = []types.Pool{}
+			}
+			dataLock.Unlock()
+
+			if !ok0 {
+				token, err := global.GetToken(req.ChainId, record.EventToken0)
+				if err != nil {
+					ch <- err
+				}
+				logo := logos[record.EventToken0]
+				token0 = types.TokenWithExtra{
+					Token: types.Token{
+						Address:  token.Address,
+						Name:     token.Name,
+						Symbol:   token.Symbol,
+						Decimals: token.Decimals,
+					},
+					Logo: logo,
+				}
+			}
+			pool.Token0 = token0.Token
+
+			if !ok1 {
+				token, err := global.GetToken(req.ChainId, record.EventToken1)
+				if err != nil {
+					ch <- err
+				}
+				logo := logos[record.EventToken0]
+				token1 = types.TokenWithExtra{
+					Token: types.Token{
+						Address:  token.Address,
+						Name:     token.Name,
+						Symbol:   token.Symbol,
+						Decimals: token.Decimals,
+					},
+					Logo: logo,
+				}
+			}
+			pool.Token1 = token1.Token
+
+			dataLock.Lock()
+			tokenMap[record.EventToken0] = token0
+			tokenMap[record.EventToken1] = token1
+			tokenPoolsMap[record.EventToken0] = append(tokenPoolsMap[record.EventToken0], pool)
+			tokenPoolsMap[record.EventToken1] = append(tokenPoolsMap[record.EventToken1], pool)
+			dataLock.Unlock()
+		}(record, results)
+	}
+	wg.Wait()
+	close(results)
+
+	fmt.Printf("============> %ds", time.Now().Unix()-sw.Unix())
+
+	for result := range results {
+		if result != nil {
+			return nil, err
 		}
-
-		if _, ok := tokenMap[record.EventToken0]; !ok {
-			token, err := global.GetToken(req.ChainId, record.EventToken0)
-			if err != nil {
-				return nil, err
-			}
-			logo := logos[record.EventToken0]
-			tokenMap[record.EventToken0] = types.TokenWithExtra{
-				Token: types.Token{
-					Address:  token.Address,
-					Name:     token.Name,
-					Symbol:   token.Symbol,
-					Decimals: token.Decimals,
-				},
-				Logo: logo,
-			}
-
-			tokenPoolsMap[record.EventToken0] = []types.Pool{}
-		}
-		pool.Token0 = tokenMap[record.EventToken0].Token
-
-		if _, ok := tokenPoolsMap[record.EventToken1]; !ok {
-			token, err := global.GetToken(req.ChainId, record.EventToken1)
-			if err != nil {
-				return nil, err
-			}
-			logo := logos[record.EventToken0]
-			tokenMap[record.EventToken1] = types.TokenWithExtra{
-				Token: types.Token{
-					Address:  token.Address,
-					Name:     token.Name,
-					Symbol:   token.Symbol,
-					Decimals: token.Decimals,
-				},
-				Logo: logo,
-			}
-
-			tokenPoolsMap[record.EventToken1] = []types.Pool{}
-		}
-		pool.Token1 = tokenMap[record.EventToken1].Token
-
-		tokenPoolsMap[record.EventToken0] = append(tokenPoolsMap[record.EventToken0], pool)
-		tokenPoolsMap[record.EventToken1] = append(tokenPoolsMap[record.EventToken1], pool)
 	}
 
 	for key, value := range tokenMap {
@@ -325,7 +383,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 	return dateResult, nil
 }
 
-func (l *TokensLogic) comparePrices(currentPrice, comparePrice *big.Int) types.Comparison {
+func (l *TokensLogic) comparePrices(currentPrice, comparePrice *big.Int) (string, *big.Float) {
 	currentPriceF := new(big.Float).SetInt(currentPrice)
 	comparePriceF := new(big.Float).SetInt(comparePrice)
 	var comparison string
@@ -341,9 +399,6 @@ func (l *TokensLogic) comparePrices(currentPrice, comparePrice *big.Int) types.C
 	if comparePriceF.Cmp(big.NewFloat(0)) == 0 {
 		comparePriceF = big.NewFloat(1)
 	}
-	percentage, _ := new(big.Float).Quo(diff, comparePriceF).Float64()
-	return types.Comparison{
-		Comparison: comparison,
-		Percentage: percentage,
-	}
+	percentage := new(big.Float).Quo(diff, comparePriceF)
+	return comparison, percentage
 }
