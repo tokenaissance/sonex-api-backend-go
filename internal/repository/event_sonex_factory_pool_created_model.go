@@ -24,11 +24,11 @@ type (
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventSonexFactoryPoolCreated, error)
 		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
-		GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error)
 		GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error)
 		FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error)
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error)
 		SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error)
+		GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -103,6 +103,102 @@ type PoolData struct {
 	Token1Logo       sql.NullString `db:"token1_logo"`
 	Token1Additional sql.NullString `db:"token1_additional"`
 	Token1Decimals   sql.NullInt64  `db:"token1_decimals"`
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error) {
+	volumeQuery := `
+		SELECT
+			sp.extra_pool AS address,
+			SUM(ABS(CAST(sp.event_amount0 AS numeric))) AS amounts0,
+			SUM(ABS(CAST(sp.event_amount1 AS numeric))) AS amounts1
+		FROM
+			event_sonex_pool_swap sp
+		WHERE sp.chain_id = %d
+	`
+
+	if last24Hours {
+		// Assuming `transaction_time` is a timestamp column in your table
+		volumeQuery += " AND sp.tx_at >= NOW() - INTERVAL '24 HOURS'"
+	}
+
+	// Complete the query with grouping
+	volumeQuery += " GROUP BY sp.extra_pool"
+
+	// Format the query with the chainId
+	volumeQuery = fmt.Sprintf(volumeQuery, chainId)
+
+	// Execute the query and scan results into poolVolumes slice
+	var poolVolumes []types.PoolVolume
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumes, volumeQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	return poolVolumes, nil
+}
+
+type PoolPositionData struct {
+	EventPool    string `db:"event_pool"`
+	EventToken0  string `db:"event_token0"`
+	EventToken1  string `db:"event_token1"`
+	EventTokenId int64  `db:"event_token_id"`
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error) {
+	query := fmt.Sprintf(`
+		SELECT DISTINCT s.event_pool, s.event_token0, s.event_token1, t.event_token_id
+		FROM %s s
+		JOIN event_sonex_pool_mint m ON s.event_pool = m.extra_pool
+		JOIN event_sonex_position_manager_transfer t ON m.tx_hash = t.tx_hash
+		WHERE s.chain_id = %d AND m.chain_id = %d AND t.chain_id = %d
+		ORDER BY s.event_pool;
+	`, m.table, chainId, chainId, chainId)
+
+	var data []PoolPositionData
+	err := m.conn.QueryRowsCtx(ctx, &data, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	poolPositions := make([]*types.PoolPositionData, 0)
+	for _, d := range data {
+		poolPositions = append(poolPositions, &types.PoolPositionData{
+			EventPool:    d.EventPool,
+			EventToken0:  d.EventToken0,
+			EventToken1:  d.EventToken1,
+			EventTokenId: d.EventTokenId,
+		})
+	}
+
+	return poolPositions, nil
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error) {
+	query := fmt.Sprintf("select %s from %s", eventSonexFactoryPoolCreatedRows, m.table)
+	var resp []EventSonexFactoryPoolCreated
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	switch err {
+	case nil:
+		return resp, nil
+	case sqlx.ErrNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error) {
+	var resp EventSonexFactoryPoolCreated
+	query := fmt.Sprintf("select %s from %s where event_pool = $1 limit 1", eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, poolAddress)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
 
 // GetPoolList returns a map of pool data and pagination meta
@@ -207,100 +303,4 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	}
 
 	return pools, meta, nil
-}
-
-func (m *customEventSonexFactoryPoolCreatedModel) GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error) {
-	volumeQuery := `
-		SELECT
-			sp.extra_pool AS address,
-			SUM(ABS(CAST(sp.event_amount0 AS numeric))) AS amounts0,
-			SUM(ABS(CAST(sp.event_amount1 AS numeric))) AS amounts1
-		FROM
-			event_sonex_pool_swap sp
-		WHERE sp.chain_id = %d
-	`
-
-	if last24Hours {
-		// Assuming `transaction_time` is a timestamp column in your table
-		volumeQuery += " AND sp.tx_at >= NOW() - INTERVAL '24 HOURS'"
-	}
-
-	// Complete the query with grouping
-	volumeQuery += " GROUP BY sp.extra_pool"
-
-	// Format the query with the chainId
-	volumeQuery = fmt.Sprintf(volumeQuery, chainId)
-
-	// Execute the query and scan results into poolVolumes slice
-	var poolVolumes []types.PoolVolume
-	err := m.conn.QueryRowsCtx(ctx, &poolVolumes, volumeQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute volume query: %w", err)
-	}
-
-	return poolVolumes, nil
-}
-
-type PoolPositionData struct {
-	EventPool    string `db:"event_pool"`
-	EventToken0  string `db:"event_token0"`
-	EventToken1  string `db:"event_token1"`
-	EventTokenId int64  `db:"event_token_id"`
-}
-
-func (m *customEventSonexFactoryPoolCreatedModel) SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error) {
-	query := fmt.Sprintf(`
-		SELECT DISTINCT s.event_pool, s.event_token0, s.event_token1, t.event_token_id
-		FROM %s s
-		JOIN event_sonex_pool_mint m ON s.event_pool = m.extra_pool
-		JOIN event_sonex_position_manager_transfer t ON m.tx_hash = t.tx_hash
-		WHERE s.chain_id = %d AND m.chain_id = %d AND t.chain_id = %d
-		ORDER BY s.event_pool;
-	`, m.table, chainId, chainId, chainId)
-
-	var data []PoolPositionData
-	err := m.conn.QueryRowsCtx(ctx, &data, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute volume query: %w", err)
-	}
-
-	poolPositions := make([]*types.PoolPositionData, 0)
-	for _, d := range data {
-		poolPositions = append(poolPositions, &types.PoolPositionData{
-			EventPool:    d.EventPool,
-			EventToken0:  d.EventToken0,
-			EventToken1:  d.EventToken1,
-			EventTokenId: d.EventTokenId,
-		})
-	}
-
-	return poolPositions, nil
-}
-
-func (m *customEventSonexFactoryPoolCreatedModel) FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error) {
-	query := fmt.Sprintf("select %s from %s", eventSonexFactoryPoolCreatedRows, m.table)
-	var resp []EventSonexFactoryPoolCreated
-	err := m.conn.QueryRowsCtx(ctx, &resp, query)
-	switch err {
-	case nil:
-		return resp, nil
-	case sqlx.ErrNotFound:
-		return nil, nil
-	default:
-		return nil, err
-	}
-}
-
-func (m *customEventSonexFactoryPoolCreatedModel) FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error) {
-	var resp EventSonexFactoryPoolCreated
-	query := fmt.Sprintf("select %s from %s where event_pool = $1 limit 1", eventSonexFactoryPoolCreatedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, poolAddress)
-	switch err {
-	case nil:
-		return &resp, nil
-	case sqlx.ErrNotFound:
-		return nil, ErrNotFound
-	default:
-		return nil, err
-	}
 }

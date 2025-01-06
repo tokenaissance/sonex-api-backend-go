@@ -91,26 +91,18 @@ type TransactionsResponse_Transaction {
 }
 
 type TransactionsResponse {
-	Data []TransactionsResponse_Transaction `json:"transactions"`
+	Transactions []TransactionsResponse_Transaction `json:"transactions"`
 }
 
 type TokensRequest {
-	ChainId   int64  `form:"chainId"`
-	OrderBy   string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
-	PageSize  int64  `form:"pageSize,default=20"`
-	PageIndex int64  `form:"pageIndex,default=1"`
+	ChainId int64  `form:"chainId"`
+	OrderBy string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
+	PageRequest
 }
 
 type TokensResponse {
-	Data  []TokenWithExtra `json:"tokens"`
-	Total int64            `json:"total"`
-}
-
-type TokenListRequest {
-	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946,optional"`
+	Tokens []TokenWithExtra `json:"tokens"`
+	Total  int64            `json:"total"`
 }
 
 type PaginationMeta {
@@ -122,13 +114,6 @@ type PaginationMeta {
 	HasNextPage     bool `json:"hasNextPage"`
 }
 
-type TokenListResponse {
-	Code    int                  `json:"code"`
-	Data    []*Token_TokenDetail `json:"data"`
-	Meta    *PaginationMeta      `json:"meta"`
-	Message string               `json:"message"`
-}
-
 type SonexTokenPricesRequest {
 	Name string `path:"name,options=you|me"`
 }
@@ -138,13 +123,12 @@ type SonexTokenPricesResponse {
 }
 
 type PoolsRequest {
+	ChainId       int64  `form:"chainId"`
 	Order         string `form:"order,default=ASC"`
-	Page          int64  `form:"page,default=1"`
-	Take          int64  `form:"take,default=10"`
-	ChainId       int64  `form:"chainId,default=1946,optional"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
+	PageRequest
 }
 
 type Token_Social {
@@ -212,10 +196,7 @@ type PoolsResponse_Pool {
 }
 
 type PoolsResponse {
-	Code    int                   `json:"code"`
-	Data    []*PoolsResponse_Pool `json:"data"`
-	Meta    *PaginationMeta       `json:"meta"`
-	Message string                `json:"message"`
+	Data []*PoolsResponse_Pool `json:"data"`
 }
 
 type TokenTopResponse {
@@ -362,60 +343,6 @@ type PositionResponse {
 	Position *Position `json:"position"`
 }
 
-type SwapEventRequest {
-	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	Address     string `form:"address,optional"`
-	PoolAddress string `form:"poolAddress,optional"`
-	Token       string `form:"token,optional"`
-	Token0      string `form:"token0,optional"`
-	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
-}
-
-type SwapEvent {
-	ID        int64            `json:"id"`
-	Address   string           `json:"address"`
-	Token0    Token_TokenInfo  `json:"token0"`
-	Token1    Token_TokenInfo  `json:"token1"`
-	Pool      Token_PoolDetail `json:"pool"`
-	Hash      string           `json:"hash"`
-	Amount0   float64          `json:"amount0"`
-	Amount1   float64          `json:"amount1"`
-	Usd       float64          `json:"usd"`
-	CreatedAt string           `json:"createdAt"`
-}
-
-type SwapEventResponse {
-	Code    int             `json:"code"`
-	Data    []*SwapEvent    `json:"data"`
-	Meta    *PaginationMeta `json:"meta"`
-	Message string          `json:"message"`
-}
-
-type SwapVolumeRequest {
-	PoolAddress string `form:"poolAddress"` // Pool address
-	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
-	Address     string `form:"address,optional"`
-	Token       string `form:"token,optional"`
-	Token0      string `form:"token0,optional"`
-	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
-}
-
-type SwapVolume {
-	Timestamp int64   `json:"timestamp"`
-	Value     float64 `json:"value"`
-	Amount    float64 `json:"amount"`
-	Amount0   float64 `json:"amount0"`
-	Amount1   float64 `json:"amount1"`
-}
-
-type SwapVolumeResponse {
-	Volumes []SwapVolume `json:"volumes"`
-}
-
 type TokenVolume {
 	Address string  `json:"address"`
 	Amounts float64 `json:"amounts"`
@@ -516,9 +443,6 @@ service sonex_api_backend_go {
 	@handler TokensHandler
 	get /tokens (TokensRequest) returns (TokensResponse)
 
-	@handler SonexTokenListHandler
-	get /tokens/list (TokenListRequest) returns (TokenListResponse)
-
 	@handler SonexTokenTopHandler
 	get /tokens/top returns (TokenTopResponse)
 
@@ -533,12 +457,6 @@ service sonex_api_backend_go {
 
 	@handler SonexPositionValuesHandler
 	get /pools/position_values (PositionValuesRequest) returns (PositionValuesResponse)
-
-	@handler SonexSwapHandler
-	get /swaps (SwapEventRequest) returns (SwapEventResponse)
-
-	@handler SonexSwapVolumeHandler
-	get /swaps/volume (SwapVolumeRequest) returns (SwapVolumeResponse)
 
 	@handler TokensKlineHandler
 	get /tokens/kline (SonexTokenKlineRequest) returns (SonexTokenKlineResponse)

@@ -298,35 +298,18 @@
         },
         "parameters": [
           {
+            "name": "chainId",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "order",
             "in": "query",
             "required": true,
             "type": "string",
             "default": "ASC"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "1"
-          },
-          {
-            "name": "take",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "10"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           },
           {
             "name": "keywords",
@@ -345,6 +328,20 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -490,163 +487,6 @@
             "name": "address",
             "in": "query",
             "required": true,
-            "type": "string"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
-          }
-        ],
-        "tags": [
-          "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
-    "/sonex/swaps": {
-      "get": {
-        "operationId": "SonexSwapHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/SwapEventResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "order",
-            "description": " Sorting order, default is \"ASC\"",
-            "in": "query",
-            "required": true,
-            "type": "string",
-            "default": "ASC"
-          },
-          {
-            "name": "page",
-            "description": " Current page number, default is 1",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "1"
-          },
-          {
-            "name": "take",
-            "description": " Number of items per page, default is 10",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "10"
-          },
-          {
-            "name": "address",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "poolAddress",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "token",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "token0",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "token1",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
-          }
-        ],
-        "tags": [
-          "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
-    "/sonex/swaps/volume": {
-      "get": {
-        "operationId": "SonexSwapVolumeHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/SwapVolumeResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "poolAddress",
-            "description": " Pool address",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "interval",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "1d",
-              "1w",
-              "1m"
-            ],
-            "default": "1d"
-          },
-          {
-            "name": "address",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "token",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "token0",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "token1",
-            "in": "query",
-            "required": false,
             "type": "string"
           },
           {
@@ -813,18 +653,16 @@
           {
             "name": "pageSize",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "integer",
-            "format": "int64",
-            "default": "20"
+            "format": "int64"
           },
           {
             "name": "pageIndex",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "integer",
-            "format": "int64",
-            "default": "1"
+            "format": "int64"
           }
         ],
         "tags": [
@@ -865,61 +703,6 @@
               "1m",
               "1y"
             ]
-          }
-        ],
-        "tags": [
-          "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
-    "/sonex/tokens/list": {
-      "get": {
-        "operationId": "SonexTokenListHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/TokenListResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "order",
-            "description": " Sorting order, default is \"ASC\"",
-            "in": "query",
-            "required": true,
-            "type": "string",
-            "default": "ASC"
-          },
-          {
-            "name": "page",
-            "description": " Current page number, default is 1",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "1"
-          },
-          {
-            "name": "take",
-            "description": " Number of items per page, default is 10",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "10"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           }
         ],
         "tags": [
@@ -1003,18 +786,16 @@
           {
             "name": "pageSize",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "integer",
-            "format": "int64",
-            "default": "20"
+            "format": "int64"
           },
           {
             "name": "pageIndex",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "integer",
-            "format": "int64",
-            "default": "1"
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1883,20 +1664,14 @@
       "properties": {
         "pageSize": {
           "type": "integer",
-          "format": "int64",
-          "default": "20"
+          "format": "int64"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64",
-          "default": "1"
+          "format": "int64"
         }
       },
-      "title": "PageRequest",
-      "required": [
-        "pageSize",
-        "pageIndex"
-      ]
+      "title": "PageRequest"
     },
     "PageResponse": {
       "type": "object",
@@ -2034,24 +1809,13 @@
     "PoolsRequest": {
       "type": "object",
       "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64"
+        },
         "order": {
           "type": "string",
           "default": "ASC"
-        },
-        "page": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1"
-        },
-        "take": {
-          "type": "integer",
-          "format": "int64",
-          "default": "10"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
         },
         "keywords": {
           "type": "string"
@@ -2061,41 +1825,35 @@
         },
         "token1Address": {
           "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "PoolsRequest",
       "required": [
-        "order",
-        "page",
-        "take"
+        "chainId",
+        "order"
       ]
     },
     "PoolsResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
         "data": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/PoolsResponse_Pool"
           }
-        },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        },
-        "message": {
-          "type": "string"
         }
       },
       "title": "PoolsResponse",
       "required": [
-        "code",
-        "data",
-        "meta",
-        "message"
+        "data"
       ]
     },
     "PoolsResponse_Pool": {
@@ -2639,221 +2397,6 @@
         "message"
       ]
     },
-    "SwapEvent": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "address": {
-          "type": "string"
-        },
-        "token0": {
-          "$ref": "#/definitions/Token_TokenInfo"
-        },
-        "token1": {
-          "$ref": "#/definitions/Token_TokenInfo"
-        },
-        "pool": {
-          "$ref": "#/definitions/Token_PoolDetail"
-        },
-        "hash": {
-          "type": "string"
-        },
-        "amount0": {
-          "type": "number",
-          "format": "double"
-        },
-        "amount1": {
-          "type": "number",
-          "format": "double"
-        },
-        "usd": {
-          "type": "number",
-          "format": "double"
-        },
-        "createdAt": {
-          "type": "string"
-        }
-      },
-      "title": "SwapEvent",
-      "required": [
-        "id",
-        "address",
-        "token0",
-        "token1",
-        "pool",
-        "hash",
-        "amount0",
-        "amount1",
-        "usd",
-        "createdAt"
-      ]
-    },
-    "SwapEventRequest": {
-      "type": "object",
-      "properties": {
-        "order": {
-          "type": "string",
-          "default": "ASC",
-          "description": " Sorting order, default is \"ASC\""
-        },
-        "page": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1",
-          "description": " Current page number, default is 1"
-        },
-        "take": {
-          "type": "integer",
-          "format": "int64",
-          "default": "10",
-          "description": " Number of items per page, default is 10"
-        },
-        "address": {
-          "type": "string"
-        },
-        "poolAddress": {
-          "type": "string"
-        },
-        "token": {
-          "type": "string"
-        },
-        "token0": {
-          "type": "string"
-        },
-        "token1": {
-          "type": "string"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
-      "title": "SwapEventRequest",
-      "required": [
-        "order",
-        "page",
-        "take"
-      ]
-    },
-    "SwapEventResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SwapEvent"
-          }
-        },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        },
-        "message": {
-          "type": "string"
-        }
-      },
-      "title": "SwapEventResponse",
-      "required": [
-        "code",
-        "data",
-        "meta",
-        "message"
-      ]
-    },
-    "SwapVolume": {
-      "type": "object",
-      "properties": {
-        "timestamp": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "value": {
-          "type": "number",
-          "format": "double"
-        },
-        "amount": {
-          "type": "number",
-          "format": "double"
-        },
-        "amount0": {
-          "type": "number",
-          "format": "double"
-        },
-        "amount1": {
-          "type": "number",
-          "format": "double"
-        }
-      },
-      "title": "SwapVolume",
-      "required": [
-        "timestamp",
-        "value",
-        "amount",
-        "amount0",
-        "amount1"
-      ]
-    },
-    "SwapVolumeRequest": {
-      "type": "object",
-      "properties": {
-        "poolAddress": {
-          "type": "string",
-          "description": " Pool address"
-        },
-        "interval": {
-          "type": "string",
-          "enum": [
-            "1d",
-            "1w",
-            "1m"
-          ],
-          "default": "1d"
-        },
-        "address": {
-          "type": "string"
-        },
-        "token": {
-          "type": "string"
-        },
-        "token0": {
-          "type": "string"
-        },
-        "token1": {
-          "type": "string"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
-      "title": "SwapVolumeRequest",
-      "required": [
-        "poolAddress"
-      ]
-    },
-    "SwapVolumeResponse": {
-      "type": "object",
-      "properties": {
-        "volumes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SwapVolume"
-          }
-        }
-      },
-      "title": "SwapVolumeResponse",
-      "required": [
-        "volumes"
-      ]
-    },
     "Token": {
       "type": "object",
       "properties": {
@@ -2882,67 +2425,6 @@
         "symbol",
         "decimals",
         "priceUSD"
-      ]
-    },
-    "TokenListRequest": {
-      "type": "object",
-      "properties": {
-        "order": {
-          "type": "string",
-          "default": "ASC",
-          "description": " Sorting order, default is \"ASC\""
-        },
-        "page": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1",
-          "description": " Current page number, default is 1"
-        },
-        "take": {
-          "type": "integer",
-          "format": "int64",
-          "default": "10",
-          "description": " Number of items per page, default is 10"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
-      "title": "TokenListRequest",
-      "required": [
-        "order",
-        "page",
-        "take"
-      ]
-    },
-    "TokenListResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Token_TokenDetail"
-          }
-        },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        },
-        "message": {
-          "type": "string"
-        }
-      },
-      "title": "TokenListResponse",
-      "required": [
-        "code",
-        "data",
-        "meta",
-        "message"
       ]
     },
     "TokenPriceRequest": {
@@ -3539,20 +3021,16 @@
         },
         "pageSize": {
           "type": "integer",
-          "format": "int64",
-          "default": "20"
+          "format": "int64"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64",
-          "default": "1"
+          "format": "int64"
         }
       },
       "title": "TokensRequest",
       "required": [
-        "chainId",
-        "pageSize",
-        "pageIndex"
+        "chainId"
       ]
     },
     "TokensResponse": {
@@ -3604,13 +3082,11 @@
         },
         "pageSize": {
           "type": "integer",
-          "format": "int64",
-          "default": "20"
+          "format": "int64"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64",
-          "default": "1"
+          "format": "int64"
         }
       },
       "title": "TransactionsRequest",

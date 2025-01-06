@@ -30,19 +30,8 @@ type SonexPoolListLogic struct {
 }
 
 type PoolsResponseWrapper struct {
-	*types.PoolsResponse
-}
-
-func (p *PoolsResponseWrapper) GetData() interface{} {
-	return p.Data
-}
-
-func (p *PoolsResponseWrapper) GetMeta() interface{} {
-	return p.Meta
-}
-
-func (p *PoolsResponseWrapper) GetCode() interface{} {
-	return p.Code
+	Data *types.PoolsResponse
+	Meta *types.PageResponse
 }
 
 func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPoolListLogic {
@@ -54,6 +43,18 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 }
 
 func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *PoolsResponseWrapper, err error) {
+	if req.ChainId <= 0 {
+		return nil, fmt.Errorf("invalid parameter")
+	}
+	if req.PageSize == nil || *req.PageSize < 1 {
+		var defaultSize int64 = 20
+		req.PageSize = &defaultSize
+	}
+	if req.PageIndex == nil || *req.PageIndex < 1 {
+		var defaultIndex int64 = 1
+		req.PageIndex = &defaultIndex
+	}
+
 	cacheKey := "sonex_dex:uniswap:pool_list"
 	if req.Token0Address != "" {
 		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Token0Address)
@@ -122,21 +123,19 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		ChainId:         req.ChainId,
 		PositionManager: sonex.PositionManager,
 		Order:           req.Order,
-		Page:            req.Page,
-		Take:            req.Take,
+		Page:            *req.PageIndex,
+		Take:            *req.PageSize,
 		Keywords:        req.Keywords,
 		Token0Address:   req.Token0Address,
 		Token1Address:   req.Token1Address,
 	})
 	if err != nil {
 		return &PoolsResponseWrapper{
-			PoolsResponse: &types.PoolsResponse{
-				Code:    400,
-				Data:    []*types.PoolsResponse_Pool{},
-				Meta:    &types.PaginationMeta{},
-				Message: err.Error(),
+			Data: &types.PoolsResponse{
+				Data: []*types.PoolsResponse_Pool{},
 			},
-		}, nil
+			Meta: &types.PageResponse{},
+		}, err
 	}
 
 	// 这里生成每个pool对应的所有positions数据,可能后面用不到
@@ -338,11 +337,13 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	// 	}
 	// }
 	response := &PoolsResponseWrapper{
-		PoolsResponse: &types.PoolsResponse{
-			Code:    200,
-			Data:    pools,
-			Meta:    meta,
-			Message: "success",
+		Data: &types.PoolsResponse{
+			Data: pools,
+		},
+		Meta: &types.PageResponse{
+			PageSize:  int64(meta.Take),
+			PageIndex: int64(meta.Page),
+			Total:     int64(meta.ItemCount),
 		},
 	}
 

@@ -1,8 +1,8 @@
 syntax = "v1"
 
 type PageRequest {
-	PageSize  int64 `form:"pageSize,default=20"`
-	PageIndex int64 `form:"pageIndex,default=1"`
+	PageSize  *int64 `form:"pageSize,optional"`
+	PageIndex *int64 `form:"pageIndex,optional"`
 }
 
 type PageResponse {

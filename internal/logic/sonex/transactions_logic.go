@@ -34,11 +34,13 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
-	if req.PageSize < 1 {
-		req.PageSize = 20
+	if req.PageSize == nil || *req.PageSize < 1 {
+		var defaultSize int64 = 20
+		req.PageSize = &defaultSize
 	}
-	if req.PageIndex < 1 {
-		req.PageIndex = 1
+	if req.PageIndex == nil || *req.PageIndex < 1 {
+		var defaultIndex int64 = 1
+		req.PageIndex = &defaultIndex
 	}
 
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
@@ -140,7 +142,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 
 	// Default
 	if swapRecords == nil {
-		swapRecords, totalResult, err = eventSonexPoolSwapModel.PageQueryOrderByTxAtWithExtra(l.ctx, req.OrderBy, req.PageSize, req.PageIndex)
+		swapRecords, totalResult, err = eventSonexPoolSwapModel.PageQueryOrderByTxAtWithExtra(l.ctx, req.OrderBy, *req.PageSize, *req.PageIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -248,16 +250,16 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	// Page
 	if totalResult < 0 {
 		totalResult = int64(len(dataResult))
-		linq.From(dataResult).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&dataResult)
+		linq.From(dataResult).Skip(int((*req.PageIndex - 1) * *req.PageSize)).Take(int(*req.PageSize)).ToSlice(&dataResult)
 	}
 
 	return &response.ApiResponse{
 		Data: types.TransactionsResponse{
-			Data: dataResult,
+			Transactions: dataResult,
 		},
 		Meta: types.PageResponse{
-			PageSize:  req.PageSize,
-			PageIndex: req.PageIndex,
+			PageSize:  *req.PageSize,
+			PageIndex: *req.PageIndex,
 			Total:     totalResult,
 		},
 	}, nil
