@@ -127,8 +127,8 @@ type Invested struct {
 }
 
 type Kline struct {
-	Price     string `json:"price"`
-	TimeStamp int64  `json:"timeStamp"`
+	Price     float64 `json:"price"`
+	TimeStamp int64   `json:"timeStamp"`
 }
 
 type MetaRequest struct {
@@ -173,6 +173,17 @@ type NftDataResponse_Data struct {
 	IsNegative      bool             `json:"isNegative"`
 	AmountPrice0    string           `json:"amountPrice0"`
 	AmountPrice1    string           `json:"amountPrice1"`
+}
+
+type PageRequest struct {
+	PageSize  int64 `form:"pageSize,default=20"`
+	PageIndex int64 `form:"pageIndex,default=1"`
+}
+
+type PageResponse struct {
+	PageSize  int64 `json:"pageSize"`
+	PageIndex int64 `json:"pageIndex"`
+	Total     int64 `json:"total"`
 }
 
 type PaginationMeta struct {
@@ -427,11 +438,11 @@ type SwapVolumeResponse struct {
 }
 
 type Token struct {
-	Address  string `json:"address"`
-	Name     string `json:"name"`
-	Symbol   string `json:"symbol"`
-	Decimals int64  `json:"decimals"`
-	Price    string `json:"price"`
+	Address  string  `json:"address"`
+	Name     string  `json:"name"`
+	Symbol   string  `json:"symbol"`
+	Decimals int64   `json:"decimals"`
+	PriceUSD float64 `json:"priceUSD"`
 }
 
 type TokenListRequest struct {
@@ -607,19 +618,17 @@ type TokensResponse struct {
 }
 
 type TransactionsRequest struct {
-	ChainId   int64  `form:"chainId"`
-	Wallet    string `form:"walletAddress,optional"`
-	Pool      string `form:"poolAddress,optional"`
-	Token0    string `form:"token0Address,optional"`
-	Token1    string `form:"token1Address,optional"`
-	OrderBy   string `form:"orderBy,optional,options=ASC|DESC,default=DESC"`
-	PageSize  int64  `form:"pageSize,default=20"`
-	PageIndex int64  `form:"pageIndex,default=1"`
+	ChainId int64  `form:"chainId"`
+	Wallet  string `form:"walletAddress,optional"`
+	Pool    string `form:"poolAddress,optional"`
+	Token0  string `form:"token0Address,optional"`
+	Token1  string `form:"token1Address,optional"`
+	OrderBy string `form:"orderBy,optional,options=ASC|DESC,default=DESC"`
+	PageRequest
 }
 
 type TransactionsResponse struct {
-	Data  []TransactionsResponse_Transaction `json:"transactions"`
-	Total int64                              `json:"total"`
+	Data []TransactionsResponse_Transaction `json:"transactions"`
 }
 
 type TransactionsResponse_Transaction struct {

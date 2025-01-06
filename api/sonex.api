@@ -69,14 +69,13 @@ type TokenQuoteResponse {
 }
 
 type TransactionsRequest {
-	ChainId   int64  `form:"chainId"`
-	Wallet    string `form:"walletAddress,optional"`
-	Pool      string `form:"poolAddress,optional"`
-	Token0    string `form:"token0Address,optional"`
-	Token1    string `form:"token1Address,optional"`
-	OrderBy   string `form:"orderBy,optional,options=ASC|DESC,default=DESC"`
-	PageSize  int64  `form:"pageSize,default=20"`
-	PageIndex int64  `form:"pageIndex,default=1"`
+	ChainId int64  `form:"chainId"`
+	Wallet  string `form:"walletAddress,optional"`
+	Pool    string `form:"poolAddress,optional"`
+	Token0  string `form:"token0Address,optional"`
+	Token1  string `form:"token1Address,optional"`
+	OrderBy string `form:"orderBy,optional,options=ASC|DESC,default=DESC"`
+	PageRequest
 }
 
 type TransactionsResponse_Transaction {
@@ -92,8 +91,7 @@ type TransactionsResponse_Transaction {
 }
 
 type TransactionsResponse {
-	Data  []TransactionsResponse_Transaction `json:"transactions"`
-	Total int64                              `json:"total"`
+	Data []TransactionsResponse_Transaction `json:"transactions"`
 }
 
 type TokensRequest {

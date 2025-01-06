@@ -1685,7 +1685,8 @@
       "type": "object",
       "properties": {
         "price": {
-          "type": "string"
+          "type": "number",
+          "format": "double"
         },
         "timeStamp": {
           "type": "integer",
@@ -1875,6 +1876,49 @@
         "isNegative",
         "amountPrice0",
         "amountPrice1"
+      ]
+    },
+    "PageRequest": {
+      "type": "object",
+      "properties": {
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "PageRequest",
+      "required": [
+        "pageSize",
+        "pageIndex"
+      ]
+    },
+    "PageResponse": {
+      "type": "object",
+      "properties": {
+        "pageSize": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "PageResponse",
+      "required": [
+        "pageSize",
+        "pageIndex",
+        "total"
       ]
     },
     "PaginationMeta": {
@@ -2826,8 +2870,9 @@
           "type": "integer",
           "format": "int64"
         },
-        "price": {
-          "type": "string"
+        "priceUSD": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "Token",
@@ -2836,7 +2881,7 @@
         "name",
         "symbol",
         "decimals",
-        "price"
+        "priceUSD"
       ]
     },
     "TokenListRequest": {
@@ -3204,8 +3249,9 @@
           "type": "integer",
           "format": "int64"
         },
-        "price": {
-          "type": "string"
+        "priceUSD": {
+          "type": "number",
+          "format": "double"
         },
         "logo": {
           "type": "string"
@@ -3568,9 +3614,7 @@
       },
       "title": "TransactionsRequest",
       "required": [
-        "chainId",
-        "pageSize",
-        "pageIndex"
+        "chainId"
       ]
     },
     "TransactionsResponse": {
@@ -3581,16 +3625,11 @@
           "items": {
             "$ref": "#/definitions/TransactionsResponse_Transaction"
           }
-        },
-        "total": {
-          "type": "integer",
-          "format": "int64"
         }
       },
       "title": "TransactionsResponse",
       "required": [
-        "transactions",
-        "total"
+        "transactions"
       ]
     },
     "TransactionsResponse_Transaction": {

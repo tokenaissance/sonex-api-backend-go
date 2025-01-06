@@ -1,11 +1,22 @@
 syntax = "v1"
 
+type PageRequest {
+	PageSize  int64 `form:"pageSize,default=20"`
+	PageIndex int64 `form:"pageIndex,default=1"`
+}
+
+type PageResponse {
+	PageSize  int64 `json:"pageSize"`
+	PageIndex int64 `json:"pageIndex"`
+	Total     int64 `json:"total"`
+}
+
 type Token {
-	Address  string `json:"address"`
-	Name     string `json:"name"`
-	Symbol   string `json:"symbol"`
-	Decimals int64  `json:"decimals"`
-	Price    string `json:"price"`
+	Address  string  `json:"address"`
+	Name     string  `json:"name"`
+	Symbol   string  `json:"symbol"`
+	Decimals int64   `json:"decimals"`
+	PriceUSD float64 `json:"priceUSD"`
 }
 
 type TokenWithExtra {
@@ -26,8 +37,8 @@ type Pool {
 }
 
 type Kline {
-	Price     string `json:"price"`
-	TimeStamp int64  `json:"timeStamp"`
+	Price     float64 `json:"price"`
+	TimeStamp int64   `json:"timeStamp"`
 }
 
 type Comparison {
