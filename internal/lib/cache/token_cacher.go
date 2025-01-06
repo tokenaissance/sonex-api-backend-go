@@ -563,3 +563,53 @@ func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, t
 
 	return sumPrices, nil
 }
+
+func (cacher *TokenCacher) BatchGetTotalSupplies(ctx context.Context, tokens []common.Address) (map[common.Address]*big.Int, error) {
+	nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf)
+	if err != nil {
+		return nil, err
+	}
+	multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+	if err != nil {
+		return nil, err
+	}
+	erc20ABI, err := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
+	if err != nil {
+		return nil, err
+	}
+	var multicallResults []contract_common.Multicall3Result
+	callDatas := []contract_common.Multicall3Call3{}
+	data, err := erc20ABI.Pack("totalSupply")
+	if err != nil {
+		return nil, err
+	}
+	for _, token := range tokens {
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       token,
+			AllowFailure: true,
+			CallData:     data,
+		})
+	}
+	multicallData, err := multicallABI.Pack("aggregate3", callDatas)
+	if err != nil {
+		return nil, err
+	}
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(cacher.chainConf.Multicall), "aggregate3", multicallData, &multicallResults)
+	if err != nil {
+		return nil, err
+	}
+	result := map[common.Address]*big.Int{}
+	for i, token := range tokens {
+		multicallResult := multicallResults[i]
+		if !multicallResult.Success {
+			continue
+		}
+		var totalSupply *big.Int
+		err = erc20ABI.UnpackIntoInterface(&totalSupply, "totalSupply", multicallResult.ReturnData)
+		if err != nil {
+			return nil, err
+		}
+		result[token] = totalSupply
+	}
+	return result, nil
+}

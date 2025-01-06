@@ -19,7 +19,7 @@ func TestGet(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	token, err := cacher.Get("0x0000000000000000000000000000000000000000")
+	token, err := cacher.Get("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
 	if err != nil {
 		t.Error(err)
 		return
@@ -267,4 +267,23 @@ func TestGetPricesWithCache(t *testing.T) {
 	end2 := time.Now()
 	fmt.Printf("Cost with cache: %ds\n", end2.Unix()-end1.Unix())
 	fmt.Println("With cache <======")
+}
+
+func TestBatchGetTotalSupplies(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
+
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
+	result, err := cacher.BatchGetTotalSupplies(
+		context.Background(),
+		[]common.Address{
+			common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"),
+			common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"),
+		},
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(result)
 }
