@@ -101,13 +101,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
-	tokenModel := repository.NewTokenModel(conn)
-
-	tokens, err := tokenModel.QueryByChainId(l.ctx, req.ChainId)
-	if err != nil {
-		return nil, err
-	}
-	_ = tokens
 
 	// Update price
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
@@ -264,6 +257,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	// Page
 	totalResult := int64(len(dataResult))
+	var meta types.PageResponse
 	if req.PageSize != nil && req.PageIndex != nil {
 		if *req.PageSize < 1 {
 			*req.PageSize = 20
@@ -273,15 +267,21 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		}
 
 		linq.From(dataResult).Skip(int((*req.PageIndex - 1) * *req.PageSize)).Take(int(*req.PageSize)).ToSlice(&dataResult)
+		meta = types.PageResponse{
+			PageSize:  *req.PageSize,
+			PageIndex: *req.PageIndex,
+		}
+	} else {
+		meta = types.PageResponse{
+			PageSize:  0,
+			PageIndex: 0,
+		}
 	}
+	meta.Total = totalResult
 
 	return &response.ApiResponse{
 		Data: dataResult,
-		Meta: types.PageResponse{
-			PageSize:  *req.PageSize,
-			PageIndex: *req.PageIndex,
-			Total:     totalResult,
-		},
+		Meta: meta,
 	}, nil
 }
 
@@ -293,12 +293,18 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	sonexTokenModel := repository.NewSonexTokenModel(conn)
+	tokenModel := repository.NewTokenModel(conn)
 
-	logos, err := sonexTokenModel.QueryLogo(l.ctx)
+	whitelistTokens, err := tokenModel.QueryByChainId(l.ctx, req.ChainId)
 	if err != nil {
 		return nil, err
 	}
+	whitelistTokenMap := map[string]repository.Token{}
+	linq.From(whitelistTokens).ToMapByT(
+		&whitelistTokenMap,
+		func(item repository.Token) string { return item.Address },
+		func(item repository.Token) repository.Token { return item },
+	)
 
 	dateResult := []types.TokensResponse_Token{}
 
@@ -318,11 +324,17 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 	tokenPoolsMap := map[string][]types.Pool{}
 	var dataLock sync.Mutex
 	var wg sync.WaitGroup
-	results := make(chan error, len(poolRecords))
+	results := make(chan error)
 
 	for _, record := range poolRecords {
+		info0, ok0 := whitelistTokenMap[record.EventToken0]
+		info1, ok1 := whitelistTokenMap[record.EventToken1]
+		if !ok0 && !ok1 {
+			continue
+		}
+
 		wg.Add(1)
-		go func(record repository.EventSonexFactoryPoolCreated, ch chan error) {
+		go func(record repository.EventSonexFactoryPoolCreated, info0 *repository.Token, info1 *repository.Token, ch chan error) {
 			defer wg.Done()
 			defer func() {
 				if err := recover(); err != nil {
@@ -353,7 +365,10 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 				if err != nil {
 					ch <- err
 				}
-				logo := logos[record.EventToken0]
+				var logo string
+				if info0 != nil {
+					logo = info0.Logo
+				}
 				token0 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
 						Token: types.Token{
@@ -373,7 +388,10 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 				if err != nil {
 					ch <- err
 				}
-				logo := logos[record.EventToken0]
+				var logo string
+				if info1 != nil {
+					logo = info1.Logo
+				}
 				token1 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
 						Token: types.Token{
@@ -394,7 +412,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 			tokenPoolsMap[record.EventToken0] = append(tokenPoolsMap[record.EventToken0], pool)
 			tokenPoolsMap[record.EventToken1] = append(tokenPoolsMap[record.EventToken1], pool)
 			dataLock.Unlock()
-		}(record, results)
+		}(record, &info0, &info1, results)
 	}
 	wg.Wait()
 	close(results)

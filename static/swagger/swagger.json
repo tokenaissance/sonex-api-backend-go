@@ -669,6 +669,13 @@
             "required": false,
             "type": "integer",
             "format": "int64"
+          },
+          {
+            "name": "noCache",
+            "in": "query",
+            "required": true,
+            "type": "boolean",
+            "format": "boolean"
           }
         ],
         "tags": [
@@ -3001,9 +3008,16 @@
         "pageIndex": {
           "type": "integer",
           "format": "int64"
+        },
+        "noCache": {
+          "type": "boolean",
+          "format": "boolean"
         }
       },
-      "title": "TokensRequest"
+      "title": "TokensRequest",
+      "required": [
+        "noCache"
+      ]
     },
     "TokensResponse_Token": {
       "type": "object",
