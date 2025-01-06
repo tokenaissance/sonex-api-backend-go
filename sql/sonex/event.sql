@@ -1,7 +1,7 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : develop
+ Source Server         : postgres
  Source Server Type    : PostgreSQL
  Source Server Version : 160003 (160003)
  Source Host           : 10.0.0.150:5432
@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 21/12/2024 11:34:10
+ Date: 07/01/2025 02:05:33
 */
 
 
@@ -34,7 +34,7 @@ CREATE TABLE "public"."event_sonex_factory_pool_created" (
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_token0" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_token1" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_fee" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_fee" int8 NOT NULL,
   "event_tick_spacing" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
@@ -212,17 +212,18 @@ CREATE TABLE "public"."event_sonex_position_manager_transfer" (
 -- ----------------------------
 -- Indexes structure for table event_sonex_factory_pool_created
 -- ----------------------------
-CREATE INDEX "factory_pool_created_index_chain_id_block_number" ON "public"."event_sonex_factory_pool_created" USING btree (
+CREATE INDEX "sonex_factory_pool_created_index_chain_id_block_number" ON "public"."event_sonex_factory_pool_created" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-CREATE UNIQUE INDEX "factory_pool_created_index_chain_id_event_pool" ON "public"."event_sonex_factory_pool_created" USING btree (
+CREATE UNIQUE INDEX "sonex_factory_pool_created_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_factory_pool_created" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "sonex_factory_pool_created_index_pool" ON "public"."event_sonex_factory_pool_created" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_pool" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-);
-CREATE UNIQUE INDEX "factory_pool_created_index_chain_id_tx_hash" ON "public"."event_sonex_factory_pool_created" USING btree (
-  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 
 -- ----------------------------
@@ -245,9 +246,10 @@ CREATE INDEX "pool_burn_index_chain_id_pool" ON "public"."event_sonex_pool_burn"
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "extra_pool" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
-CREATE UNIQUE INDEX "pool_burn_index_chain_id_tx_hash" ON "public"."event_sonex_pool_burn" USING btree (
+CREATE UNIQUE INDEX "pool_burn_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_pool_burn" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
 
 -- ----------------------------
@@ -274,9 +276,10 @@ CREATE INDEX "pool_mint_index_chain_id_sender" ON "public"."event_sonex_pool_min
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_sender" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
-CREATE UNIQUE INDEX "pool_mint_index_chain_id_tx_hash" ON "public"."event_sonex_pool_mint" USING btree (
+CREATE UNIQUE INDEX "pool_mint_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_pool_mint" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
 
 -- ----------------------------
@@ -303,9 +306,10 @@ CREATE INDEX "pool_swap_index_chain_id_sender" ON "public"."event_sonex_pool_swa
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_sender" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
-CREATE UNIQUE INDEX "pool_swap_index_chain_id_tx_hash" ON "public"."event_sonex_pool_swap" USING btree (
+CREATE UNIQUE INDEX "pool_swap_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_pool_swap" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
 
 -- ----------------------------
@@ -324,9 +328,10 @@ CREATE INDEX "position_manager_collect_index_chain_id_event_token_id" ON "public
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-CREATE UNIQUE INDEX "position_manager_collect_index_chain_id_tx_hash" ON "public"."event_sonex_position_manager_collect" USING btree (
+CREATE UNIQUE INDEX "position_manager_collect_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_position_manager_collect" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
 
 -- ----------------------------
@@ -337,6 +342,11 @@ ALTER TABLE "public"."event_sonex_position_manager_collect" ADD CONSTRAINT "even
 -- ----------------------------
 -- Indexes structure for table event_sonex_position_manager_decrease_liquidity
 -- ----------------------------
+CREATE UNIQUE INDEX "manager_decrease_liquidity_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_position_manager_decrease_liquidity" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
 CREATE INDEX "position_manager_decrease_liquidity_index_chain_id_block_number" ON "public"."event_sonex_position_manager_decrease_liquidity" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
@@ -344,10 +354,6 @@ CREATE INDEX "position_manager_decrease_liquidity_index_chain_id_block_number" O
 CREATE INDEX "position_manager_decrease_liquidity_index_chain_id_token_id" ON "public"."event_sonex_position_manager_decrease_liquidity" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
-);
-CREATE UNIQUE INDEX "position_manager_decrease_liquidity_index_chain_id_tx_hash" ON "public"."event_sonex_position_manager_decrease_liquidity" USING btree (
-  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 
 -- ----------------------------
@@ -358,6 +364,11 @@ ALTER TABLE "public"."event_sonex_position_manager_decrease_liquidity" ADD CONST
 -- ----------------------------
 -- Indexes structure for table event_sonex_position_manager_increase_liquidity
 -- ----------------------------
+CREATE UNIQUE INDEX "manager_increase_liquidity_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_position_manager_increase_liquidity" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
 CREATE INDEX "position_manager_increase_liquidity_index_chain_id_block_number" ON "public"."event_sonex_position_manager_increase_liquidity" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
@@ -365,10 +376,6 @@ CREATE INDEX "position_manager_increase_liquidity_index_chain_id_block_number" O
 CREATE INDEX "position_manager_increase_liquidity_index_chain_id_token_id" ON "public"."event_sonex_position_manager_increase_liquidity" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
-);
-CREATE UNIQUE INDEX "position_manager_increase_liquidity_index_chain_id_tx_hash" ON "public"."event_sonex_position_manager_increase_liquidity" USING btree (
-  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 
 -- ----------------------------
@@ -379,6 +386,11 @@ ALTER TABLE "public"."event_sonex_position_manager_increase_liquidity" ADD CONST
 -- ----------------------------
 -- Indexes structure for table event_sonex_position_manager_transfer
 -- ----------------------------
+CREATE UNIQUE INDEX "manager_transfer_index_chain_id_tx_hash_tx_index" ON "public"."event_sonex_position_manager_transfer" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
 CREATE INDEX "position_manager_transfer_index_chain_id_block_number" ON "public"."event_sonex_position_manager_transfer" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "block_number" "pg_catalog"."int8_ops" ASC NULLS LAST
@@ -394,10 +406,6 @@ CREATE INDEX "position_manager_transfer_index_chain_id_event_to" ON "public"."ev
 CREATE INDEX "position_manager_transfer_index_chain_id_token_id" ON "public"."event_sonex_position_manager_transfer" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
-);
-CREATE UNIQUE INDEX "position_manager_transfer_index_chain_id_tx_hash" ON "public"."event_sonex_position_manager_transfer" USING btree (
-  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 
 -- ----------------------------

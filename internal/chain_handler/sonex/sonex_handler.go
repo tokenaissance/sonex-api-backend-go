@@ -151,7 +151,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				pool := event.Pool.Hex()
 
 				// If handled, ignore
-				_, err := eventSonexFactoryPoolCreatedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+				_, err := eventSonexFactoryPoolCreatedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
@@ -327,7 +327,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									amount1 := event.Amount1.String()
 
 									// If handled, ignore
-									_, err := eventSonexPoolMintModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventSonexPoolMintModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -366,7 +366,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									tick := event.Tick.String()
 
 									// If handled, ignore
-									_, err := eventSonexPoolSwapModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventSonexPoolSwapModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -405,7 +405,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									amount1 := event.Amount1.String()
 
 									// If handled, ignore
-									_, err := eventSonexPoolBurnModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventSonexPoolBurnModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -583,7 +583,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					tokenId := event.TokenId.Int64()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerTransferModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerTransferModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
@@ -620,7 +620,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					amount1 := event.Amount1.String()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerIncreaseLiquidityModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerIncreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
@@ -657,7 +657,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					amount1 := event.Amount1.String()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerDecreaseLiquidityModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerDecreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
@@ -694,7 +694,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					amount1 := event.Amount1.String()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerCollectModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerCollectModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
