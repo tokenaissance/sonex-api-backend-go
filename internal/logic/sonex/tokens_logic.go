@@ -59,23 +59,25 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	var dataResult []types.TokensResponse_Token
 	// Check cache
-	lastUpdate, err := redisCache.Get(cacheKey)
-	if err == nil && lastUpdate != "" {
-		var cacheWarpper CacheWarpper
-		err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
-		if err == nil {
-			dataResult = cacheWarpper.Data
-			conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-			eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-			record, err := eventSonexFactoryPoolCreatedModel.FindLatestByChainId(l.ctx, req.ChainId)
-			switch err {
-			case repository.ErrNotFound:
-			case nil:
-				if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
-					resp = nil
+	if req.NoCache {
+		lastUpdate, err := redisCache.Get(cacheKey)
+		if err == nil && lastUpdate != "" {
+			var cacheWarpper CacheWarpper
+			err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+			if err == nil {
+				dataResult = cacheWarpper.Data
+				conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+				eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+				record, err := eventSonexFactoryPoolCreatedModel.FindLatestByChainId(l.ctx, req.ChainId)
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+					if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
+						resp = nil
+					}
+				default:
+					return nil, err
 				}
-			default:
-				return nil, err
 			}
 		}
 	}
