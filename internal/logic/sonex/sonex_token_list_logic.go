@@ -71,6 +71,32 @@ func (l *SonexTokenListLogic) SonexTokenList(req *types.TokenListRequest) (resp 
 		}, nil
 	}
 
+	// TODO optimize this
+	// get price info from db
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
+	if err != nil {
+		return &TokenListResponseWrapper{
+			&types.TokenListResponse{
+				Code:    400,
+				Data:    []*types.Token_TokenDetail{},
+				Meta:    &types.PaginationMeta{},
+				Message: err.Error(),
+			},
+		}, err
+	}
+	// assign price to  data
+	for _i, _tokenDetail := range data {
+		_tokenPrice, ok := prices[_tokenDetail.Address]
+
+		if ok {
+			// if ok,then assign
+			data[_i].Price = _tokenPrice.String()
+		} else {
+			// if not ok ,set default value
+			data[_i].Price = "0.0"
+		}
+	}
 	response := &TokenListResponseWrapper{
 		&types.TokenListResponse{
 			Code:    200,
