@@ -537,7 +537,7 @@ type TokenWithExtra struct {
 	Token
 	Logo       string     `json:"logo"`
 	Pools      []Pool     `json:"pools"`
-	Volume     string     `json:"volume"`
+	VolumeUSD  float64    `json:"volumeUSD"`
 	Kline      []Kline    `json:"kline"`
 	RiseFall1H Comparison `json:"riseRall1H"`
 	RiseFall1D Comparison `json:"riseRall1D"`

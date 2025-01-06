@@ -3262,8 +3262,9 @@
             "$ref": "#/definitions/Pool"
           }
         },
-        "volume": {
-          "type": "string"
+        "volumeUSD": {
+          "type": "number",
+          "format": "double"
         },
         "kline": {
           "type": "array",
@@ -3282,7 +3283,7 @@
       "required": [
         "logo",
         "pools",
-        "volume",
+        "volumeUSD",
         "kline",
         "riseRall1H",
         "riseRall1D"

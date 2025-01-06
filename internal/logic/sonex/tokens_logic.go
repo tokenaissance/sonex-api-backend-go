@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"sonex_api_backend_go/internal/lib/cache"
-	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -147,11 +146,12 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 				item.Pools[i].Token1.PriceUSD = price1
 			}
 
-			volume, ok := volumes[item.Address]
+			volumeI, ok := volumes[item.Address]
 			if !ok {
-				volume = big.NewInt(0)
+				volumeI = big.NewInt(0)
 			}
-			item.Volume = volume.String()
+			volume, _ := global.PriceToUSD(req.ChainId, volumeI)
+			item.VolumeUSD = volume
 
 			kline1D, err := tokenPriceModel.Kline(item.Address, "1d")
 			if err != nil {
@@ -234,14 +234,12 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 				return item.RiseFall1D.Percentage
 			}).ToSlice(&resp.Data)
 		case "Volume_ASC":
-			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) lib_common.CompareableBigInt {
-				apr, _ := new(big.Int).SetString(item.Volume, 10)
-				return lib_common.CompareableBigInt{Value: apr}
+			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) float64 {
+				return item.VolumeUSD
 			}).ToSlice(&resp.Data)
 		case "Volume_DESC":
-			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) lib_common.CompareableBigInt {
-				apr, _ := new(big.Int).SetString(item.Volume, 10)
-				return lib_common.CompareableBigInt{Value: apr}
+			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+				return item.VolumeUSD
 			}).ToSlice(&resp.Data)
 		}
 	}
@@ -269,8 +267,6 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 	}
 
 	dateResult := []types.TokenWithExtra{}
-
-	sw := time.Now()
 
 	poolRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(l.ctx, req.ChainId)
 	if err != nil {
@@ -364,8 +360,6 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 	}
 	wg.Wait()
 	close(results)
-
-	fmt.Printf("============> %ds", time.Now().Unix()-sw.Unix())
 
 	for result := range results {
 		if result != nil {
