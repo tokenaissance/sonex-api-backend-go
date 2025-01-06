@@ -292,7 +292,10 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/PoolsResponse"
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PoolsResponse_Pool"
+              }
             }
           }
         },
@@ -623,7 +626,10 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/TokensResponse"
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TokensResponse_Token"
+              }
             }
           }
         },
@@ -736,7 +742,10 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/TransactionsResponse"
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TransactionsResponse_Transaction"
+              }
             }
           }
         },
@@ -945,6 +954,10 @@
         "totalAmount0",
         "totalAmount1"
       ]
+    },
+    "ChainRequest": {
+      "type": "object",
+      "title": "ChainRequest"
     },
     "ChainSyncPrograss": {
       "type": "object",
@@ -1809,10 +1822,6 @@
     "PoolsRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64"
-        },
         "order": {
           "type": "string",
           "default": "ASC"
@@ -1837,23 +1846,7 @@
       },
       "title": "PoolsRequest",
       "required": [
-        "chainId",
         "order"
-      ]
-    },
-    "PoolsResponse": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PoolsResponse_Pool"
-          }
-        }
-      },
-      "title": "PoolsResponse",
-      "required": [
-        "data"
       ]
     },
     "PoolsResponse_Pool": {
@@ -2430,10 +2423,6 @@
     "TokenPriceRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64"
-        },
         "token": {
           "type": "string"
         },
@@ -2448,7 +2437,6 @@
       },
       "title": "TokenPriceRequest",
       "required": [
-        "chainId",
         "token"
       ]
     },
@@ -2522,10 +2510,6 @@
     "TokenQuoteRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64"
-        },
         "from": {
           "type": "string"
         },
@@ -2548,7 +2532,6 @@
       },
       "title": "TokenQuoteRequest",
       "required": [
-        "chainId",
         "from",
         "to",
         "type",
@@ -2735,9 +2718,6 @@
           "type": "number",
           "format": "double"
         },
-        "logo": {
-          "type": "string"
-        },
         "pools": {
           "type": "array",
           "items": {
@@ -2763,7 +2743,6 @@
       },
       "title": "TokenWithExtra",
       "required": [
-        "logo",
         "pools",
         "volumeUSD",
         "kline",
@@ -3003,10 +2982,6 @@
     "TokensRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64"
-        },
         "orderBy": {
           "type": "string",
           "enum": [
@@ -3028,38 +3003,48 @@
           "format": "int64"
         }
       },
-      "title": "TokensRequest",
-      "required": [
-        "chainId"
-      ]
+      "title": "TokensRequest"
     },
-    "TokensResponse": {
+    "TokensResponse_Token": {
       "type": "object",
       "properties": {
-        "tokens": {
+        "": {
+          "$ref": "#/definitions/Token"
+        },
+        "pools": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/TokenWithExtra"
+            "$ref": "#/definitions/Pool"
           }
         },
-        "total": {
-          "type": "integer",
-          "format": "int64"
+        "volumeUSD": {
+          "type": "number",
+          "format": "double"
+        },
+        "kline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Kline"
+          }
+        },
+        "riseRall1H": {
+          "$ref": "#/definitions/Comparison"
+        },
+        "riseRall1D": {
+          "$ref": "#/definitions/Comparison"
+        },
+        "logo": {
+          "type": "string"
         }
       },
-      "title": "TokensResponse",
+      "title": "TokensResponse_Token",
       "required": [
-        "tokens",
-        "total"
+        "logo"
       ]
     },
     "TransactionsRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64"
-        },
         "walletAddress": {
           "type": "string"
         },
@@ -3089,25 +3074,7 @@
           "format": "int64"
         }
       },
-      "title": "TransactionsRequest",
-      "required": [
-        "chainId"
-      ]
-    },
-    "TransactionsResponse": {
-      "type": "object",
-      "properties": {
-        "transactions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TransactionsResponse_Transaction"
-          }
-        }
-      },
-      "title": "TransactionsResponse",
-      "required": [
-        "transactions"
-      ]
+      "title": "TransactionsRequest"
     },
     "TransactionsResponse_Transaction": {
       "type": "object",

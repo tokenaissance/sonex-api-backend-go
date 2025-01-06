@@ -8,6 +8,10 @@ type AggregatedAmounts struct {
 	TotalAmount1 float64 `json:"totalAmount1"`
 }
 
+type ChainRequest struct {
+	ChainId int64 `header:"chainId"`
+}
+
 type ChainSyncPrograss struct {
 	ChainId   int64  `json:"chainId"`
 	Height    int64  `json:"height"`
@@ -216,16 +220,12 @@ type PoolVolume struct {
 }
 
 type PoolsRequest struct {
-	ChainId       int64  `form:"chainId"`
+	ChainRequest
 	Order         string `form:"order,default=ASC"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
 	PageRequest
-}
-
-type PoolsResponse struct {
-	Data []*PoolsResponse_Pool `json:"data"`
 }
 
 type PoolsResponse_Pool struct {
@@ -388,7 +388,7 @@ type Token struct {
 }
 
 type TokenPriceRequest struct {
-	ChainId        int64   `form:"chainId"`
+	ChainRequest
 	Token          string  `form:"token"`
 	IsCache        bool    `form:"isCache,optional,default=true"`
 	WantStablecoin *string `form:"wantStablecoin,optional"`
@@ -413,7 +413,7 @@ type TokenPriceResponse_Price_Pool struct {
 }
 
 type TokenQuoteRequest struct {
-	ChainId    int64  `form:"chainId"`
+	ChainRequest
 	From       string `form:"from"`
 	To         string `form:"to"`
 	Type       string `form:"type,options=INPUT|OUTPUT"`
@@ -463,7 +463,6 @@ type TokenVolume struct {
 
 type TokenWithExtra struct {
 	Token
-	Logo       string     `json:"logo"`
 	Pools      []Pool     `json:"pools"`
 	VolumeUSD  float64    `json:"volumeUSD"`
 	Kline      []Kline    `json:"kline"`
@@ -534,28 +533,24 @@ type Token_TokenValue struct {
 }
 
 type TokensRequest struct {
-	ChainId int64  `form:"chainId"`
+	ChainRequest
 	OrderBy string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
 	PageRequest
 }
 
-type TokensResponse struct {
-	Tokens []TokenWithExtra `json:"tokens"`
-	Total  int64            `json:"total"`
+type TokensResponse_Token struct {
+	TokenWithExtra
+	Logo string `json:"logo"`
 }
 
 type TransactionsRequest struct {
-	ChainId int64  `form:"chainId"`
+	ChainRequest
 	Wallet  string `form:"walletAddress,optional"`
 	Pool    string `form:"poolAddress,optional"`
 	Token0  string `form:"token0Address,optional"`
 	Token1  string `form:"token1Address,optional"`
 	OrderBy string `form:"orderBy,optional,options=ASC|DESC,default=DESC"`
 	PageRequest
-}
-
-type TransactionsResponse struct {
-	Transactions []TransactionsResponse_Transaction `json:"transactions"`
 }
 
 type TransactionsResponse_Transaction struct {

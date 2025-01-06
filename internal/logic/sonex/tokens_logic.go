@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
@@ -26,7 +27,7 @@ type TokensLogic struct {
 }
 
 type CacheWarpper struct {
-	Data       []types.TokenWithExtra
+	Data       []types.TokensResponse_Token
 	LastUpdate time.Time
 }
 
@@ -38,7 +39,7 @@ func NewTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *TokensLogi
 	}
 }
 
-func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensResponse, err error) {
+func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiResponse, err error) {
 	if req.ChainId == 0 {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
@@ -56,14 +57,14 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 	cacheKey := fmt.Sprintf("sonex:tokens:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
+	var dataResult []types.TokensResponse_Token
 	// Check cache
 	lastUpdate, err := redisCache.Get(cacheKey)
 	if err == nil && lastUpdate != "" {
 		var cacheWarpper CacheWarpper
 		err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
 		if err == nil {
-			resp = &types.TokensResponse{Tokens: cacheWarpper.Data}
-
+			dataResult = cacheWarpper.Data
 			conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 			eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 			record, err := eventSonexFactoryPoolCreatedModel.FindLatestByChainId(l.ctx, req.ChainId)
@@ -80,12 +81,12 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 	}
 
 	// No cache
-	if resp == nil {
+	if dataResult == nil {
 		data, err := l.getData(req)
 		if err != nil {
 			return nil, err
 		}
-		resp = &types.TokensResponse{Tokens: data}
+		dataResult = data
 
 		// Set cache
 		respBytes, err := json.Marshal(CacheWarpper{Data: data, LastUpdate: time.Now().UTC()})
@@ -100,6 +101,13 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	tokenModel := repository.NewTokenModel(conn)
+
+	tokens, err := tokenModel.QueryByChainId(l.ctx, req.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	_ = tokens
 
 	// Update price
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
@@ -113,21 +121,21 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 
 	var wg sync.WaitGroup
 	var results = make(chan struct {
-		Data types.TokenWithExtra
+		Data types.TokensResponse_Token
 		Err  error
-	}, len(resp.Tokens))
+	}, len(dataResult))
 
-	for _, item := range resp.Tokens {
+	for _, item := range dataResult {
 		wg.Add(1)
-		go func(item types.TokenWithExtra, ch chan struct {
-			Data types.TokenWithExtra
+		go func(item types.TokensResponse_Token, ch chan struct {
+			Data types.TokensResponse_Token
 			Err  error
 		}) {
 			defer wg.Done()
 			defer func() {
 				if err := recover(); err != nil {
 					ch <- struct {
-						Data types.TokenWithExtra
+						Data types.TokensResponse_Token
 						Err  error
 					}{
 						Err: fmt.Errorf("%s %s(panic)", item.Address, err),
@@ -166,7 +174,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 			kline1D, err := tokenPriceModel.Kline(item.Address, "1d")
 			if err != nil {
 				ch <- struct {
-					Data types.TokenWithExtra
+					Data types.TokensResponse_Token
 					Err  error
 				}{
 					Err: err,
@@ -205,7 +213,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 			item.RiseFall1D = types.Comparison{Comparison: comparison1D, Percentage: percentage1D}
 
 			ch <- struct {
-				Data types.TokenWithExtra
+				Data types.TokensResponse_Token
 				Err  error
 			}{
 				Data: item,
@@ -216,46 +224,46 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 	close(results)
 
 	// Handle results
-	resp.Tokens = []types.TokenWithExtra{}
+	dataResult = []types.TokensResponse_Token{}
 	for result := range results {
 		if result.Err != nil {
 			return nil, result.Err
 		}
-		resp.Tokens = append(resp.Tokens, result.Data)
+		dataResult = append(dataResult, result.Data)
 	}
 
 	// Sorts
 	if req.OrderBy != "" {
 		switch req.OrderBy {
 		case "1H_ASC":
-			linq.From(resp.Tokens).OrderByT(func(item types.TokenWithExtra) float64 {
+			linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1H.Percentage
-			}).ToSlice(&resp.Tokens)
+			}).ToSlice(&dataResult)
 		case "1H_DESC":
-			linq.From(resp.Tokens).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+			linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1H.Percentage
-			}).ToSlice(&resp.Tokens)
+			}).ToSlice(&dataResult)
 		case "1D_ASC":
-			linq.From(resp.Tokens).OrderByT(func(item types.TokenWithExtra) float64 {
+			linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1D.Percentage
-			}).ToSlice(&resp.Tokens)
+			}).ToSlice(&dataResult)
 		case "1D_DESC":
-			linq.From(resp.Tokens).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+			linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1D.Percentage
-			}).ToSlice(&resp.Tokens)
+			}).ToSlice(&dataResult)
 		case "Volume_ASC":
-			linq.From(resp.Tokens).OrderByT(func(item types.TokenWithExtra) float64 {
+			linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
 				return item.VolumeUSD
-			}).ToSlice(&resp.Tokens)
+			}).ToSlice(&dataResult)
 		case "Volume_DESC":
-			linq.From(resp.Tokens).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+			linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
 				return item.VolumeUSD
-			}).ToSlice(&resp.Tokens)
+			}).ToSlice(&dataResult)
 		}
 	}
 
 	// Page
-	resp.Total = int64(len(resp.Tokens))
+	totalResult := int64(len(dataResult))
 	if req.PageSize != nil && req.PageIndex != nil {
 		if *req.PageSize < 1 {
 			*req.PageSize = 20
@@ -264,13 +272,20 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 			*req.PageIndex = 1
 		}
 
-		linq.From(resp.Tokens).Skip(int((*req.PageIndex - 1) * *req.PageSize)).Take(int(*req.PageSize)).ToSlice(&resp.Tokens)
+		linq.From(dataResult).Skip(int((*req.PageIndex - 1) * *req.PageSize)).Take(int(*req.PageSize)).ToSlice(&dataResult)
 	}
 
-	return resp, nil
+	return &response.ApiResponse{
+		Data: dataResult,
+		Meta: types.PageResponse{
+			PageSize:  *req.PageSize,
+			PageIndex: *req.PageIndex,
+			Total:     totalResult,
+		},
+	}, nil
 }
 
-func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra, error) {
+func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_Token, error) {
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
@@ -285,7 +300,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 		return nil, err
 	}
 
-	dateResult := []types.TokenWithExtra{}
+	dateResult := []types.TokensResponse_Token{}
 
 	poolRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(l.ctx, req.ChainId)
 	if err != nil {
@@ -299,7 +314,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 		},
 	)
 
-	tokenMap := map[string]types.TokenWithExtra{}
+	tokenMap := map[string]types.TokensResponse_Token{}
 	tokenPoolsMap := map[string][]types.Pool{}
 	var dataLock sync.Mutex
 	var wg sync.WaitGroup
@@ -339,12 +354,14 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 					ch <- err
 				}
 				logo := logos[record.EventToken0]
-				token0 = types.TokenWithExtra{
-					Token: types.Token{
-						Address:  token.Address,
-						Name:     token.Name,
-						Symbol:   token.Symbol,
-						Decimals: token.Decimals,
+				token0 = types.TokensResponse_Token{
+					TokenWithExtra: types.TokenWithExtra{
+						Token: types.Token{
+							Address:  token.Address,
+							Name:     token.Name,
+							Symbol:   token.Symbol,
+							Decimals: token.Decimals,
+						},
 					},
 					Logo: logo,
 				}
@@ -357,12 +374,14 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokenWithExtra,
 					ch <- err
 				}
 				logo := logos[record.EventToken0]
-				token1 = types.TokenWithExtra{
-					Token: types.Token{
-						Address:  token.Address,
-						Name:     token.Name,
-						Symbol:   token.Symbol,
-						Decimals: token.Decimals,
+				token1 = types.TokensResponse_Token{
+					TokenWithExtra: types.TokenWithExtra{
+						Token: types.Token{
+							Address:  token.Address,
+							Name:     token.Name,
+							Symbol:   token.Symbol,
+							Decimals: token.Decimals,
+						},
 					},
 					Logo: logo,
 				}

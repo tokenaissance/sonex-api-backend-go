@@ -6,7 +6,7 @@ import "./common.api"
 Sonex Module
 */
 type TokenPriceRequest {
-	ChainId        int64   `form:"chainId"`
+	ChainRequest
 	Token          string  `form:"token"`
 	IsCache        bool    `form:"isCache,optional,default=true"`
 	WantStablecoin *string `form:"wantStablecoin,optional"`
@@ -31,7 +31,7 @@ type TokenPriceResponse {
 }
 
 type TokenQuoteRequest {
-	ChainId    int64  `form:"chainId"`
+	ChainRequest
 	From       string `form:"from"`
 	To         string `form:"to"`
 	Type       string `form:"type,options=INPUT|OUTPUT"`
@@ -69,7 +69,7 @@ type TokenQuoteResponse {
 }
 
 type TransactionsRequest {
-	ChainId int64  `form:"chainId"`
+	ChainRequest
 	Wallet  string `form:"walletAddress,optional"`
 	Pool    string `form:"poolAddress,optional"`
 	Token0  string `form:"token0Address,optional"`
@@ -90,19 +90,15 @@ type TransactionsResponse_Transaction {
 	ValueUSD   float64 `json:"valueUSD"`
 }
 
-type TransactionsResponse {
-	Transactions []TransactionsResponse_Transaction `json:"transactions"`
-}
-
 type TokensRequest {
-	ChainId int64  `form:"chainId"`
+	ChainRequest
 	OrderBy string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
 	PageRequest
 }
 
-type TokensResponse {
-	Tokens []TokenWithExtra `json:"tokens"`
-	Total  int64            `json:"total"`
+type TokensResponse_Token {
+	TokenWithExtra
+	Logo string `json:"logo"`
 }
 
 type PaginationMeta {
@@ -123,7 +119,7 @@ type SonexTokenPricesResponse {
 }
 
 type PoolsRequest {
-	ChainId       int64  `form:"chainId"`
+	ChainRequest
 	Order         string `form:"order,default=ASC"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
@@ -193,10 +189,6 @@ type PoolsResponse_Pool {
 	Price1             string              `json:"price1"`
 	Stablecoin         string              `json:"stablecoin"`
 	StablecoinDecimals int64               `json:"decimals"`
-}
-
-type PoolsResponse {
-	Data []*PoolsResponse_Pool `json:"data"`
 }
 
 type TokenTopResponse {
@@ -438,16 +430,16 @@ service sonex_api_backend_go {
 	get /token/quote (TokenQuoteRequest) returns (TokenQuoteResponse)
 
 	@handler TransactionsHandler
-	get /transactions (TransactionsRequest) returns (TransactionsResponse)
+	get /transactions (TransactionsRequest) returns ([]TransactionsResponse_Transaction)
 
 	@handler TokensHandler
-	get /tokens (TokensRequest) returns (TokensResponse)
+	get /tokens (TokensRequest) returns ([]TokensResponse_Token)
 
 	@handler SonexTokenTopHandler
 	get /tokens/top returns (TokenTopResponse)
 
 	@handler SonexPoolListHandler
-	get /pools (PoolsRequest) returns (PoolsResponse)
+	get /pools (PoolsRequest) returns ([]PoolsResponse_Pool)
 
 	@handler SonexPositionsHandler
 	get /pools/positions (PositionsRequest) returns (PositionsResponse)

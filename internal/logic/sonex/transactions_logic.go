@@ -254,9 +254,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	}
 
 	return &response.ApiResponse{
-		Data: types.TransactionsResponse{
-			Transactions: dataResult,
-		},
+		Data: dataResult,
 		Meta: types.PageResponse{
 			PageSize:  *req.PageSize,
 			PageIndex: *req.PageIndex,

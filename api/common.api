@@ -1,5 +1,9 @@
 syntax = "v1"
 
+type ChainRequest {
+	ChainId int64 `header:"chainId"`
+}
+
 type PageRequest {
 	PageSize  *int64 `form:"pageSize,optional"`
 	PageIndex *int64 `form:"pageIndex,optional"`
@@ -21,7 +25,6 @@ type Token {
 
 type TokenWithExtra {
 	Token
-	Logo       string     `json:"logo"`
 	Pools      []Pool     `json:"pools"`
 	VolumeUSD  float64    `json:"volumeUSD"`
 	Kline      []Kline    `json:"kline"`

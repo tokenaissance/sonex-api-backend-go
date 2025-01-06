@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/cache"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/global"
@@ -29,11 +30,6 @@ type SonexPoolListLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-type PoolsResponseWrapper struct {
-	Data *types.PoolsResponse
-	Meta *types.PageResponse
-}
-
 func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPoolListLogic {
 	return &SonexPoolListLogic{
 		Logger: logx.WithContext(ctx),
@@ -42,7 +38,7 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 	}
 }
 
-func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *PoolsResponseWrapper, err error) {
+func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *response.ApiResponse, err error) {
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
@@ -72,7 +68,7 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp PoolsResponseWrapper
+		var cachedResp response.ApiResponse
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
 			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
@@ -85,7 +81,7 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.ICache, cacheKey string, cachedResp *PoolsResponseWrapper) (*PoolsResponseWrapper, error) {
+func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.ICache, cacheKey string, cachedResp *response.ApiResponse) (*response.ApiResponse, error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
@@ -130,10 +126,8 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		Token1Address:   req.Token1Address,
 	})
 	if err != nil {
-		return &PoolsResponseWrapper{
-			Data: &types.PoolsResponse{
-				Data: []*types.PoolsResponse_Pool{},
-			},
+		return &response.ApiResponse{
+			Data: []*types.PoolsResponse_Pool{},
 			Meta: &types.PageResponse{},
 		}, err
 	}
@@ -336,10 +330,8 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	// 		pool.Volume = tokenPair.Value()
 	// 	}
 	// }
-	response := &PoolsResponseWrapper{
-		Data: &types.PoolsResponse{
-			Data: pools,
-		},
+	response := &response.ApiResponse{
+		Data: pools,
 		Meta: &types.PageResponse{
 			PageSize:  int64(meta.Take),
 			PageIndex: int64(meta.Page),
