@@ -3,6 +3,7 @@ package global
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
@@ -125,6 +126,20 @@ func SetToken(chainId int64, address string, isStablecoin bool) error {
 		return err
 	}
 	return nil
+}
+
+func PriceToUSD(chainId int64, price *big.Int) (float64, error) {
+	chainConf := c.GetChainConfig(chainId)
+	if chainConf == nil {
+		return 0, fmt.Errorf("%s", "Miss chain configure")
+	}
+	usdToken, err := GetToken(chainId, common.HexToAddress(chainConf.USD).Hex())
+	if err != nil {
+		return 0, err
+	}
+	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
+	val, _ := new(big.Float).Quo(new(big.Float).SetInt(price), usdAccuracy).Float64()
+	return math.Round(val*100) / 100, nil
 }
 
 func GetStablecoin(chainId int64) []cache.Token {

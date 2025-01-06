@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -29,7 +30,7 @@ func NewTransactionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Tran
 	}
 }
 
-func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *types.TransactionsResponse, err error) {
+func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *response.ApiResponse, err error) {
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
@@ -44,11 +45,6 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
 	}
-	usdToken, err := global.GetToken(req.ChainId, common.HexToAddress(chainConf.USD).Hex())
-	if err != nil {
-		return nil, err
-	}
-	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
@@ -168,16 +164,18 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			if err != nil {
 				return nil, err
 			}
-			price0 := big.NewInt(0)
-			price1 := big.NewInt(0)
+			price0I := big.NewInt(0)
+			price1I := big.NewInt(0)
 			price, ok := prices[token0.Address]
 			if ok {
-				price0, _ = new(big.Int).SetString(price.Price, 10)
+				price0I, _ = new(big.Int).SetString(price.Price, 10)
 			}
+			price0, _ := global.PriceToUSD(req.ChainId, price0I)
 			price, ok = prices[token1.Address]
 			if ok {
-				price1, _ = new(big.Int).SetString(price.Price, 10)
+				price1I, _ = new(big.Int).SetString(price.Price, 10)
 			}
+			price1, _ := global.PriceToUSD(req.ChainId, price1I)
 
 			pool = types.Pool{
 				Address: poolAddress.Hex(),
@@ -186,14 +184,14 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 					Name:     token0.Name,
 					Symbol:   token0.Symbol,
 					Decimals: token0.Decimals,
-					Price:    price0.String(),
+					PriceUSD: price0,
 				},
 				Token1: types.Token{
 					Address:  token1.Address,
 					Name:     token1.Name,
 					Symbol:   token1.Symbol,
 					Decimals: token1.Decimals,
-					Price:    price1.String(),
+					PriceUSD: price1,
 				},
 				Fee: record.ExtraFee,
 			}
@@ -206,8 +204,8 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		var toAmount *big.Int
 		amount0, _ := new(big.Int).SetString(record.EventAmount0, 10)
 		amount1, _ := new(big.Int).SetString(record.EventAmount1, 10)
-		price0, _ := new(big.Float).SetString(pool.Token0.Price)
-		price1, _ := new(big.Float).SetString(pool.Token1.Price)
+		price0 := big.NewFloat(pool.Token0.PriceUSD)
+		price1 := big.NewFloat(pool.Token1.PriceUSD)
 		var valueUSD float64
 
 		if amount0.Cmp(amount1) < 0 {
@@ -216,20 +214,22 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			fromAmount = new(big.Int).Abs(amount0)
 			toAmount = new(big.Int).Abs(amount1)
 			fromAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
-			toAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
-			fromValueUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price0), fromAccuracy), usdAccuracy)
-			toValueUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(toAmount), price1), toAccuracy), usdAccuracy)
-			valueUSD, _ = new(big.Float).Add(fromValueUSD, toValueUSD).Float64()
+			// toAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
+			// fromValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price0), fromAccuracy)
+			// toValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(toAmount), price1), toAccuracy)
+			// valueUSD, _ = new(big.Float).Add(fromValueUSD, toValueUSD).Float64()
+			valueUSD, _ = new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price0), fromAccuracy).Float64()
 		} else {
 			from = record.ExtraToken1
 			to = record.ExtraToken0
 			fromAmount = new(big.Int).Abs(amount1)
 			toAmount = new(big.Int).Abs(amount0)
 			fromAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
-			toAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
-			fromValueUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price1), fromAccuracy), usdAccuracy)
-			toValueUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(toAmount), price0), toAccuracy), usdAccuracy)
-			valueUSD, _ = new(big.Float).Add(fromValueUSD, toValueUSD).Float64()
+			// toAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
+			// fromValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price1), fromAccuracy)
+			// toValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(toAmount), price0), toAccuracy)
+			// valueUSD, _ = new(big.Float).Add(fromValueUSD, toValueUSD).Float64()
+			valueUSD, _ = new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price1), fromAccuracy).Float64()
 		}
 
 		dataResult = append(dataResult, types.TransactionsResponse_Transaction{
@@ -251,8 +251,14 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		linq.From(dataResult).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&dataResult)
 	}
 
-	return &types.TransactionsResponse{
-		Data:  dataResult,
-		Total: totalResult,
+	return &response.ApiResponse{
+		Data: types.TransactionsResponse{
+			Data: dataResult,
+		},
+		Meta: types.PageResponse{
+			PageSize:  req.PageSize,
+			PageIndex: req.PageIndex,
+			Total:     totalResult,
+		},
 	}, nil
 }
