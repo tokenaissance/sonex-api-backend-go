@@ -89,16 +89,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/swaps",
-				Handler: sonex.SonexSwapHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/swaps/volume",
-				Handler: sonex.SonexSwapVolumeHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
 				Path:    "/token/price",
 				Handler: sonex.SonexTokenPriceHandler(serverCtx),
 			},
@@ -116,11 +106,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/tokens/kline",
 				Handler: sonex.TokensKlineHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/tokens/list",
-				Handler: sonex.SonexTokenListHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,

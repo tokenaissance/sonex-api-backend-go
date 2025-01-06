@@ -62,7 +62,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 		var cacheWarpper CacheWarpper
 		err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
 		if err == nil {
-			resp = &types.TokensResponse{Data: cacheWarpper.Data}
+			resp = &types.TokensResponse{Tokens: cacheWarpper.Data}
 
 			conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 			eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
@@ -85,7 +85,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 		if err != nil {
 			return nil, err
 		}
-		resp = &types.TokensResponse{Data: data}
+		resp = &types.TokensResponse{Tokens: data}
 
 		// Set cache
 		respBytes, err := json.Marshal(CacheWarpper{Data: data, LastUpdate: time.Now().UTC()})
@@ -115,9 +115,9 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 	var results = make(chan struct {
 		Data types.TokenWithExtra
 		Err  error
-	}, len(resp.Data))
+	}, len(resp.Tokens))
 
-	for _, item := range resp.Data {
+	for _, item := range resp.Tokens {
 		wg.Add(1)
 		go func(item types.TokenWithExtra, ch chan struct {
 			Data types.TokenWithExtra
@@ -216,47 +216,56 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 	close(results)
 
 	// Handle results
-	resp.Data = []types.TokenWithExtra{}
+	resp.Tokens = []types.TokenWithExtra{}
 	for result := range results {
 		if result.Err != nil {
 			return nil, result.Err
 		}
-		resp.Data = append(resp.Data, result.Data)
+		resp.Tokens = append(resp.Tokens, result.Data)
 	}
 
 	// Sorts
 	if req.OrderBy != "" {
 		switch req.OrderBy {
 		case "1H_ASC":
-			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) float64 {
+			linq.From(resp.Tokens).OrderByT(func(item types.TokenWithExtra) float64 {
 				return item.RiseFall1H.Percentage
-			}).ToSlice(&resp.Data)
+			}).ToSlice(&resp.Tokens)
 		case "1H_DESC":
-			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+			linq.From(resp.Tokens).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
 				return item.RiseFall1H.Percentage
-			}).ToSlice(&resp.Data)
+			}).ToSlice(&resp.Tokens)
 		case "1D_ASC":
-			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) float64 {
+			linq.From(resp.Tokens).OrderByT(func(item types.TokenWithExtra) float64 {
 				return item.RiseFall1D.Percentage
-			}).ToSlice(&resp.Data)
+			}).ToSlice(&resp.Tokens)
 		case "1D_DESC":
-			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+			linq.From(resp.Tokens).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
 				return item.RiseFall1D.Percentage
-			}).ToSlice(&resp.Data)
+			}).ToSlice(&resp.Tokens)
 		case "Volume_ASC":
-			linq.From(resp.Data).OrderByT(func(item types.TokenWithExtra) float64 {
+			linq.From(resp.Tokens).OrderByT(func(item types.TokenWithExtra) float64 {
 				return item.VolumeUSD
-			}).ToSlice(&resp.Data)
+			}).ToSlice(&resp.Tokens)
 		case "Volume_DESC":
-			linq.From(resp.Data).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
+			linq.From(resp.Tokens).OrderByDescendingT(func(item types.TokenWithExtra) float64 {
 				return item.VolumeUSD
-			}).ToSlice(&resp.Data)
+			}).ToSlice(&resp.Tokens)
 		}
 	}
 
 	// Page
-	resp.Total = int64(len(resp.Data))
-	linq.From(resp.Data).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&resp.Data)
+	resp.Total = int64(len(resp.Tokens))
+	if req.PageSize != nil && req.PageIndex != nil {
+		if *req.PageSize < 1 {
+			*req.PageSize = 20
+		}
+		if *req.PageIndex < 1 {
+			*req.PageIndex = 1
+		}
+
+		linq.From(resp.Tokens).Skip(int((*req.PageIndex - 1) * *req.PageSize)).Take(int(*req.PageSize)).ToSlice(&resp.Tokens)
+	}
 
 	return resp, nil
 }

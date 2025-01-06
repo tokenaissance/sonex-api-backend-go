@@ -176,8 +176,8 @@ type NftDataResponse_Data struct {
 }
 
 type PageRequest struct {
-	PageSize  int64 `form:"pageSize,default=20"`
-	PageIndex int64 `form:"pageIndex,default=1"`
+	PageSize  *int64 `form:"pageSize,optional"`
+	PageIndex *int64 `form:"pageIndex,optional"`
 }
 
 type PageResponse struct {
@@ -216,20 +216,16 @@ type PoolVolume struct {
 }
 
 type PoolsRequest struct {
+	ChainId       int64  `form:"chainId"`
 	Order         string `form:"order,default=ASC"`
-	Page          int64  `form:"page,default=1"`
-	Take          int64  `form:"take,default=10"`
-	ChainId       int64  `form:"chainId,default=1946,optional"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
+	PageRequest
 }
 
 type PoolsResponse struct {
-	Code    int                   `json:"code"`
-	Data    []*PoolsResponse_Pool `json:"data"`
-	Meta    *PaginationMeta       `json:"meta"`
-	Message string                `json:"message"`
+	Data []*PoolsResponse_Pool `json:"data"`
 }
 
 type PoolsResponse_Pool struct {
@@ -383,80 +379,12 @@ type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
 }
 
-type SwapEvent struct {
-	ID        int64            `json:"id"`
-	Address   string           `json:"address"`
-	Token0    Token_TokenInfo  `json:"token0"`
-	Token1    Token_TokenInfo  `json:"token1"`
-	Pool      Token_PoolDetail `json:"pool"`
-	Hash      string           `json:"hash"`
-	Amount0   float64          `json:"amount0"`
-	Amount1   float64          `json:"amount1"`
-	Usd       float64          `json:"usd"`
-	CreatedAt string           `json:"createdAt"`
-}
-
-type SwapEventRequest struct {
-	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	Address     string `form:"address,optional"`
-	PoolAddress string `form:"poolAddress,optional"`
-	Token       string `form:"token,optional"`
-	Token0      string `form:"token0,optional"`
-	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
-}
-
-type SwapEventResponse struct {
-	Code    int             `json:"code"`
-	Data    []*SwapEvent    `json:"data"`
-	Meta    *PaginationMeta `json:"meta"`
-	Message string          `json:"message"`
-}
-
-type SwapVolume struct {
-	Timestamp int64   `json:"timestamp"`
-	Value     float64 `json:"value"`
-	Amount    float64 `json:"amount"`
-	Amount0   float64 `json:"amount0"`
-	Amount1   float64 `json:"amount1"`
-}
-
-type SwapVolumeRequest struct {
-	PoolAddress string `form:"poolAddress"` // Pool address
-	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
-	Address     string `form:"address,optional"`
-	Token       string `form:"token,optional"`
-	Token0      string `form:"token0,optional"`
-	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
-}
-
-type SwapVolumeResponse struct {
-	Volumes []SwapVolume `json:"volumes"`
-}
-
 type Token struct {
 	Address  string  `json:"address"`
 	Name     string  `json:"name"`
 	Symbol   string  `json:"symbol"`
 	Decimals int64   `json:"decimals"`
 	PriceUSD float64 `json:"priceUSD"`
-}
-
-type TokenListRequest struct {
-	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946,optional"`
-}
-
-type TokenListResponse struct {
-	Code    int                  `json:"code"`
-	Data    []*Token_TokenDetail `json:"data"`
-	Meta    *PaginationMeta      `json:"meta"`
-	Message string               `json:"message"`
 }
 
 type TokenPriceRequest struct {
@@ -606,15 +534,14 @@ type Token_TokenValue struct {
 }
 
 type TokensRequest struct {
-	ChainId   int64  `form:"chainId"`
-	OrderBy   string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
-	PageSize  int64  `form:"pageSize,default=20"`
-	PageIndex int64  `form:"pageIndex,default=1"`
+	ChainId int64  `form:"chainId"`
+	OrderBy string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC,default=Volume_DESC"`
+	PageRequest
 }
 
 type TokensResponse struct {
-	Data  []TokenWithExtra `json:"tokens"`
-	Total int64            `json:"total"`
+	Tokens []TokenWithExtra `json:"tokens"`
+	Total  int64            `json:"total"`
 }
 
 type TransactionsRequest struct {
@@ -628,7 +555,7 @@ type TransactionsRequest struct {
 }
 
 type TransactionsResponse struct {
-	Data []TransactionsResponse_Transaction `json:"transactions"`
+	Transactions []TransactionsResponse_Transaction `json:"transactions"`
 }
 
 type TransactionsResponse_Transaction struct {
