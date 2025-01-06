@@ -28,7 +28,7 @@ CREATE TABLE "public"."token" (
   "decimals" int8 NOT NULL,
   "address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "logo" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "sort" int8 NOT NULL,
+  "sort" int8 NOT NULL DEFAULT 0,
   "hidden" bool NOT NULL DEFAULT false
 )
 ;
