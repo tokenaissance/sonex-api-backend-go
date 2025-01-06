@@ -64,8 +64,18 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *types.TokensRespon
 		if err == nil {
 			resp = &types.TokensResponse{Data: cacheWarpper.Data}
 
-			// TODO
-			// 出现新池子时应更新缓存
+			conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+			eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+			record, err := eventSonexFactoryPoolCreatedModel.FindLatestByChainId(l.ctx, req.ChainId)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
+					resp = nil
+				}
+			default:
+				return nil, err
+			}
 		}
 	}
 
