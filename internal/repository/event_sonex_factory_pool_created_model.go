@@ -21,6 +21,7 @@ type (
 		eventSonexFactoryPoolCreatedModel
 		withSession(session sqlx.Session) EventSonexFactoryPoolCreatedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) error
+		FindLatestByChainId(ctx context.Context, chainId int64) (*EventSonexFactoryPoolCreated, error)
 		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
 		GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error)
@@ -50,6 +51,20 @@ func (m *customEventSonexFactoryPoolCreatedModel) New(ctx context.Context, id in
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", m.table, eventSonexFactoryPoolCreatedRows)
 	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
 	return err
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) FindLatestByChainId(ctx context.Context, chainId int64) (*EventSonexFactoryPoolCreated, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 ORDER BY tx_at DESC LIMIT 1", eventSonexFactoryPoolCreatedRows, m.table)
+	var resp EventSonexFactoryPoolCreated
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
 
 func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error) {
