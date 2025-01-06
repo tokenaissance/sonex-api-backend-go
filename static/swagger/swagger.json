@@ -3049,11 +3049,21 @@
         },
         "logo": {
           "type": "string"
+        },
+        "sort": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "hidden": {
+          "type": "boolean",
+          "format": "boolean"
         }
       },
       "title": "TokensResponse_Token",
       "required": [
-        "logo"
+        "logo",
+        "sort",
+        "hidden"
       ]
     },
     "TransactionsRequest": {

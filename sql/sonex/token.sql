@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 06/01/2025 20:13:22
+ Date: 06/01/2025 21:46:02
 */
 
 
@@ -21,24 +21,17 @@
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."token";
 CREATE TABLE "public"."token" (
-  "id" int8 NOT NULL,
+  "id" int8 NOT NULL DEFAULT nextval('token_id'::regclass),
   "chain_id" int8 NOT NULL,
   "name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "symbal" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "decimals" int8 NOT NULL,
   "address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "logo" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "logo" varchar(255) COLLATE "pg_catalog"."default",
   "sort" int8 NOT NULL DEFAULT 0,
   "hidden" bool NOT NULL DEFAULT false
 )
 ;
-
--- ----------------------------
--- Records of token
--- ----------------------------
-BEGIN;
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbal", "decimals", "address", "logo", "sort", "hidden") VALUES (1, 1946, 'Wrapped Ethereum', 'WETH', 18, '0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C', 'https://img.sonex.so/weth-logo.png', 999, 'f');
-COMMIT;
 
 -- ----------------------------
 -- Indexes structure for table token
@@ -52,3 +45,10 @@ CREATE UNIQUE INDEX "token_index_chain_id_address" ON "public"."token" USING btr
 -- Primary Key structure for table token
 -- ----------------------------
 ALTER TABLE "public"."token" ADD CONSTRAINT "token_pkey" PRIMARY KEY ("id");
+
+CREATE SEQUENCE "public"."token_id"
+  INCREMENT 1
+  MINVALUE  1
+  MAXVALUE 9223372036854775807
+START 1
+CACHE 1;

@@ -37,15 +37,15 @@ type (
 	}
 
 	Token struct {
-		Id       int64  `db:"id"`
-		ChainId  int64  `db:"chain_id"`
-		Name     string `db:"name"`
-		Symbal   string `db:"symbal"`
-		Decimals int64  `db:"decimals"`
-		Address  string `db:"address"`
-		Logo     string `db:"logo"`
-		Sort     int64  `db:"sort"`
-		Hidden   bool   `db:"hidden"`
+		Id       int64          `db:"id"`
+		ChainId  int64          `db:"chain_id"`
+		Name     string         `db:"name"`
+		Symbal   string         `db:"symbal"`
+		Decimals int64          `db:"decimals"`
+		Address  string         `db:"address"`
+		Logo     sql.NullString `db:"logo"`
+		Sort     int64          `db:"sort"`
+		Hidden   bool           `db:"hidden"`
 	}
 )
 

@@ -59,7 +59,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	var dataResult []types.TokensResponse_Token
 	// Check cache
-	if req.NoCache {
+	if !req.NoCache {
 		lastUpdate, err := redisCache.Get(cacheKey)
 		if err == nil && lastUpdate != "" {
 			var cacheWarpper CacheWarpper
@@ -103,6 +103,9 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+
+	// Filter
+	linq.From(dataResult).WhereT(func(item types.TokensResponse_Token) bool { return !item.Hidden }).ToSlice(&dataResult)
 
 	// Update price
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
@@ -255,6 +258,10 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				return item.VolumeUSD
 			}).ToSlice(&dataResult)
 		}
+	} else {
+		linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) int64 {
+			return item.Sort
+		}).ToSlice(&dataResult)
 	}
 
 	// Page
@@ -368,8 +375,12 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 					ch <- err
 				}
 				var logo string
+				var sort int64
+				var hidden bool
 				if info0 != nil {
-					logo = info0.Logo
+					logo = info0.Logo.String
+					sort = info0.Sort
+					hidden = info0.Hidden
 				}
 				token0 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
@@ -380,7 +391,9 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 							Decimals: token.Decimals,
 						},
 					},
-					Logo: logo,
+					Logo:   logo,
+					Sort:   sort,
+					Hidden: hidden,
 				}
 			}
 			pool.Token0 = token0.Token
@@ -391,8 +404,12 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 					ch <- err
 				}
 				var logo string
+				var sort int64
+				var hidden bool
 				if info1 != nil {
-					logo = info1.Logo
+					logo = info1.Logo.String
+					sort = info1.Sort
+					hidden = info1.Hidden
 				}
 				token1 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
@@ -403,7 +420,9 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 							Decimals: token.Decimals,
 						},
 					},
-					Logo: logo,
+					Logo:   logo,
+					Sort:   sort,
+					Hidden: hidden,
 				}
 			}
 			pool.Token1 = token1.Token
