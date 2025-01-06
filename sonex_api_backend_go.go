@@ -64,37 +64,21 @@ func main() {
 	server := rest.MustNewServer(c.RestConf, opts...)
 	defer server.Stop()
 	// Standrad response
-	httpx.SetOkHandler(func(ctx context.Context, a any) any {
-		var data interface{}
-		var meta interface{}
+	httpx.SetOkHandler(func(ctx context.Context, resp any) any {
 		code := 200
-
-		if responseWithFields, ok := a.(interface {
-			GetData() interface{}
-			GetCode() interface{}
-		}); ok {
-			data = responseWithFields.GetData()
-			code = responseWithFields.GetCode().(int)
-
-			if metaProvider, ok := a.(interface {
-				GetMeta() interface{}
-			}); ok {
-				meta = metaProvider.GetMeta()
+		switch respNoNeedHandle := resp.(type) {
+		case response.ApiResponse:
+			respNoNeedHandle.Code = code
+			return respNoNeedHandle
+		case *response.ApiResponse:
+			respNoNeedHandle.Code = code
+			return respNoNeedHandle
+		default:
+			return response.ApiResponse{
+				Code: code,
+				Data: resp,
 			}
-		} else {
-			data = a
 		}
-
-		apiResponse := response.ApiResponse{
-			Code: code,
-			Data: data,
-		}
-
-		if meta != nil {
-			apiResponse.Meta = meta
-		}
-
-		return apiResponse
 	})
 
 	httpx.SetErrorHandlerCtx(func(ctx context.Context, err error) (int, any) {
