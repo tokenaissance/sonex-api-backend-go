@@ -30,7 +30,7 @@ CREATE TABLE "public"."token" (
   "id" int8 NOT NULL DEFAULT nextval('token_id'::regclass),
   "chain_id" int8 NOT NULL,
   "name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "symbal" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "symbol" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "decimals" int8 NOT NULL,
   "address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "logo" varchar(255) COLLATE "pg_catalog"."default",

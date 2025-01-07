@@ -14,51 +14,61 @@ import (
 )
 
 func HandleRecordTokenPrice(config *config.Config) {
-	fmt.Println("开始执行token价格记录任务")
-
-	ctx := context.Background()
-
+	logx.Info("Token history price updating")
 	conn := repository.NewConn(config.PostgreSQL.DateSource())
-	//model := repository.NewSonexTokenModel(conn)
-	//results, total, err := model.GetTokenList(context.Background(), req)
 
-	query := fmt.Sprintf("select * from %s", "sonex_token")
-	var tokens []repository.TokenData
-	_ = conn.QueryRowsCtx(context.Background(), &tokens, query)
+	for _, chainConf := range config.Chains {
+		err := Update(chainConf, conn)
+		if err != nil {
+			logx.Errorf("Token history price update failed: %d %s", chainConf.ChainId, err)
+		}
+	}
+	logx.Info("Token history price updated")
+}
 
-	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address,price, created_at) values (?, ?,?,?)")
+func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
+	tokenModel := repository.NewTokenModel(conn)
+
+	tokens, err := tokenModel.QueryByChainId(context.Background(), chainConf.ChainId)
 	if err != nil {
-		panic(err)
+		return err
+	}
+
+	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address,price, created_at) values (?,?,?,?)")
+	if err != nil {
+		return err
 	}
 	defer blk.Flush()
 
 	var wg sync.WaitGroup
+	var asyncErr error
 
 	for _, token := range tokens {
 		wg.Add(1)
 
-		go func(item *repository.TokenData) {
+		go func(item *repository.Token) {
 			defer wg.Done()
 
-			// todo: 2024-12-29 chainID 固定，目前 sonex_token_price_record 中并没有包含 chainId 字段
-			chainId := int64(1946)
-			usdAddress := config.GetChainConfig(chainId).USD
-			bestPrice, _, err := global.GetPrices(ctx, nil, chainId, item.Address, false, 2, &usdAddress)
+			bestPrice, _, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
 			if err != nil {
-				logx.Errorf("[HandleRecordTokenPrice]: get token Address: %s Symbol: %s price error: %s", item.Address, item.Symbol, err)
+				asyncErr = err
 				return
 			}
 			if bestPrice == nil {
-				logx.Errorf("[HandleRecordTokenPrice]: bestPrice == nil, get token token Address: %s Symbol: %s price error", item.Address, item.Symbol)
+				asyncErr = fmt.Errorf("%s", fmt.Sprintf("Can not get %s[%s] price", item.Address, item.Symbol))
 				return
 			}
-			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().Format("2006-01-02 15:04:05"))
+			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"))
 			if err != nil {
-				logx.Errorf("[HandleRecordTokenPrice]: insert token price record error: %s", err)
+				asyncErr = err
 				return
 			}
 		}(&token)
 	}
-
 	wg.Wait()
+	if asyncErr != nil {
+		return asyncErr
+	}
+
+	return nil
 }

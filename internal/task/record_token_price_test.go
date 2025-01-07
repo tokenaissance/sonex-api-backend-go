@@ -16,7 +16,8 @@ func TestHandleRecordTokenPrice(t *testing.T) {
 
 	err := global.Initialize(c)
 	if err != nil {
-		panic(err)
+		t.Error(err)
+		return
 	}
 	// measure time
 	start := time.Now()
