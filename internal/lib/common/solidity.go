@@ -7,6 +7,8 @@ import (
 )
 
 func DecodeRevert(data []byte) (int64, string) {
+	return 0, string(data)
+
 	var flag int64
 	var errMsg string
 	if len(data) > 0 && bytes.Equal(data[:4], []byte{0x08, 0xc3, 0x79, 0xa0}) {
