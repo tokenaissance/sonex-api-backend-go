@@ -48,9 +48,14 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 
 		go func(item *repository.Token) {
 			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					asyncErr = fmt.Errorf("Update %s[%s] price failed(panic): %s", item.Address, item.Symbol, err)
+					return
+				}
+			}()
 
 			bestPrice, _, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
-			logx.Debugf("=================>[%s] %v %v", item.Symbol, bestPrice, err)
 			if err != nil {
 				asyncErr = err
 				return
