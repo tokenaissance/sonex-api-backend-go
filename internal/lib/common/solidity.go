@@ -7,7 +7,7 @@ import (
 )
 
 func DecodeRevert(data []byte) (int64, string) {
-	return 0, string(data)
+	return 0, string(data[4:])
 
 	var flag int64
 	var errMsg string

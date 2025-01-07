@@ -184,7 +184,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		temp := common.HexToAddress(*wantStablecoin)
 		wantStablecoinAddress = &temp
 	}
-	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5, wantStablecoinAddress)
+	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 50, wantStablecoinAddress)
 	if err != nil {
 		return nil, nil, nil, err
 	}
