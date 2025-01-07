@@ -92,13 +92,13 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		if amount.Cmp(big.NewInt(0)) > 0 {
 			switch req.Type {
 			case "INPUT":
-				prices, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+				prices, _, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
 				if err != nil {
 					ch <- err
 					return
 				}
 			case "OUTPUT":
-				prices, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+				prices, _, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
 				if err != nil {
 					ch <- err
 					return

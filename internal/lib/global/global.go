@@ -280,12 +280,12 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 	return bestPrice, successedPrices, failedPrices, nil
 }
 
-func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountIn *big.Int, maxLength int64) ([]cache.Price, error) {
+func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountIn *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token cacher")
+		return nil, nil, fmt.Errorf("%s", "Miss token cacher")
 	}
 
 	if pools == nil {
@@ -293,7 +293,7 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		linq.From(records).
 			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
@@ -309,7 +309,16 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 
 	prices, err := cacher.QuoteExactInput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountIn, maxLength, 100)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	successedPrices := []cache.Price{}
+	failedPrices := []cache.Price{}
+	for _, price := range prices {
+		if price.Err != nil {
+			failedPrices = append(failedPrices, price)
+		} else {
+			successedPrices = append(successedPrices, price)
+		}
 	}
 
 	// if len(prices) > 0 {
@@ -332,15 +341,15 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 	// 	}
 	// }
 
-	return prices, nil
+	return successedPrices, failedPrices, nil
 }
 
-func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountOut *big.Int, maxLength int64) ([]cache.Price, error) {
+func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountOut *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token cacher")
+		return nil, nil, fmt.Errorf("%s", "Miss token cacher")
 	}
 
 	if pools == nil {
@@ -348,7 +357,7 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		linq.From(records).
 			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
@@ -364,7 +373,16 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 
 	prices, err := cacher.QuoteExactOutput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountOut, maxLength, 100)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	successedPrices := []cache.Price{}
+	failedPrices := []cache.Price{}
+	for _, price := range prices {
+		if price.Err != nil {
+			failedPrices = append(failedPrices, price)
+		} else {
+			successedPrices = append(successedPrices, price)
+		}
 	}
 
 	// if len(prices) > 0 {
@@ -387,7 +405,7 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 	// }
 	// }
 
-	return prices, nil
+	return successedPrices, failedPrices, nil
 }
 
 type SummarizePositionsResult_Detail struct {
