@@ -273,11 +273,27 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	// Handle results
 	dataResult = []types.TokensResponse_Token{}
+	var ethResult *types.TokensResponse_Token
 	for result := range results {
 		if result.Err != nil {
 			return nil, result.Err
 		}
+		if result.Data.Address == common.HexToAddress(chainConf.WETH).Hex() {
+			ethResult = &result.Data
+		}
 		dataResult = append(dataResult, result.Data)
+	}
+
+	// ETH
+	if eth, ok := whitelistTokenMap[(common.Address{}).Hex()]; ok && ethResult != nil {
+		ethResult.Address = eth.Address
+		ethResult.Name = eth.Name
+		ethResult.Symbol = eth.Symbol
+		ethResult.Decimals = eth.Decimals
+		ethResult.Logo = eth.Logo.String
+		ethResult.Sort = eth.Sort
+		ethResult.Hidden = eth.Hidden
+		dataResult = append(dataResult, *ethResult)
 	}
 
 	// Sorts
