@@ -699,6 +699,13 @@
         },
         "parameters": [
           {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "address",
             "in": "query",
             "required": true,
@@ -2363,6 +2370,10 @@
         "price": {
           "type": "string"
         },
+        "priceUSD": {
+          "type": "number",
+          "format": "double"
+        },
         "createdAt": {
           "type": "string"
         },
@@ -2377,6 +2388,7 @@
         "tokenSymbol",
         "tokenAddress",
         "price",
+        "priceUSD",
         "createdAt",
         "timeStamp"
       ]

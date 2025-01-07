@@ -2,6 +2,8 @@ package sonex
 
 import (
 	"context"
+	"math/big"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -44,6 +46,9 @@ func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp 
 	gconv.Structs(result, &resp.Records)
 
 	for i, v := range resp.Records {
+		priceI, _ := new(big.Int).SetString(resp.Records[i].Price, 10)
+		priceUSD, _ := global.PriceToUSD(req.ChainId, priceI)
+		resp.Records[i].PriceUSD = priceUSD
 		resp.Records[i].TimeStamp = gtime.New(v.CreatedAt).Timestamp()
 	}
 	// todo: cache kline

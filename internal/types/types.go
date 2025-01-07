@@ -354,6 +354,7 @@ type ReplayResponse struct {
 }
 
 type SonexTokenKlineRequest struct {
+	ChainRequest
 	Address  string `form:"address"`
 	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
 }
@@ -363,12 +364,13 @@ type SonexTokenKlineResponse struct {
 }
 
 type SonexTokenPriceRecord struct {
-	Id           int64  `json:"id"`
-	TokenSymbol  string `json:"tokenSymbol"`
-	TokenAddress string `json:"tokenAddress"`
-	Price        string `json:"price"`
-	CreatedAt    string `json:"createdAt"`
-	TimeStamp    int64  `json:"timeStamp"`
+	Id           int64   `json:"id"`
+	TokenSymbol  string  `json:"tokenSymbol"`
+	TokenAddress string  `json:"tokenAddress"`
+	Price        string  `json:"price"`
+	PriceUSD     float64 `json:"priceUSD"`
+	CreatedAt    string  `json:"createdAt"`
+	TimeStamp    int64   `json:"timeStamp"`
 }
 
 type SonexTokenPricesRequest struct {
