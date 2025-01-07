@@ -56,7 +56,7 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				}
 			}()
 
-			bestPrice, _, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
+			bestPrice, successed, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
 			if err != nil {
 				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
@@ -70,7 +70,7 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 					}
 					failedList = append(failedList, fmt.Sprintf("Path: %s, Error: %s", strings.Join(pools, " -> "), item.Err.Error()))
 				}
-				logx.Errorf("Get %s[%s] best price failed, Failed list: %v", item.Address, item.Symbol, failedList)
+				logx.Errorf("Get %s[%s] best price failed,Success count: %d, Failed list: %v", item.Address, item.Symbol, len(successed), failedList)
 				return
 			}
 			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"))
