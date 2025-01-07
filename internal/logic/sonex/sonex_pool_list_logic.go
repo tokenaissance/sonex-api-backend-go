@@ -245,13 +245,13 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			price0 := big.NewInt(0)
 			price1 := big.NewInt(0)
 
-			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, &chain.USD)
+			bestPrice0, _, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, &chain.USD)
 			if err == nil && bestPrice0 != nil {
 				price0 = bestPrice0.Value
 			}
 			pool.Price0 = price0.String()
 
-			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, &chain.USD)
+			bestPrice1, _, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, &chain.USD)
 			if err == nil && bestPrice1 != nil {
 				price1 = bestPrice1.Value
 			}

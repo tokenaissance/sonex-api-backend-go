@@ -181,7 +181,7 @@ func getPoolInfo(ctx context.Context, client *ethclient.Client, pool *xpoolContr
 func getTokenPrice(chainId int64, tokenAddress string) (*big.Int, error) {
 
 	priceValue := big.NewInt(0)
-	_, price, err := global.GetPrices(context.Background(), nil, chainId, tokenAddress, true, 2, nil)
+	_, price, _, err := global.GetPrices(context.Background(), nil, chainId, tokenAddress, true, 2, nil)
 	if err != nil {
 		logx.Errorf("failed to get token price: %v", err)
 	} else if len(price) > 0 && price[0].Value != nil {

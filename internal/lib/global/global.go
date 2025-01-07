@@ -152,12 +152,12 @@ func GetStablecoin(chainId int64) []cache.Token {
 	return cacher.GetStablecoins()
 }
 
-func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool, maxLength int64, wantStablecoin *string) (*cache.Price, []cache.Price, error) {
+func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool, maxLength int64, wantStablecoin *string) (*cache.Price, []cache.Price, []cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil, nil, fmt.Errorf("%s", "Miss token cacher")
+		return nil, nil, nil, fmt.Errorf("%s", "Miss token cacher")
 	}
 
 	if pools == nil {
@@ -165,7 +165,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		linq.From(records).
 			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
@@ -186,20 +186,29 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 	}
 	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5, wantStablecoinAddress)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+	successedPrices := []cache.Price{}
+	failedPrices := []cache.Price{}
+	for _, price := range prices {
+		if price.Err != nil {
+			failedPrices = append(failedPrices, price)
+		} else {
+			successedPrices = append(successedPrices, price)
+		}
 	}
 
 	// Best price
 	var bestPrice *cache.Price
-	if len(prices) > 0 {
+	if len(successedPrices) > 0 {
 		// Sort by path length
-		linq.From(prices).OrderByT(func(item cache.Price) int { return len(item.Pools) }).ToSlice(&prices)
-		pathLength := len(prices[0].Pools)
-		linq.From(prices).WhereT(func(item cache.Price) bool {
+		linq.From(successedPrices).OrderByT(func(item cache.Price) int { return len(item.Pools) }).ToSlice(&prices)
+		pathLength := len(successedPrices[0].Pools)
+		linq.From(successedPrices).WhereT(func(item cache.Price) bool {
 			return len(item.Pools) == pathLength
-		}).ToSlice(&prices)
+		}).ToSlice(&successedPrices)
 		poolMap := map[string]*big.Int{}
-		linq.From(prices).ForEachT(func(price cache.Price) {
+		linq.From(successedPrices).ForEachT(func(price cache.Price) {
 			linq.From(price.Pools).ForEachT(func(pool quoter.Pool) {
 				poolMap[pool.Address.Hex()] = common.Big0
 			})
@@ -211,20 +220,20 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 
 		chain := c.GetChainConfig(chainId)
 		if chain == nil {
-			return nil, nil, fmt.Errorf("%s", "Miss chain configure")
+			return nil, nil, nil, fmt.Errorf("%s", "Miss chain configure")
 		}
 		if chain.Multicall == "" || !common.IsHexAddress(chain.Multicall) {
-			return nil, nil, fmt.Errorf("%s", "Invalid multicall contract")
+			return nil, nil, nil, fmt.Errorf("%s", "Invalid multicall contract")
 		}
 
 		callDatas := []contract_common.Multicall3Call{}
 		poolABI, err := abi.JSON(strings.NewReader(uniswap_v3.UniswapV3PoolABI))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		data, err := poolABI.Pack("liquidity")
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		for _, pool := range usedPools {
 			callDatas = append(callDatas, contract_common.Multicall3Call{
@@ -234,15 +243,15 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		}
 		multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		data, err = multicallABI.Pack("aggregate", callDatas)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		nodeCaller, err := node_caller.NewNodeCaller(*chain)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		var result struct {
 			BlockNumber *big.Int `json:"blockNumber"`
@@ -250,13 +259,13 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		}
 		err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate", data, &result)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		for i, value := range result.ReturnData {
 			poolMap[usedPools[i].Hex()] = new(big.Int).SetBytes(value)
 		}
 		maxLiquidity := common.Big0
-		for _, price := range prices {
+		for _, price := range successedPrices {
 			liquidity := common.Big0
 			for _, pool := range price.Pools {
 				liquidity = new(big.Int).Add(liquidity, poolMap[pool.Address.Hex()])
@@ -268,7 +277,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		}
 	}
 
-	return bestPrice, prices, nil
+	return bestPrice, successedPrices, failedPrices, nil
 }
 
 func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountIn *big.Int, maxLength int64) ([]cache.Price, error) {
@@ -433,7 +442,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			amount0, amount1 := position.Amounts()
 			fee0, fee1 := position.UnclaimedFees()
 
-			token0CachePrice, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2, &stablecoin)
+			token0CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2, &stablecoin)
 			if err != nil {
 				ch <- struct {
 					BalanceUSD *big.Int
@@ -459,7 +468,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			balanceUSD = new(big.Int).Add(balanceUSD, new(big.Int).Div(new(big.Int).Mul(amount0, token0Price), tokne0Decimals))
 			earnedUSD = new(big.Int).Add(earnedUSD, new(big.Int).Div(new(big.Int).Mul(fee0, token0Price), tokne0Decimals))
 
-			token1CachePrice, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2, &stablecoin)
+			token1CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2, &stablecoin)
 			if err != nil {
 				ch <- struct {
 					BalanceUSD *big.Int
