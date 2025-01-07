@@ -162,6 +162,21 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			if err != nil {
 				return nil, err
 			}
+			valueI, _ := new(big.Int).SetString(record.Value, 10)
+			if valueI.Cmp(common.Big0) > 0 {
+				if token0.Address == common.HexToAddress(chainConf.WETH).Hex() {
+					token0.Address = (common.Address{}).Hex()
+					token0.Name = chainConf.ETH.Name
+					token0.Symbol = chainConf.ETH.Symbol
+					token0.Decimals = chainConf.ETH.Decimals
+				} else if token1.Address == common.HexToAddress(chainConf.WETH).Hex() {
+					token1.Address = (common.Address{}).Hex()
+					token1.Name = chainConf.ETH.Name
+					token1.Symbol = chainConf.ETH.Symbol
+					token1.Decimals = chainConf.ETH.Decimals
+				}
+			}
+
 			prices, err := tokenPriceModel.GetCurrentPrices([]string{token0.Address, token1.Address})
 			if err != nil {
 				return nil, err
