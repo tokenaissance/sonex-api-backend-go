@@ -2,9 +2,11 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,13 +56,21 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				}
 			}()
 
-			bestPrice, _, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
+			bestPrice, _, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
 			if err != nil {
 				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
 			}
 			if bestPrice == nil {
-				logx.Errorf("Get %s[%s] best price failed: %s", item.Address, item.Symbol, err)
+				failedList := []string{}
+				for _, item := range failed {
+					pools := []string{}
+					for _, pool := range item.Pools {
+						pools = append(pools, fmt.Sprintf("%s:%s[%d]", pool.Token0, pool.Token1, pool.Fee))
+					}
+					failedList = append(failedList, fmt.Sprintf("Path: %s, Error: %s", strings.Join(pools, " -> "), item.Err.Error()))
+				}
+				logx.Errorf("Get %s[%s] best price failed, Failed list: %v", item.Address, item.Symbol, failedList)
 				return
 			}
 			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"))
