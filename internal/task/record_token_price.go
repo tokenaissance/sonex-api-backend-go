@@ -50,6 +50,7 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			defer wg.Done()
 
 			bestPrice, _, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
+			logx.Debugf("=================>[%s] %v %v", item.Symbol, bestPrice, err)
 			if err != nil {
 				asyncErr = err
 				return
