@@ -2,7 +2,6 @@ package task
 
 import (
 	"context"
-	"fmt"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
@@ -21,6 +20,7 @@ func HandleRecordTokenPrice(config *config.Config) {
 		err := Update(chainConf, conn)
 		if err != nil {
 			logx.Errorf("Token history price update failed: %d %s", chainConf.ChainId, err)
+			continue
 		}
 	}
 	logx.Info("Token history price updated")
@@ -41,7 +41,6 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 	defer blk.Flush()
 
 	var wg sync.WaitGroup
-	var asyncErr error
 
 	for _, token := range tokens {
 		wg.Add(1)
@@ -50,31 +49,28 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			defer wg.Done()
 			defer func() {
 				if err := recover(); err != nil {
-					asyncErr = fmt.Errorf("Update %s[%s] price failed(panic): %s", item.Address, item.Symbol, err)
+					logx.Errorf("Update %s[%s] price failed(panic): %s", item.Address, item.Symbol, err)
 					return
 				}
 			}()
 
 			bestPrice, _, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
 			if err != nil {
-				asyncErr = err
+				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
 			}
 			if bestPrice == nil {
-				asyncErr = fmt.Errorf("%s", fmt.Sprintf("Can not get %s[%s] price", item.Address, item.Symbol))
+				logx.Errorf("Get %s[%s] best price failed: %s", item.Address, item.Symbol, err)
 				return
 			}
 			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"))
 			if err != nil {
-				asyncErr = err
+				logx.Errorf("Insert %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
 			}
 		}(&token)
 	}
 	wg.Wait()
-	if asyncErr != nil {
-		return asyncErr
-	}
 
 	return nil
 }
