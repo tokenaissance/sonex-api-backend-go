@@ -60,8 +60,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	var dataResult []types.TokensResponse_Token
 	// Check cache
 	if !req.NoCache {
-		logx.Debug("=================> cache")
-
 		lastUpdate, err := redisCache.Get(cacheKey)
 		if err == nil && lastUpdate != "" {
 			var cacheWarpper CacheWarpper
@@ -86,8 +84,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	// No cache
 	if dataResult == nil {
-		logx.Debugf("=================> no cache")
-
 		data, err := l.getData(req)
 		if err != nil {
 			return nil, err
@@ -104,10 +100,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			logx.Errorf("Set cache error: %v", err)
 		}
 	}
-
-	var tas []string
-	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) string { return item.Address }).ToSlice(&tas)
-	logx.Debugf("=================> no handled data\n%v", tas)
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
