@@ -210,7 +210,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		price1 := big.NewFloat(pool.Token1.PriceUSD)
 		var valueUSD float64
 
-		if amount0.Cmp(amount1) < 0 {
+		if amount0.Cmp(amount1) > 0 {
 			from = record.ExtraToken0
 			to = record.ExtraToken1
 			fromAmount = new(big.Int).Abs(amount0)
