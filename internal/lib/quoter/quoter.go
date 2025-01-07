@@ -2,9 +2,11 @@ package quoter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
+	lib_common "sonex_api_backend_go/internal/lib/common"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/node_caller"
@@ -173,11 +175,13 @@ func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte,
 		var output QuoteExactInputResult
 		multicallResult := multicallResults[i]
 		if !multicallResult.Success {
-			continue
-		}
-		err = quoterABI.UnpackIntoInterface(&output, "quoteExactInput", multicallResult.ReturnData)
-		if err != nil {
-			return nil, err
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			output = QuoteExactInputResult{Error: errors.New(errMsg)}
+		} else {
+			err = quoterABI.UnpackIntoInterface(&output, "quoteExactInput", multicallResult.ReturnData)
+			if err != nil {
+				return nil, err
+			}
 		}
 		result[common.Bytes2Hex(path)] = &output
 	}
@@ -260,7 +264,8 @@ func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte
 		var output QuoteExactOutputResult
 		multicallResult := multicallResults[i]
 		if multicallResult.Success {
-			continue
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			output = QuoteExactOutputResult{Error: errors.New(errMsg)}
 		}
 		err = quoterABI.UnpackIntoInterface(&output, "quoteExactOutput", multicallResult.ReturnData)
 		if err != nil {

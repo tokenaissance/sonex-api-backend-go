@@ -50,6 +50,7 @@ type Price struct {
 	InitializedTicksCrossedList []uint32
 	GasEstimate                 *big.Int
 	PriceImpact                 float64
+	Err                         error
 }
 
 type PriceCache struct {
@@ -366,16 +367,23 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 		if !ok {
 			continue
 		}
-		prices = append(prices, Price{
-			From:                        fromToken.Address,
-			To:                          toToken.Address,
-			Pools:                       path.Pools,
-			Path:                        path.ToBytes(),
-			Value:                       result.AmountOut,
-			SqrtPriceX96AfterList:       result.SqrtPriceX96AfterList,
-			InitializedTicksCrossedList: result.InitializedTicksCrossedList,
-			GasEstimate:                 result.GasEstimate,
-		})
+
+		price := Price{
+			From:  fromToken.Address,
+			To:    toToken.Address,
+			Pools: path.Pools,
+			Path:  path.ToBytes(),
+		}
+		if result.Error != nil {
+			price.Err = result.Error
+		} else {
+			price.Value = result.AmountOut
+			price.SqrtPriceX96AfterList = result.SqrtPriceX96AfterList
+			price.InitializedTicksCrossedList = result.InitializedTicksCrossedList
+			price.GasEstimate = result.GasEstimate
+		}
+
+		prices = append(prices, price)
 	}
 
 	return prices, nil

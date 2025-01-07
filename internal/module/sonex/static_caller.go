@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
+	lib_common "sonex_api_backend_go/internal/lib/common"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/node_caller"
@@ -99,38 +100,50 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 	result := []*Pool{}
 	fieldNumber := 4
 	for i, addr := range pools {
+		multicallResult := multicallResults[i*fieldNumber]
 		var slot0 Slot0
-		err = uniswapV3PoolABI.UnpackIntoInterface(&slot0, "slot0", multicallResults[i*fieldNumber].ReturnData)
+		err = uniswapV3PoolABI.UnpackIntoInterface(&slot0, "slot0", multicallResult.ReturnData)
 		if err != nil {
 			return nil, err
 		}
-		if !multicallResults[i*fieldNumber].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall slot0 failed: %s, pool: %s", multicallResults[i*fieldNumber].ReturnData[4:], addr))
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall slot0 failed: %s, pool: %s", errMsg, addr))
 		}
+
+		multicallResult = multicallResults[i*fieldNumber+1]
 		var feeGrowthGlobal0X128 *big.Int
-		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal0X128, "feeGrowthGlobal0X128", multicallResults[i*fieldNumber+1].ReturnData)
+		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal0X128, "feeGrowthGlobal0X128", multicallResult.ReturnData)
 		if err != nil {
 			return nil, err
 		}
 		if !multicallResults[i*fieldNumber+1].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall feeGrowthGlobal0X128 failed: %s, pool: %s", multicallResults[i*fieldNumber+1].ReturnData[4:], addr))
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall feeGrowthGlobal0X128 failed: %s, pool: %s", errMsg, addr))
 		}
+
+		multicallResult = multicallResults[i*fieldNumber+2]
 		var feeGrowthGlobal1X128 *big.Int
-		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal1X128, "feeGrowthGlobal1X128", multicallResults[i*fieldNumber+2].ReturnData)
+		err = uniswapV3PoolABI.UnpackIntoInterface(&feeGrowthGlobal1X128, "feeGrowthGlobal1X128", multicallResult.ReturnData)
 		if err != nil {
 			return nil, err
 		}
 		if !multicallResults[i*fieldNumber+2].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall feeGrowthGlobal1X128 failed: %s, pool: %s", multicallResults[i*fieldNumber+2].ReturnData[4:], addr))
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall feeGrowthGlobal1X128 failed: %s, pool: %s", errMsg, addr))
 		}
+
+		multicallResult = multicallResults[i*fieldNumber+3]
 		var fee *big.Int
-		err = uniswapV3PoolABI.UnpackIntoInterface(&fee, "fee", multicallResults[i*fieldNumber+3].ReturnData)
+		err = uniswapV3PoolABI.UnpackIntoInterface(&fee, "fee", multicallResult.ReturnData)
 		if err != nil {
 			return nil, err
 		}
-		if !multicallResults[i*fieldNumber+3].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall fee failed: %s, pool: %s", multicallResults[i*fieldNumber+3].ReturnData[4:], addr))
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall fee failed: %s, pool: %s", errMsg, addr))
 		}
+
 		pool := &Pool{
 			Address:              addr,
 			Slot0:                &slot0,
@@ -201,24 +214,30 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 	if err != nil {
 		return nil, err
 	}
-	if !multicallResults[0].Success {
-		return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", multicallResults[0].ReturnData[4:]))
-	}
+	multicallResult := multicallResults[0]
 	var factory common.Address
 	err = positionManagerABI.UnpackIntoInterface(&factory, "factory", multicallResults[0].ReturnData)
 	if err != nil {
 		return nil, err
 	}
+	if !multicallResult.Success {
+		_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+		return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", errMsg))
+	}
+
 	positions := []*Position{}
 	for i, tokenId := range tokenIds {
-		if !multicallResults[i+1].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", multicallResults[i+1].ReturnData[4:], tokenId.String()))
-		}
+		multicallResult := multicallResults[i+1]
 		var position Position
-		err = positionManagerABI.UnpackIntoInterface(&position, "positions", multicallResults[i+1].ReturnData)
+		err = positionManagerABI.UnpackIntoInterface(&position, "positions", multicallResult.ReturnData)
 		if err != nil {
 			return nil, err
 		}
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", errMsg, tokenId.String()))
+		}
+
 		position.Factory = factory
 		position.TokenId = tokenId
 		positions = append(positions, &position)
@@ -275,23 +294,27 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 		poolAddress := ComputePoolAddress(position.Factory, position.Token0, position.Token1, position.Fee)
 		position.Pool = poolMap[poolAddress.Hex()]
 
-		if !multicallResults[i*2].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", multicallResults[i*2].ReturnData[4:]))
-		}
+		multicallResult := multicallResults[i*2]
 		var lowerTick Tick
-		err = uniswapV3PoolABI.UnpackIntoInterface(&lowerTick, "ticks", multicallResults[i*2].ReturnData)
+		err = uniswapV3PoolABI.UnpackIntoInterface(&lowerTick, "ticks", multicallResult.ReturnData)
 		if err != nil {
 			return nil, err
 		}
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", errMsg, position.TokenId.String()))
+		}
 		position.LowerTick = &lowerTick
 
-		if !multicallResults[i*2+1].Success {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", multicallResults[i*2+1].ReturnData[4:]))
-		}
+		multicallResult = multicallResults[i*2+1]
 		var upperTick Tick
 		err = uniswapV3PoolABI.UnpackIntoInterface(&upperTick, "ticks", multicallResults[i*2+1].ReturnData)
 		if err != nil {
 			return nil, err
+		}
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", errMsg, position.TokenId.String()))
 		}
 		position.UpperTick = &upperTick
 	}

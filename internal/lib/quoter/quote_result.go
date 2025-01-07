@@ -7,6 +7,7 @@ type QuoteExactInputResult struct {
 	SqrtPriceX96AfterList       []*big.Int `json:"sqrtPriceX96AfterList"`
 	InitializedTicksCrossedList []uint32   `json:"initializedTicksCrossedList"`
 	GasEstimate                 *big.Int   `json:"gasEstimate"`
+	Error                       error
 }
 
 type QuoteExactOutputResult struct {
@@ -14,4 +15,5 @@ type QuoteExactOutputResult struct {
 	SqrtPriceX96AfterList       []*big.Int `json:"sqrtPriceX96AfterList"`
 	InitializedTicksCrossedList []uint32   `json:"initializedTicksCrossedList"`
 	GasEstimate                 *big.Int   `json:"gasEstimate"`
+	Error                       error
 }
