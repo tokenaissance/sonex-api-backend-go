@@ -138,8 +138,8 @@ func PriceToUSD(chainId int64, price *big.Int) (float64, error) {
 		return 0, err
 	}
 	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
-	val, _ := new(big.Float).Quo(new(big.Float).SetInt(price), usdAccuracy).Float64()
-	return math.Round(val*100) / 100, nil
+	val, _ := new(big.Float).Quo(new(big.Float).SetInt(price), usdAccuracy).SetPrec(math.MaxUint32).Float64()
+	return val, nil
 }
 
 func GetStablecoin(chainId int64) []cache.Token {
