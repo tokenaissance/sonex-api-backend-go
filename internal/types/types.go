@@ -301,6 +301,7 @@ type Position struct {
 	UnclaimedFee1 float64          `json:"unclaimedFee1"`
 	TokenValue0   Token_TokenValue `json:"tokenValue0"`
 	TokenValue1   Token_TokenValue `json:"tokenValue1"`
+	IsHolding     bool             `json:"isHolding"`
 }
 
 type PositionRequest struct {
