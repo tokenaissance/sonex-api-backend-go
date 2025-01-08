@@ -121,51 +121,47 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		}
 	}
 
-	var bestRouterResult *types.TokenQuoteResponse_Router
-	maxValue := common.Big0
-	for _, price := range prices {
-		if maxValue.Cmp(price.Value) < 0 {
-			maxValue = price.Value
-			var router []types.TokenQuoteResponse_Router_Pool
-			linq.From(price.Pools).
-				SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
-					return types.TokenQuoteResponse_Router_Pool{
-						Address: pool.Address.Hex(),
-						Token0:  pool.Token0.Hex(),
-						Token1:  pool.Token1.Hex(),
-						Fee:     pool.Fee,
-					}
-				}).
-				ToSlice(&router)
-			var sqrtPriceX96AfterList []string
-			linq.From(price.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
-			var initializedTicksCrossedList []int64
-			linq.From(price.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
-			var amountIn *big.Int
-			var amountOut *big.Int
-			switch req.Type {
-			case "INPUT":
-				amountIn, amountOut = amount, price.Value
-			case "OUTPUT":
-				amountIn, amountOut = price.Value, amount
+	bestRouter := linq.From(prices).OrderByT(func(item cache.Price) float64 {
+		return item.PriceImpact
+	}).First().(cache.Price)
+	var router []types.TokenQuoteResponse_Router_Pool
+	linq.From(bestRouter.Pools).
+		SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
+			return types.TokenQuoteResponse_Router_Pool{
+				Address: pool.Address.Hex(),
+				Token0:  pool.Token0.Hex(),
+				Token1:  pool.Token1.Hex(),
+				Fee:     pool.Fee,
 			}
-			bestRouterResult = &types.TokenQuoteResponse_Router{
-				TokenIn:                     fromAddress.Hex(),
-				TokenOut:                    toAddress.Hex(),
-				AmountIn:                    amountIn.String(),
-				AmountOut:                   amountOut.String(),
-				Stablecoin:                  stablecoinAddress.Hex(),
-				PriceUSDIn:                  fromPriceUSD.String(),
-				PriceUSDOut:                 toPriceUSD.String(),
-				Router:                      router,
-				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(price.Path)),
-				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
-				InitializedTicksCrossedList: initializedTicksCrossedList,
-				GasEstimate:                 price.GasEstimate.String(),
-				PriceImpact:                 fmt.Sprintf("%.2f%%", price.PriceImpact*100),
-				FeeRate:                     fmt.Sprintf("%.2f%%", price.FeeRate*100),
-			}
-		}
+		}).
+		ToSlice(&router)
+	var sqrtPriceX96AfterList []string
+	linq.From(bestRouter.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
+	var initializedTicksCrossedList []int64
+	linq.From(bestRouter.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
+	var amountIn *big.Int
+	var amountOut *big.Int
+	switch req.Type {
+	case "INPUT":
+		amountIn, amountOut = amount, bestRouter.Value
+	case "OUTPUT":
+		amountIn, amountOut = bestRouter.Value, amount
+	}
+	bestRouterResult := &types.TokenQuoteResponse_Router{
+		TokenIn:                     fromAddress.Hex(),
+		TokenOut:                    toAddress.Hex(),
+		AmountIn:                    amountIn.String(),
+		AmountOut:                   amountOut.String(),
+		Stablecoin:                  stablecoinAddress.Hex(),
+		PriceUSDIn:                  fromPriceUSD.String(),
+		PriceUSDOut:                 toPriceUSD.String(),
+		Router:                      router,
+		Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(bestRouter.Path)),
+		SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
+		InitializedTicksCrossedList: initializedTicksCrossedList,
+		GasEstimate:                 bestRouter.GasEstimate.String(),
+		PriceImpact:                 fmt.Sprintf("%.2f%%", bestRouter.PriceImpact*100),
+		FeeRate:                     fmt.Sprintf("%.2f%%", bestRouter.FeeRate*100),
 	}
 
 	routerResult := []types.TokenQuoteResponse_Router{}
