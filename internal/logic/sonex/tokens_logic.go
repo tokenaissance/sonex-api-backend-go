@@ -316,32 +316,50 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	// Sorts
 	if req.OrderBy != "" {
+		var query linq.OrderedQuery
 		switch req.OrderBy {
 		case "1H_ASC":
-			linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
+			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1H.Percentage
-			}).ToSlice(&dataResult)
+			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
+				return item.Sort
+			})
 		case "1H_DESC":
-			linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
+			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1H.Percentage
-			}).ToSlice(&dataResult)
+			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
+				return item.Sort
+			})
 		case "1D_ASC":
-			linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
+			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1D.Percentage
-			}).ToSlice(&dataResult)
+			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
+				return item.Sort
+			})
 		case "1D_DESC":
-			linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
+			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
 				return item.RiseFall1D.Percentage
-			}).ToSlice(&dataResult)
+			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
+				return item.Sort
+			})
 		case "Volume_ASC":
-			linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
+			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
 				return item.VolumeUSD
-			}).ToSlice(&dataResult)
+			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
+				return item.Sort
+			})
 		case "Volume_DESC":
-			linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
+			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
 				return item.VolumeUSD
-			}).ToSlice(&dataResult)
+			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
+				return item.Sort
+			})
+		default:
+			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) int64 {
+				return item.Sort
+			})
 		}
+		query.ToSlice(&dataResult)
 	} else {
 		linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) int64 {
 			return item.Sort
