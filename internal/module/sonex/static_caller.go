@@ -132,6 +132,10 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 	if err != nil {
 		return nil, err
 	}
+	liquidityData, err := uniswapV3PoolABI.Pack("liquidity")
+	if err != nil {
+		return nil, err
+	}
 	for _, pool := range pools {
 		callDatas = append(callDatas, contract_common.Multicall3Call3{
 			Target:       pool,
@@ -153,6 +157,11 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 			AllowFailure: true,
 			CallData:     feeData,
 		})
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       pool,
+			AllowFailure: true,
+			CallData:     liquidityData,
+		})
 	}
 	data, err := multicallABI.Pack("aggregate3", callDatas)
 	if err != nil {
@@ -163,7 +172,7 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 		return nil, err
 	}
 	result := []*Pool{}
-	fieldNumber := 4
+	fieldNumber := 5
 	for i, addr := range pools {
 		multicallResult := multicallResults[i*fieldNumber]
 		if !multicallResult.Success {
@@ -209,12 +218,24 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 			return nil, err
 		}
 
+		multicallResult = multicallResults[i*fieldNumber+4]
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall liquidity failed: %s, pool: %s", errMsg, addr))
+		}
+		var liquidity *big.Int
+		err = uniswapV3PoolABI.UnpackIntoInterface(&liquidity, "liquidity", multicallResult.ReturnData)
+		if err != nil {
+			return nil, err
+		}
+
 		pool := &Pool{
 			Address:              addr,
 			Slot0:                &slot0,
 			FeeGrowthGlobal0X128: feeGrowthGlobal0X128,
 			FeeGrowthGlobal1X128: feeGrowthGlobal1X128,
 			Fee:                  fee,
+			Liquidity:            liquidity,
 		}
 		result = append(result, pool)
 	}

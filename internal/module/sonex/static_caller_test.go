@@ -59,7 +59,6 @@ func TestBatchGetPools(t *testing.T) {
 
 	for _, pool := range pools {
 		fmt.Printf("%+v\n", pool)
-		fmt.Printf("%+v\n", pool.Slot0)
 	}
 }
 
