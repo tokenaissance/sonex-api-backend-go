@@ -81,6 +81,11 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		lockAcquired = true
 	}
 
+	// Continue with the rest of the logic using transferItem, collectedItem, and positions
+	response := &PositionResponseWrapper{
+		PositionResponse: &types.PositionResponse{},
+	}
+
 	defer func() {
 		if lockAcquired {
 			cacher.Del(lockKey)
@@ -102,14 +107,15 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	// if no transfer event or position NFT is burnt, return nil
 	position, ok := itemM[req.TokenId]
 
-	// Continue with the rest of the logic using transferItem, collectedItem, and positions
-	response := &PositionResponseWrapper{
-		PositionResponse: &types.PositionResponse{
-			Position: &types.Position{IsBurnt: true},
-		},
-	}
-
 	if !ok || position.IsBurnt {
+		response.Position = &types.Position{IsBurnt: true}
+		responseBytes, err := json.Marshal(response)
+		if err == nil {
+			err = cacher.Set(cacheKey, responseBytes, 0)
+			if err != nil {
+				l.Error("Failed to cache response", err)
+			}
+		}
 		return response, nil
 	}
 
@@ -178,14 +184,6 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	position = l.fillPosition(ctx, req, position, innerPosition, prices, collectedPairs)
 
 	response.Position = position
-
-	responseBytes, err := json.Marshal(response)
-	if err == nil {
-		err = cacher.Set(cacheKey, responseBytes, 0)
-		if err != nil {
-			l.Error("Failed to cache response", err)
-		}
-	}
 
 	return response, nil
 }
