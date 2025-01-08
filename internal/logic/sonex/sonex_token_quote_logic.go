@@ -208,6 +208,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),
 				PriceImpact:                 fmt.Sprintf("%f%%", item.PriceImpact*100),
+				FeeRate:                     fmt.Sprintf("%.2f%%", item.FeeRate*100),
 			}
 		}).
 		ToSlice(&routerResult)
