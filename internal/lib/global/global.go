@@ -58,12 +58,6 @@ func Initialize(config config.Config) error {
 		tokenCachersLock.Lock()
 		tokenCachers[chain.ChainId] = tokenCacher
 		tokenCachersLock.Unlock()
-		for _, token := range chain.Tokens {
-			err := SetToken(chain.ChainId, token.Address, token.IsStablecoin)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
@@ -114,14 +108,14 @@ func GetToken(chainId int64, address string) (*cache.Token, error) {
 	return cacher.Get(common.HexToAddress(address))
 }
 
-func SetToken(chainId int64, address string, isStablecoin bool) error {
+func SetToken(chainId int64, address string) error {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
 		return fmt.Errorf("%s", "Miss token cacher")
 	}
-	err := cacher.Set(common.HexToAddress(address), isStablecoin)
+	err := cacher.Set(common.HexToAddress(address))
 	if err != nil {
 		return err
 	}
@@ -142,17 +136,7 @@ func PriceToUSD(chainId int64, price *big.Int) (float64, error) {
 	return val, nil
 }
 
-func GetStablecoin(chainId int64) []cache.Token {
-	tokenCachersLock.RLock()
-	cacher, ok := tokenCachers[chainId]
-	tokenCachersLock.RUnlock()
-	if !ok {
-		return nil
-	}
-	return cacher.GetStablecoins()
-}
-
-func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool, maxLength int64, wantStablecoin *string) (*cache.Price, []cache.Price, []cache.Price, error) {
+func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool, maxLength int64) (*cache.Price, []cache.Price, []cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
@@ -179,12 +163,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 			ToSlice(&pools)
 	}
 
-	var wantStablecoinAddress *common.Address
-	if wantStablecoin != nil {
-		temp := common.HexToAddress(*wantStablecoin)
-		wantStablecoinAddress = &temp
-	}
-	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5, wantStablecoinAddress)
+	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -637,8 +616,7 @@ type SummarizePositionsResult struct {
 	Details         []SummarizePositionsResult_Detail
 }
 
-func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, positions []*sonex.Position, stablecoinAddress common.Address) (*big.Int, *big.Int, []SummarizePositionsResult_Detail, error) {
-	stablecoin := stablecoinAddress.Hex()
+func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, positions []*sonex.Position) (*big.Int, *big.Int, []SummarizePositionsResult_Detail, error) {
 	totalBalanceUSD := big.NewInt(0)
 	totalEarnedUSD := big.NewInt(0)
 	details := []SummarizePositionsResult_Detail{}
@@ -676,7 +654,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			amount0, amount1 := position.Amounts()
 			fee0, fee1 := position.UnclaimedFees()
 
-			token0CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2, &stablecoin)
+			token0CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2)
 			if err != nil {
 				ch <- struct {
 					BalanceUSD *big.Int
@@ -702,7 +680,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			balanceUSD = new(big.Int).Add(balanceUSD, new(big.Int).Div(new(big.Int).Mul(amount0, token0Price), tokne0Decimals))
 			earnedUSD = new(big.Int).Add(earnedUSD, new(big.Int).Div(new(big.Int).Mul(fee0, token0Price), tokne0Decimals))
 
-			token1CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2, &stablecoin)
+			token1CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2)
 			if err != nil {
 				ch <- struct {
 					BalanceUSD *big.Int
@@ -792,7 +770,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 			return nil, err
 		}
 
-		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions, stablecoinAddress)
+		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions)
 		if err != nil {
 			return nil, err
 		}
@@ -844,7 +822,7 @@ func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId i
 			return nil, err
 		}
 
-		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions, stablecoinAddress)
+		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions)
 		if err != nil {
 			return nil, err
 		}

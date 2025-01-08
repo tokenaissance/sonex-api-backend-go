@@ -136,7 +136,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 
 	// 计算质押的流动性价值
 	token0PriceValue := big.NewInt(0)
-	_, token0Price, _, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token0Address, true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
+	_, token0Price, _, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token0Address, true, 2)
 	if err != nil {
 		logx.Errorf("failed to get token0 price: %v", err)
 	} else if len(token0Price) > 0 && token0Price[0].Value != nil {
@@ -144,7 +144,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	}
 
 	token1PriceValue := big.NewInt(0)
-	_, token1Price, _, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token1Address, true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
+	_, token1Price, _, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token1Address, true, 2)
 	if err != nil {
 		logx.Errorf("failed to get token1 price: %v", err)
 	} else if len(token1Price) > 0 && token1Price[0].Value != nil {

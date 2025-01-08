@@ -27,17 +27,16 @@ type TokenCacher struct {
 	sonexConf               config.SonexConfig
 	tokens                  map[string]Token
 	tokensLock              sync.RWMutex
-	prices                  map[string]map[string]PriceCache
+	prices                  map[string]PriceCache
 	pricesLock              sync.RWMutex
 	priceCacheExpireSeconds int64
 }
 
 type Token struct {
-	Address      string
-	Name         string
-	Symbol       string
-	Decimals     int64
-	IsStablecoin bool
+	Address  string
+	Name     string
+	Symbol   string
+	Decimals int64
 }
 
 type Price struct {
@@ -64,7 +63,7 @@ func NewTokenCacher(chainConf config.ChainConfig, sonexConf config.SonexConfig) 
 		chainConf:               chainConf,
 		sonexConf:               sonexConf,
 		tokens:                  map[string]Token{},
-		prices:                  map[string]map[string]PriceCache{},
+		prices:                  map[string]PriceCache{},
 		priceCacheExpireSeconds: DEFAULT_PRICE_CACHE_EXPIRE_SECONDS,
 	}
 }
@@ -190,11 +189,10 @@ func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 			return nil, fmt.Errorf("%s", "Miss ETH configure")
 		}
 		return &Token{
-			Address:      (common.Address{}).Hex(),
-			Name:         eth.Name,
-			Symbol:       eth.Symbol,
-			Decimals:     eth.Decimals,
-			IsStablecoin: false,
+			Address:  (common.Address{}).Hex(),
+			Name:     eth.Name,
+			Symbol:   eth.Symbol,
+			Decimals: eth.Decimals,
 		}, nil
 	}
 
@@ -272,11 +270,10 @@ func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 		}
 
 		token = Token{
-			Address:      address.Hex(),
-			Name:         name,
-			Symbol:       symbol,
-			Decimals:     int64(decimals),
-			IsStablecoin: false,
+			Address:  address.Hex(),
+			Name:     name,
+			Symbol:   symbol,
+			Decimals: int64(decimals),
 		}
 		cacher.tokensLock.Lock()
 		cacher.tokens[address.Hex()] = token
@@ -285,31 +282,15 @@ func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 	return &token, nil
 }
 
-func (c *TokenCacher) Set(address common.Address, isStablecoin bool) error {
+func (c *TokenCacher) Set(address common.Address) error {
 	token, err := c.Get(address)
 	if err != nil {
 		return err
 	}
-	token.IsStablecoin = isStablecoin
 	c.tokensLock.Lock()
 	c.tokens[address.Hex()] = *token
 	c.tokensLock.Unlock()
 	return nil
-}
-
-func (cacher *TokenCacher) GetStablecoins() []Token {
-	cacher.tokensLock.RLock()
-	tokens := cacher.tokens
-	cacher.tokensLock.RUnlock()
-	var result []Token
-	linq.From(tokens).
-		WhereT(func(item linq.KeyValue) bool {
-			token, _ := item.Value.(Token)
-			return token.IsStablecoin
-		}).
-		SelectT(func(item linq.KeyValue) Token { return item.Value.(Token) }).
-		ToSlice(&result)
-	return result
 }
 
 func (cacher *TokenCacher) GetAll() []Token {
@@ -497,138 +478,67 @@ func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.
 	return prices, nil
 }
 
-func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, token common.Address, isCache bool, maxLength int64, maxNumber int64, wantStablecoin *common.Address) ([]Price, error) {
-	if token.Hex() == (common.Address{}).Hex() {
-		if !common.IsHexAddress(cacher.chainConf.WETH) {
-			return nil, fmt.Errorf("%s", "Miss WETH configure")
-		}
-		token = common.HexToAddress(cacher.chainConf.WETH)
+func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, address common.Address, isCache bool, maxLength int64, maxNumber int64) ([]Price, error) {
+	if cacher.chainConf.USD == "" || !common.IsHexAddress(cacher.chainConf.USD) {
+		return nil, fmt.Errorf("%s", "Miss USD configure")
 	}
-	stablecoins := cacher.GetStablecoins()
-	if len(stablecoins) == 0 {
-		return nil, fmt.Errorf("%s", "No any stablecoins")
-	}
-	if wantStablecoin != nil {
-		linq.From(stablecoins).
-			WhereT(func(item Token) bool { return item.Address == wantStablecoin.Hex() }).
-			ToSlice(&stablecoins)
-	}
-	tokenI, err := cacher.Get(token)
+	usdToken, err := cacher.Get(common.HexToAddress(cacher.chainConf.USD))
 	if err != nil {
 		return nil, err
 	}
+	token, err := cacher.Get(address)
+	if err != nil {
+		return nil, err
+	}
+	amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
 
-	amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(tokenI.Decimals), nil))
+	var prices []Price
 
-	var wg sync.WaitGroup
-	results := make(chan struct {
-		Err    error
-		Prices []Price
-	}, len(stablecoins))
-	sumPrices := []Price{}
+	if prices != nil && isCache {
+		cacher.pricesLock.RLock()
+		priceCache, ok := cacher.prices[token.Address]
+		if ok && priceCache.UpdatedAt.Add(time.Second*time.Duration(cacher.priceCacheExpireSeconds)).Unix() > time.Now().UTC().Unix() {
+			prices = priceCache.Prices
+		}
+		cacher.pricesLock.RUnlock()
+	}
 
-	for _, stablecoin := range stablecoins {
-		wg.Add(1)
-		go func(ch chan struct {
-			Err    error
-			Prices []Price
-		}) {
-			defer wg.Done()
-			defer func() {
-				if err := recover(); err != nil {
-					ch <- struct {
-						Err    error
-						Prices []Price
-					}{
-						Err: fmt.Errorf("%s", err),
-					}
-				}
-			}()
-
-			var prices []Price
-
-			if token.Hex() == common.HexToAddress(stablecoin.Address).Hex() {
-				prices = []Price{{
-					From:                        token.Hex(),
-					To:                          stablecoin.Address,
-					Pools:                       []quoter.Pool{},
-					Path:                        []byte{},
-					Value:                       new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(stablecoin.Decimals), nil)),
-					SqrtPriceX96AfterList:       []*big.Int{},
-					InitializedTicksCrossedList: []uint32{},
-					GasEstimate:                 big.NewInt(0),
-					PriceImpact:                 0,
-				}}
-			}
-
-			if prices != nil && isCache {
-				cacher.pricesLock.RLock()
-				from, ok := cacher.prices[tokenI.Address]
-				if ok {
-					priceCache, ok := from[stablecoin.Address]
-					if ok && priceCache.UpdatedAt.Add(time.Second*time.Duration(cacher.priceCacheExpireSeconds)).Unix() > time.Now().UTC().Unix() {
-						prices = priceCache.Prices
-					}
-				}
-				cacher.pricesLock.RUnlock()
-			}
-
-			if prices != nil {
-				linq.From(prices).
-					WhereT(func(price Price) bool {
-						for _, pathPool := range price.Pools {
-							contains := func(ps []quoter.Pool, p string) bool {
-								for _, pool := range ps {
-									if pool.Address.Hex() == p {
-										return true
-									}
-								}
-								return false
-							}
-							if !contains(pools, pathPool.Address.Hex()) {
-								return false
+	if prices != nil {
+		linq.From(prices).
+			WhereT(func(price Price) bool {
+				for _, pathPool := range price.Pools {
+					contains := func(ps []quoter.Pool, p string) bool {
+						for _, pool := range ps {
+							if pool.Address.Hex() == p {
+								return true
 							}
 						}
-						return true
-					}).
-					ToSlice(&prices)
-			} else {
-				prices, err = cacher.QuoteExactInput(ctx, pools, token, common.HexToAddress(stablecoin.Address), amountIn, maxLength, maxNumber)
-				if err != nil {
-					panic(err)
+						return false
+					}
+					if !contains(pools, pathPool.Address.Hex()) {
+						return false
+					}
 				}
-
-				// Add cache
-				updatedAt := time.Now().UTC()
-				cacher.pricesLock.Lock()
-				cacher.prices[token.Hex()] = map[string]PriceCache{}
-				cacher.prices[token.Hex()][stablecoin.Address] = PriceCache{
-					Prices:    prices,
-					UpdatedAt: updatedAt,
-				}
-				cacher.pricesLock.Unlock()
-			}
-
-			ch <- struct {
-				Err    error
-				Prices []Price
-			}{
-				Prices: prices,
-			}
-		}(results)
-	}
-
-	wg.Wait()
-	close(results)
-
-	// Handle results
-	for result := range results {
-		if result.Err == nil {
-			sumPrices = append(sumPrices, result.Prices...)
+				return true
+			}).
+			ToSlice(&prices)
+	} else {
+		prices, err = cacher.QuoteExactInput(ctx, pools, address, common.HexToAddress(usdToken.Address), amountIn, maxLength, maxNumber)
+		if err != nil {
+			panic(err)
 		}
+
+		// Add cache
+		updatedAt := time.Now().UTC()
+		cacher.pricesLock.Lock()
+		cacher.prices[token.Address] = PriceCache{
+			Prices:    prices,
+			UpdatedAt: updatedAt,
+		}
+		cacher.pricesLock.Unlock()
 	}
 
-	return sumPrices, nil
+	return prices, nil
 }
 
 func (cacher *TokenCacher) BatchGetTotalSupplies(ctx context.Context, tokens []common.Address) (map[common.Address]*big.Int, error) {

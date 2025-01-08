@@ -15,7 +15,6 @@ type ChainConfig struct {
 	MinDelayWaitMillisecond int64            `json:",default=2000"`
 	MaxLogsNumber           int64            `json:",default=10000"`
 	Multicall               string           `json:",optional"`
-	Tokens                  []TokenConfig    `json:",optional"`
 	ETH                     *ETHConfig       `json:",optional"`
 	WETH                    string           `json:",optional"`
 	USD                     string           `json:",optional"`
@@ -25,11 +24,6 @@ type ETHConfig struct {
 	Name     string
 	Symbol   string
 	Decimals int64
-}
-
-type TokenConfig struct {
-	Address      string `json:","`
-	IsStablecoin bool   `json:",default=false"`
 }
 
 func (config *ChainConfig) GetNode() string {
