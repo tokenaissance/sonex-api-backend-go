@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/cache"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
@@ -23,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type SonexPoolListLogic struct {
@@ -114,7 +116,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	// eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(ctx, &module_sonex.GetPoolListParams{
 		ChainId:         req.ChainId,
@@ -265,8 +267,8 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			tokenPair := module_sonex.NewTokenPair(token0, token1)
 
 			mu.Lock()
-			pool.Token0Balance = token0.Value()
-			pool.Token1Balance = token1.Value()
+			pool.Token0Balance = token0.Amount()
+			pool.Token1Balance = token1.Amount()
 			pool.TvlUSD = tokenPair.Value()
 			pool.Token0Price = &types.Token_TokenPrice{
 				Price:    token0.Price(),
@@ -291,12 +293,12 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 
 			rand.Seed(time.Now().UnixNano())
 
-			if strings.Compare(pool.TvlUSD, "0") == 0 {
-				pool.Volume = "0"
-			} else {
-				volumeFloat, _ := yield24h.Quo(yield24h, big.NewFloat(0.015)).Float64()
-				pool.Volume = fmt.Sprintf("%f", volumeFloat)
-			}
+			// if strings.Compare(pool.TvlUSD, "0") == 0 {
+			// 	pool.Volume = "0"
+			// } else {
+			// 	volumeFloat, _ := yield24h.Quo(yield24h, big.NewFloat(0.015)).Float64()
+			// 	pool.Volume = fmt.Sprintf("%f", volumeFloat)
+			// }
 
 			mu.Unlock()
 
@@ -338,6 +340,24 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
 		return tvlUsd_i.Cmp(tvlUsd_j) > 0
 	})
+
+	// calculate volume
+	_swapAmoutEthAndUsdMap, err := CalucatedVolume24H(req, conn, chain)
+	if err != nil {
+		logx.Errorf(" CalucatedVolume24H ERROR %#s", err)
+		return &response.ApiResponse{
+			Data: []*types.PoolsResponse_Pool{},
+			Meta: &types.PageResponse{},
+		}, err
+	}
+	// get Price from value
+	for _, pool := range pools {
+		// 要用 tolower 处理
+		poolVolume, ok := _swapAmoutEthAndUsdMap[strings.ToLower(pool.Address)]
+		if ok {
+			pool.Volume = poolVolume.Volume24H.String()
+		}
+	}
 	response := &response.ApiResponse{
 		Data: pools,
 		Meta: &types.PageResponse{
@@ -356,4 +376,156 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	}
 
 	return response, nil
+}
+
+// for calcuated volume
+// key : pool Address
+// body: usdt_amount,eth_Amount
+// 计算方法: eth_amount*eth_price  + usd
+type SwapAmoutEthAndUsd struct {
+	Volume24H *big.Float //
+	EthAmount *big.Float //
+	UsdAmount *big.Float //
+}
+
+func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *config.ChainConfig) (map[string]*SwapAmoutEthAndUsd, error) {
+
+	/*
+		USD: amount1
+		WETH: amount0
+	*/
+
+	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	ctx := context.Background()
+	// 获取 event_sonex_pool_swap 里面的交易详情
+	poolVolumesMap, err := eventSonexPoolSwapModel.SummarizePoolVolumesUsd(ctx, req.ChainId, true)
+	if err != nil {
+		logx.Errorf("[refreshCache]: SummarizePoolVolumesUsd error: %s", err)
+		return nil, err
+	}
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+	//  poolVolumesMapAfterProcessedItems 条目
+	_swapAmoutEthAndUsdMap := make(map[string]*SwapAmoutEthAndUsd)
+	for _, _v := range poolVolumesMap {
+
+		// pre process
+		_valueString := "0"
+		if !strings.EqualFold(_v.Value, "0") {
+			_valueString = _v.Value
+		}
+		_valueFloat, _ := new(big.Float).SetString(_valueString)
+
+		if (strings.EqualFold(strings.ToLower(_v.ExtraToken0), strings.ToLower(chain.WETH)) &&
+			!strings.EqualFold(strings.ToLower(_v.ExtraToken1), strings.ToLower(chain.USD))) ||
+			(strings.EqualFold(strings.ToLower(_v.ExtraToken1), strings.ToLower(chain.WETH)) &&
+				!strings.EqualFold(strings.ToLower(_v.ExtraToken0), strings.ToLower(chain.USD))) {
+			// 1, ETH/TOKENA 交易对
+			_swapAmoutEthAndUsd := &SwapAmoutEthAndUsd{
+				Volume24H: big.NewFloat(0),
+				EthAmount: big.NewFloat(0),
+				UsdAmount: big.NewFloat(0),
+			}
+			if _valueFloat.Cmp(big.NewFloat(0)) > 0 {
+				// 直接用ETH代币购买代币,value 不为0
+				_wethValue, _ := new(big.Float).SetString(_valueString)
+				_swapAmoutEthAndUsd.EthAmount = new(big.Float).Add(_swapAmoutEthAndUsd.EthAmount, _wethValue)
+			} else if _valueFloat.Cmp(big.NewFloat(0)) == 0 {
+				_usdValue, _ := new(big.Float).SetString(_v.Amount0)
+				_swapAmoutEthAndUsd.UsdAmount = new(big.Float).Add(_swapAmoutEthAndUsd.UsdAmount, _usdValue.Abs(_usdValue))
+			}
+
+			_oldValue, ok := _swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)]
+			if !ok {
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)] = _swapAmoutEthAndUsd
+			} else {
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)].EthAmount = new(big.Float).Add(_oldValue.EthAmount, _swapAmoutEthAndUsd.EthAmount)
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)].UsdAmount = new(big.Float).Add(_oldValue.UsdAmount, _swapAmoutEthAndUsd.UsdAmount)
+			}
+
+		} else if strings.EqualFold(strings.ToLower(_v.ExtraToken0), strings.ToLower(chain.USD)) &&
+			!strings.EqualFold(strings.ToLower(_v.ExtraToken1), strings.ToLower(chain.WETH)) ||
+			strings.EqualFold(strings.ToLower(_v.ExtraToken1), strings.ToLower(chain.USD)) &&
+				!strings.EqualFold(strings.ToLower(_v.ExtraToken0), strings.ToLower(chain.WETH)) {
+			_swapAmoutEthAndUsd := &SwapAmoutEthAndUsd{
+				Volume24H: big.NewFloat(0),
+				EthAmount: big.NewFloat(0),
+				UsdAmount: big.NewFloat(0),
+			}
+			// 2 ,USD/TOKENA 交易对
+			// 此时_value 不为 0,因此不考虑 _value = "0"  的情况,
+			_usdValue, _ := new(big.Float).SetString(_v.Amount1)
+			_swapAmoutEthAndUsd.UsdAmount = new(big.Float).Add(_swapAmoutEthAndUsd.UsdAmount, _usdValue.Abs(_usdValue))
+
+			_oldValue, ok := _swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)]
+			if !ok {
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)] = _swapAmoutEthAndUsd
+			} else {
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)].UsdAmount = new(big.Float).Add(_oldValue.UsdAmount, _swapAmoutEthAndUsd.UsdAmount)
+			}
+
+		} else if strings.EqualFold(strings.ToLower(_v.ExtraToken0), strings.ToLower(chain.USD)) &&
+			strings.EqualFold(strings.ToLower(_v.ExtraToken1), strings.ToLower(chain.WETH)) ||
+			strings.EqualFold(strings.ToLower(_v.ExtraToken1), strings.ToLower(chain.USD)) &&
+				strings.EqualFold(strings.ToLower(_v.ExtraToken0), strings.ToLower(chain.WETH)) {
+			_swapAmoutEthAndUsd := &SwapAmoutEthAndUsd{
+				Volume24H: big.NewFloat(0),
+				EthAmount: big.NewFloat(0),
+				UsdAmount: big.NewFloat(0),
+			}
+			// 3, USD/ETH 交易对
+			if _valueFloat.Cmp(big.NewFloat(0)) > 0 {
+				// 直接用ETH代币购买代币,value 不为0
+				_wethValue, _ := new(big.Float).SetString(_valueString)
+				_swapAmoutEthAndUsd.EthAmount = new(big.Float).Add(_swapAmoutEthAndUsd.EthAmount, _wethValue)
+			} else if _valueFloat.Cmp(big.NewFloat(0)) == 0 {
+				_usdValue, _ := new(big.Float).SetString(_v.Amount1)
+				_swapAmoutEthAndUsd.UsdAmount = new(big.Float).Add(_swapAmoutEthAndUsd.UsdAmount, _usdValue.Abs(_usdValue))
+			}
+
+			_oldValue, ok := _swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)]
+			if !ok {
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)] = _swapAmoutEthAndUsd
+			} else {
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)].EthAmount = new(big.Float).Add(_oldValue.EthAmount, _swapAmoutEthAndUsd.EthAmount)
+				_swapAmoutEthAndUsdMap[strings.ToLower(_v.Address)].UsdAmount = new(big.Float).Add(_oldValue.UsdAmount, _swapAmoutEthAndUsd.UsdAmount)
+			}
+		}
+	}
+
+	prices, _ := tokenPriceModel.GetCurrentPrices([]string{chain.WETH, chain.USD})
+	_wethPrice := ""
+	_usdPrice := ""
+	for _, v := range prices {
+		if strings.EqualFold(strings.ToLower(v.TokenAddress), strings.ToLower(chain.WETH)) {
+			_wethPrice = v.Price
+		}
+
+		if strings.EqualFold(strings.ToLower(v.TokenAddress), strings.ToLower(chain.USD)) {
+			_usdPrice = v.Price
+		}
+	}
+
+	if strings.EqualFold(_wethPrice, "") {
+		// weth 默认值为 $3400
+		// 3400*10**18 = 3400000000000000000000
+		_wethPrice = "3400000000000000000000"
+	}
+
+	if strings.EqualFold(_usdPrice, "") {
+		// _usdPrice 默认值为 $1
+		// 10**6 = 1000000
+		// usd 为 6 位小数
+		_usdPrice = "1000000"
+	}
+
+	// get the data slice with processed pools
+
+	_wethPriceFloat, _ := new(big.Float).SetString(_wethPrice)
+	_usdPriceFloat, _ := new(big.Float).SetString(_usdPrice)
+
+	// assign value
+	for i, v := range _swapAmoutEthAndUsdMap {
+		_swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, v.EthAmount), new(big.Float).Mul(_usdPriceFloat, v.UsdAmount))
+	}
+	return _swapAmoutEthAndUsdMap, nil
 }
