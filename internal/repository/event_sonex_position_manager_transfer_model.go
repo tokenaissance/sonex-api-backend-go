@@ -183,6 +183,11 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 				IsBurnt: item.IsBurnt.Bool,
 			}
 
+			// 当前地址是否持仓该 position
+			// 持仓：当前地址是 position 的 Owner，且 position 未被销毁
+			// 未持仓：当前地址是 Creator 但不是 Owner，或者 position 已被销毁
+			position.IsHolding = (item.EventTo.String == address) && !item.IsBurnt.Bool
+
 			// if filterBurnt and position is burnt, skip
 			if filterBurnt && position.IsBurnt {
 				continue

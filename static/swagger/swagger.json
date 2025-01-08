@@ -2130,6 +2130,10 @@
         },
         "tokenValue1": {
           "$ref": "#/definitions/Token_TokenValue"
+        },
+        "isHolding": {
+          "type": "boolean",
+          "format": "boolean"
         }
       },
       "title": "Position",
@@ -2147,7 +2151,8 @@
         "unclaimedFee0",
         "unclaimedFee1",
         "tokenValue0",
-        "tokenValue1"
+        "tokenValue1",
+        "isHolding"
       ]
     },
     "PositionRequest": {
