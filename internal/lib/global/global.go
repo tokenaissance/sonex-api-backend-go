@@ -406,6 +406,20 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 			avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
 			successedPrices[i].PriceImpact = avgPriceImpact
 			successedPrices[i].FeeRate = 1 - totalFeeRate
+
+			if avgPriceImpact > 1 {
+				fmt.Printf("========> %+v\n", price.Pools)
+				for j, pool := range price.Pools {
+					fmt.Printf("Pool ========> %s \n", pool.Address)
+					info := poolMap[pool.Address.Hex()]
+					fmt.Printf("Liquidity ========> %s\n", info.Liquidity)
+					priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
+					fmt.Printf("PriceImpact ========> %s\n", priceImpact.String())
+				}
+				fmt.Printf("TotalPriceImpact ========> %s\n", totalPriceImpact.String())
+				fmt.Printf("TotalLiquidity ========> %s\n", totalLiquidity.String())
+				fmt.Printf("<========\n")
+			}
 		}
 	}
 

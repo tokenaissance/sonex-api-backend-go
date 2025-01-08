@@ -3,7 +3,6 @@ package sonex
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/big"
 	"sync"
 
@@ -150,13 +149,6 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			case "OUTPUT":
 				amountIn, amountOut = price.Value, amount
 			}
-			priceImpact := math.Abs(price.PriceImpact)
-			var priceImpactStr string
-			if priceImpact > 1 {
-				priceImpactStr = ">100%"
-			} else {
-				priceImpactStr = fmt.Sprintf("%.2f%%", price.PriceImpact*100)
-			}
 			bestRouterResult = &types.TokenQuoteResponse_Router{
 				TokenIn:                     fromAddress.Hex(),
 				TokenOut:                    toAddress.Hex(),
@@ -170,7 +162,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 price.GasEstimate.String(),
-				PriceImpact:                 priceImpactStr,
+				PriceImpact:                 fmt.Sprintf("%.2f%%", price.PriceImpact*100),
 				FeeRate:                     fmt.Sprintf("%.2f%%", price.FeeRate*100),
 			}
 		}

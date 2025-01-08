@@ -68,9 +68,9 @@ func TestQuote(t *testing.T) {
 
 	Initialize(c)
 	token, _ := GetToken(1946, "0x8879309d4002b8C98163Ece3f58653F774de8416")
-	amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
+	amountIn := new(big.Int).Mul(big.NewInt(100), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
 	st := time.Now()
-	prices, _, err := QuoteExactInput(context.Background(), nil, 1946, "0x8879309d4002b8C98163Ece3f58653F774de8416", "0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062", amountIn, 2)
+	prices, _, err := QuoteExactInput(context.Background(), nil, 1946, "0x8879309d4002b8C98163Ece3f58653F774de8416", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655", amountIn, 2)
 	if err != nil {
 		t.Error(err)
 		return
@@ -82,7 +82,7 @@ func TestQuote(t *testing.T) {
 		for _, pool := range price.Pools {
 			s = append(s, fmt.Sprintf("%s:%s[%d]", pool.Token0, pool.Token1, pool.Fee))
 		}
-		fmt.Printf("Path: %s, Price: %s\n", strings.Join(s, " -> "), price.Value.String())
+		fmt.Printf("Path: %s, Price: %s, PriceImpact: %f\n", strings.Join(s, " -> "), price.Value.String(), price.PriceImpact)
 	}
 }
 
