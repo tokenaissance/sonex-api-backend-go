@@ -344,5 +344,8 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 		},
 	}
 
+	// 6. fill tick
+	position.Pool.Tick = innnerPosition.Pool.Slot0.Tick.String()
+
 	return position
 }
