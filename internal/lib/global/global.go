@@ -144,25 +144,6 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		return nil, nil, nil, fmt.Errorf("%s", "Miss token cacher")
 	}
 
-	if pools == nil {
-		conn := repository.NewConn(c.PostgreSQL.DateSource())
-		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		linq.From(records).
-			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
-				return quoter.Pool{
-					Address: common.HexToAddress(item.EventPool),
-					Token0:  common.HexToAddress(item.EventToken0),
-					Token1:  common.HexToAddress(item.EventToken1),
-					Fee:     item.EventFee,
-				}
-			}).
-			ToSlice(&pools)
-	}
-
 	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5)
 	if err != nil {
 		return nil, nil, nil, err
