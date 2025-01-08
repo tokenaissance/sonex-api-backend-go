@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sonex_api_backend_go/internal/module/sonex"
 	"time"
 
 	"github.com/gogf/gf/v2/os/gtime"
@@ -24,8 +25,8 @@ type (
 		QueryLatestHistoryPricesByAddresses(addresses []string) (map[string]*big.Int, error)
 		GetCurrentPrice(tokenAddress string) (float64, error)
 		GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error)
-		GetLastHourPrice(tokenAddress string) (float64, error)
-		GetYesterdayPrice(tokenAddress string) (float64, error)
+		GetLastHourPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
+		GetYesterdayPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
 	}
 
 	customSonexTokenPriceRecordModel struct {
@@ -225,7 +226,10 @@ func (m *customSonexTokenPriceRecordModel) GetCurrentPrice(tokenAddress string) 
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
-	return price, err
+	if err != nil {
+		return 0, err
+	}
+	return price, nil
 }
 
 func (m *customSonexTokenPriceRecordModel) GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error) {
@@ -247,9 +251,8 @@ func (m *customSonexTokenPriceRecordModel) GetCurrentPrices(tokenAddresses []str
 	return result, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(tokenAddress string) (float64, error) {
-	ctx := context.Background()
-	var price float64
+func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error) {
+	var price string
 	query := `
 		SELECT price
 		FROM sonex_token_price_record
@@ -259,12 +262,15 @@ func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(tokenAddress string)
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
-	return price, err
+	tp, err := sonex.NewTokenPrice(price, 18)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]*sonex.TokenPrice{tokenAddress: tp}, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(tokenAddress string) (float64, error) {
-	ctx := context.Background()
-	var price float64
+func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error) {
+	var price string
 	query := `
 		SELECT price
 		FROM sonex_token_price_record
@@ -274,7 +280,11 @@ func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(tokenAddress string
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
-	return price, err
+	tp, err := sonex.NewTokenPrice(price, 18)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]*sonex.TokenPrice{tokenAddress: tp}, nil
 }
 
 // 根据 interval 获取查询条件的时间范围
