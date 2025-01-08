@@ -4,11 +4,11 @@ import (
 	"context"
 	"math"
 	"math/big"
-	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -29,13 +29,19 @@ func NewSonexSwapVolumeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *S
 func (l *SonexSwapVolumeLogic) SonexSwapVolume(req *types.SwapVolumeRequest) (resp *types.SwapVolumeResponse, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPoolSwapModel(conn)
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	data, token0, err := model.GetSwapVolumes(l.ctx, req)
 	if err != nil {
 		return nil, err
 	}
+	token0Address := common.HexToAddress(token0.Address)
+	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses([]string{token0Address.Hex()})
+	if err != nil {
+		return nil, err
+	}
 	priceFloat := new(big.Float)
-	if bestPrice, _, _, err := global.GetPrices(l.ctx, nil, req.ChainId, token0.Address, true, 2); err == nil && bestPrice != nil {
-		priceFloat = priceFloat.SetInt(bestPrice.Value)
+	if price, ok := currentPriceRecords[token0Address.Hex()]; ok {
+		priceFloat = priceFloat.SetInt(price)
 	}
 	resp = &types.SwapVolumeResponse{}
 	gconv.Structs(data, &resp.Volumes)
