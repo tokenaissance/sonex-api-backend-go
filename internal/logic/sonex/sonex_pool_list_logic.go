@@ -15,6 +15,7 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -330,6 +331,13 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	// 		pool.Volume = tokenPair.Value()
 	// 	}
 	// }
+
+	// sort pool tvl
+	sort.SliceStable(pools, func(i, j int) bool {
+		tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+		tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+		return tvlUsd_i.Cmp(tvlUsd_j) > 0
+	})
 	response := &response.ApiResponse{
 		Data: pools,
 		Meta: &types.PageResponse{
