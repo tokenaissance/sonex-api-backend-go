@@ -382,6 +382,60 @@ type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
 }
 
+type SwapEvent struct {
+	ID        int64            `json:"id"`
+	Address   string           `json:"address"`
+	Token0    Token_TokenInfo  `json:"token0"`
+	Token1    Token_TokenInfo  `json:"token1"`
+	Pool      Token_PoolDetail `json:"pool"`
+	Hash      string           `json:"hash"`
+	Amount0   float64          `json:"amount0"`
+	Amount1   float64          `json:"amount1"`
+	Usd       float64          `json:"usd"`
+	CreatedAt string           `json:"createdAt"`
+}
+
+type SwapEventRequest struct {
+	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
+	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
+	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
+	Address     string `form:"address,optional"`
+	PoolAddress string `form:"poolAddress,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapEventResponse struct {
+	Code    int             `json:"code"`
+	Data    []*SwapEvent    `json:"data"`
+	Meta    *PaginationMeta `json:"meta"`
+	Message string          `json:"message"`
+}
+
+type SwapVolume struct {
+	Timestamp int64   `json:"timestamp"`
+	Value     float64 `json:"value"`
+	Amount    float64 `json:"amount"`
+	Amount0   float64 `json:"amount0"`
+	Amount1   float64 `json:"amount1"`
+}
+
+type SwapVolumeRequest struct {
+	PoolAddress string `form:"poolAddress"` // Pool address
+	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
+	Address     string `form:"address,optional"`
+	Token       string `form:"token,optional"`
+	Token0      string `form:"token0,optional"`
+	Token1      string `form:"token1,optional"`
+	ChainId     int64  `form:"chainId,default=1946,optional"`
+}
+
+type SwapVolumeResponse struct {
+	Volumes []SwapVolume `json:"volumes"`
+}
+
 type Token struct {
 	Address     string  `json:"address"`
 	Name        string  `json:"name"`
