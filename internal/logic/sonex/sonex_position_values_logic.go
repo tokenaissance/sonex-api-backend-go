@@ -210,7 +210,7 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	} else {
 		logx.Errorf("[convertPosition] Token0 price not found from db for address: %s", innnerPosition.Token0.Hex())
 
-		bestPrice0, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token0.Hex(), true, 2, &l.svcCtx.Config.GetChainConfig(chainId).USD)
+		bestPrice0, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token0.Hex(), true, 2)
 		if err == nil && bestPrice0 != nil {
 			price0.SetInt(bestPrice0.Value)
 			price0String = bestPrice0.Value.String()
@@ -223,7 +223,7 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	} else {
 		logx.Errorf("[convertPosition] Token1 price not found from db for address: %s", innnerPosition.Token1.Hex())
 
-		bestPrice1, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token1.Hex(), true, 2, &l.svcCtx.Config.GetChainConfig(chainId).USD)
+		bestPrice1, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token1.Hex(), true, 2)
 		if err == nil && bestPrice1 != nil {
 			price1.SetInt(bestPrice1.Value)
 			price1String = bestPrice1.Value.String()
