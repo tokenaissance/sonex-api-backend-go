@@ -307,5 +307,7 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 			Decimals: daiDecimals,
 		},
 	}
+	// 6. fill tick
+	position.Pool.Tick = innnerPosition.Pool.Slot0.Tick.String()
 	return position
 }
