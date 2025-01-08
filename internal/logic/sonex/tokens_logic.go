@@ -364,7 +364,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			return item.Sort
 		})
 	}
-	query.ToSlice(&dataResult)
+	query.ThenByT(func(item types.TokensResponse_Token) string { return item.Symbol }).ToSlice(&dataResult)
 
 	// Page
 	totalResult := int64(len(dataResult))
