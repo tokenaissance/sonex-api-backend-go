@@ -315,8 +315,8 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	}
 
 	// Sorts
+	var query linq.OrderedQuery
 	if req.OrderBy != "" {
-		var query linq.OrderedQuery
 		switch req.OrderBy {
 		case "1H_ASC":
 			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
@@ -359,12 +359,12 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				return item.Sort
 			})
 		}
-		query.ToSlice(&dataResult)
 	} else {
-		linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) int64 {
+		query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) int64 {
 			return item.Sort
-		}).ToSlice(&dataResult)
+		})
 	}
+	query.ToSlice(&dataResult)
 
 	// Page
 	totalResult := int64(len(dataResult))
