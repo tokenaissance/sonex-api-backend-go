@@ -92,7 +92,6 @@ func (m *customEventSonexPositionManagerTransferModel) QueryValidPositionsByChai
 }
 
 // GetTransferEvents get transfer events by address
-// filterBurnt: true if filter burnt positions
 func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string, filterBurnt bool) ([]*types.Position, error) {
 	var items []*transferData
 
@@ -122,11 +121,6 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 		JOIN sonex_token token1 ON f.event_token1 = token1.address
 		WHERE (t.event_from = $1 OR t.event_to = $1)
 	`, m.table)
-
-	// filter burnt positions
-	// if filterBurnt {
-	// 	query += fmt.Sprintf(" AND t.event_token_id NOT IN (SELECT event_token_id FROM %s WHERE event_from = $1 AND event_to = '0x0000000000000000000000000000000000000000')", m.table)
-	// }
 
 	address = common.HexToAddress(address).Hex()
 	err := m.conn.QueryRowsCtx(ctx, &items, query, address)
