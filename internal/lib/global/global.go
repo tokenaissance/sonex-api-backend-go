@@ -111,7 +111,7 @@ func GetToken(chainId int64, address string) (*cache.Token, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
-	return cacher.Get(address)
+	return cacher.Get(common.HexToAddress(address))
 }
 
 func SetToken(chainId int64, address string, isStablecoin bool) error {
@@ -121,7 +121,7 @@ func SetToken(chainId int64, address string, isStablecoin bool) error {
 	if !ok {
 		return fmt.Errorf("%s", "Miss token cacher")
 	}
-	err := cacher.Set(address, isStablecoin)
+	err := cacher.Set(common.HexToAddress(address), isStablecoin)
 	if err != nil {
 		return err
 	}
@@ -281,6 +281,14 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 }
 
 func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountIn *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
+	chainConf := c.GetChainConfig(chainId)
+	if chainConf == nil {
+		return nil, nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+
+	fromAddress := common.HexToAddress(from)
+	toAddress := common.HexToAddress(to)
+
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
@@ -307,10 +315,15 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 			ToSlice(&pools)
 	}
 
-	prices, err := cacher.QuoteExactInput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountIn, maxLength, 100)
+	prices, err := cacher.QuoteExactInput(ctx, pools, fromAddress, toAddress, amountIn, maxLength, 100)
 	if err != nil {
 		return nil, nil, err
 	}
+	// ETH or USD
+	if len(prices) == 1 && len(prices[0].Pools) == 0 {
+		return prices, []cache.Price{}, nil
+	}
+
 	successedPrices := []cache.Price{}
 	failedPrices := []cache.Price{}
 	for _, price := range prices {
@@ -440,6 +453,14 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 }
 
 func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountOut *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
+	chainConf := c.GetChainConfig(chainId)
+	if chainConf == nil {
+		return nil, nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+
+	fromAddress := common.HexToAddress(from)
+	toAddress := common.HexToAddress(to)
+
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
@@ -466,10 +487,15 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 			ToSlice(&pools)
 	}
 
-	prices, err := cacher.QuoteExactOutput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountOut, maxLength, 100)
+	prices, err := cacher.QuoteExactOutput(ctx, pools, fromAddress, toAddress, amountOut, maxLength, 100)
 	if err != nil {
 		return nil, nil, err
 	}
+	// ETH or USD
+	if len(prices) == 1 && len(prices[0].Pools) == 0 {
+		return prices, []cache.Price{}, nil
+	}
+
 	successedPrices := []cache.Price{}
 	failedPrices := []cache.Price{}
 	for _, price := range prices {

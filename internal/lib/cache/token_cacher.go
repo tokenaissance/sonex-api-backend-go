@@ -183,8 +183,8 @@ func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, m
 	return paths, nil
 }
 
-func (cacher *TokenCacher) Get(address string) (*Token, error) {
-	if address == "" || common.HexToAddress(address).Hex() == (common.Address{}).Hex() {
+func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
+	if address == (common.Address{}) {
 		eth := cacher.chainConf.ETH
 		if eth == nil {
 			return nil, fmt.Errorf("%s", "Miss ETH configure")
@@ -199,10 +199,10 @@ func (cacher *TokenCacher) Get(address string) (*Token, error) {
 	}
 
 	cacher.tokensLock.RLock()
-	token, ok := cacher.tokens[address]
+	token, ok := cacher.tokens[address.Hex()]
 	cacher.tokensLock.RUnlock()
 	if !ok {
-		tokenAddress := common.HexToAddress(address)
+		tokenAddress := common.HexToAddress(address.Hex())
 		if cacher.chainConf.Multicall == "" || !common.IsHexAddress(cacher.chainConf.Multicall) {
 			return nil, fmt.Errorf("%s", "Invalid multicall contract")
 		}
@@ -272,27 +272,27 @@ func (cacher *TokenCacher) Get(address string) (*Token, error) {
 		}
 
 		token = Token{
-			Address:      address,
+			Address:      address.Hex(),
 			Name:         name,
 			Symbol:       symbol,
 			Decimals:     int64(decimals),
 			IsStablecoin: false,
 		}
 		cacher.tokensLock.Lock()
-		cacher.tokens[address] = token
+		cacher.tokens[address.Hex()] = token
 		cacher.tokensLock.Unlock()
 	}
 	return &token, nil
 }
 
-func (c *TokenCacher) Set(address string, isStablecoin bool) error {
+func (c *TokenCacher) Set(address common.Address, isStablecoin bool) error {
 	token, err := c.Get(address)
 	if err != nil {
 		return err
 	}
 	token.IsStablecoin = isStablecoin
 	c.tokensLock.Lock()
-	c.tokens[address] = *token
+	c.tokens[address.Hex()] = *token
 	c.tokensLock.Unlock()
 	return nil
 }
@@ -331,11 +331,40 @@ func (cacher *TokenCacher) SetPriceCacheExpireSeconds(duration int64) {
 }
 
 func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.Pool, from common.Address, to common.Address, amountIn *big.Int, maxLength int64, maxNumber int64) ([]Price, error) {
-	fromToken, err := cacher.Get(from.Hex())
+	switch from {
+	case common.Address{}:
+		if cacher.chainConf.WETH == "" || !common.IsHexAddress(cacher.chainConf.WETH) {
+			return nil, fmt.Errorf("%s", "Miss ETH configure")
+		}
+		from = common.HexToAddress(cacher.chainConf.WETH)
+	case to:
+		if cacher.chainConf.USD == "" || !common.IsHexAddress(cacher.chainConf.USD) {
+			return nil, fmt.Errorf("%s", "Miss USD configure")
+		}
+		usdToken, err := cacher.Get(common.HexToAddress(cacher.chainConf.USD))
+		if err != nil {
+			return nil, err
+		}
+		usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+		return []Price{
+			{
+				From:                        from.Hex(),
+				To:                          to.Hex(),
+				Pools:                       []quoter.Pool{},
+				Path:                        []byte{},
+				Value:                       usdAccuracy,
+				SqrtPriceX96AfterList:       []*big.Int{},
+				InitializedTicksCrossedList: []uint32{},
+				GasEstimate:                 big.NewInt(0),
+			},
+		}, nil
+	}
+
+	fromToken, err := cacher.Get(from)
 	if err != nil {
 		return nil, err
 	}
-	toToken, err := cacher.Get(to.Hex())
+	toToken, err := cacher.Get(to)
 	if err != nil {
 		return nil, err
 	}
@@ -391,11 +420,40 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 }
 
 func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.Pool, from common.Address, to common.Address, amountOut *big.Int, maxLength int64, maxNumber int64) ([]Price, error) {
-	fromToken, err := cacher.Get(from.Hex())
+	switch from {
+	case common.Address{}:
+		if cacher.chainConf.WETH == "" || !common.IsHexAddress(cacher.chainConf.WETH) {
+			return nil, fmt.Errorf("%s", "Miss ETH configure")
+		}
+		from = common.HexToAddress(cacher.chainConf.WETH)
+	case to:
+		if cacher.chainConf.USD == "" || !common.IsHexAddress(cacher.chainConf.USD) {
+			return nil, fmt.Errorf("%s", "Miss USD configure")
+		}
+		usdToken, err := cacher.Get(common.HexToAddress(cacher.chainConf.USD))
+		if err != nil {
+			return nil, err
+		}
+		usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+		return []Price{
+			{
+				From:                        from.Hex(),
+				To:                          to.Hex(),
+				Pools:                       []quoter.Pool{},
+				Path:                        []byte{},
+				Value:                       usdAccuracy,
+				SqrtPriceX96AfterList:       []*big.Int{},
+				InitializedTicksCrossedList: []uint32{},
+				GasEstimate:                 big.NewInt(0),
+			},
+		}, nil
+	}
+
+	fromToken, err := cacher.Get(from)
 	if err != nil {
 		return nil, err
 	}
-	toToken, err := cacher.Get(to.Hex())
+	toToken, err := cacher.Get(to)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +513,7 @@ func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, t
 			WhereT(func(item Token) bool { return item.Address == wantStablecoin.Hex() }).
 			ToSlice(&stablecoins)
 	}
-	tokenI, err := cacher.Get(token.Hex())
+	tokenI, err := cacher.Get(token)
 	if err != nil {
 		return nil, err
 	}
