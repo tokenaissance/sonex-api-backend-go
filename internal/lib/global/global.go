@@ -76,7 +76,7 @@ func AddCronJob(cron string, job func()) (cron.EntryID, error) {
 }
 
 func Start() {
-	// chainHandlerManager.Start()
+	chainHandlerManager.Start()
 	cronExecuter.Start()
 }
 
