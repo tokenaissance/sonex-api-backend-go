@@ -50,6 +50,7 @@ type Price struct {
 	InitializedTicksCrossedList []uint32
 	GasEstimate                 *big.Int
 	PriceImpact                 float64
+	FeeRate                     float64
 	Err                         error
 }
 

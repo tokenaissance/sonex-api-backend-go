@@ -60,6 +60,7 @@ type TokenQuoteResponse_Router {
 	InitializedTicksCrossedList []int64                          `json:"initializedTicksCrossedList"`
 	GasEstimate                 string                           `json:"gasEstimate"`
 	PriceImpact                 string                           `json:"priceImpact"`
+	FeeRate                     string                           `json:"feeRate"`
 }
 
 type TokenQuoteResponse {

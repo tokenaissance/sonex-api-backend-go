@@ -445,6 +445,7 @@ type TokenQuoteResponse_Router struct {
 	InitializedTicksCrossedList []int64                          `json:"initializedTicksCrossedList"`
 	GasEstimate                 string                           `json:"gasEstimate"`
 	PriceImpact                 string                           `json:"priceImpact"`
+	FeeRate                     string                           `json:"feeRate"`
 }
 
 type TokenQuoteResponse_Router_Pool struct {

@@ -163,6 +163,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 price.GasEstimate.String(),
 				PriceImpact:                 fmt.Sprintf("%f%%", price.PriceImpact*100),
+				FeeRate:                     fmt.Sprintf("%f%%", price.FeeRate*100),
 			}
 		}
 	}

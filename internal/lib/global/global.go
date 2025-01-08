@@ -421,7 +421,7 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 		for i, price := range successedPrices {
 			totalPriceImpact := big.NewFloat(0)
 			totalLiquidity := big.NewFloat(0)
-			// var totalFeeRate float64 = 1
+			var totalFeeRate int64 = 1
 			for j, pool := range price.Pools {
 				info := poolMap[pool.Address.Hex()]
 				liquidity := new(big.Float).SetInt(info.Liquidity)
@@ -429,10 +429,11 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 				totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
 				totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
 
-				// 10000 - pool.Fee
+				totalFeeRate = totalFeeRate * (1000000 - pool.Fee)
 			}
 			avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
 			successedPrices[i].PriceImpact = avgPriceImpact
+			successedPrices[i].FeeRate = 1 - float64(totalFeeRate)/100000000
 		}
 	}
 
