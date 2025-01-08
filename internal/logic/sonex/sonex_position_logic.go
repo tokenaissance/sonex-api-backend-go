@@ -179,6 +179,9 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		if result.prices != nil {
 			prices = result.prices
 		}
+		if result.collectedPairs != nil {
+			collectedPairs = result.collectedPairs
+		}
 	}
 
 	position = l.fillPosition(ctx, req, position, innerPosition, prices, collectedPairs)
@@ -322,7 +325,6 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	position.UnclaimedFee1, _ = unclaimedFee1Float.Float64()
 
 	pnl := claimableFees
-
 	if collectedPair, ok := collectedPairs[req.TokenId]; ok {
 		// set collected token price
 		collectedPair.Token0().SetTokenPrice(price0String, daiDecimals)
