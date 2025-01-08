@@ -149,7 +149,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 			}
 
 			position := &types.Position{
-				Origin:      item.EventFrom.String,
+				Origin:      item.EventTo.String,
 				TokenID:     item.TokenId.Int64,
 				TickUpper:   item.EventTickUpper.String,
 				TickLower:   item.EventTickLower.String,
