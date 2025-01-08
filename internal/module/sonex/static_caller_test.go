@@ -11,6 +11,35 @@ import (
 	"github.com/zeromicro/go-zero/core/conf"
 )
 
+func TestBatchBalanceOf(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
+
+	caller, _ := NewStaticCaller(c)
+	results, err := caller.BatchBalanceOf(
+		context.Background(), 1946,
+		[]common.Address{
+			common.HexToAddress("0x8168CdEE316Ef25508Ba6bB6e5196742c0eA58F3"),
+			common.HexToAddress("0x1F62BD3384012DA4B9dc81d12E96DAD0944885b1"),
+		},
+		[]common.Address{
+			common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"),
+			common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"),
+		},
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for addr, balances := range results {
+		fmt.Printf("Address: %s\n", addr)
+		for token, balance := range balances {
+			fmt.Printf("\t%s %s\n", token, balance.String())
+		}
+	}
+}
+
 func TestBatchGetPools(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
@@ -30,7 +59,6 @@ func TestBatchGetPools(t *testing.T) {
 
 	for _, pool := range pools {
 		fmt.Printf("%+v\n", pool)
-		fmt.Printf("%+v\n", pool.Slot0)
 	}
 }
 

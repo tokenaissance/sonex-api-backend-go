@@ -13,6 +13,7 @@ type Pool struct {
 	FeeGrowthGlobal0X128 *big.Int
 	FeeGrowthGlobal1X128 *big.Int
 	Fee                  *big.Int
+	Liquidity            *big.Int
 }
 
 type GetPoolListParams struct {
