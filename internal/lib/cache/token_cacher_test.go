@@ -19,7 +19,7 @@ func TestGet(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	token, err := cacher.Get("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
+	token, err := cacher.Get(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"))
 	if err != nil {
 		t.Error(err)
 		return
@@ -32,12 +32,12 @@ func TestSet(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	err := cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
+	err := cacher.Set(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), true)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	token, _ := cacher.Get("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
+	token, _ := cacher.Get(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"))
 	fmt.Println(token)
 }
 
@@ -46,7 +46,7 @@ func TestGetStablecoins(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	err := cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
+	err := cacher.Set(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), true)
 	if err != nil {
 		t.Error(err)
 		return
@@ -179,7 +179,7 @@ func TestGetPrices(t *testing.T) {
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
 	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	_ = cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
+	_ = cacher.Set(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), true)
 
 	prices, err := cacher.GetPrices(context.Background(), pools, common.HexToAddress("0x8879309d4002b8c98163ece3f58653f774de8416"), false, 0, 50, nil)
 	if err != nil {
@@ -200,7 +200,7 @@ func TestGetPricesWithCache(t *testing.T) {
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	_ = cacher.Set("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", true)
+	_ = cacher.Set(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"), true)
 	sAddr := common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
 
 	start := time.Now()
