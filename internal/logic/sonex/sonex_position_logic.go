@@ -185,6 +185,14 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 
 	response.Position = position
 
+	responseBytes, err := json.Marshal(response)
+	if err == nil {
+		err = cacher.Set(cacheKey, responseBytes, 0)
+		if err != nil {
+			l.Error("Failed to cache response", err)
+		}
+	}
+
 	return response, nil
 }
 
