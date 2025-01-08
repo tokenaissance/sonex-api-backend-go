@@ -118,7 +118,19 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	)
 
 	// Filter
-	linq.From(dataResult).WhereT(func(item types.TokensResponse_Token) bool { return !item.Hidden }).ToSlice(&dataResult)
+	linq.From(dataResult).
+		WhereT(func(item types.TokensResponse_Token) bool {
+			_, ok := whitelistTokenMap[item.Address]
+			return ok
+		}).
+		SelectT(func(item types.TokensResponse_Token) types.TokensResponse_Token {
+			tokenInfo := whitelistTokenMap[item.Address]
+			item.Logo = tokenInfo.Logo.String
+			item.Sort = tokenInfo.Sort
+			item.Hidden = tokenInfo.Hidden
+			return item
+		}).
+		WhereT(func(item types.TokensResponse_Token) bool { return !item.Hidden }).ToSlice(&dataResult)
 
 	// Update price
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
@@ -174,13 +186,8 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			}
 			accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(item.Decimals), nil)
 			fdv, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply, priceI), accuracy))
+			item.TotalSupply = totalSupply.String()
 			item.FdvUSD = fdv
-
-			extra, ok := whitelistTokenMap[item.Address]
-			if ok {
-				item.Sort = extra.Sort
-				item.Hidden = extra.Hidden
-			}
 
 			for i, pool := range item.Pools {
 				price0I, ok := prices[pool.Token0.Address]
@@ -202,6 +209,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				}
 				accuracy0 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil)
 				fdv0, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply0, price0I), accuracy0))
+				item.Pools[i].Token0.TotalSupply = totalSupply0.String()
 				item.Pools[i].Token0.FdvUSD = fdv0
 				totalSupply1, ok := totalSupplies[common.HexToAddress(pool.Token1.Address)]
 				if !ok {
@@ -209,6 +217,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				}
 				accuracy1 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil)
 				fdv1, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply1, price1I), accuracy1))
+				item.Pools[i].Token1.TotalSupply = totalSupply1.String()
 				item.Pools[i].Token1.FdvUSD = fdv1
 			}
 
