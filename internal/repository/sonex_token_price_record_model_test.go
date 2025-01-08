@@ -12,7 +12,20 @@ func TestSonexTokenPriceRecordModelKline(t *testing.T) {
 	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
 
 	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DateSource()))
-	records, err := model.Kline("0xA5D6513082EF1F157A33A066293309E74A8aF6Df", "1d")
+	records, err := model.Kline("0x8879309d4002b8C98163Ece3f58653F774de8416", "1h")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = records
+}
+
+func TestSonexTokenPriceRecordModelQueryLatestHistoryPricesByAddressesInterval(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
+
+	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DateSource()))
+	records, err := model.QueryLatestHistoryPricesByAddressesInterval([]string{"0x8879309d4002b8C98163Ece3f58653F774de8416"}, "1h")
 	if err != nil {
 		t.Error(err)
 		return

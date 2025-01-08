@@ -22,6 +22,7 @@ type (
 		Kline(address string, interval string) ([]*TokenPriceRecord, error)
 		QueryLatestHistoryPrices() (map[string]*big.Int, error)
 		QueryLatestHistoryPricesByAddresses(addresses []string) (map[string]*big.Int, error)
+		QueryLatestHistoryPricesByAddressesInterval(addresses []string, interval string) (map[string]*big.Int, error)
 		GetCurrentPrice(tokenAddress string) (float64, error)
 		GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error)
 		GetLastHourPrice(tokenAddress string) (float64, error)
@@ -47,6 +48,12 @@ func (m *customSonexTokenPriceRecordModel) withSession(session sqlx.Session) Son
 type TokenPriceRecord struct {
 	Id           int64  `db:"id"`
 	TokenSymbol  string `db:"token_symbol"`
+	TokenAddress string `db:"token_address"`
+	Price        string `db:"price"`
+	CreatedAt    string `db:"created_at"`
+}
+
+type MiniTokenPriceRecord struct {
 	TokenAddress string `db:"token_address"`
 	Price        string `db:"price"`
 	CreatedAt    string `db:"created_at"`
@@ -158,18 +165,13 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices() (map[string]*big.Int, error) {
 	ctx := context.Background()
 
-	type PriceRecord struct {
-		TokenAddress string `db:"token_address"`
-		Price        string `db:"price"`
-	}
-
-	var records []PriceRecord
-	query := `
-		SELECT DISTINCT ON (token_address) token_address, price
-		FROM sonex_token_price_record
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (token_address) token_address, price, created_at
+		FROM %s
 		ORDER BY token_address, created_at DESC;
-	`
+	`, m.table)
 
+	var records []MiniTokenPriceRecord
 	err := m.conn.QueryRowsCtx(ctx, &records, query)
 	if err != nil {
 		return nil, err
@@ -187,19 +189,41 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices() (map[strin
 func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(tokenAddresses []string) (map[string]*big.Int, error) {
 	ctx := context.Background()
 
-	type PriceRecord struct {
-		TokenAddress string `db:"token_address"`
-		Price        string `db:"price"`
-	}
-
-	var records []PriceRecord
-	query := `
-		SELECT DISTINCT ON (token_address) token_address, price
-		FROM sonex_token_price_record
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (token_address) token_address, price, created_at
+		FROM %s
 		WHERE token_address = ANY($1)
 		ORDER BY token_address, created_at DESC;
-	`
+	`, m.table)
 
+	var records []MiniTokenPriceRecord
+	err := m.conn.QueryRowsCtx(ctx, &records, query, tokenAddresses)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*big.Int, len(records))
+	for _, record := range records {
+		value, _ := new(big.Int).SetString(record.Price, 10)
+		result[record.TokenAddress] = value
+	}
+
+	return result, nil
+}
+
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesInterval(tokenAddresses []string, interval string) (map[string]*big.Int, error) {
+	ctx := context.Background()
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (token_address) token_address, price, created_at
+		FROM %s
+		WHERE 
+			token_address = ANY($1)
+			AND created_at <= NOW() - INTERVAL '%s'
+		ORDER BY token_address, created_at DESC;
+	`, m.table, getIntervalDuration(interval))
+
+	var records []MiniTokenPriceRecord
 	err := m.conn.QueryRowsCtx(ctx, &records, query, tokenAddresses)
 	if err != nil {
 		return nil, err

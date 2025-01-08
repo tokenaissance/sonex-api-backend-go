@@ -133,10 +133,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		WhereT(func(item types.TokensResponse_Token) bool { return !item.Hidden }).ToSlice(&dataResult)
 
 	// Update price
-	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
-	if err != nil {
-		return nil, err
-	}
 	volumes, err := eventSonexPoolSwapModel.SummarizeVolumesByChainId(l.ctx, req.ChainId)
 	if err != nil {
 		return nil, err
@@ -144,7 +140,21 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	var tokenAddresses []common.Address
 	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) common.Address { return common.HexToAddress(item.Address) }).ToSlice(&tokenAddresses)
+	var tokenAddressStrs []string
+	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) string { return item.Address }).ToSlice(&tokenAddressStrs)
 	totalSupplies, err := global.BatchGetTotalSupplies(l.ctx, req.ChainId, tokenAddresses)
+	if err != nil {
+		return nil, err
+	}
+	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(tokenAddressStrs)
+	if err != nil {
+		return nil, err
+	}
+	last1DPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(tokenAddressStrs, "1d")
+	if err != nil {
+		return nil, err
+	}
+	last1HPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(tokenAddressStrs, "1h")
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +183,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				}
 			}()
 
-			priceI, ok := prices[item.Address]
+			priceI, ok := currentPriceRecords[item.Address]
 			if !ok {
 				priceI = big.NewInt(0)
 			}
@@ -190,13 +200,13 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			item.FdvUSD = fdv
 
 			for i, pool := range item.Pools {
-				price0I, ok := prices[pool.Token0.Address]
+				price0I, ok := currentPriceRecords[pool.Token0.Address]
 				if !ok {
 					price0I = big.NewInt(0)
 				}
 				price0, _ := global.PriceToUSD(req.ChainId, price0I)
 				item.Pools[i].Token0.PriceUSD = price0
-				price1I, ok := prices[pool.Token1.Address]
+				price1I, ok := currentPriceRecords[pool.Token1.Address]
 				if !ok {
 					price1I = big.NewInt(0)
 				}
@@ -240,15 +250,18 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			}
 			item.Kline = []types.Kline{}
 			currentPrice := big.NewInt(0)
-			var currentTimestamp int64 = 0
+			if currentPriceRecord, ok := currentPriceRecords[item.Address]; ok {
+				currentPrice = currentPriceRecord
+			}
 			last1DPrice := big.NewInt(0)
-			if len(kline1D) > 0 {
-				currentPrice, _ = new(big.Int).SetString(kline1D[len(kline1D)-1].Price, 10)
-				t, _ := time.Parse("2006-01-02 15:04:05", kline1D[len(kline1D)-1].CreatedAt)
-				currentTimestamp = t.Unix()
-				last1DPrice, _ = new(big.Int).SetString(kline1D[len(kline1D)-1].Price, 10)
+			if last1DPriceRecord, ok := last1DPriceRecords[item.Address]; ok {
+				last1DPrice = last1DPriceRecord
 			}
 			last1HPrice := big.NewInt(0)
+			if last1HPriceRecord, ok := last1HPriceRecords[item.Address]; ok {
+				last1HPrice = last1HPriceRecord
+			}
+
 			for _, tick := range kline1D {
 				priceI, _ := new(big.Int).SetString(tick.Price, 10)
 				price, _ := new(big.Float).Quo(new(big.Float).SetInt(priceI), usdAccuracy).Float64()
@@ -257,15 +270,11 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 					Price:     price,
 					TimeStamp: t.Unix(),
 				})
-
-				if last1HPrice.Cmp(big.NewInt(0)) == 0 && (t.Unix()-currentTimestamp)/3600 > 1 {
-					last1HPrice, _ = new(big.Int).SetString(tick.Price, 10)
-				}
 			}
 			comparison1H, percentage1HF := l.comparePrices(currentPrice, last1HPrice)
-			percentage1H, _ := new(big.Float).Quo(percentage1HF, usdAccuracy).Float64()
+			percentage1H, _ := percentage1HF.Float64()
 			comparison1D, percentage1DF := l.comparePrices(currentPrice, last1DPrice)
-			percentage1D, _ := new(big.Float).Quo(percentage1DF, usdAccuracy).Float64()
+			percentage1D, _ := percentage1DF.Float64()
 			item.RiseFall1H = types.Comparison{Comparison: comparison1H, Percentage: percentage1H}
 			item.RiseFall1D = types.Comparison{Comparison: comparison1D, Percentage: percentage1D}
 
