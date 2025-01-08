@@ -12,6 +12,7 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"sort"
 	"sync"
 	"time"
 
@@ -186,6 +187,11 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 			response.Positions = append(response.Positions, convertedPosition)
 		}
 	}
+
+	// sort by position in DESC
+	sort.Slice(response.Positions, func(i, j int) bool {
+		return response.Positions[i].Position > response.Positions[j].Position
+	})
 
 	responseBytes, err := json.Marshal(response)
 	if err == nil {
