@@ -109,8 +109,13 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 			m.event_tick_upper,
 			token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
 			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional,
-			CASE WHEN m.extra_pool IS NULL THEN true ELSE false END AS is_closed
-		FROM %s t
+			CASE WHEN EXISTS (
+				SELECT 1 
+				FROM %[1]s 
+				WHERE event_token_id = t.event_token_id
+				AND event_to = '0x0000000000000000000000000000000000000000'
+			) THEN true ELSE false END AS is_burnt
+		FROM %[1]s t
 		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		JOIN sonex_token token0 ON f.event_token0 = token0.address
@@ -119,9 +124,9 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 	`, m.table)
 
 	// filter burnt positions
-	if filterBurnt {
-		query += fmt.Sprintf(" AND t.event_token_id NOT IN (SELECT event_token_id FROM %s WHERE event_from = $1 AND event_to = '0x0000000000000000000000000000000000000000')", m.table)
-	}
+	// if filterBurnt {
+	// 	query += fmt.Sprintf(" AND t.event_token_id NOT IN (SELECT event_token_id FROM %s WHERE event_from = $1 AND event_to = '0x0000000000000000000000000000000000000000')", m.table)
+	// }
 
 	address = common.HexToAddress(address).Hex()
 	err := m.conn.QueryRowsCtx(ctx, &items, query, address)
@@ -130,7 +135,6 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 	}
 
 	positionMap := make(map[int64]*types.Position)
-	closedPositionMap := make(map[int64]int64)
 
 	for _, item := range items {
 		if item.Pool.Valid {
@@ -176,18 +180,15 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 					Tick:        "0",
 					Volume:      "0",
 				},
-				IsBurnt: false,
+				IsBurnt: item.IsBurnt.Bool,
+			}
+
+			// if filterBurnt and position is burnt, skip
+			if filterBurnt && position.IsBurnt {
+				continue
 			}
 
 			positionMap[item.TokenId.Int64] = position
-		} else {
-			closedPositionMap[item.TokenId.Int64] = item.TokenId.Int64
-		}
-	}
-
-	for tokenId := range closedPositionMap {
-		if position, exists := positionMap[tokenId]; exists {
-			position.IsBurnt = true
 		}
 	}
 
