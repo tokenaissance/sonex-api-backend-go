@@ -29,6 +29,8 @@ func TestGetPrices(t *testing.T) {
 	Initialize(c)
 	token := common.HexToAddress("0x0000000000000000000000000000000000000000")
 	stablecoin := "0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"
+
+	st := time.Now()
 	bestPrice, successed, failed, err := GetPrices(context.Background(), nil, 1946, token.Hex(), false, 2, &stablecoin)
 	if err != nil {
 		t.Error(err)
@@ -58,6 +60,7 @@ func TestGetPrices(t *testing.T) {
 		}
 		fmt.Printf("Path: %s, Error: %s\n", strings.Join(s, " -> "), price.Err.Error())
 	}
+	fmt.Printf("Cost %ds\n", time.Now().Unix()-st.Unix())
 }
 
 func TestQuote(t *testing.T) {
