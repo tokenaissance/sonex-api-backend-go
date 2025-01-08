@@ -255,7 +255,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 		TokenID:     item.TokenId.Int64,
 		TickUpper:   item.EventTickUpper.String,
 		TickLower:   item.EventTickLower.String,
-		Origin:      item.EventFrom.String,
+		Origin:      item.EventTo.String,
 		PositionAge: positionAge,
 		Pool: types.Token_PoolDetail{
 			ID:        item.PoolId.Int64,
