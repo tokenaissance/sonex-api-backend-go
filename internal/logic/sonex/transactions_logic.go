@@ -52,7 +52,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
-	var swapRecords []repository.EventSonexPoolSwapWithExtra
+	var swapRecords []repository.EventSonexMergePoolSwapWithExtra
 	dataResult := []types.TransactionsResponse_Transaction{}
 	var totalResult int64 = -1
 
@@ -60,12 +60,12 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if req.Wallet != "" && common.IsHexAddress(req.Wallet) {
 		walletAddress := common.HexToAddress(req.Wallet)
 		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryByWalletWithExtra(l.ctx, walletAddress.Hex())
+			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByWalletWithExtra(l.ctx, walletAddress.Hex())
 			if err != nil {
 				return nil, err
 			}
 			if swapRecords == nil {
-				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
+				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
 			}
 		} else {
 			linq.From(swapRecords).
@@ -76,12 +76,12 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if req.Pool != "" && common.IsHexAddress(req.Pool) {
 		poolAddress := common.HexToAddress(req.Pool)
 		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryByPoolWithExtra(l.ctx, poolAddress.Hex())
+			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByPoolWithExtra(l.ctx, poolAddress.Hex())
 			if err != nil {
 				return nil, err
 			}
 			if swapRecords == nil {
-				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
+				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
 			}
 		} else {
 			linq.From(swapRecords).
@@ -92,16 +92,16 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if req.Token0 != "" && common.IsHexAddress(req.Token0) {
 		tokens := []string{common.HexToAddress(req.Token0).Hex()}
 		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryByTokensWithExtra(l.ctx, tokens)
+			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByTokensWithExtra(l.ctx, tokens)
 			if err != nil {
 				return nil, err
 			}
 			if swapRecords == nil {
-				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
+				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
 			}
 		} else {
 			linq.From(swapRecords).
-				WhereT(func(item repository.EventSonexPoolSwapWithExtra) bool {
+				WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
 					return linq.From(tokens).Contains(item.ExtraToken0) || linq.From(tokens).Contains(item.ExtraToken1)
 				}).
 				ToSlice(&swapRecords)
@@ -110,16 +110,16 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if req.Token1 != "" && common.IsHexAddress(req.Token1) {
 		tokens := []string{common.HexToAddress(req.Token1).Hex()}
 		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryByTokensWithExtra(l.ctx, tokens)
+			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByTokensWithExtra(l.ctx, tokens)
 			if err != nil {
 				return nil, err
 			}
 			if swapRecords == nil {
-				swapRecords = []repository.EventSonexPoolSwapWithExtra{}
+				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
 			}
 		} else {
 			linq.From(swapRecords).
-				WhereT(func(item repository.EventSonexPoolSwapWithExtra) bool {
+				WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
 					return linq.From(tokens).Contains(item.ExtraToken0) || linq.From(tokens).Contains(item.ExtraToken1)
 				}).
 				ToSlice(&swapRecords)
@@ -142,7 +142,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 
 	// Default
 	if swapRecords == nil {
-		swapRecords, totalResult, err = eventSonexPoolSwapModel.PageQueryOrderByTxAtWithExtra(l.ctx, req.OrderBy, *req.PageSize, *req.PageIndex)
+		swapRecords, totalResult, err = eventSonexPoolSwapModel.PageQueryMergeWithExtra(l.ctx, *req.PageSize, *req.PageIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -151,14 +151,14 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	// Handle data
 	pools := map[string]types.Pool{}
 	for _, record := range swapRecords {
-		poolAddress := common.HexToAddress(record.ExtraPool)
+		poolAddress := common.HexToAddress(record.ExtraPool())
 		pool, ok := pools[poolAddress.Hex()]
 		if !ok {
-			token0, err := global.GetToken(req.ChainId, record.ExtraToken0)
+			token0, err := global.GetToken(req.ChainId, record.ExtraToken0())
 			if err != nil {
 				return nil, err
 			}
-			token1, err := global.GetToken(req.ChainId, record.ExtraToken1)
+			token1, err := global.GetToken(req.ChainId, record.ExtraToken1())
 			if err != nil {
 				return nil, err
 			}
@@ -196,7 +196,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 					Decimals: token1.Decimals,
 					PriceUSD: price1,
 				},
-				Fee: record.ExtraFee,
+				Fee: record.ExtraFee(),
 			}
 			pools[poolAddress.Hex()] = pool
 		}
@@ -205,8 +205,8 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		var to string
 		var fromAmount *big.Int
 		var toAmount *big.Int
-		amount0, _ := new(big.Int).SetString(record.EventAmount0, 10)
-		amount1, _ := new(big.Int).SetString(record.EventAmount1, 10)
+		amount0, _ := new(big.Int).SetString(record.EventAmount0(), 10)
+		amount1, _ := new(big.Int).SetString(record.EventAmount1(), 10)
 		price0 := big.NewFloat(pool.Token0.PriceUSD)
 		price1 := big.NewFloat(pool.Token1.PriceUSD)
 		accuracy0 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
@@ -216,24 +216,24 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 
 		var valueUSD float64
 		if valueUSD0 > valueUSD1 {
-			from = record.ExtraToken0
-			to = record.ExtraToken1
+			from = record.ExtraToken0()
+			to = record.ExtraToken1()
 			fromAmount = new(big.Int).Abs(amount0)
 			toAmount = new(big.Int).Abs(amount1)
 			valueUSD = valueUSD0
 		} else {
-			from = record.ExtraToken1
-			to = record.ExtraToken0
+			from = record.ExtraToken1()
+			to = record.ExtraToken0()
 			fromAmount = new(big.Int).Abs(amount1)
 			toAmount = new(big.Int).Abs(amount0)
 			valueUSD = valueUSD1
 		}
 
 		// ETH
-		// valueI, _ := new(big.Int).SetString(record.Value, 10)
-		// if valueI.Cmp(common.Big0) > 0 {
-		// 	from = (common.Address{}).Hex()
-		// }
+		valueI, _ := new(big.Int).SetString(record.Value, 10)
+		if valueI.Cmp(common.Big0) > 0 {
+			from = (common.Address{}).Hex()
+		}
 
 		dataResult = append(dataResult, types.TransactionsResponse_Transaction{
 			Wallet:     record.From,
