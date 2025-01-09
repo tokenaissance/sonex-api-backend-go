@@ -256,13 +256,10 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 		}
 	}
 
-	factor0 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token0.Decimals)))
-	factor1 := new(big.Float).SetFloat64(math.Pow10(int(position.Pool.Token1.Decimals)))
-
 	poolPrice0 := new(big.Float).Quo(price0, factorUsd)
 	position.Pool.Token0Price = poolPrice0.String()
 
-	// 转换 price 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
+	// 转换 price 为 *big.Float 类型
 	poolPrice1 := new(big.Float).Quo(price1, factorUsd)
 	position.Pool.Token1Price = poolPrice1.String()
 
@@ -270,20 +267,7 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	amount0, amount1 := innnerPosition.Amounts()
 	unclaimedFee0, unclaimedFee1 := innnerPosition.UnclaimedFees()
 
-	// 转换 amount0, amount1 为 *big.Float 类型，并根据 factor0 和 factor1 做调整
-	amount0Float := new(big.Float).SetInt(amount0)
-	amount1Float := new(big.Float).SetInt(amount1)
-
-	amount0Float = amount0Float.Quo(amount0Float, factor0)
-	amount1Float = amount1Float.Quo(amount1Float, factor1)
-
-	// 1. 计算 amount0 和 amount1 的余额
-	// positionValue0 := new(big.Float).Mul(amount0Float, poolPrice0)
-	// positionValue1 := new(big.Float).Mul(amount1Float, poolPrice1)
-
 	// 2. 计算总 position
-	// totalPosition := new(big.Float).Add(positionValue0, positionValue1)
-
 	amount0String := amount0.String()
 	amount1String := amount1.String()
 	token0Value, _ := sonex.NewTokenValue(amount0String, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
@@ -292,20 +276,10 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	position.Position, _ = tokenPair.ValueFloat64()
 
 	// 计算未结费用 unclaimedFee0 和 unclaimedFee1
-	position.UnclaimedFee0, _ = new(big.Float).SetInt(unclaimedFee0).Float64()
-	position.UnclaimedFee1, _ = new(big.Float).SetInt(unclaimedFee1).Float64()
-
-	// 计算 claimable fees
-	unclaimedFee0Float := new(big.Float).SetInt(unclaimedFee0)
-	unclaimedFee1Float := new(big.Float).SetInt(unclaimedFee1)
-	unclaimedFee0Float = unclaimedFee0Float.Quo(unclaimedFee0Float, factor0)
-	unclaimedFee1Float = unclaimedFee1Float.Quo(unclaimedFee1Float, factor1)
-
-	// claimableFee0 := new(big.Float).Mul(unclaimedFee0Float, poolPrice0)
-	// claimableFee1 := new(big.Float).Mul(unclaimedFee1Float, poolPrice1)
+	position.UnclaimedFee0, _ = unclaimedFee0.Float64()
+	position.UnclaimedFee1, _ = unclaimedFee1.Float64()
 
 	// 3. claimableFees
-	// claimableFees := new(big.Float).Add(claimableFee0, claimableFee1)
 	claimableToken0Value, _ := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
 	claimableToken1Value, _ := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
 	claimableTokenPair := sonex.NewTokenPair(claimableToken0Value, claimableToken1Value)
