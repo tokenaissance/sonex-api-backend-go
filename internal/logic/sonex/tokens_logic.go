@@ -256,11 +256,11 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			if currentPriceRecord, ok := currentPriceRecords[item.Address]; ok {
 				currentPrice = currentPriceRecord
 			}
-			last1DPrice := big.NewInt(0)
+			last1DPrice, _ := usdAccuracy.Int(nil)
 			if last1DPriceRecord, ok := last1DPriceRecords[item.Address]; ok {
 				last1DPrice = last1DPriceRecord
 			}
-			last1HPrice := big.NewInt(0)
+			last1HPrice, _ := usdAccuracy.Int(nil)
 			if last1HPriceRecord, ok := last1HPriceRecords[item.Address]; ok {
 				last1HPrice = last1HPriceRecord
 			}
