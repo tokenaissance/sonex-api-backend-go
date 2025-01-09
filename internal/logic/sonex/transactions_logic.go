@@ -223,30 +223,20 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		amount1, _ := new(big.Int).SetString(record.EventAmount1, 10)
 		price0 := big.NewFloat(pool.Token0.PriceUSD)
 		price1 := big.NewFloat(pool.Token1.PriceUSD)
-		var valueUSD float64
+		accuracy0 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
+		accuracy1 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
+		valueUSD0, _ := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), price0), accuracy0).Float64()
+		valueUSD1, _ := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), price1), accuracy1).Float64()
 
-		if amount0.Cmp(amount1) > 0 {
+		var valueUSD float64
+		if valueUSD0 > valueUSD1 {
 			from = record.ExtraToken0
 			to = record.ExtraToken1
-			fromAmount = new(big.Int).Abs(amount0)
-			toAmount = new(big.Int).Abs(amount1)
-			fromAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
-			// toAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
-			// fromValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price0), fromAccuracy)
-			// toValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(toAmount), price1), toAccuracy)
-			// valueUSD, _ = new(big.Float).Add(fromValueUSD, toValueUSD).Float64()
-			valueUSD, _ = new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price0), fromAccuracy).Float64()
+			valueUSD = valueUSD0
 		} else {
 			from = record.ExtraToken1
 			to = record.ExtraToken0
-			fromAmount = new(big.Int).Abs(amount1)
-			toAmount = new(big.Int).Abs(amount0)
-			fromAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
-			// toAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
-			// fromValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price1), fromAccuracy)
-			// toValueUSD := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(toAmount), price0), toAccuracy)
-			// valueUSD, _ = new(big.Float).Add(fromValueUSD, toValueUSD).Float64()
-			valueUSD, _ = new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(fromAmount), price1), fromAccuracy).Float64()
+			valueUSD = valueUSD1
 		}
 
 		dataResult = append(dataResult, types.TransactionsResponse_Transaction{
