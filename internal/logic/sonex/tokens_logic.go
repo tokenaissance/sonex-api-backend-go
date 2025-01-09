@@ -138,11 +138,14 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		return nil, err
 	}
 
-	var tokenAddresses []common.Address
-	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) common.Address { return common.HexToAddress(item.Address) }).ToSlice(&tokenAddresses)
+	var tokenAddressesWithOutETH []common.Address
+	linq.From(dataResult).
+		WhereT(func(item types.TokensResponse_Token) bool { return item.Address != (common.Address{}).Hex() }).
+		SelectT(func(item types.TokensResponse_Token) common.Address { return common.HexToAddress(item.Address) }).
+		ToSlice(&tokenAddressesWithOutETH)
 	var tokenAddressStrs []string
 	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) string { return item.Address }).ToSlice(&tokenAddressStrs)
-	totalSupplies, err := global.BatchGetTotalSupplies(l.ctx, req.ChainId, tokenAddresses)
+	totalSupplies, err := global.BatchGetTotalSupplies(l.ctx, req.ChainId, tokenAddressesWithOutETH)
 	if err != nil {
 		return nil, err
 	}
@@ -291,27 +294,33 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	// Handle results
 	dataResult = []types.TokensResponse_Token{}
-	var ethResult *types.TokensResponse_Token
+	var eth *types.TokensResponse_Token
+	var weth *types.TokensResponse_Token
 	for result := range results {
 		if result.Err != nil {
 			return nil, result.Err
 		}
-		if result.Data.Address == common.HexToAddress(chainConf.WETH).Hex() {
-			ethResult = &result.Data
+		switch result.Data.Address {
+		case (common.Address{}).Hex():
+			eth = &result.Data
+			continue
+		case common.HexToAddress(chainConf.WETH).Hex():
+			weth = &result.Data
 		}
 		dataResult = append(dataResult, result.Data)
 	}
 
 	// ETH
-	if eth, ok := whitelistTokenMap[(common.Address{}).Hex()]; ok && ethResult != nil {
-		ethResult.Address = eth.Address
-		ethResult.Name = eth.Name
-		ethResult.Symbol = eth.Symbol
-		ethResult.Decimals = eth.Decimals
-		ethResult.Logo = eth.Logo.String
-		ethResult.Sort = eth.Sort
-		ethResult.Hidden = eth.Hidden
-		dataResult = append(dataResult, *ethResult)
+	if eth != nil && weth != nil {
+		eth.TotalSupply = weth.TotalSupply
+		eth.FdvUSD = weth.FdvUSD
+		eth.PriceUSD = weth.PriceUSD
+		eth.Pools = weth.Pools
+		eth.VolumeUSD = weth.VolumeUSD
+		eth.Kline = weth.Kline
+		eth.RiseFall1H = weth.RiseFall1H
+		eth.RiseFall1D = weth.RiseFall1D
+		dataResult = append(dataResult, *eth)
 	}
 
 	// Sorts
@@ -431,7 +440,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 		},
 	)
 
-	tokenMap := map[string]types.TokensResponse_Token{}
+	tokenWithPoolsMap := map[string]types.TokensResponse_Token{}
 	tokenPoolsMap := map[string][]types.Pool{}
 	var dataLock sync.Mutex
 	var wg sync.WaitGroup
@@ -447,15 +456,6 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 				}
 			}()
 
-			extra0, ok := whitelistTokenMap[record.EventToken0]
-			if !ok {
-				return
-			}
-			extra1, ok := whitelistTokenMap[record.EventToken1]
-			if !ok {
-				return
-			}
-
 			pool := types.Pool{
 				Address: record.EventPool,
 				Fee:     record.EventFee,
@@ -470,7 +470,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 			}
 
 			dataLock.Lock()
-			token0, ok0 := tokenMap[record.EventToken0]
+			token0, ok0 := tokenWithPoolsMap[record.EventToken0]
 			if !ok0 {
 				token0 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
@@ -481,7 +481,6 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 							Decimals: tokenInfo0.Decimals,
 						},
 					},
-					Logo: extra0.Logo.String,
 				}
 			}
 			_, pOk0 := tokenPoolsMap[record.EventToken0]
@@ -490,7 +489,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 			}
 			pool.Token0 = token0.Token
 
-			token1, ok1 := tokenMap[record.EventToken1]
+			token1, ok1 := tokenWithPoolsMap[record.EventToken1]
 			if !ok1 {
 				token1 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
@@ -501,7 +500,6 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 							Decimals: tokenInfo1.Decimals,
 						},
 					},
-					Logo: extra1.Logo.String,
 				}
 			}
 			_, pOk1 := tokenPoolsMap[record.EventToken1]
@@ -509,8 +507,8 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 				tokenPoolsMap[record.EventToken1] = []types.Pool{}
 			}
 			pool.Token1 = token1.Token
-			tokenMap[record.EventToken0] = token0
-			tokenMap[record.EventToken1] = token1
+			tokenWithPoolsMap[record.EventToken0] = token0
+			tokenWithPoolsMap[record.EventToken1] = token1
 			tokenPoolsMap[record.EventToken0] = append(tokenPoolsMap[record.EventToken0], pool)
 			tokenPoolsMap[record.EventToken1] = append(tokenPoolsMap[record.EventToken1], pool)
 			dataLock.Unlock()
@@ -525,11 +523,25 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 		}
 	}
 
-	for key, value := range tokenMap {
-		if pools, ok := tokenPoolsMap[key]; ok {
-			value.Pools = pools
+	for _, wt := range whitelistTokens {
+		data, tok := tokenWithPoolsMap[wt.Address]
+		pools, pok := tokenPoolsMap[wt.Address]
+		if tok && pok {
+			data.Pools = pools
+		} else {
+			data = types.TokensResponse_Token{
+				TokenWithExtra: types.TokenWithExtra{
+					Token: types.Token{
+						Address:  wt.Address,
+						Name:     wt.Name,
+						Symbol:   wt.Symbol,
+						Decimals: wt.Decimals,
+					},
+					Pools: []types.Pool{},
+				},
+			}
 		}
-		dateResult = append(dateResult, value)
+		dateResult = append(dateResult, data)
 	}
 
 	return dateResult, nil
