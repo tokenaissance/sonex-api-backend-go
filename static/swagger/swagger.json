@@ -613,12 +613,6 @@
             "type": "boolean",
             "format": "boolean",
             "default": "true"
-          },
-          {
-            "name": "wantStablecoin",
-            "in": "query",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
@@ -672,12 +666,6 @@
           },
           {
             "name": "amount",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "stablecoin",
             "in": "query",
             "required": true,
             "type": "string"
@@ -2750,9 +2738,6 @@
           "type": "boolean",
           "format": "boolean",
           "default": "true"
-        },
-        "wantStablecoin": {
-          "type": "string"
         }
       },
       "title": "TokenPriceRequest",
@@ -2845,9 +2830,6 @@
         },
         "amount": {
           "type": "string"
-        },
-        "stablecoin": {
-          "type": "string"
         }
       },
       "title": "TokenQuoteRequest",
@@ -2855,8 +2837,7 @@
         "from",
         "to",
         "type",
-        "amount",
-        "stablecoin"
+        "amount"
       ]
     },
     "TokenQuoteResponse": {
