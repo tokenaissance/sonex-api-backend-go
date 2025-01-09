@@ -313,7 +313,7 @@ func (m *customEventSonexPoolSwapModel) QueryMergeByTokensWithExtra(ctx context.
 			JOIN %s C ON C.event_pool = S.extra_pool 
 			WHERE event_sender = event_recipient) T2 
 		ON T1.tx_hash = T2.tx_hash AND T1.tx_index > T2.tx_index
-		WHERE T1.event_token0_1 = ANY($1) OR T1.event_token1_1 = ANY($2) OR T2.event_token0_0 = ANY($3) OR T2.event_token1_0 = ANY($4)
+		WHERE T1.extra_token0_1 = ANY($1) OR T1.extra_token1_1 = ANY($2) OR T2.extra_token0_0 = ANY($3) OR T2.extra_token1_0 = ANY($4)
 	`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	var resp []EventSonexMergePoolSwapWithExtra
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, tokens, tokens, tokens, tokens)
