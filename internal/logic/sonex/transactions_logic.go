@@ -230,10 +230,10 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		}
 
 		// ETH
-		valueI, _ := new(big.Int).SetString(record.Value, 10)
-		if valueI.Cmp(common.Big0) > 0 {
-			from = (common.Address{}).Hex()
-		}
+		// valueI, _ := new(big.Int).SetString(record.Value, 10)
+		// if valueI.Cmp(common.Big0) > 0 {
+		// 	from = (common.Address{}).Hex()
+		// }
 
 		dataResult = append(dataResult, types.TransactionsResponse_Transaction{
 			Wallet:     record.From,
