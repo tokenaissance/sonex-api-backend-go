@@ -55,7 +55,7 @@ type (
 
 	PoolVolumeUsd struct {
 		Id          int64  `json:"id"`           // id
-		Address     string `json:"address"`      // pool address
+		ExtraPool   string `json:"extra_pool"`   // pool address
 		Value       string `json:"value"`        // 购买代币时,交易里面的ETHvalue
 		Amount0     string `json:"amount0"`      // amount 0
 		Amount1     string `json:"amount1"`      // amount 1
@@ -292,13 +292,13 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Cont
 
 	volumeQuery := fmt.Sprintf(`
 		SELECT
-			S.id AS id,
-			S.extra_pool AS address,
+			S.id ,
+			S.extra_pool AS extra_pool,
 			S.value AS value,
 			S.event_amount0 AS amount0,
-			S.event_amount1 AS amount1
+			S.event_amount1 AS amount1,
 			C.event_token0 AS extra_token0, 
-			C.event_token1 AS extra_token1,
+			C.event_token1 AS extra_token1
 		FROM
 			%s S
 		JOIN %s C ON S.extra_pool = C.event_pool 
@@ -307,11 +307,11 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Cont
 
 	if last24Hours {
 		// Assuming `transaction_time` is a timestamp column in your table
-		volumeQuery += " AND sp.tx_at >= NOW() - INTERVAL '24 HOURS'"
+		volumeQuery += " AND S.tx_at >= NOW() - INTERVAL '24 HOURS'"
 	}
 
 	// Complete the query with grouping
-	volumeQuery += " GROUP BY sp.extra_pool"
+	volumeQuery += " GROUP BY S.extra_pool,S.id,C.event_token0, C.event_token1"
 
 	// Execute the query and scan results into poolVolumes slice
 	var poolVolumesUsd []*PoolVolumeUsd
