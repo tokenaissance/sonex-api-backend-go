@@ -618,7 +618,7 @@ type TransactionsRequest struct {
 
 type TransactionsResponse_Transaction struct {
 	Wallet     string  `json:"wallet"`
-	Pool       Pool    `json:"pool"`
+	Pools      []Pool  `json:"pools"`
 	TxHash     string  `json:"txHash"`
 	TxAt       int64   `json:"txAt"`
 	From       string  `json:"from"`

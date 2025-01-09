@@ -69,7 +69,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			}
 		} else {
 			linq.From(swapRecords).
-				WhereT(func(item repository.EventSonexPoolSwapWithExtra) bool { return item.From == walletAddress.Hex() }).
+				WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool { return item.From == walletAddress.Hex() }).
 				ToSlice(&swapRecords)
 		}
 	}
@@ -85,7 +85,9 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			}
 		} else {
 			linq.From(swapRecords).
-				WhereT(func(item repository.EventSonexPoolSwapWithExtra) bool { return item.ExtraPool == poolAddress.Hex() }).
+				WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
+					return item.ExtraPool_0.String == poolAddress.Hex() || item.ExtraPool_1 == poolAddress.Hex()
+				}).
 				ToSlice(&swapRecords)
 		}
 	}
@@ -127,14 +129,16 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	}
 
 	// Sort
-	if swapRecords != nil && req.OrderBy != "" {
+	if swapRecords != nil {
 		switch req.OrderBy {
 		case "ASC":
-			linq.From(swapRecords).OrderByT(func(item repository.EventSonexPoolSwapWithExtra) int64 {
+			linq.From(swapRecords).OrderByT(func(item repository.EventSonexMergePoolSwapWithExtra) int64 {
 				return item.TxAt.Unix()
 			}).ToSlice(&swapRecords)
 		case "DESC":
-			linq.From(swapRecords).OrderByDescendingT(func(item repository.EventSonexPoolSwapWithExtra) int64 {
+			fallthrough
+		default:
+			linq.From(swapRecords).OrderByDescendingT(func(item repository.EventSonexMergePoolSwapWithExtra) int64 {
 				return item.TxAt.Unix()
 			}).ToSlice(&swapRecords)
 		}
@@ -142,91 +146,124 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 
 	// Default
 	if swapRecords == nil {
-		swapRecords, totalResult, err = eventSonexPoolSwapModel.PageQueryMergeWithExtra(l.ctx, *req.PageSize, *req.PageIndex)
+		swapRecords, totalResult, err = eventSonexPoolSwapModel.PageQueryMergeOrderByTxAtWithExtra(l.ctx, req.OrderBy, *req.PageSize, *req.PageIndex)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Handle data
-	pools := map[string]types.Pool{}
+	poolMap := map[string]types.Pool{}
 	for _, record := range swapRecords {
-		poolAddress := common.HexToAddress(record.ExtraPool())
-		pool, ok := pools[poolAddress.Hex()]
-		if !ok {
-			token0, err := global.GetToken(req.ChainId, record.ExtraToken0())
-			if err != nil {
-				return nil, err
-			}
-			token1, err := global.GetToken(req.ChainId, record.ExtraToken1())
-			if err != nil {
-				return nil, err
+		handlePool := func(poolAddress common.Address) (*types.Pool, *types.Token, *types.Token, *big.Int, *big.Int, float64, error) {
+			pool, ok := poolMap[poolAddress.Hex()]
+			if !ok {
+				token0, err := global.GetToken(req.ChainId, record.ExtraToken0())
+				if err != nil {
+					return nil, nil, nil, nil, nil, 0, err
+				}
+				token1, err := global.GetToken(req.ChainId, record.ExtraToken1())
+				if err != nil {
+					return nil, nil, nil, nil, nil, 0, err
+				}
+
+				prices, err := tokenPriceModel.GetCurrentPrices([]string{token0.Address, token1.Address})
+				if err != nil {
+					return nil, nil, nil, nil, nil, 0, err
+				}
+				price0I := big.NewInt(0)
+				price1I := big.NewInt(0)
+				price, ok := prices[token0.Address]
+				if ok {
+					price0I, _ = new(big.Int).SetString(price.Price, 10)
+				}
+				price0, _ := global.PriceToUSD(req.ChainId, price0I)
+				price, ok = prices[token1.Address]
+				if ok {
+					price1I, _ = new(big.Int).SetString(price.Price, 10)
+				}
+				price1, _ := global.PriceToUSD(req.ChainId, price1I)
+
+				pool = types.Pool{
+					Address: poolAddress.Hex(),
+					Token0: types.Token{
+						Address:  token0.Address,
+						Name:     token0.Name,
+						Symbol:   token0.Symbol,
+						Decimals: token0.Decimals,
+						PriceUSD: price0,
+					},
+					Token1: types.Token{
+						Address:  token1.Address,
+						Name:     token1.Name,
+						Symbol:   token1.Symbol,
+						Decimals: token1.Decimals,
+						PriceUSD: price1,
+					},
+					Fee: record.ExtraFee(),
+				}
 			}
 
-			prices, err := tokenPriceModel.GetCurrentPrices([]string{token0.Address, token1.Address})
-			if err != nil {
-				return nil, err
-			}
-			price0I := big.NewInt(0)
-			price1I := big.NewInt(0)
-			price, ok := prices[token0.Address]
-			if ok {
-				price0I, _ = new(big.Int).SetString(price.Price, 10)
-			}
-			price0, _ := global.PriceToUSD(req.ChainId, price0I)
-			price, ok = prices[token1.Address]
-			if ok {
-				price1I, _ = new(big.Int).SetString(price.Price, 10)
-			}
-			price1, _ := global.PriceToUSD(req.ChainId, price1I)
+			var from types.Token
+			var to types.Token
+			var fromAmount *big.Int
+			var toAmount *big.Int
+			amount0, _ := new(big.Int).SetString(record.EventAmount0(), 10)
+			amount1, _ := new(big.Int).SetString(record.EventAmount1(), 10)
+			price0 := big.NewFloat(pool.Token0.PriceUSD)
+			price1 := big.NewFloat(pool.Token1.PriceUSD)
+			accuracy0 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
+			accuracy1 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
+			valueUSD0, _ := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), price0), accuracy0).Float64()
+			valueUSD1, _ := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), price1), accuracy1).Float64()
 
-			pool = types.Pool{
-				Address: poolAddress.Hex(),
-				Token0: types.Token{
-					Address:  token0.Address,
-					Name:     token0.Name,
-					Symbol:   token0.Symbol,
-					Decimals: token0.Decimals,
-					PriceUSD: price0,
-				},
-				Token1: types.Token{
-					Address:  token1.Address,
-					Name:     token1.Name,
-					Symbol:   token1.Symbol,
-					Decimals: token1.Decimals,
-					PriceUSD: price1,
-				},
-				Fee: record.ExtraFee(),
+			var valueUSD float64
+			if valueUSD0 > valueUSD1 {
+				from = pool.Token0
+				to = pool.Token1
+				fromAmount = new(big.Int).Abs(amount0)
+				toAmount = new(big.Int).Abs(amount1)
+				valueUSD = valueUSD0
+			} else {
+				from = pool.Token1
+				to = pool.Token0
+				fromAmount = new(big.Int).Abs(amount1)
+				toAmount = new(big.Int).Abs(amount0)
+				valueUSD = valueUSD1
 			}
-			pools[poolAddress.Hex()] = pool
+			return &pool, &from, &to, fromAmount, toAmount, valueUSD, nil
 		}
-
+		pools := []types.Pool{}
 		var from string
 		var to string
 		var fromAmount *big.Int
 		var toAmount *big.Int
-		amount0, _ := new(big.Int).SetString(record.EventAmount0(), 10)
-		amount1, _ := new(big.Int).SetString(record.EventAmount1(), 10)
-		price0 := big.NewFloat(pool.Token0.PriceUSD)
-		price1 := big.NewFloat(pool.Token1.PriceUSD)
-		accuracy0 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
-		accuracy1 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
-		valueUSD0, _ := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), price0), accuracy0).Float64()
-		valueUSD1, _ := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), price1), accuracy1).Float64()
-
 		var valueUSD float64
-		if valueUSD0 > valueUSD1 {
-			from = record.ExtraToken0()
-			to = record.ExtraToken1()
-			fromAmount = new(big.Int).Abs(amount0)
-			toAmount = new(big.Int).Abs(amount1)
-			valueUSD = valueUSD0
-		} else {
-			from = record.ExtraToken1()
-			to = record.ExtraToken0()
-			fromAmount = new(big.Int).Abs(amount1)
-			toAmount = new(big.Int).Abs(amount0)
-			valueUSD = valueUSD1
+		if record.ExtraPool_0.Valid {
+			pool, from_, _, fromAmount_, _, valueUSD_, err := handlePool(common.HexToAddress(record.ExtraPool_0.String))
+			if err != nil {
+				return nil, err
+			}
+			from = from_.Address
+			fromAmount = fromAmount_
+			valueUSD = valueUSD_
+			poolMap[record.ExtraPool_0.String] = *pool
+			pools = append(pools, *pool)
+		}
+		{
+			pool, from_, to_, fromAmount_, toAmount_, valueUSD_, err := handlePool(common.HexToAddress(record.ExtraPool_1))
+			if err != nil {
+				return nil, err
+			}
+			if from == "" {
+				from = from_.Address
+				fromAmount = fromAmount_
+				valueUSD = valueUSD_
+			}
+			to = to_.Address
+			toAmount = toAmount_
+			poolMap[record.ExtraPool_1] = *pool
+			pools = append(pools, *pool)
 		}
 
 		// ETH
@@ -237,7 +274,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 
 		dataResult = append(dataResult, types.TransactionsResponse_Transaction{
 			Wallet:     record.From,
-			Pool:       pool,
+			Pools:      pools,
 			TxHash:     record.TxHash,
 			TxAt:       record.TxAt.Unix(),
 			From:       from,
