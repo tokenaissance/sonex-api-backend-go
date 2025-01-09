@@ -192,7 +192,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		go func(pool *types.PoolsResponse_Pool) {
 			defer wg.Done()
 
-			logx.Info("XXXXXXXXXXXXXXXXXXXXXXin pool response  ")
 			nodeCaller, err := node_caller.NewNodeCaller(*chain)
 			if err != nil {
 				return
@@ -529,8 +528,5 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 		_swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, v.EthAmount), v.UsdAmount)
 	}
 
-	// for i, v := range _swapAmoutEthAndUsdMap {
-	// 	logx.Debugf("TAGTAGTAG_swapAmoutEthAndUsdMap:i %v ,v:# %#v", i, v)
-	// }
 	return _swapAmoutEthAndUsdMap, nil
 }
