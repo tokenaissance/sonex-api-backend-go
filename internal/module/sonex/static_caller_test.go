@@ -69,8 +69,8 @@ func TestBatchGetPositions(t *testing.T) {
 	caller, _ := NewStaticCaller(c)
 	positions, err := caller.BatchGetPositions(
 		context.Background(), 1946,
-		common.HexToAddress("0xeC816FCdc262601C0E23902c679FDd87CFb24077"),
-		[]*big.Int{big.NewInt(135)},
+		common.HexToAddress("0x8e4D565832783738A0560688CA1A8A1c131a636B"),
+		[]*big.Int{big.NewInt(8)},
 	)
 	if err != nil {
 		t.Error(err)
