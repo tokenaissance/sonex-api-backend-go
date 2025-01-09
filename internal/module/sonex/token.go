@@ -218,9 +218,20 @@ func (tv *TokenValue) value() *big.Float {
 	return value
 }
 
-// Value 返回 token 的净值字符串
+// Value returns the token's net value as string.
+// Deprecated: Use ValueString instead.
 func (tv *TokenValue) Value() string {
 	return tv.value().String()
+}
+
+// ValueString 返回 token 的净值字符串
+func (tv *TokenValue) ValueString() string {
+	return tv.value().String()
+}
+
+// ValueFloat64 返回 token 的净值 float64
+func (tv *TokenValue) ValueFloat64() (float64, big.Accuracy) {
+	return tv.value().Float64()
 }
 
 // AmountAdd return a new TokenValue = tv + amount, keep the price
