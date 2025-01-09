@@ -3427,8 +3427,11 @@
         "wallet": {
           "type": "string"
         },
-        "pool": {
-          "$ref": "#/definitions/Pool"
+        "pools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Pool"
+          }
         },
         "txHash": {
           "type": "string"
@@ -3457,7 +3460,7 @@
       "title": "TransactionsResponse_Transaction",
       "required": [
         "wallet",
-        "pool",
+        "pools",
         "txHash",
         "txAt",
         "from",

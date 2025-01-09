@@ -11,6 +11,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -31,6 +32,7 @@ type (
 		QueryMergeByTokensWithExtra(ctx context.Context, tokens []string) ([]EventSonexMergePoolSwapWithExtra, error)
 		PageQueryWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
 		PageQueryMergeWithExtra(ctx context.Context, pageSize int64, pageIndex int64) ([]EventSonexMergePoolSwapWithExtra, int64, error)
+		PageQueryMergeOrderByTxAtWithExtra(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		PageQueryByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexPoolSwapWithExtra, int64, error)
 		PageQueryMergeByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
@@ -115,14 +117,6 @@ func (s *EventSonexMergePoolSwapWithExtra) EventAmount1() string {
 		return s.EventAmount1_0.String
 	} else {
 		return s.EventAmount1_1
-	}
-}
-
-func (s *EventSonexMergePoolSwapWithExtra) ExtraPool() string {
-	if s.ExtraPool_0.Valid {
-		return s.ExtraPool_0.String
-	} else {
-		return s.ExtraPool_1
 	}
 }
 
@@ -381,6 +375,55 @@ func (m *customEventSonexPoolSwapModel) PageQueryMergeWithExtra(ctx context.Cont
 		ON T1.tx_hash = T2.tx_hash AND T1.tx_index > T2.tx_index
 		ORDER BY T1.tx_at DESC OFFSET $1 LIMIT $2
 	`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	var resp []EventSonexMergePoolSwapWithExtra
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	var total int64 = 0
+	query = fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM %s
+		WHERE event_sender <> event_recipient
+	`, m.table)
+	err = m.conn.QueryRowCtx(ctx, &total, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	return resp, total, err
+}
+
+func (m *customEventSonexPoolSwapModel) PageQueryMergeOrderByTxAtWithExtra(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]EventSonexMergePoolSwapWithExtra, int64, error) {
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	if !linq.From([]string{"ASC", "DESC"}).Contains(orderBy) {
+		orderBy = "DESC"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			T1.id, T1.created_at, T1.updated_at, T1.chain_id, T1.block_number, T1.tx_index, T1.tx_hash, T1.tx_at, T1.from_, T1.to_, T1.value, T1.event_sender, T1.event_recipient, 
+			T2.event_amount0_0, T2.event_amount1_0, T2.event_sqrt_price_x96_0, T2.event_tick_0, T2.extra_pool_0, T2.extra_token0_0, T2.extra_token1_0, T2.extra_fee_0, T2.extra_tick_spacing_0,
+			T1.event_amount0_1, T1.event_amount1_1, T1.event_sqrt_price_x96_1, T1.event_tick_1, T1.extra_pool_1, T1.extra_token0_1, T1.extra_token1_1, T1.extra_fee_1, T1.extra_tick_spacing_1
+		FROM
+			(SELECT 
+				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value,
+				S.event_sender, S.event_recipient, 
+				S.event_amount0 AS event_amount0_1, S.event_amount1 AS event_amount1_1, S.event_sqrt_price_x96 AS event_sqrt_price_x96_1, S.event_tick AS event_tick_1, S.extra_pool AS extra_pool_1,
+				C.event_token0 AS extra_token0_1, C.event_token1 AS extra_token1_1, C.event_fee AS extra_fee_1, C.event_tick_spacing AS extra_tick_spacing_1
+			FROM %s S
+			JOIN %s C ON C.event_pool = S.extra_pool
+			WHERE event_sender <> event_recipient) T1
+		LEFT JOIN 
+			(SELECT 
+				S.tx_index, S.tx_hash, 
+				S.event_amount0 AS event_amount0_0, S.event_amount1 AS event_amount1_0, S.event_sqrt_price_x96 AS event_sqrt_price_x96_0, S.event_tick AS event_tick_0, S.extra_pool AS extra_pool_0,
+				C.event_token0 AS extra_token0_0, C.event_token1 AS extra_token1_0, C.event_fee AS extra_fee_0, C.event_tick_spacing AS extra_tick_spacing_0
+			FROM %s S
+			JOIN %s C ON C.event_pool = S.extra_pool 
+			WHERE event_sender = event_recipient) T2 
+		ON T1.tx_hash = T2.tx_hash AND T1.tx_index > T2.tx_index
+		ORDER BY T1.tx_at %s OFFSET $1 LIMIT $2
+	`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), m.table, eventSonexFactoryPoolCreatedModel.tableName(), orderBy)
 	var resp []EventSonexMergePoolSwapWithExtra
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
 	if err != nil {
