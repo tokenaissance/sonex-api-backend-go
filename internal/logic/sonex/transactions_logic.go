@@ -239,7 +239,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			from = record.ExtraToken1
 			to = record.ExtraToken0
 			fromAmount = new(big.Int).Abs(amount1)
-			toAmount = new(big.Int).Abs(amount1)
+			toAmount = new(big.Int).Abs(amount0)
 			valueUSD = valueUSD1
 		}
 
