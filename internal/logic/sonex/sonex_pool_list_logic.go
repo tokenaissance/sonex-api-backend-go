@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 	"math/rand"
 	"sonex_api_backend_go/internal/config"
@@ -116,10 +117,10 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+	tokenModel := repository.NewTokenModel(conn)
 
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
-
 	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(ctx, &module_sonex.GetPoolListParams{
 		ChainId:         req.ChainId,
 		PositionManager: sonex.PositionManager,
@@ -179,7 +180,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	poolChan := make(chan *types.PoolsResponse_Pool, len(data))
 	pools := make([]*types.PoolsResponse_Pool, 0, len(data))
 
-	mockYields := []float64{0.0347, 0.0412, 0.0289, 0.0378, 0.0456, 0.0234, 0.0467, 0.0312, 0.0398, 0.0289, 0.0312, 0.0398, 0.0289}
+	mockYields := []float64{0.00000347, 0.00000412, 0.00000289, 0.00000378, 0.00000456, 0.00000234, 0.00000467, 0.00000312, 0.00000398, 0.00000289, 0.00000312, 0.00000398, 0.00000289}
 
 	for i := range data {
 		poolFromDB := data[i]
@@ -247,45 +248,105 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 				return
 			}
 
-			price0 := big.NewInt(0)
-			price1 := big.NewInt(0)
-
-			token0Address := common.HexToAddress(pool.Token0.Address)
-			token1Address := common.HexToAddress(pool.Token1.Address)
-			currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses([]string{token0Address.Hex(), token1Address.Hex()})
+			prices, err := tokenPriceModel.GetCurrentPrices([]string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
 			if err != nil {
+				logx.Errorf("GetCurrentPrices:%v ", err)
 				return
 			}
-			price0_, ok := currentPriceRecords[token0Address.Hex()]
-			if ok {
-				price0 = price0_
+
+			price0 := big.NewInt(0)
+			price0Decimal := int64(0)
+			price1 := big.NewInt(0)
+			// price1Decimal := int64(0)
+
+			// bestPrice0, _, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2)
+			// if err == nil && bestPrice0 != nil {
+			// 	price0 = bestPrice0.Value
+			// }
+
+			for _, v := range prices {
+				if strings.EqualFold(v.TokenAddress, common.HexToAddress(pool.Token0.Address).Hex()) {
+					price0, _ = new(big.Int).SetString(v.Price, 10)
+					price0Decimal = int64(v.UsdDecimals)
+				}
+
+				if strings.EqualFold(v.TokenAddress, common.HexToAddress(pool.Token1.Address).Hex()) {
+					price1, _ = new(big.Int).SetString(v.Price, 10)
+					// price1Decimal = int64(v.UsdDecimals)
+				}
+
 			}
-			price1_, ok := currentPriceRecords[token0Address.Hex()]
-			if ok {
-				price1 = price1_
+
+			logx.Infof("XXXXXXXXXXXXXtoken0 %v balance0 :%v price0 :%v token1:%v balance1:%v   price1:%v  ", pool.Token0.Address, balance0, price0, pool.Token1.Address, balance1, price1)
+
+			_tokenInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chain.ChainId, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
+			if err != nil {
+				logx.Errorf("QueryByChainIdAddress:%v ", err)
+				return
+			}
+
+			_decimals0 := int64(0)
+
+			_decimals1 := int64(0)
+
+			for _, v := range _tokenInfo {
+				if strings.EqualFold(v.Address, common.HexToAddress(pool.Token0.Address).Hex()) {
+					_decimals0 = v.Decimals
+
+				}
+
+				if strings.EqualFold(v.Address, common.HexToAddress(pool.Token1.Address).Hex()) {
+					_decimals1 = v.Decimals
+				}
 			}
 			pool.Price0 = price0.String()
-			pool.Price1 = price1.String()
 
-			daiDecimals := 18
-			token0, _ := module_sonex.NewTokenValue(balance0.String(), pool.Token0.Decimals)
-			token1, _ := module_sonex.NewTokenValue(balance1.String(), pool.Token1.Decimals)
-			token0.SetTokenPrice(price0.String(), daiDecimals)
-			token1.SetTokenPrice(price1.String(), daiDecimals)
-			tokenPair := module_sonex.NewTokenPair(token0, token1)
+			// bestPrice1, _, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2)
+			// if err == nil && bestPrice1 != nil {
+			// 	price1 = bestPrice1.Value
+			// }
+			pool.Price1 = price1.String()
+			// daiDecimals := 18
+			// token0, _ := module_sonex.NewTokenValue(balance0.String(), pool.Token0.Decimals)
+			// token1, _ := module_sonex.NewTokenValue(balance1.String(), pool.Token1.Decimals)
+			// token0.SetTokenPrice(price0.String(), pool.Token0.Decimals)
+			// token1.SetTokenPrice(price1.String(), pool.Token1.Decimals)
+			// tokenPair := module_sonex.NewTokenPair(token0, token1)
 
 			mu.Lock()
-			pool.Token0Balance = token0.Amount()
-			pool.Token1Balance = token1.Amount()
-			pool.Liquidity = tokenPair.Value()
-			pool.TvlUSD = tokenPair.Value()
+			pool.Token0Balance = balance0.String()
+			pool.Token1Balance = balance1.String()
+
+			if balance0.Cmp(big.NewInt(0)) < 0 {
+				balance0 = big.NewInt(1)
+			}
+
+			if balance1.Cmp(big.NewInt(0)) < 0 {
+				balance1 = big.NewInt(1)
+			}
+
+			// for tvl calucate
+			balance0Float, _ := new(big.Float).SetString(balance0.String())
+			_balance0divdeimals0 := new(big.Float).Quo(balance0Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals0))))
+
+			// balance1Float, _ := new(big.Float).SetString(balance1.String())
+			// _balance1divdeimals1 := new(big.Float).Quo(balance1Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals1))))
+
+			_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(price0Decimal))))
+			// _price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(price1Decimal))))
+
+			//
+			// 其中一个代币的价格*余额*2
+			_tvlUSD := new(big.Float).Mul(new(big.Float).Mul(_balance0divdeimals0, _price0divUsdDecimals), big.NewFloat(2))
+			pool.Liquidity = _tvlUSD.String()
+			pool.TvlUSD = _tvlUSD.String()
 			pool.Token0Price = &types.Token_TokenPrice{
-				Price:    token0.Price(),
-				Decimals: token0.PriceDecimals(),
+				Price:    price0.String(),
+				Decimals: int(_decimals0),
 			}
 			pool.Token1Price = &types.Token_TokenPrice{
-				Price:    token1.Price(),
-				Decimals: token1.PriceDecimals(),
+				Price:    price1.String(),
+				Decimals: int(_decimals1),
 			}
 
 			pool.Stablecoin = stablecoinToken.Address
@@ -513,10 +574,11 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 		}
 	}
 
+	// gettoken price
 	if strings.EqualFold(_wethPrice, "") {
 		// weth 默认值为 $3400
-		// 3400*10**18 = 3400000000000000000000
-		_wethPrice = "3400000000000000000000"
+		// 3400*10**6 = 3313849586
+		_wethPrice = "3313849586"
 	}
 
 	if strings.EqualFold(_usdPrice, "") {

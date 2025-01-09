@@ -52,6 +52,7 @@ type TokenPriceRecord struct {
 	TokenAddress string `db:"token_address"`
 	Price        string `db:"price"`
 	CreatedAt    string `db:"created_at"`
+	UsdDecimals  int    `db:"usd_decimals"`
 }
 
 type MiniTokenPriceRecord struct {
