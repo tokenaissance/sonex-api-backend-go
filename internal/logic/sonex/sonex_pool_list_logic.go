@@ -118,6 +118,8 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+
 	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(ctx, &module_sonex.GetPoolListParams{
 		ChainId:         req.ChainId,
 		PositionManager: sonex.PositionManager,
@@ -248,17 +250,23 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			price0 := big.NewInt(0)
 			price1 := big.NewInt(0)
 
-			bestPrice0, _, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2)
-			if err == nil && bestPrice0 != nil {
-				price0 = bestPrice0.Value
+			token0Address := common.HexToAddress(pool.Token0.Address)
+			token1Address := common.HexToAddress(pool.Token1.Address)
+			currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses([]string{token0Address.Hex(), token1Address.Hex()})
+			if err != nil {
+				return
+			}
+			price0_, ok := currentPriceRecords[token0Address.Hex()]
+			if ok {
+				price0 = price0_
+			}
+			price1_, ok := currentPriceRecords[token0Address.Hex()]
+			if ok {
+				price1 = price1_
 			}
 			pool.Price0 = price0.String()
-
-			bestPrice1, _, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2)
-			if err == nil && bestPrice1 != nil {
-				price1 = bestPrice1.Value
-			}
 			pool.Price1 = price1.String()
+
 			daiDecimals := 18
 			token0, _ := module_sonex.NewTokenValue(balance0.String(), pool.Token0.Decimals)
 			token1, _ := module_sonex.NewTokenValue(balance1.String(), pool.Token1.Decimals)
