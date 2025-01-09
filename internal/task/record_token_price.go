@@ -87,7 +87,7 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				logx.Errorf("Get %s[%s] best price failed,Success count: %d, Failed list: %v", item.Address, item.Symbol, len(successed), failedList)
 				return
 			}
-			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"), token.Decimals)
+			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"), usdToken.Decimals)
 			if err != nil {
 				logx.Errorf("Insert %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
