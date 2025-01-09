@@ -104,10 +104,13 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		return nil, err
 	}
 
-	// if no transfer event or position NFT is burnt, return nil
+	// if no transfer event and position NFT is burnt, return nil
 	position, ok := itemM[req.TokenId]
-
-	if !ok || position.IsBurnt {
+	// if no transfer event, construct empty position
+	if !ok {
+		position = &types.Position{TokenID: req.TokenId, Pool: types.Token_PoolDetail{}}
+		response.Position = position
+	} else if position.IsBurnt {
 		response.Position = &types.Position{IsBurnt: true}
 		responseBytes, err := json.Marshal(response)
 		if err == nil {
@@ -136,6 +139,30 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		return nil, err
 	}
 	innerPosition := positions[0]
+
+	token0, err := global.GetToken(req.ChainId, innerPosition.Token0.Hex())
+	if err != nil {
+		logx.Errorf("[SonexPosition] GetToken error: %s", err.Error())
+		return nil, err
+	}
+	token1, err := global.GetToken(req.ChainId, innerPosition.Token1.Hex())
+	if err != nil {
+		logx.Errorf("[SonexPosition] GetToken error: %s", err.Error())
+		return nil, err
+	}
+
+	position.Pool.Token0 = types.Token_TokenInfo{
+		Address:  token0.Address,
+		Decimals: int(token0.Decimals),
+		Symbol:   token0.Symbol,
+		Name:     token0.Name,
+	}
+	position.Pool.Token1 = types.Token_TokenInfo{
+		Address:  token1.Address,
+		Decimals: int(token1.Decimals),
+		Symbol:   token1.Symbol,
+		Name:     token1.Name,
+	}
 
 	// Collect results
 	var collectedPairs = make(map[int64]*sonex.TokenPair)
