@@ -218,9 +218,20 @@ func (tv *TokenValue) value() *big.Float {
 	return value
 }
 
-// Value 返回 token 的净值字符串
+// Value returns the token's net value as string.
+// Deprecated: Use ValueString instead.
 func (tv *TokenValue) Value() string {
 	return tv.value().String()
+}
+
+// ValueString 返回 token 的净值字符串
+func (tv *TokenValue) ValueString() string {
+	return tv.value().String()
+}
+
+// ValueFloat64 返回 token 的净值 float64
+func (tv *TokenValue) ValueFloat64() (float64, big.Accuracy) {
+	return tv.value().Float64()
 }
 
 // AmountAdd return a new TokenValue = tv + amount, keep the price
@@ -280,9 +291,20 @@ func (tp *TokenPair) value() *big.Float {
 	return token0Value.Add(token0Value, token1Value)
 }
 
-// Value 返回 token 的净值字符串
+// Value returns the token pair's net value as string.
+// Deprecated: Use ValueString instead.
 func (tp *TokenPair) Value() string {
 	return tp.value().String()
+}
+
+// ValueString 返回 token 的净值字符串
+func (tp TokenPair) ValueString() string {
+	return tp.value().String()
+}
+
+// ValueFloat64 返回 token 的净值 float64
+func (tp *TokenPair) ValueFloat64() (float64, big.Accuracy) {
+	return tp.value().Float64()
 }
 
 // ValueAdd 返回两个 token pair 的净值之和
