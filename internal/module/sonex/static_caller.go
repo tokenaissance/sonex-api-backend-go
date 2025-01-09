@@ -291,6 +291,16 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 			AllowFailure: true,
 			CallData:     positionsData,
 		})
+
+		ownerOfData, err := positionManagerABI.Pack("ownerOf", tokenId)
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       positionManager,
+			AllowFailure: true,
+			CallData:     ownerOfData,
+		})
 	}
 	data, err = multicallABI.Pack("aggregate3", callDatas)
 	if err != nil {
@@ -312,8 +322,9 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 	}
 
 	positions := []*Position{}
+	fieldNumber := 2
 	for i, tokenId := range tokenIds {
-		multicallResult := multicallResults[i+1]
+		multicallResult := multicallResults[i*fieldNumber+1]
 		if !multicallResult.Success {
 			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
 			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", errMsg, tokenId.String()))
@@ -324,7 +335,19 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 			return nil, err
 		}
 
+		multicallResult = multicallResults[i*fieldNumber+2]
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", errMsg, tokenId.String()))
+		}
+		var owner common.Address
+		err = positionManagerABI.UnpackIntoInterface(&owner, "ownerOf", multicallResult.ReturnData)
+		if err != nil {
+			return nil, err
+		}
+
 		position.Factory = factory
+		position.Owner = owner
 		position.TokenId = tokenId
 		positions = append(positions, &position)
 	}
