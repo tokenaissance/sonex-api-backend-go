@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -38,7 +39,7 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 		return err
 	}
 
-	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address,price, created_at) values (?,?,?,?)")
+	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address,price, created_at, usd_decimals) values (?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -58,6 +59,11 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				}
 			}()
 
+			usdToken, err := global.GetToken(chainConf.ChainId, common.HexToAddress(chainConf.USD).Hex())
+			if err != nil || usdToken == nil {
+				logx.Errorf("Get USD token[%s] failed: %s", chainConf.USD, err)
+				return
+			}
 			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
 			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
 			var bestPrice *cache.Price
@@ -81,7 +87,7 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				logx.Errorf("Get %s[%s] best price failed,Success count: %d, Failed list: %v", item.Address, item.Symbol, len(successed), failedList)
 				return
 			}
-			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"))
+			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"), token.Decimals)
 			if err != nil {
 				logx.Errorf("Insert %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
