@@ -525,7 +525,7 @@ func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, a
 	} else {
 		prices, err = cacher.QuoteExactInput(ctx, pools, address, common.HexToAddress(usdToken.Address), amountIn, maxLength, maxNumber)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("QuoteExactInput error: %s", err)
 		}
 
 		// Add cache
