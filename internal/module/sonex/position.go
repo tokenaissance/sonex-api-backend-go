@@ -13,6 +13,7 @@ type Position struct {
 	Pool                     *Pool
 	LowerTick                *Tick
 	UpperTick                *Tick
+	Owner                    common.Address `json:"owner"`
 	Nonce                    *big.Int       `json:"nonce"`
 	Operator                 common.Address `json:"operator"`
 	Token0                   common.Address `json:"token0"`
