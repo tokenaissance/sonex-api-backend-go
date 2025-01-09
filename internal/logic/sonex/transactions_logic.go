@@ -232,10 +232,14 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		if valueUSD0 > valueUSD1 {
 			from = record.ExtraToken0
 			to = record.ExtraToken1
+			fromAmount = new(big.Int).Abs(amount0)
+			toAmount = new(big.Int).Abs(amount1)
 			valueUSD = valueUSD0
 		} else {
 			from = record.ExtraToken1
 			to = record.ExtraToken0
+			fromAmount = new(big.Int).Abs(amount1)
+			toAmount = new(big.Int).Abs(amount1)
 			valueUSD = valueUSD1
 		}
 
