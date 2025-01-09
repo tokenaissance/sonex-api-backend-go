@@ -36,8 +36,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	if req.ChainId == 0 ||
 		req.From == "" || !common.IsHexAddress(req.From) ||
 		req.To == "" || !common.IsHexAddress(req.To) ||
-		req.Amount == "" ||
-		req.Stablecoin == "" || !common.IsHexAddress(req.Stablecoin) {
+		req.Amount == "" {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
 	amount, ok := new(big.Int).SetString(req.Amount, 10)
@@ -47,9 +46,32 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 
 	fromAddress := common.HexToAddress(req.From)
 	toAddress := common.HexToAddress(req.To)
-	stablecoinAddress := common.HexToAddress(req.Stablecoin)
-	var maxLength int64 = 2
+	stablecoinAddress := common.HexToAddress(l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
 
+	if amount.Cmp(big.NewInt(0)) <= 0 {
+		return &types.TokenQuoteResponse{
+			SwapRouter: l.svcCtx.Config.GetSonexConfig(req.ChainId).SwapRouter,
+			BestRouter: &types.TokenQuoteResponse_Router{
+				TokenIn:                     common.HexToAddress(req.From).Hex(),
+				TokenOut:                    common.HexToAddress(req.To).Hex(),
+				AmountIn:                    "0",
+				AmountOut:                   "0",
+				Stablecoin:                  stablecoinAddress.Hex(),
+				PriceUSDIn:                  "0",
+				PriceUSDOut:                 "0",
+				Router:                      []types.TokenQuoteResponse_Router_Pool{},
+				Path:                        "0x",
+				SqrtPriceX96AfterList:       []string{},
+				InitializedTicksCrossedList: []int64{},
+				GasEstimate:                 "0",
+				PriceImpact:                 "0%",
+				FeeRate:                     "0%",
+			},
+			Routers: []types.TokenQuoteResponse_Router{},
+		}, nil
+	}
+
+	var maxLength int64 = 2
 	fromPriceUSD := big.NewInt(0)
 	toPriceUSD := big.NewInt(0)
 	var prices []cache.Price
@@ -89,26 +111,23 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				ch <- fmt.Errorf("%s(panic)", err)
 			}
 		}()
-		if amount.Cmp(big.NewInt(0)) > 0 {
-			switch req.Type {
-			case "INPUT":
-				prices, _, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
-				if err != nil {
-					ch <- err
-					return
-				}
-			case "OUTPUT":
-				prices, _, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
-				if err != nil {
-					ch <- err
-					return
-				}
-			default:
-				err = fmt.Errorf("%s", "Invalid type")
+
+		switch req.Type {
+		case "INPUT":
+			prices, _, err = global.QuoteExactInput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+			if err != nil {
+				ch <- err
 				return
 			}
-		} else {
-			prices = []cache.Price{}
+		case "OUTPUT":
+			prices, _, err = global.QuoteExactOutput(l.ctx, nil, req.ChainId, fromAddress.Hex(), toAddress.Hex(), amount, maxLength)
+			if err != nil {
+				ch <- err
+				return
+			}
+		default:
+			err = fmt.Errorf("%s", "Invalid type")
+			return
 		}
 	}(results)
 

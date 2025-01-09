@@ -448,9 +448,8 @@ type Token struct {
 
 type TokenPriceRequest struct {
 	ChainRequest
-	Token          string  `form:"token"`
-	IsCache        bool    `form:"isCache,optional,default=true"`
-	WantStablecoin *string `form:"wantStablecoin,optional"`
+	Token   string `form:"token"`
+	IsCache bool   `form:"isCache,optional,default=true"`
 }
 
 type TokenPriceResponse struct {
@@ -473,11 +472,10 @@ type TokenPriceResponse_Price_Pool struct {
 
 type TokenQuoteRequest struct {
 	ChainRequest
-	From       string `form:"from"`
-	To         string `form:"to"`
-	Type       string `form:"type,options=INPUT|OUTPUT"`
-	Amount     string `form:"amount"`
-	Stablecoin string `form:"stablecoin"`
+	From   string `form:"from"`
+	To     string `form:"to"`
+	Type   string `form:"type,options=INPUT|OUTPUT"`
+	Amount string `form:"amount"`
 }
 
 type TokenQuoteResponse struct {
