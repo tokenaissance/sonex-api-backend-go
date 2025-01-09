@@ -639,10 +639,11 @@ CREATE TABLE "public"."sonex_token" (
 DROP TABLE IF EXISTS "public"."sonex_token_price_record";
 CREATE TABLE "public"."sonex_token_price_record" (
   "id" int8 NOT NULL DEFAULT nextval('sonex_token_price_record_id'::regclass),
-  "token_symbol" varchar(255) COLLATE "pg_catalog"."default",
-  "token_address" varchar(255) COLLATE "pg_catalog"."default",
-  "price" varchar COLLATE "pg_catalog"."default",
-  "created_at" timestamp(6)
+  "token_symbol" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "token_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "price" varchar COLLATE "pg_catalog"."default" NOT NULL,
+  "created_at" timestamp(6) NOT NULL,
+  "usd_decimals" int8 NOT NULL
 )
 ;
 
