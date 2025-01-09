@@ -221,7 +221,6 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesIn
 		WHERE 
 			token_address = ANY($1)
 			AND created_at <= NOW() - INTERVAL '%s'
-		ORDER BY token_address, created_at DESC;
 	`, m.table, getIntervalDuration(interval))
 
 	var records []MiniTokenPriceRecord
@@ -286,6 +285,9 @@ func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(ctx context.Context,
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
+	if err != nil {
+		return nil, err
+	}
 	tp, err := sonex.NewTokenPrice(price, 18)
 	if err != nil {
 		return nil, err
@@ -304,6 +306,9 @@ func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(ctx context.Context
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
+	if err != nil {
+		return nil, err
+	}
 	tp, err := sonex.NewTokenPrice(price, 18)
 	if err != nil {
 		return nil, err
