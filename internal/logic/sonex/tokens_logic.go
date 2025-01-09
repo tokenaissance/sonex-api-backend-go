@@ -238,6 +238,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			if !ok {
 				volumeI = big.NewInt(0)
 			}
+			volumeI = new(big.Int).Div(new(big.Int).Mul(volumeI, priceI), accuracy)
 			volume, _ := global.PriceToUSD(req.ChainId, volumeI)
 			item.VolumeUSD = volume
 
