@@ -231,7 +231,11 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 	`, m.table)
 
 	err := m.conn.QueryRowCtx(ctx, &item, query, eventTokenId, "0x0000000000000000000000000000000000000000")
-	if err != nil {
+	switch err {
+	case sqlx.ErrNotFound:
+		return map[int64]*types.Position{}, nil
+	case nil:
+	default:
 		return nil, err
 	}
 	result := make(map[int64]*types.Position)
