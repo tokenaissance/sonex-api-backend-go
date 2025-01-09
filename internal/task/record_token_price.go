@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -68,7 +69,10 @@ func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
 			var bestPrice *cache.Price
 			if len(successed) > 0 {
-				bestPrice = &successed[0]
+				price := linq.From(successed).OrderByT(func(item cache.Price) float64 {
+					return item.PriceImpact
+				}).First().(cache.Price)
+				bestPrice = &price
 			}
 			// bestPrice, successed, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
 			if err != nil {
