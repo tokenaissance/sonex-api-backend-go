@@ -65,7 +65,6 @@ func (position *Position) Amounts() (*big.Int, *big.Int) {
 	sqrtPriceA := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(position.TickLower)))
 	sqrtPriceB := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(position.TickUpper)))
 	currentTick := position.Pool.Slot0.Tick
-	// currentTick := GetTickAtSqrtPrice(position.Pool.Slot0.SqrtPriceX96)
 	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(position.Pool.Slot0.SqrtPriceX96), Q96)
 
 	amount0 := big.NewInt(0)
@@ -85,15 +84,33 @@ func (position *Position) Amounts() (*big.Int, *big.Int) {
 
 func (position *Position) UnclaimedFees() (*big.Int, *big.Int) {
 	Q128 := new(big.Int).Lsh(big.NewInt(1), 128)
+	currentTick := position.Pool.Slot0.Tick
+	var tickLowerFeeGrowthBelow0 *big.Int
+	var tickLowerFeeGrowthBelow1 *big.Int
+	var tickUpperFeeGrowthAbove0 *big.Int
+	var tickUpperFeeGrowthAbove1 *big.Int
 
-	feeGrowthDelta0 := new(big.Int).Sub(position.Pool.FeeGrowthGlobal0X128, position.FeeGrowthInside0LastX128)
-	feeGrowthDelta1 := new(big.Int).Sub(position.Pool.FeeGrowthGlobal1X128, position.FeeGrowthInside1LastX128)
+	if currentTick.Cmp(position.TickUpper) >= 0 {
+		tickUpperFeeGrowthAbove0 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal0X128, position.UpperTick.FeeGrowthOutside0X128)
+		tickUpperFeeGrowthAbove1 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal1X128, position.UpperTick.FeeGrowthOutside0X128)
+	} else {
+		tickUpperFeeGrowthAbove0 = position.UpperTick.FeeGrowthOutside0X128
+		tickUpperFeeGrowthAbove1 = position.UpperTick.FeeGrowthOutside0X128
+	}
 
-	fee0 := new(big.Int).Mul(feeGrowthDelta0, position.Liquidity)
-	fee1 := new(big.Int).Mul(feeGrowthDelta1, position.Liquidity)
+	if currentTick.Cmp(position.TickLower) >= 0 {
+		tickLowerFeeGrowthBelow0 = position.LowerTick.FeeGrowthOutside0X128
+		tickLowerFeeGrowthBelow1 = position.LowerTick.FeeGrowthOutside1X128
+	} else {
+		tickLowerFeeGrowthBelow0 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal0X128, position.LowerTick.FeeGrowthOutside0X128)
+		tickLowerFeeGrowthBelow1 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal1X128, position.LowerTick.FeeGrowthOutside1X128)
+	}
 
-	fee0 = new(big.Int).Div(fee0, Q128)
-	fee1 = new(big.Int).Div(fee1, Q128)
+	frT10 := new(big.Int).Sub(new(big.Int).Sub(position.Pool.FeeGrowthGlobal0X128, tickLowerFeeGrowthBelow0), tickUpperFeeGrowthAbove0)
+	frT11 := new(big.Int).Sub(new(big.Int).Sub(position.Pool.FeeGrowthGlobal1X128, tickLowerFeeGrowthBelow1), tickUpperFeeGrowthAbove1)
+
+	fee0 := new(big.Int).Div(new(big.Int).Mul(new(big.Int).Sub(frT10, position.FeeGrowthInside0LastX128), position.Liquidity), Q128)
+	fee1 := new(big.Int).Div(new(big.Int).Mul(new(big.Int).Sub(frT11, position.FeeGrowthInside1LastX128), position.Liquidity), Q128)
 
 	return fee0, fee1
 }
