@@ -595,7 +595,7 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 
 	// assign value
 	for i, v := range _swapAmoutEthAndUsdMap {
-		_swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, v.EthAmount), v.UsdAmount)
+		_swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, new(big.Float).Quo(v.EthAmount, new(big.Float).SetFloat64(math.Pow10(18)))), v.UsdAmount)
 	}
 
 	return _swapAmoutEthAndUsdMap, nil
