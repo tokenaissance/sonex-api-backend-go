@@ -16,19 +16,19 @@ type PageResponse {
 }
 
 type Token {
-	Address     string  `json:"address"`
-	Name        string  `json:"name"`
-	Symbol      string  `json:"symbol"`
-	Decimals    int64   `json:"decimals"`
-	TotalSupply string  `json:"totalSupply"`
-	FdvUSD      float64 `json:"fdvUSD"`
-	PriceUSD    float64 `json:"priceUSD"`
+	Address     string `json:"address"`
+	Name        string `json:"name"`
+	Symbol      string `json:"symbol"`
+	Decimals    int64  `json:"decimals"`
+	TotalSupply string `json:"totalSupply"`
+	FdvUSD      string `json:"fdvUSD"`
+	PriceUSD    string `json:"priceUSD"`
 }
 
 type TokenWithExtra {
 	Token
 	Pools      []Pool     `json:"pools"`
-	VolumeUSD  float64    `json:"volumeUSD"`
+	VolumeUSD  string     `json:"volumeUSD"`
 	Kline      []Kline    `json:"kline"`
 	RiseFall1H Comparison `json:"riseRall1H"`
 	RiseFall1D Comparison `json:"riseRall1D"`
@@ -42,11 +42,11 @@ type Pool {
 }
 
 type Kline {
-	Price     float64 `json:"price"`
-	TimeStamp int64   `json:"timeStamp"`
+	Price     string `json:"price"`
+	TimeStamp int64  `json:"timeStamp"`
 }
 
 type Comparison {
-	Comparison string  `json:"comparison"` // UP、DOWN、SAME
-	Percentage float64 `json:"percentage"`
+	Comparison string `json:"comparison"` // UP、DOWN、SAME
+	Percentage string `json:"percentage"`
 }

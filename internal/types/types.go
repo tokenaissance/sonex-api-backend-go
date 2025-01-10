@@ -19,8 +19,8 @@ type ChainSyncPrograss struct {
 }
 
 type Comparison struct {
-	Comparison string  `json:"comparison"` // UP、DOWN、SAME
-	Percentage float64 `json:"percentage"`
+	Comparison string `json:"comparison"` // UP、DOWN、SAME
+	Percentage string `json:"percentage"`
 }
 
 type FarmIncentivesRequest struct {
@@ -131,8 +131,8 @@ type Invested struct {
 }
 
 type Kline struct {
-	Price     float64 `json:"price"`
-	TimeStamp int64   `json:"timeStamp"`
+	Price     string `json:"price"`
+	TimeStamp int64  `json:"timeStamp"`
 }
 
 type MetaRequest struct {
@@ -437,13 +437,13 @@ type SwapVolumeResponse struct {
 }
 
 type Token struct {
-	Address     string  `json:"address"`
-	Name        string  `json:"name"`
-	Symbol      string  `json:"symbol"`
-	Decimals    int64   `json:"decimals"`
-	TotalSupply string  `json:"totalSupply"`
-	FdvUSD      float64 `json:"fdvUSD"`
-	PriceUSD    float64 `json:"priceUSD"`
+	Address     string `json:"address"`
+	Name        string `json:"name"`
+	Symbol      string `json:"symbol"`
+	Decimals    int64  `json:"decimals"`
+	TotalSupply string `json:"totalSupply"`
+	FdvUSD      string `json:"fdvUSD"`
+	PriceUSD    string `json:"priceUSD"`
 }
 
 type TokenPriceRequest struct {
@@ -522,7 +522,7 @@ type TokenVolume struct {
 type TokenWithExtra struct {
 	Token
 	Pools      []Pool     `json:"pools"`
-	VolumeUSD  float64    `json:"volumeUSD"`
+	VolumeUSD  string     `json:"volumeUSD"`
 	Kline      []Kline    `json:"kline"`
 	RiseFall1H Comparison `json:"riseRall1H"`
 	RiseFall1D Comparison `json:"riseRall1D"`
@@ -615,15 +615,15 @@ type TransactionsRequest struct {
 }
 
 type TransactionsResponse_Transaction struct {
-	Wallet     string  `json:"wallet"`
-	Pools      []Pool  `json:"pools"`
-	TxHash     string  `json:"txHash"`
-	TxAt       int64   `json:"txAt"`
-	From       string  `json:"from"`
-	To         string  `json:"to"`
-	FromAmount string  `json:"fromAmount"`
-	ToAmount   string  `json:"toAmount"`
-	ValueUSD   float64 `json:"valueUSD"`
+	Wallet     string `json:"wallet"`
+	Pools      []Pool `json:"pools"`
+	TxHash     string `json:"txHash"`
+	TxAt       int64  `json:"txAt"`
+	From       string `json:"from"`
+	To         string `json:"to"`
+	FromAmount string `json:"fromAmount"`
+	ToAmount   string `json:"toAmount"`
+	ValueUSD   string `json:"valueUSD"`
 }
 
 type UserAssetData struct {
