@@ -26,7 +26,7 @@ func TestEventSonexPoolSwapModelPageQueryWithExtra(t *testing.T) {
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
-	records, total, err := model.PageQueryWithExtra(context.Background(), 1, 1)
+	records, total, err := model.PageQueryOrderByTxAtWithExtra(context.Background(), "DESC", 1, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,12 +34,12 @@ func TestEventSonexPoolSwapModelPageQueryWithExtra(t *testing.T) {
 	_ = total
 }
 
-func TestEventSonexPoolSwapModelPageQueryMergeWithExtra(t *testing.T) {
+func TestEventSonexPoolSwapModelPageQueryMergeOrderByTxAtWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
-	records, total, err := model.PageQueryMergeWithExtra(context.Background(), 20, 1)
+	records, total, err := model.PageQueryMergeOrderByTxAtWithExtra(context.Background(), "DESC", 20, 1)
 	if err != nil {
 		t.Error(err)
 	}
