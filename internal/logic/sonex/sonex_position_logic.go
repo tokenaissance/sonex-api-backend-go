@@ -151,9 +151,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		return nil, err
 	}
 
-	if len(position.Origin) <= 0 {
-		position.Origin = innerPosition.Owner.Hex()
-	}
+	position.Origin = innerPosition.Owner.Hex()
 	position.Pool.Token0 = types.Token_TokenInfo{
 		Address:  token0.Address,
 		Decimals: int(token0.Decimals),
