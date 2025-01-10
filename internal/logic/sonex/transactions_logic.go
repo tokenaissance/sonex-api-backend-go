@@ -106,11 +106,9 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
 			}
 		}
-		if common.HexToAddress(req.Token0) == (common.Address{}) {
-			linq.From(swapRecords).WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
-				return item.FromToken() == (common.Address{}).Hex() || item.ToToken() == (common.Address{}).Hex()
-			}).ToSlice(&swapRecords)
-		}
+		linq.From(swapRecords).WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
+			return item.FromToken() == common.HexToAddress(req.Token0).Hex() || item.ToToken() == common.HexToAddress(req.Token0).Hex()
+		}).ToSlice(&swapRecords)
 	}
 	if req.Token1 != "" && common.IsHexAddress(req.Token1) {
 		tokenAddress := common.HexToAddress(req.Token0)
@@ -127,11 +125,9 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
 			}
 		}
-		if common.HexToAddress(req.Token0) == (common.Address{}) {
-			linq.From(swapRecords).WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
-				return item.FromToken() == (common.Address{}).Hex() || item.ToToken() == (common.Address{}).Hex()
-			}).ToSlice(&swapRecords)
-		}
+		linq.From(swapRecords).WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
+			return item.FromToken() == common.HexToAddress(req.Token0).Hex() || item.ToToken() == common.HexToAddress(req.Token0).Hex()
+		}).ToSlice(&swapRecords)
 	}
 
 	// Sort
