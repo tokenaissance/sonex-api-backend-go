@@ -1063,8 +1063,7 @@
           "description": " UP、DOWN、SAME"
         },
         "percentage": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         }
       },
       "title": "Comparison",
@@ -1553,8 +1552,7 @@
       "type": "object",
       "properties": {
         "price": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "timeStamp": {
           "type": "integer",
@@ -2709,12 +2707,10 @@
           "type": "string"
         },
         "fdvUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "priceUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         }
       },
       "title": "Token",
@@ -3023,12 +3019,10 @@
           "type": "string"
         },
         "fdvUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "priceUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "pools": {
           "type": "array",
@@ -3037,8 +3031,7 @@
           }
         },
         "volumeUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "kline": {
           "type": "array",
@@ -3334,8 +3327,7 @@
           }
         },
         "volumeUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         },
         "kline": {
           "type": "array",
@@ -3434,8 +3426,7 @@
           "type": "string"
         },
         "valueUSD": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         }
       },
       "title": "TransactionsResponse_Transaction",

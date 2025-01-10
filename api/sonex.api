@@ -78,15 +78,15 @@ type TransactionsRequest {
 }
 
 type TransactionsResponse_Transaction {
-	Wallet     string  `json:"wallet"`
-	Pools      []Pool  `json:"pools"`
-	TxHash     string  `json:"txHash"`
-	TxAt       int64   `json:"txAt"`
-	From       string  `json:"from"`
-	To         string  `json:"to"`
-	FromAmount string  `json:"fromAmount"`
-	ToAmount   string  `json:"toAmount"`
-	ValueUSD   float64 `json:"valueUSD"`
+	Wallet     string `json:"wallet"`
+	Pools      []Pool `json:"pools"`
+	TxHash     string `json:"txHash"`
+	TxAt       int64  `json:"txAt"`
+	From       string `json:"from"`
+	To         string `json:"to"`
+	FromAmount string `json:"fromAmount"`
+	ToAmount   string `json:"toAmount"`
+	ValueUSD   string `json:"valueUSD"`
 }
 
 type TokensRequest {

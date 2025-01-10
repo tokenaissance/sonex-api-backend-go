@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -191,7 +192,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				priceI = big.NewInt(0)
 			}
 			price, _ := global.PriceToUSD(req.ChainId, priceI)
-			item.PriceUSD = price
+			item.PriceUSD = fmt.Sprintf("%f", price)
 
 			totalSupply, ok := totalSupplies[common.HexToAddress(item.Address)]
 			if !ok {
@@ -200,7 +201,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(item.Decimals), nil)
 			fdv, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply, priceI), accuracy))
 			item.TotalSupply = totalSupply.String()
-			item.FdvUSD = fdv
+			item.FdvUSD = fmt.Sprintf("%f", fdv)
 
 			for i, pool := range item.Pools {
 				price0I, ok := currentPriceRecords[pool.Token0.Address]
@@ -208,13 +209,13 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 					price0I = big.NewInt(0)
 				}
 				price0, _ := global.PriceToUSD(req.ChainId, price0I)
-				item.Pools[i].Token0.PriceUSD = price0
+				item.Pools[i].Token0.PriceUSD = fmt.Sprintf("%f", price0)
 				price1I, ok := currentPriceRecords[pool.Token1.Address]
 				if !ok {
 					price1I = big.NewInt(0)
 				}
 				price1, _ := global.PriceToUSD(req.ChainId, price1I)
-				item.Pools[i].Token1.PriceUSD = price1
+				item.Pools[i].Token1.PriceUSD = fmt.Sprintf("%f", price1)
 
 				totalSupply0, ok := totalSupplies[common.HexToAddress(pool.Token0.Address)]
 				if !ok {
@@ -223,7 +224,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				accuracy0 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil)
 				fdv0, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply0, price0I), accuracy0))
 				item.Pools[i].Token0.TotalSupply = totalSupply0.String()
-				item.Pools[i].Token0.FdvUSD = fdv0
+				item.Pools[i].Token0.FdvUSD = fmt.Sprintf("%f", fdv0)
 				totalSupply1, ok := totalSupplies[common.HexToAddress(pool.Token1.Address)]
 				if !ok {
 					totalSupply1 = big.NewInt(0)
@@ -231,7 +232,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				accuracy1 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil)
 				fdv1, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply1, price1I), accuracy1))
 				item.Pools[i].Token1.TotalSupply = totalSupply1.String()
-				item.Pools[i].Token1.FdvUSD = fdv1
+				item.Pools[i].Token1.FdvUSD = fmt.Sprintf("%f", fdv1)
 			}
 
 			volumeI, ok := volumes[item.Address]
@@ -240,7 +241,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			}
 			volumeI = new(big.Int).Div(new(big.Int).Mul(volumeI, priceI), accuracy)
 			volume, _ := global.PriceToUSD(req.ChainId, volumeI)
-			item.VolumeUSD = volume
+			item.VolumeUSD = fmt.Sprintf("%f", volume)
 
 			kline1D, err := tokenPriceModel.Kline(item.Address, "1d")
 			if err != nil {
@@ -271,7 +272,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 				price, _ := new(big.Float).Quo(new(big.Float).SetInt(priceI), usdAccuracy).Float64()
 				t, _ := time.Parse("2006-01-02 15:04:05", tick.CreatedAt)
 				item.Kline = append(item.Kline, types.Kline{
-					Price:     price,
+					Price:     fmt.Sprintf("%f", price),
 					TimeStamp: t.Unix(),
 				})
 			}
@@ -279,8 +280,8 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			percentage1H, _ := percentage1HF.Float64()
 			comparison1D, percentage1DF := l.comparePrices(currentPrice, last1DPrice)
 			percentage1D, _ := percentage1DF.Float64()
-			item.RiseFall1H = types.Comparison{Comparison: comparison1H, Percentage: percentage1H}
-			item.RiseFall1D = types.Comparison{Comparison: comparison1D, Percentage: percentage1D}
+			item.RiseFall1H = types.Comparison{Comparison: comparison1H, Percentage: fmt.Sprintf("%f", percentage1H)}
+			item.RiseFall1D = types.Comparison{Comparison: comparison1D, Percentage: fmt.Sprintf("%f", percentage1D)}
 
 			ch <- struct {
 				Data types.TokensResponse_Token
@@ -330,37 +331,43 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		switch req.OrderBy {
 		case "1H_ASC":
 			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
-				return item.RiseFall1H.Percentage
+				value, _ := strconv.ParseFloat(item.RiseFall1H.Percentage, 64)
+				return value
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})
 		case "1H_DESC":
 			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
-				return item.RiseFall1H.Percentage
+				value, _ := strconv.ParseFloat(item.RiseFall1H.Percentage, 64)
+				return value
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})
 		case "1D_ASC":
 			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
-				return item.RiseFall1D.Percentage
+				value, _ := strconv.ParseFloat(item.RiseFall1D.Percentage, 64)
+				return value
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})
 		case "1D_DESC":
 			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
-				return item.RiseFall1D.Percentage
+				value, _ := strconv.ParseFloat(item.RiseFall1D.Percentage, 64)
+				return value
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})
 		case "Volume_ASC":
 			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) float64 {
-				return item.VolumeUSD
+				value, _ := strconv.ParseFloat(item.VolumeUSD, 64)
+				return value
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})
 		case "Volume_DESC":
 			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) float64 {
-				return item.VolumeUSD
+				value, _ := strconv.ParseFloat(item.VolumeUSD, 64)
+				return value
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})

@@ -191,14 +191,14 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 						Name:     token0.Name,
 						Symbol:   token0.Symbol,
 						Decimals: token0.Decimals,
-						PriceUSD: price0,
+						PriceUSD: fmt.Sprintf("%f", price0),
 					},
 					Token1: types.Token{
 						Address:  token1.Address,
 						Name:     token1.Name,
 						Symbol:   token1.Symbol,
 						Decimals: token1.Decimals,
-						PriceUSD: price1,
+						PriceUSD: fmt.Sprintf("%f", price1),
 					},
 					Fee: record.ExtraFee(),
 				}
@@ -210,8 +210,8 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			var toAmount *big.Int
 			amount0, _ := new(big.Int).SetString(record.EventAmount0(), 10)
 			amount1, _ := new(big.Int).SetString(record.EventAmount1(), 10)
-			price0 := big.NewFloat(pool.Token0.PriceUSD)
-			price1 := big.NewFloat(pool.Token1.PriceUSD)
+			price0, _ := new(big.Float).SetString(pool.Token0.PriceUSD)
+			price1, _ := new(big.Float).SetString(pool.Token1.PriceUSD)
 			accuracy0 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil))
 			accuracy1 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil))
 			valueUSD0, _ := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), price0), accuracy0).Float64()
@@ -281,7 +281,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			To:         to,
 			FromAmount: fromAmount.String(),
 			ToAmount:   toAmount.String(),
-			ValueUSD:   valueUSD,
+			ValueUSD:   fmt.Sprintf("%f", valueUSD),
 		})
 	}
 
