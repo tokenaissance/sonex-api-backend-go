@@ -337,7 +337,10 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 
 			//
 			// 其中一个代币的价格*余额*2
-			_tvlUSD := new(big.Float).Mul(new(big.Float).Mul(_balance0divdeimals0, _price0divUsdDecimals), big.NewFloat(2))
+			_token0Volume := new(big.Float).Mul(_balance0divdeimals0, _price0divUsdDecimals)
+
+			_tvlUSD := new(big.Float).Mul(_token0Volume, big.NewFloat(2))
+
 			pool.Liquidity = _tvlUSD.String()
 			pool.TvlUSD = _tvlUSD.String()
 			pool.Token0Price = &types.Token_TokenPrice{
@@ -564,13 +567,17 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 	prices, _ := tokenPriceModel.GetCurrentPrices([]string{chain.WETH, chain.USD})
 	_wethPrice := ""
 	_usdPrice := ""
+	_wethPriceForUsdDecimals := 6 // 数据库存储的价格精度，默认是6
+	_usdPriceForUsdDecimals := 6  // 数据库存储的价格精度，默认是6
 	for _, v := range prices {
 		if strings.EqualFold(strings.ToLower(v.TokenAddress), strings.ToLower(chain.WETH)) {
 			_wethPrice = v.Price
+			_wethPriceForUsdDecimals = v.UsdDecimals
 		}
 
 		if strings.EqualFold(strings.ToLower(v.TokenAddress), strings.ToLower(chain.USD)) {
 			_usdPrice = v.Price
+			_usdPriceForUsdDecimals = v.UsdDecimals
 		}
 	}
 
@@ -591,11 +598,25 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 	// get the data slice with processed pools
 
 	_wethPriceFloat, _ := new(big.Float).SetString(_wethPrice)
+
+	//  数据库里面拿出来的ETH的价格也要除以 10**6 ，除 6 是根据 数据库里面写入的ETH价格是  6位精度的 sting
+	_wethPriceFloatQuo6pow10 := new(big.Float).Quo(_wethPriceFloat, new(big.Float).SetFloat64(math.Pow10(_wethPriceForUsdDecimals)))
 	// _usdPriceFloat, _ := new(big.Float).SetString(_usdPrice)
 
 	// assign value
 	for i, v := range _swapAmoutEthAndUsdMap {
-		_swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, new(big.Float).Quo(v.EthAmount, new(big.Float).SetFloat64(math.Pow10(18)))), v.UsdAmount)
+		// _swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, new(big.Float).Quo(v.EthAmount, new(big.Float).SetFloat64(math.Pow10(18)))), v.UsdAmount)
+		// 数据库里面拿出来ethValue（也就是数据库里面value字段），要除以10**18，根据数据库里面保存的是 18位精度  event_sonex_pool_swap
+		// usdAmount 要除以10**6，根据 event_sonex_pool_swap 表里面  evenet0_token 或者event1 的token， 是 6 位精度保存的，
+		// 然后相加
+		_ethAmountDiv18 := new(big.Float).Quo(v.EthAmount, new(big.Float).SetFloat64(math.Pow10(18)))
+		_ethValue := new(big.Float).Mul(_wethPriceFloatQuo6pow10, _ethAmountDiv18)
+
+		_usdAmountDiv6 := new(big.Float).Quo(v.UsdAmount, new(big.Float).SetFloat64(math.Pow10(_usdPriceForUsdDecimals)))
+
+		_swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(_ethValue, _usdAmountDiv6)
+
+		logx.Debugf(" i:%v v:%#v _wethPriceFloatQuo6pow10:%v v.EthAmount:%v _ethAmountDiv18:%v ,_ethValue:%v, v.UsdAmount:%v _usdAmountDiv6:%v  	_swapAmoutEthAndUsdMap[i].Volume24H :%v  ", i, v, _wethPriceFloatQuo6pow10, v.EthAmount, _ethAmountDiv18, _ethValue, v.UsdAmount, _usdAmountDiv6, _swapAmoutEthAndUsdMap[i].Volume24H)
 	}
 
 	return _swapAmoutEthAndUsdMap, nil
