@@ -160,13 +160,38 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				id, err := global.NewId()
-				if err != nil {
+				existed, err := eventSonexFactoryPoolCreatedModel.FindByPoolAddress(ctx, pool)
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+				default:
 					return err
 				}
-				err = eventSonexFactoryPoolCreatedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
-				if err != nil {
-					return err
+				var id int64
+				if existed == nil {
+					id, err = global.NewId()
+					if err != nil {
+						return err
+					}
+					err = eventSonexFactoryPoolCreatedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
+					if err != nil {
+						return err
+					}
+				} else {
+					// Temporary handle
+					// Minato resent some data about same event infomation but different tx hash
+					existed.UpdatedAt = time.Now().UTC()
+					existed.TxIndex = txIndex
+					existed.TxHash = txHash
+					existed.TxAt = txAt
+					existed.From = from
+					existed.To = to
+					existed.Value = value
+					err := eventSonexFactoryPoolCreatedModel.Update(ctx, existed)
+					if err != nil {
+						return err
+					}
+					continue
 				}
 			}
 
