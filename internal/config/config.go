@@ -5,13 +5,14 @@ import "github.com/zeromicro/go-zero/rest"
 type Config struct {
 	Debug bool `json:",env=DEBUG,default=false"`
 	rest.RestConf
-	Domains    []string      `json:",optional,default=[]"`
-	PostgreSQL PgConfig      `json:","`
-	Chains     []ChainConfig `json:","`
-	Sonexes    []SonexConfig `json:",optional"`
-	Xpools     []XpoolConfig `json:",optional"`
-	Farms      []FarmConfig  `json:",optional"`
-	Redis      RedisConfig   `json:","`
+	Domains     []string           `json:",optional,default=[]"`
+	PostgreSQL  PgConfig           `json:","`
+	Chains      []ChainConfig      `json:","`
+	Sonexes     []SonexConfig      `json:",optional"`
+	PreDeposits []PreDepositConfig `json:",optional"`
+	Xpools      []XpoolConfig      `json:",optional"`
+	Farms       []FarmConfig       `json:",optional"`
+	Redis       RedisConfig        `json:","`
 }
 
 func (config *Config) GetChainConfig(chainId int64) *ChainConfig {
@@ -25,6 +26,15 @@ func (config *Config) GetChainConfig(chainId int64) *ChainConfig {
 
 func (config *Config) GetSonexConfig(chainId int64) *SonexConfig {
 	for _, c := range config.Sonexes {
+		if c.ChainId == chainId {
+			return &c
+		}
+	}
+	return nil
+}
+
+func (config *Config) GetPreDepositConfig(chainId int64) *PreDepositConfig {
+	for _, c := range config.PreDeposits {
 		if c.ChainId == chainId {
 			return &c
 		}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sonex_api_backend_go/internal/chain_handler/farm"
+	"sonex_api_backend_go/internal/chain_handler/pre_deposit"
 	"sonex_api_backend_go/internal/chain_handler/sonex"
 	"sonex_api_backend_go/internal/chain_handler/xpool"
 	"sonex_api_backend_go/internal/config"
@@ -17,7 +18,6 @@ import (
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
 
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -104,10 +104,9 @@ func main() {
 	for _, chain := range c.Chains {
 		// Sonex handler
 		{
-			configA := linq.From(c.Sonexes).SingleWithT(func(item config.SonexConfig) bool { return item.ChainId == chain.ChainId })
-			if configA != nil {
-				config, _ := configA.(config.SonexConfig)
-				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, config)
+			config := c.GetSonexConfig(chain.ChainId)
+			if config != nil {
+				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
@@ -115,33 +114,43 @@ func main() {
 				handler.OnPoolSwap(func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *contract_uniswap_v3.UniswapV3PoolSwap) {
 					sonex.SwapCallback(c, chainId, pool, tx, event)
 				})
-				global.AddChainHandler(1946, handler)
+				global.AddChainHandler(chain.ChainId, handler)
+			}
+		}
+
+		// Per deposit handler
+		{
+			config := c.GetPreDepositConfig(chain.ChainId)
+			if config != nil {
+				handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DateSource(), chain, *config)
+				if err != nil {
+					panic(err)
+				}
+				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
 
 		// X Pool handler
 		{
-			configA := linq.From(c.Xpools).SingleWithT(func(item config.XpoolConfig) bool { return item.ChainId == chain.ChainId })
-			if configA != nil {
-				config, _ := configA.(config.XpoolConfig)
-				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, config)
+			config := c.GetXpoolConfig(chain.ChainId)
+			if config != nil {
+				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
-				global.AddChainHandler(1946, handler)
+				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
 
 		// Farm handler
 		{
-			configA := linq.From(c.Farms).SingleWithT(func(item config.FarmConfig) bool { return item.ChainId == chain.ChainId })
-			if configA != nil {
-				config, _ := configA.(config.FarmConfig)
-				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
+			config := c.GetFarmConfig(chain.ChainId)
+			if config != nil {
+				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
-				global.AddChainHandler(1946, handler)
+				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
 	}
