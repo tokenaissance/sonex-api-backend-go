@@ -274,7 +274,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 					price1, _ = new(big.Int).SetString(v.Price, 10)
 					// price1Decimal = int64(v.UsdDecimals)
 				}
-
 			}
 
 			logx.Infof("XXXXXXXXXXXXXtoken0 %v balance0 :%v price0 :%v token1:%v balance1:%v   price1:%v  ", pool.Token0.Address, balance0, price0, pool.Token1.Address, balance1, price1)
