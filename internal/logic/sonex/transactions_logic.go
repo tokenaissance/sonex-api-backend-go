@@ -34,14 +34,6 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
-	if req.PageSize == nil || *req.PageSize < 1 {
-		var defaultSize int64 = 20
-		req.PageSize = &defaultSize
-	}
-	if req.PageIndex == nil || *req.PageIndex < 1 {
-		var defaultIndex int64 = 1
-		req.PageIndex = &defaultIndex
-	}
 
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	if chainConf == nil {
@@ -52,107 +44,71 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
-	var swapRecords []repository.EventSonexMergePoolSwapWithExtra
 	dataResult := []types.TransactionsResponse_Transaction{}
 	var totalResult int64 = -1
 
 	// Filter
+	options := repository.QueryMergePoolSwapWithExtraOptions{}
 	if req.Wallet != "" && common.IsHexAddress(req.Wallet) {
-		walletAddress := common.HexToAddress(req.Wallet)
-		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByWalletWithExtra(l.ctx, walletAddress.Hex())
-			if err != nil {
-				return nil, err
-			}
-			if swapRecords == nil {
-				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
-			}
-		} else {
-			linq.From(swapRecords).
-				WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool { return item.From == walletAddress.Hex() }).
-				ToSlice(&swapRecords)
-		}
+		walletAddress := common.HexToAddress(req.Wallet).Hex()
+		options.Wallet = &walletAddress
 	}
 	if req.Pool != "" && common.IsHexAddress(req.Pool) {
-		poolAddress := common.HexToAddress(req.Pool)
-		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByPoolWithExtra(l.ctx, poolAddress.Hex())
-			if err != nil {
-				return nil, err
-			}
-			if swapRecords == nil {
-				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
-			}
-		} else {
-			linq.From(swapRecords).
-				WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
-					return item.ExtraPool_0 == poolAddress.Hex() || item.ExtraPool_1.String == poolAddress.Hex()
-				}).
-				ToSlice(&swapRecords)
-		}
+		poolAddress := common.HexToAddress(req.Pool).Hex()
+		options.Pool = &poolAddress
 	}
 	if req.Token0 != "" && common.IsHexAddress(req.Token0) {
-		tokenAddress := common.HexToAddress(req.Token0)
-		if tokenAddress == (common.Address{}) {
-			tokenAddress = common.HexToAddress(chainConf.WETH)
+		token0Address := common.HexToAddress(req.Token0)
+		var tokenAddress string
+		switch token0Address {
+		case (common.Address{}):
+			tokenAddress = common.HexToAddress(chainConf.WETH).Hex()
+			options.IsETH = true
+		default:
+			tokenAddress = token0Address.Hex()
 		}
-		tokens := []string{tokenAddress.Hex()}
-		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByTokensWithExtra(l.ctx, tokens)
-			if err != nil {
-				return nil, err
-			}
-			if swapRecords == nil {
-				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
-			}
+		if options.Tokens == nil {
+			options.Tokens = []string{}
 		}
-		linq.From(swapRecords).WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
-			return item.FromToken() == common.HexToAddress(req.Token0).Hex() || item.ToToken() == common.HexToAddress(req.Token0).Hex()
-		}).ToSlice(&swapRecords)
+		options.Tokens = append(options.Tokens, tokenAddress)
 	}
 	if req.Token1 != "" && common.IsHexAddress(req.Token1) {
-		tokenAddress := common.HexToAddress(req.Token0)
-		if tokenAddress == (common.Address{}) {
-			tokenAddress = common.HexToAddress(chainConf.WETH)
-		}
-		tokens := []string{tokenAddress.Hex()}
-		if swapRecords == nil {
-			swapRecords, err = eventSonexPoolSwapModel.QueryMergeByTokensWithExtra(l.ctx, tokens)
-			if err != nil {
-				return nil, err
-			}
-			if swapRecords == nil {
-				swapRecords = []repository.EventSonexMergePoolSwapWithExtra{}
-			}
-		}
-		linq.From(swapRecords).WhereT(func(item repository.EventSonexMergePoolSwapWithExtra) bool {
-			return item.FromToken() == common.HexToAddress(req.Token0).Hex() || item.ToToken() == common.HexToAddress(req.Token0).Hex()
-		}).ToSlice(&swapRecords)
-	}
-
-	// Sort
-	if swapRecords != nil {
-		switch req.OrderBy {
-		case "ASC":
-			linq.From(swapRecords).OrderByT(func(item repository.EventSonexMergePoolSwapWithExtra) int64 {
-				return item.TxAt.Unix()
-			}).ToSlice(&swapRecords)
-		case "DESC":
-			fallthrough
+		token1Address := common.HexToAddress(req.Token1)
+		var tokenAddress string
+		switch token1Address {
+		case (common.Address{}):
+			tokenAddress = common.HexToAddress(chainConf.WETH).Hex()
+			options.IsETH = true
 		default:
-			linq.From(swapRecords).OrderByDescendingT(func(item repository.EventSonexMergePoolSwapWithExtra) int64 {
-				return item.TxAt.Unix()
-			}).ToSlice(&swapRecords)
+			tokenAddress = token1Address.Hex()
 		}
+		if options.Tokens == nil {
+			options.Tokens = []string{}
+		}
+		options.Tokens = append(options.Tokens, tokenAddress)
 	}
 
-	// Default
-	if swapRecords == nil {
-		swapRecords, totalResult, err = eventSonexPoolSwapModel.PageQueryMergeOrderByTxAtWithExtra(l.ctx, req.OrderBy, *req.PageSize, *req.PageIndex)
-		if err != nil {
-			return nil, err
-		}
+	// Page
+	if req.OrderBy != "" {
+		options.OrderBy = &req.OrderBy
 	}
+	if req.PageSize == nil || *req.PageSize < 1 {
+		var defaultSize int64 = 20
+		req.PageSize = &defaultSize
+	}
+	options.PageSize = req.PageSize
+	if req.PageIndex == nil || *req.PageIndex < 1 {
+		var defaultIndex int64 = 1
+		req.PageIndex = &defaultIndex
+	}
+	options.PageIndex = req.PageIndex
+
+	// Query
+	swapRecords, total, err := eventSonexPoolSwapModel.QueryMergeWithExtra(l.ctx, &options)
+	if err != nil {
+		return nil, err
+	}
+	totalResult = total
 
 	// Handle data
 	tokenAddresses := []string{}
@@ -257,12 +213,6 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			ToAmount:   record.ToAmount().String(),
 			ValueUSD:   fmt.Sprintf("%f", valueUSD),
 		})
-	}
-
-	// Page
-	if totalResult < 0 {
-		totalResult = int64(len(dataResult))
-		linq.From(dataResult).Skip(int((*req.PageIndex - 1) * *req.PageSize)).Take(int(*req.PageSize)).ToSlice(&dataResult)
 	}
 
 	return &response.ApiResponse{

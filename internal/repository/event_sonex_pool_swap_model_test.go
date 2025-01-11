@@ -21,6 +21,31 @@ func TestEventSonexPoolMintModelPageQueryWithExtra(t *testing.T) {
 	_ = total
 }
 
+func TestEventSonexPoolSwapModelQueryMergeWithExtra(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	wallet := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
+	// pool := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
+	tokens := []string{"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"}
+	orderBy := "DESC"
+	var pageSize int64 = 20
+	var pageIndex int64 = 1
+	records, total, err := model.QueryMergeWithExtra(context.Background(), &QueryMergePoolSwapWithExtraOptions{
+		Wallet:    &wallet,
+		Tokens:    tokens,
+		OrderBy:   &orderBy,
+		PageSize:  &pageSize,
+		PageIndex: &pageIndex,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	_ = records
+	_ = total
+}
+
 func TestEventSonexPoolSwapModelPageQueryWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
@@ -45,6 +70,30 @@ func TestEventSonexPoolSwapModelPageQueryMergeOrderByTxAtWithExtra(t *testing.T)
 	}
 	_ = records
 	_ = total
+}
+
+func TestEventSonexPoolSwapModelQueryByPoolWithExtra(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	records, err := model.QueryMergeByPoolWithExtra(context.Background(), "0xb80252975faDD59d342fFF146F939208B60C7C27")
+	if err != nil {
+		t.Error(err)
+	}
+	_ = records
+}
+
+func TestEventSonexPoolSwapModelQueryMergeByTokensWithExtra(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	records, err := model.QueryMergeByTokensWithExtra(context.Background(), []string{"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C", "0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"})
+	if err != nil {
+		t.Error(err)
+	}
+	_ = records
 }
 
 func TestEventSonexPoolSwapModelPageQueryMergeByWalletWithExtra(t *testing.T) {
