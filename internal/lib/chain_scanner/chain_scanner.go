@@ -17,6 +17,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+// Represents a blockchain scanner
 type ChainScanner struct {
 	dataSource           string
 	config               config.ChainConfig
@@ -47,6 +48,7 @@ func NewChainScanner(dataSource string, config config.ChainConfig) (*ChainScanne
 	return chainScanner, nil
 }
 
+// Init & returns a Blockchain RPC client
 func (scanner *ChainScanner) getClient() (*ethclient.Client, error) {
 	if len(scanner.config.Nodes) == 0 {
 		return nil, fmt.Errorf("%s", "Invalid configuration")
@@ -66,10 +68,12 @@ func (chainScanner *ChainScanner) ChainConf() config.ChainConfig {
 	return chainScanner.config
 }
 
+// Adds a scanning handler
 func (chainScanner *ChainScanner) AddHandler(handler IHandler) {
 	chainScanner.handlers = append(chainScanner.handlers, handler)
 }
 
+// Starts scanning
 func (chainScanner *ChainScanner) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	chainScanner.cancel = cancel
@@ -252,14 +256,17 @@ func (chainScanner *ChainScanner) Start() {
 	}(ctx)
 }
 
+// Stops scanning
 func (chainScanner *ChainScanner) Stop() {
 	chainScanner.cancel()
 }
 
+// Register a replay (rescan) task
 func (chainScanner *ChainScanner) Replay(request Replay) {
 	chainScanner.replays.Enqueue(request)
 }
 
+// Register a replay (rescan) task for specified block number
 func (chainScanner *ChainScanner) ReplayByBlockNumber(number uint64) {
 	chainScanner.replays.Enqueue(Replay{
 		Start: number,
@@ -267,6 +274,7 @@ func (chainScanner *ChainScanner) ReplayByBlockNumber(number uint64) {
 	})
 }
 
+// Register a replay (rescan) task for specified transaction
 func (chainScanner *ChainScanner) ReplayByTxHash(txHash string) error {
 	client, err := ethclient.Dial(chainScanner.config.GetNode())
 	if err != nil {

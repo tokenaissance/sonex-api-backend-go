@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Represents swap path
 type Path struct {
 	Pools  []Pool
 	Tokens []common.Address

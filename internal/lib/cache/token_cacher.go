@@ -22,16 +22,18 @@ import (
 
 const DEFAULT_PRICE_CACHE_EXPIRE_SECONDS int64 = 300
 
+// Implements cache for tokens' metadatas and prices.
 type TokenCacher struct {
 	chainConf               config.ChainConfig
 	sonexConf               config.SonexConfig
-	tokens                  map[string]Token
+	tokens                  map[string]Token // key is token address
 	tokensLock              sync.RWMutex
-	prices                  map[string]PriceCache
+	prices                  map[string]PriceCache // key is token address
 	pricesLock              sync.RWMutex
 	priceCacheExpireSeconds int64
 }
 
+// Represents metadata of a token.
 type Token struct {
 	Address  string
 	Name     string
@@ -39,6 +41,7 @@ type Token struct {
 	Decimals int64
 }
 
+// Represents price details of a token pair
 type Price struct {
 	From                        string
 	To                          string
@@ -68,6 +71,7 @@ func NewTokenCacher(chainConf config.ChainConfig, sonexConf config.SonexConfig) 
 	}
 }
 
+// Sorts swap paths by defined strategy
 func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, maxNumber int64) ([]quoter.Path, error) {
 	poolMap := map[string]*struct {
 		Liquidity *big.Int
@@ -182,6 +186,9 @@ func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, m
 	return paths, nil
 }
 
+// Returns token's metadata.
+//
+// Fetch online if cache miss.
 func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 	if address == (common.Address{}) {
 		eth := cacher.chainConf.ETH
@@ -293,6 +300,7 @@ func (c *TokenCacher) Set(address common.Address) error {
 	return nil
 }
 
+// Returns all cached tokens
 func (cacher *TokenCacher) GetAll() []Token {
 	cacher.tokensLock.RLock()
 	tokens := cacher.tokens
@@ -311,6 +319,8 @@ func (cacher *TokenCacher) SetPriceCacheExpireSeconds(duration int64) {
 	cacher.priceCacheExpireSeconds = duration
 }
 
+// Returns an array which item is the amount out received for a given exact input swap without executing the swap,
+// respective to each item of `pools`.
 func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.Pool, from common.Address, to common.Address, amountIn *big.Int, maxLength int64, maxNumber int64) ([]Price, error) {
 	switch from {
 	case common.Address{}:
@@ -400,6 +410,8 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 	return prices, nil
 }
 
+// Returns an array which item is the amount in required for a given exact output swap without executing the swap,
+// respective to each item of `pools`.
 func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.Pool, from common.Address, to common.Address, amountOut *big.Int, maxLength int64, maxNumber int64) ([]Price, error) {
 	switch from {
 	case common.Address{}:
@@ -478,6 +490,8 @@ func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.
 	return prices, nil
 }
 
+// Returns prices in USD of token of `address`,
+// each price correspond to pool in `pools`, one by one.
 func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, address common.Address, isCache bool, maxLength int64, maxNumber int64) ([]Price, error) {
 	if cacher.chainConf.USD == "" || !common.IsHexAddress(cacher.chainConf.USD) {
 		return nil, fmt.Errorf("%s", "Miss USD configure")
@@ -541,6 +555,7 @@ func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, a
 	return prices, nil
 }
 
+// Batch query tokens' total supplies
 func (cacher *TokenCacher) BatchGetTotalSupplies(ctx context.Context, tokens []common.Address) (map[common.Address]*big.Int, error) {
 	nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf)
 	if err != nil {
