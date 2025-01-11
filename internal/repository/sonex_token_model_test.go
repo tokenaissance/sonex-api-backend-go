@@ -33,3 +33,16 @@ func TestSonexTokenModelQueryLogo(t *testing.T) {
 	}
 	_ = res
 }
+
+func Test_FindByOneAddress(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewSonexTokenModel(NewConn(c.PostgreSQL.DateSource()))
+	records, err := model.FindByOneAddress(context.Background(), "0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = records
+}
