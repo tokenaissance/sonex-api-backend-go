@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/types"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/ahmetb/go-linq/v3"
@@ -25,6 +26,7 @@ type (
 		eventSonexPoolSwapModel
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
+		QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error)
 		QueryMergeByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexMergePoolSwapWithExtra, error)
 		QueryByPoolWithExtra(ctx context.Context, pool string) ([]EventSonexPoolSwapWithExtra, error)
@@ -51,6 +53,34 @@ type (
 		ExtraToken1      string `db:"extra_token1"`
 		ExtraFee         int64  `db:"extra_fee"`
 		ExtraTickSpacing string `db:"extra_tick_spacing"`
+	}
+
+	PoolVolume struct {
+		Address string `json:"address"`
+		Amount0 string `json:"amount0"`
+		Amount1 string `json:"amount1"`
+	}
+
+	PoolVolumeUsd struct {
+		Id          int64  `json:"id"`           // id
+		ExtraPool   string `json:"extra_pool"`   // pool address
+		Value       string `json:"value"`        // 购买代币时,交易里面的ETHvalue
+		Amount0     string `json:"amount0"`      // amount 0
+		Amount1     string `json:"amount1"`      // amount 1
+		ExtraToken0 string `json:"extra_token0"` // token0
+		ExtraToken1 string `json:"extra_token1"` // token1
+	}
+)
+
+type (
+	QueryMergePoolSwapWithExtraOptions struct {
+		Wallet    *string
+		Pool      *string
+		Tokens    []string
+		IsETH     bool
+		OrderBy   *string
+		PageSize  *int64
+		PageIndex *int64
 	}
 
 	EventSonexMergePoolSwapWithExtra struct {
@@ -89,26 +119,10 @@ type (
 		ExtraFee_1          sql.NullInt64  `db:"extra_fee_1"`
 		ExtraTickSpacing_1  sql.NullString `db:"extra_tick_spacing_1"`
 	}
-
-	PoolVolume struct {
-		Address string `json:"address"`
-		Amount0 string `json:"amount0"`
-		Amount1 string `json:"amount1"`
-	}
-
-	PoolVolumeUsd struct {
-		Id          int64  `json:"id"`           // id
-		ExtraPool   string `json:"extra_pool"`   // pool address
-		Value       string `json:"value"`        // 购买代币时,交易里面的ETHvalue
-		Amount0     string `json:"amount0"`      // amount 0
-		Amount1     string `json:"amount1"`      // amount 1
-		ExtraToken0 string `json:"extra_token0"` // token0
-		ExtraToken1 string `json:"extra_token1"` // token1
-	}
 )
 
 func (record *EventSonexMergePoolSwapWithExtra) IsCross() bool {
-	return record.EventSender_1.Valid
+	return record.TxIndex_1.Valid
 }
 
 func (record *EventSonexMergePoolSwapWithExtra) Tokens() []string {
@@ -225,6 +239,108 @@ func (m *customEventSonexPoolSwapModel) New(ctx context.Context, id int64, chain
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)", m.table, eventSonexPoolSwapRows)
 	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, pool)
 	return err
+}
+
+func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error) {
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	with := fmt.Sprintf(`
+		WITH MergeSelect AS(
+		SELECT
+			T1.id, T1.created_at, T1.updated_at, T1.chain_id, T1.block_number, T1.tx_hash, T1.tx_at, T1.from_, T1.to_, T1.value, 
+			T1.tx_index AS tx_index_0, T1.event_sender_0, T1.event_recipient_0, T1.event_amount0_0, T1.event_amount1_0, T1.event_sqrt_price_x96_0, T1.event_tick_0, T1.extra_pool_0, T1.extra_token0_0, T1.extra_token1_0, T1.extra_fee_0, T1.extra_tick_spacing_0,
+			T2.tx_index AS tx_index_1, T2.event_sender_1, T2.event_recipient_1, T2.event_amount0_1, T2.event_amount1_1, T2.event_sqrt_price_x96_1, T2.event_tick_1, T2.extra_pool_1, T2.extra_token0_1, T2.extra_token1_1, T2.extra_fee_1, T2.extra_tick_spacing_1
+		FROM
+			(SELECT 
+				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value,
+				S.event_sender AS event_sender_0, S.event_recipient AS event_recipient_0, S.event_amount0 AS event_amount0_0, S.event_amount1 AS event_amount1_0, S.event_sqrt_price_x96 AS event_sqrt_price_x96_0, S.event_tick AS event_tick_0, S.extra_pool AS extra_pool_0,
+				C.event_token0 AS extra_token0_0, C.event_token1 AS extra_token1_0, C.event_fee AS extra_fee_0, C.event_tick_spacing AS extra_tick_spacing_0
+			FROM %s S
+			JOIN %s C ON C.event_pool = S.extra_pool) T1
+		LEFT JOIN 
+			(SELECT 
+				S.tx_index, S.tx_hash, 
+				S.event_sender AS event_sender_1, S.event_recipient AS event_recipient_1, S.event_amount0 AS event_amount0_1, S.event_amount1 AS event_amount1_1, S.event_sqrt_price_x96 AS event_sqrt_price_x96_1, S.event_tick AS event_tick_1, S.extra_pool AS extra_pool_1,
+				C.event_token0 AS extra_token0_1, C.event_token1 AS extra_token1_1, C.event_fee AS extra_fee_1, C.event_tick_spacing AS extra_tick_spacing_1
+			FROM %s S
+			JOIN %s C ON C.event_pool = S.extra_pool) T2
+		ON 
+			T1.tx_hash = T2.tx_hash 
+			AND T1.tx_index < T2.tx_index 
+			AND (CASE 
+				WHEN T1.event_amount0_0::NUMERIC < 0 THEN T1.event_amount0_0::NUMERIC = T2.event_amount0_1::NUMERIC * -1
+				WHEN T1.event_amount1_0::NUMERIC < 0 THEN T1.event_amount1_0::NUMERIC = T2.event_amount1_1::NUMERIC* -1 
+				ELSE FALSE
+				END)
+		)
+	`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	orderBy := "DESC"
+	options := ""
+	if opt != nil {
+		if opt.OrderBy != nil {
+			if linq.From([]string{"ASC", "DESC"}).Contains(*opt.OrderBy) {
+				orderBy = *opt.OrderBy
+			}
+		}
+		if opt.Wallet != nil {
+			options = fmt.Sprintf(`
+				%s AND (from_ = '%s')
+			`, options, *opt.Wallet)
+		}
+		if opt.Pool != nil {
+			options = fmt.Sprintf(`
+				%s AND (extra_pool_0 = '%s' OR extra_pool_1 = '%s')
+			`, options, *opt.Pool, *opt.Pool)
+		}
+		if opt.Tokens != nil {
+			linq.From(opt.Tokens).SelectT(func(item string) string { return fmt.Sprintf("'%s'", item) }).ToSlice(&opt.Tokens)
+			tokens := strings.Join(opt.Tokens, " ")
+			options = fmt.Sprintf(`
+				%s AND (extra_token0_0 IN (%s) OR extra_token1_0 IN (%s) OR extra_token0_1 IN (%s) OR extra_token1_1 IN (%s))
+			`, options, tokens, tokens, tokens, tokens)
+			if opt.IsETH {
+				options = fmt.Sprintf(`
+					%s AND (value::NUMERIC > 0 OR (CASE
+						WHEN tx_index_1 IS NULL THEN event_sender_0 = event_recipient_0
+						WHEN tx_index_1 IS NOT NULL THEN event_sender_1 = event_recipient_1
+						ELSE FALSE
+						END))
+				`, options)
+			}
+		}
+		if opt.PageSize != nil && opt.PageIndex != nil {
+			orderBy = fmt.Sprintf(`
+				%s OFFSET %d LIMIT %d
+			`, orderBy, *opt.PageSize*(*opt.PageIndex-1), *opt.PageSize)
+		}
+	}
+	query := fmt.Sprintf(`
+		%s
+		SELECT * FROM MergeSelect 
+		WHERE 
+			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL))
+			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL)))
+			%s
+		ORDER BY tx_at %s
+	`, with, options, orderBy)
+	var resp []EventSonexMergePoolSwapWithExtra
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	var total int64 = 0
+	query = fmt.Sprintf(`
+		%s
+		SELECT COUNT(*) FROM MergeSelect 
+		WHERE 
+			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL))
+			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL)))
+			%s
+	`, with, options)
+	err = m.conn.QueryRowCtx(ctx, &total, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	return resp, total, err
 }
 
 func (m *customEventSonexPoolSwapModel) QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error) {
