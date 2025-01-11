@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Implements adapter of the X-Pool dApp
 type StaticCaller struct {
 	c config.Config
 }

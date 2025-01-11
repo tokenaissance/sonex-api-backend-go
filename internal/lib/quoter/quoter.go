@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// Implements adapter of the "Quoter" contract.
 type Quoter struct {
 	chainConf config.ChainConfig
 	sonexConf config.SonexConfig
@@ -34,6 +35,7 @@ func NewQuoter(chainConf config.ChainConfig, sonexConf config.SonexConfig) (*Quo
 	}, nil
 }
 
+// Finds available paths to swapping `from` token for `to` token
 func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength int64) []Path {
 	contains := func(tokens []common.Address, address common.Address) bool {
 		for _, token := range tokens {
@@ -100,6 +102,7 @@ func FindPaths(pools []Pool, from common.Address, to common.Address, maxLength i
 	return paths
 }
 
+// Returns the amount out received for a given exact input swap without executing the swap.
 func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn *big.Int) (*QuoteExactInputResult, error) {
 	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
@@ -132,6 +135,7 @@ func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn
 	return &output, nil
 }
 
+// Batch version of [Quoter.QuoteExactInput]
 func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte, amountIn *big.Int) (map[string]*QuoteExactInputResult, error) {
 	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
@@ -189,6 +193,7 @@ func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte,
 	return result, nil
 }
 
+// Returns the amount in required for a given exact output swap without executing the swap
 func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountOut *big.Int) (*QuoteExactOutputResult, error) {
 	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
@@ -221,6 +226,7 @@ func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountO
 	return &output, nil
 }
 
+// Batch version of [Quoter.QuoteExactOutput]
 func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte, amountIn *big.Int) ([]*QuoteExactOutputResult, error) {
 	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
