@@ -38,8 +38,24 @@ type PositionsResponseWrapper struct {
 	*types.PositionsResponse
 }
 
+const (
+	CacheKey = "sonex_dex:uniswap:positions:%s"
+)
+
+// DelCache 删除缓存
+func (l *SonexPositionsLogic) DelCache(address string) error {
+	address = common.HexToAddress(address).Hex()
+	cacheKey := fmt.Sprintf(CacheKey, address)
+	err := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB).Del(cacheKey)
+	if err != nil {
+		logx.Errorf("[SonexPositionsLogic] DelCache error: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
 func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp *PositionsResponseWrapper, err error) {
-	cacheKey := fmt.Sprintf("sonex_dex:uniswap:positions:%s:%s", req.Address, req.FilterType)
+	cacheKey := fmt.Sprintf(CacheKey, req.Address)
 
 	// Check cache
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
