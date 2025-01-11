@@ -12,6 +12,7 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"strconv"
 	"sync"
 	"time"
 
@@ -139,6 +140,12 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		return nil, err
 	}
 	innerPosition := positions[0]
+
+	// cache tokenid
+	err = l.cacheAddressTokenIds(ctx, innerPosition.Owner.Hex(), req.TokenId)
+	if err != nil {
+		logx.Errorf("[SonexPosition] cacheAddressTokenIds error: %s", err.Error())
+	}
 
 	token0, err := global.GetToken(req.ChainId, innerPosition.Token0.Hex())
 	if err != nil {
@@ -381,4 +388,47 @@ func (l *SonexPositionLogic) fillPosition(ctx context.Context,
 	position.Pool.Tick = innnerPosition.Pool.Slot0.Tick.String()
 
 	return position, nil
+}
+
+func (l *SonexPositionLogic) cacheAddressTokenIds(ctx context.Context, address string, tokenid int64) error {
+	address = common.HexToAddress(address).Hex()
+	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position:tokenids:%s", address)
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+
+	// add tokenid to Set
+	err := cacher.SAdd(ctx, cacheKey, tokenid).Err()
+	if err != nil {
+		return err
+	}
+
+	// set expire time
+	err = cacher.Expire(cacheKey, 30*time.Second)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (l *SonexPositionLogic) GetAddressTokenIds(ctx context.Context, address string) ([]int64, error) {
+	address = common.HexToAddress(address).Hex()
+	cacheKey := fmt.Sprintf("sonex_dex:uniswap:position:tokenids:%s", address)
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+
+	result, err := cacher.SMembers(ctx, cacheKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	// 将字符串转换为 int64
+	tokenIds := make([]int64, 0, len(result))
+	for _, str := range result {
+		tokenId, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse tokenId: %w", err)
+		}
+		tokenIds = append(tokenIds, tokenId)
+	}
+
+	return tokenIds, nil
 }
