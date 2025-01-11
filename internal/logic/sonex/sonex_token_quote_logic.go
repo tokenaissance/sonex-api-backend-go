@@ -140,9 +140,13 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		}
 	}
 
-	bestRouter := linq.From(prices).OrderByT(func(item cache.Price) float64 {
+	bestRouterA := linq.From(prices).OrderByT(func(item cache.Price) float64 {
 		return item.PriceImpact
-	}).First().(cache.Price)
+	}).First()
+	var bestRouter cache.Price
+	if bestRouterA != nil {
+		bestRouter = bestRouterA.(cache.Price)
+	}
 	var router []types.TokenQuoteResponse_Router_Pool
 	linq.From(bestRouter.Pools).
 		SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
