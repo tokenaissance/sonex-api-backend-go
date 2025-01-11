@@ -180,6 +180,7 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 						Symbol:   token1.Symbol,
 						Name:     token1.Name,
 					},
+					Tick: p.Pool.Slot0.Tick.String(),
 				},
 				TickUpper:   p.TickUpper.String(),
 				TickLower:   p.TickLower.String(),
