@@ -31,8 +31,8 @@ func (l *SonexTokensInfoLogic) SonexTokensInfo(req *types.TokensInfoRequest) (re
 	_tokenAddress := req.Address
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	ctx := context.Background()
-	tokenModel := repository.NewTokenModel(conn)
-	_tokenInfo, err := tokenModel.QueryByChainIdAndOneAddress(ctx, req.ChainId, _tokenAddress)
+	tokenModel := repository.NewSonexTokenModel(conn)
+	_tokenInfo, err := tokenModel.FindByOneAddress(ctx, _tokenAddress)
 	if err != nil {
 		logx.Infof("SonexTokensInfo ERR:%v ", err)
 		return &types.TokenInfoResponse{StatusCode: 500}, errors.New("internal error ")
@@ -55,7 +55,7 @@ func (l *SonexTokensInfoLogic) SonexTokensInfo(req *types.TokensInfoRequest) (re
 			},
 		}, nil
 	} else {
-		return &types.TokenInfoResponse{StatusCode: 500}, errors.New("Internal  error")
+		return &types.TokenInfoResponse{StatusCode: 500}, errors.New("internal  error")
 	}
 
 }

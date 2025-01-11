@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -18,7 +17,6 @@ type (
 		withSession(session sqlx.Session) TokenModel
 		QueryByChainId(ctx context.Context, chainId int64) ([]Token, error)
 		QueryByChainIdAddress(ctx context.Context, chainId int64, addresses []string) ([]Token, error)
-		QueryByChainIdAndOneAddress(ctx context.Context, chainId int64, address string) (PoolsResponse_Token, error)
 	}
 
 	customTokenModel struct {
@@ -57,35 +55,6 @@ func (m *customTokenModel) QueryByChainIdAddress(ctx context.Context, chainId in
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, addresses)
 	if err != nil {
 		return nil, err
-	}
-	return resp, nil
-}
-
-type PoolsResponse_Token struct {
-	Address    string         `db:"address"`
-	Symbol     string         `db:"symbol"`
-	Name       string         `db:"name"`
-	Decimals   int            `db:"decimals"`
-	Logo       string         `db:"logo"`
-	Additional sql.NullString `db:"additional"`
-}
-
-// type PoolsResponse_TokenAdditional struct {
-// 	Audits      string       `json:"audits"`
-// 	Social      Token_Social `json:"social"`
-// 	Website     string       `json:"website"`
-// 	Whitepaper  string       `json:"whitepaper"`
-// 	Description string       `json:"description"`
-// }
-
-func (m *customTokenModel) QueryByChainIdAndOneAddress(ctx context.Context, chainId int64, address string) (PoolsResponse_Token, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM %s WHERE chain_id = $1 AND address = $2  ORDER BY sort DESC
-	`, tokenRows, m.table)
-	var resp PoolsResponse_Token
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address)
-	if err != nil {
-		return resp, err
 	}
 	return resp, nil
 }

@@ -623,8 +623,8 @@ type Token_TokenValue struct {
 }
 
 type TokensInfoRequest struct {
+	Address string `path:"address"`
 	ChainId int64  `form:"chainId,default=1946,optional"`
-	Address string `form:"address"`
 }
 
 type TokensRequest struct {

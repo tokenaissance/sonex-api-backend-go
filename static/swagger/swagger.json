@@ -806,12 +806,6 @@
             "type": "integer",
             "format": "int64",
             "default": "1946"
-          },
-          {
-            "name": "address",
-            "in": "query",
-            "required": true,
-            "type": "string"
           }
         ],
         "tags": [
@@ -3489,15 +3483,9 @@
           "type": "integer",
           "format": "int64",
           "default": "1946"
-        },
-        "address": {
-          "type": "string"
         }
       },
-      "title": "TokensInfoRequest",
-      "required": [
-        "address"
-      ]
+      "title": "TokensInfoRequest"
     },
     "TokensRequest": {
       "type": "object",

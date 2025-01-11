@@ -40,7 +40,6 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	_poolAddress := req.Address
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	sonex := l.svcCtx.Config.GetSonexConfig(req.ChainId)
-	// _poolInfoResponse:=&types.PoolInfoResponse{StatusCode: 200}
 	if !common.IsHexAddress(_poolAddress) {
 		logx.Errorf("invalid pool address:%v ", _poolAddress)
 		return &types.PoolInfoResponse{StatusCode: 500}, errors.New("invalid param")
