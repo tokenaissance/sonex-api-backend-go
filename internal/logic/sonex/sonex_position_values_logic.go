@@ -259,8 +259,16 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	// 2. 计算总 position
 	amount0String := amount0.String()
 	amount1String := amount1.String()
-	token0Value, _ := sonex.NewTokenValue(amount0String, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
-	token1Value, _ := sonex.NewTokenValue(amount1String, position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	token0Value, err := sonex.NewTokenValue(amount0String, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[fillPosition] NewTokenValue error: %s", err.Error())
+		return nil, err
+	}
+	token1Value, err := sonex.NewTokenValue(amount1String, position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[fillPosition] NewTokenValue error: %s", err.Error())
+		return nil, err
+	}
 	tokenPair := sonex.NewTokenPair(token0Value, token1Value)
 	position.Position, _ = tokenPair.ValueFloat64()
 
