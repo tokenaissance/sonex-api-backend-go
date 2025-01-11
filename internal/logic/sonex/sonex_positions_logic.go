@@ -166,6 +166,7 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 		if _, ok := positionTransferItemMap[p.TokenId.Int64()]; !ok {
 			positionTransferItemMap[p.TokenId.Int64()] = &types.Position{
 				TokenID: p.TokenId.Int64(),
+				Origin:  p.Owner.Hex(),
 				Pool: types.Token_PoolDetail{
 					Token0: types.Token_TokenInfo{
 						Address:  token0.Address,
@@ -180,6 +181,9 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 						Name:     token1.Name,
 					},
 				},
+				TickUpper:   p.TickUpper.String(),
+				TickLower:   p.TickLower.String(),
+				PositionAge: 0,
 			}
 		}
 	}
