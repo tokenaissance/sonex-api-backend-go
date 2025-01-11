@@ -437,7 +437,6 @@ type PositionValuesResponse {
 
 type PositionsRequest {
 	Address    string `form:"address"`
-	FilterType string `form:"filterType,optional,default=none"`
 	ChainId    int64  `form:"chainId,default=1946,optional"`
 }
 

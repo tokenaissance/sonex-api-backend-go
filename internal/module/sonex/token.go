@@ -273,8 +273,18 @@ func NewTokenPair(tokens ...*TokenValue) *TokenPair {
 		pair.token0, _ = NewTokenValue("0", defaultDecimals)
 		pair.token1, _ = NewTokenValue("0", defaultDecimals)
 	case 2:
-		pair.token0 = tokens[0]
-		pair.token1 = tokens[1]
+		// 分别检查每个 token 是否为 nil
+		if tokens[0] == nil {
+			pair.token0, _ = NewTokenValue("0", defaultDecimals)
+		} else {
+			pair.token0 = tokens[0]
+		}
+
+		if tokens[1] == nil {
+			pair.token1, _ = NewTokenValue("0", defaultDecimals)
+		} else {
+			pair.token1 = tokens[1]
+		}
 	default:
 		// 如果参数数量不正确，返回默认初始化的 pair
 		pair.token0, _ = NewTokenValue("0", defaultDecimals)
