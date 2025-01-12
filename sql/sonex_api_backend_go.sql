@@ -503,7 +503,7 @@ CREATE TABLE "public"."event_sonex_position_manager_transfer" (
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_xpool_factory_pool_created";
 CREATE TABLE "public"."event_xpool_factory_pool_created" (
-  "id" int8 NOT NULL DEFAULT nextval('event_xpool_factory_pool_created_id_seq'::regclass),
+  "id" int8 NOT NULL,
   "created_at" timestamptz(6) NOT NULL,
   "updated_at" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
@@ -526,7 +526,7 @@ CREATE TABLE "public"."event_xpool_factory_pool_created" (
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_xpool_factory_pool_destroied";
 CREATE TABLE "public"."event_xpool_factory_pool_destroied" (
-  "id" int8 NOT NULL DEFAULT nextval('event_xpool_factory_pool_destroied_id_seq'::regclass),
+  "id" int8 NOT NULL,
   "created_at" timestamptz(6) NOT NULL,
   "updated_at" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
@@ -550,7 +550,7 @@ CREATE TABLE "public"."event_xpool_factory_pool_destroied" (
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_xpool_pool_claimed";
 CREATE TABLE "public"."event_xpool_pool_claimed" (
-  "id" int8 NOT NULL DEFAULT nextval('event_xpool_pool_claimed_id_seq'::regclass),
+  "id" int8 NOT NULL,
   "created_at" timestamptz(6) NOT NULL,
   "updated_at" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
@@ -572,7 +572,7 @@ CREATE TABLE "public"."event_xpool_pool_claimed" (
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_xpool_pool_deposited";
 CREATE TABLE "public"."event_xpool_pool_deposited" (
-  "id" int8 NOT NULL DEFAULT nextval('event_xpool_pool_deposited_id_seq'::regclass),
+  "id" int8 NOT NULL,
   "created_at" timestamptz(6) NOT NULL,
   "updated_at" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
@@ -594,7 +594,7 @@ CREATE TABLE "public"."event_xpool_pool_deposited" (
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_xpool_pool_withdrawed";
 CREATE TABLE "public"."event_xpool_pool_withdrawed" (
-  "id" int8 NOT NULL DEFAULT nextval('event_xpool_pool_withdrawed_id_seq'::regclass),
+  "id" int8 NOT NULL,
   "created_at" timestamptz(6) NOT NULL,
   "updated_at" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
