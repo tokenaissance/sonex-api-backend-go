@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sonex_api_backend_go/internal/types"
 )
 
 // TokenAmount 表示一个 token 的数量和精度
@@ -322,4 +323,17 @@ func (tp *TokenPair) ValueAdd(tp0 *TokenPair, tp1 *TokenPair) *big.Float {
 	tp0Value := tp0.value()
 	tp1Value := tp1.value()
 	return tp0Value.Add(tp0Value, tp1Value)
+}
+
+func (tp *TokenPair) ToTokenValuePair() *types.TokenValuePair {
+	return &types.TokenValuePair{
+		Token0: types.Token_TokenValue{
+			Amount:   tp.token0.amount,
+			Decimals: tp.token0.TokenAmount.decimals,
+		},
+		Token1: types.Token_TokenValue{
+			Amount:   tp.token1.amount,
+			Decimals: tp.token1.TokenAmount.decimals,
+		},
+	}
 }

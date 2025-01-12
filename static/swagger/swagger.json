@@ -2360,6 +2360,15 @@
         "isHolding": {
           "type": "boolean",
           "format": "boolean"
+        },
+        "totalInvested": {
+          "$ref": "#/definitions/TokenValuePair"
+        },
+        "totalWithdrawn": {
+          "$ref": "#/definitions/TokenValuePair"
+        },
+        "totalCollected": {
+          "$ref": "#/definitions/TokenValuePair"
         }
       },
       "title": "Position",
@@ -3161,6 +3170,22 @@
         "code",
         "data",
         "message"
+      ]
+    },
+    "TokenValuePair": {
+      "type": "object",
+      "properties": {
+        "token0": {
+          "$ref": "#/definitions/Token_TokenValue"
+        },
+        "token1": {
+          "$ref": "#/definitions/Token_TokenValue"
+        }
+      },
+      "title": "TokenValuePair",
+      "required": [
+        "token0",
+        "token1"
       ]
     },
     "TokenVolume": {

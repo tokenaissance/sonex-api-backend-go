@@ -314,21 +314,24 @@ type PortfolioResponse struct {
 }
 
 type Position struct {
-	TokenID       int64            `json:"tokenId"`
-	Position      float64          `json:"position"`
-	ClaimableFees float64          `json:"claimableFees"`
-	IsBurnt       bool             `json:"isBurnt"`
-	TickUpper     string           `json:"tickUpper"`
-	TickLower     string           `json:"tickLower"`
-	PNL           float64          `json:"pnl"`
-	Origin        string           `json:"origin"`
-	Pool          Token_PoolDetail `json:"pool"`
-	PositionAge   int              `json:"positionAge"`
-	UnclaimedFee0 float64          `json:"unclaimedFee0"`
-	UnclaimedFee1 float64          `json:"unclaimedFee1"`
-	TokenValue0   Token_TokenValue `json:"tokenValue0"`
-	TokenValue1   Token_TokenValue `json:"tokenValue1"`
-	IsHolding     bool             `json:"isHolding"`
+	TokenID        int64            `json:"tokenId"`
+	Position       float64          `json:"position"`
+	ClaimableFees  float64          `json:"claimableFees"`
+	IsBurnt        bool             `json:"isBurnt"`
+	TickUpper      string           `json:"tickUpper"`
+	TickLower      string           `json:"tickLower"`
+	PNL            float64          `json:"pnl"`
+	Origin         string           `json:"origin"`
+	Pool           Token_PoolDetail `json:"pool"`
+	PositionAge    int              `json:"positionAge"`
+	UnclaimedFee0  float64          `json:"unclaimedFee0"`
+	UnclaimedFee1  float64          `json:"unclaimedFee1"`
+	TokenValue0    Token_TokenValue `json:"tokenValue0"`
+	TokenValue1    Token_TokenValue `json:"tokenValue1"`
+	IsHolding      bool             `json:"isHolding"`
+	TotalInvested  TokenValuePair   `json:"totalInvested,omitempty"`
+	TotalWithdrawn TokenValuePair   `json:"totalWithdrawn,omitempty"`
+	TotalCollected TokenValuePair   `json:"totalCollected,omitempty"`
 }
 
 type PositionRequest struct {
@@ -543,6 +546,11 @@ type TokenTopResponse struct {
 	Code    int                  `json:"code"`
 	Data    []*Token_TokenDetail `json:"data"`
 	Message string               `json:"message"`
+}
+
+type TokenValuePair struct {
+	Token0 Token_TokenValue `json:"token0"`
+	Token1 Token_TokenValue `json:"token1"`
 }
 
 type TokenVolume struct {
