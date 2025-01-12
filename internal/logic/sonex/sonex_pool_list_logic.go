@@ -605,7 +605,7 @@ func CalucatedVolume24H(conn sqlx.SqlConn, chain *config.ChainConfig, _chainId i
 
 	// assign value
 
-	_specialPoolAddressVolume24H := ""
+	_specialPoolAddressVolume24H := "0"
 	for i, v := range _swapAmoutEthAndUsdMap {
 		// _swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, new(big.Float).Quo(v.EthAmount, new(big.Float).SetFloat64(math.Pow10(18)))), v.UsdAmount)
 		// 数据库里面拿出来ethValue（也就是数据库里面value字段），要除以10**18，根据数据库里面保存的是 18位精度  event_sonex_pool_swap
