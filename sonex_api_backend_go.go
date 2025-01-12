@@ -129,6 +129,9 @@ func main() {
 				handler.OnStaked(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.BridgeStakerStaked) {
 					pre_deposit.StakedCallback(c, chainId, tx, event)
 				})
+				handler.OnRewardClaimed(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.RewardClaimerRewardClaimed) {
+					pre_deposit.RewardClaimedCallback(c, chainId, tx, event)
+				})
 				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}

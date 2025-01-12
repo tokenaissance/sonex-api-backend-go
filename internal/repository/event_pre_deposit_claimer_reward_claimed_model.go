@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -17,7 +18,8 @@ type (
 		eventPreDepositClaimerRewardClaimedModel
 		withSession(session sqlx.Session) EventPreDepositClaimerRewardClaimedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, token string, amount string, nonce int64) error
-		QueryLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*EventPreDepositClaimerRewardClaimed, error)
+		FindLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*EventPreDepositClaimerRewardClaimed, error)
+		SummarizeTotalClaimedByChainIdUserToken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error)
 	}
 
 	customEventPreDepositClaimerRewardClaimedModel struct {
@@ -42,7 +44,7 @@ func (m *customEventPreDepositClaimerRewardClaimedModel) New(ctx context.Context
 	return err
 }
 
-func (m *customEventPreDepositClaimerRewardClaimedModel) QueryLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*EventPreDepositClaimerRewardClaimed, error) {
+func (m *customEventPreDepositClaimerRewardClaimedModel) FindLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*EventPreDepositClaimerRewardClaimed, error) {
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND event_user = $2 ORDER BY event_nonce DESC LIMIT 1", eventPreDepositClaimerRewardClaimedRows, m.table)
 	var resp EventPreDepositClaimerRewardClaimed
 	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user)
@@ -54,4 +56,15 @@ func (m *customEventPreDepositClaimerRewardClaimedModel) QueryLatestByChainIdUse
 	default:
 		return nil, err
 	}
+}
+
+func (m *customEventPreDepositClaimerRewardClaimedModel) SummarizeTotalClaimedByChainIdUserToken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error) {
+	query := fmt.Sprintf("SELECT COALESCE(SUM(event_amount::NUMERIC),0) FROM %s WHERE chain_id = $1 AND event_user = $2 AND event_token = $3", m.table)
+	var resp string
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user, token)
+	if err != nil {
+		return nil, err
+	}
+	value, _ := new(big.Int).SetString(resp, 10)
+	return value, nil
 }

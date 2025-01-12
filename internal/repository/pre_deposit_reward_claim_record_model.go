@@ -20,7 +20,6 @@ type (
 		New(ctx context.Context, id int64, chainId int64, user string, token string, amount string, nonce int64, signature string) error
 		UpdateTxById(ctx context.Context, id int64, txHash string, txIndex int64, txAt time.Time) error
 		FindLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*PreDepositRewardClaimRecord, error)
-		SummarizeClaimedByChainIdUsertoken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error)
 	}
 
 	customPreDepositRewardClaimRecordModel struct {
@@ -45,8 +44,8 @@ func (m *customPreDepositRewardClaimRecordModel) withSession(session sqlx.Sessio
 }
 
 func (m *customPreDepositRewardClaimRecordModel) New(ctx context.Context, id int64, chainId int64, user string, token string, amount string, nonce int64, signature string) error {
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", m.table, preDepositRewardClaimRecordRows)
-	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, user, token, amount, nonce, signature)
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, preDepositRewardClaimRecordRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, user, token, amount, nonce, signature, nil, nil, nil)
 	return err
 }
 
@@ -57,7 +56,7 @@ func (m *customPreDepositRewardClaimRecordModel) UpdateTxById(ctx context.Contex
 }
 
 func (m *customPreDepositRewardClaimRecordModel) FindLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*PreDepositRewardClaimRecord, error) {
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND user_address = $2 ORDER BY updated_at DESC LIMIT 1", eventPreDepositClaimerRewardClaimedRows, m.table)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND user_address = $2 ORDER BY updated_at DESC LIMIT 1", preDepositRewardClaimRecordRows, m.table)
 	var resp PreDepositRewardClaimRecord
 	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user)
 	switch err {
@@ -68,15 +67,4 @@ func (m *customPreDepositRewardClaimRecordModel) FindLatestByChainIdUser(ctx con
 	default:
 		return nil, err
 	}
-}
-
-func (m *customPreDepositRewardClaimRecordModel) SummarizeClaimedByChainIdUsertoken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error) {
-	query := fmt.Sprintf("SELECT COALESCE(SUM(amount::NUMERIC),0) FROM %s WHERE chain_id = $1 AND user_address = $2 AND token = $3 AND tx_hash IS NOT NULL", m.table)
-	var resp string
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user, token)
-	if err != nil {
-		return nil, err
-	}
-	value, _ := new(big.Int).SetString(resp, 10)
-	return value, nil
 }

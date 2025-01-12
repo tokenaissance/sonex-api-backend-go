@@ -18,6 +18,7 @@ type (
 		withSession(session sqlx.Session) PreDepositRewardSnapshotModel
 		New(ctx context.Context, id int64, chainId int64, user string, amount string, rewardToken string, rewardAmount *big.Int) error
 		FindLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*PreDepositRewardSnapshot, error)
+		SummarizeTotalRewardByChainIdUserToken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error)
 	}
 
 	customPreDepositRewardSnapshotModel struct {
@@ -54,4 +55,15 @@ func (m *customPreDepositRewardSnapshotModel) FindLatestByChainIdUser(ctx contex
 	default:
 		return nil, err
 	}
+}
+
+func (m *customPreDepositRewardSnapshotModel) SummarizeTotalRewardByChainIdUserToken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error) {
+	query := fmt.Sprintf("SELECT COALESCE(SUM(reward_amount::NUMERIC),0) FROM %s WHERE chain_id = $1 AND user_address = $2 AND reward_token = $3", m.table)
+	var resp string
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user, token)
+	if err != nil {
+		return nil, err
+	}
+	value, _ := new(big.Int).SetString(resp, 10)
+	return value, nil
 }
