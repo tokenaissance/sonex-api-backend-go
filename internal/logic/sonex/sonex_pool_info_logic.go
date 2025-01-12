@@ -222,6 +222,9 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 
 			_fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
 
+			if strings.EqualFold(_volume24HString, "") {
+				_volume24HString = "0"
+			}
 			_volume24HBigFloat64, _ := new(big.Float).SetString(_volume24HString)
 			_volume24HFloat64, _ := _volume24HBigFloat64.Float64()
 			_result = &types.PoolInfoResponse{
@@ -263,6 +266,9 @@ func getVolume24HOfPoolAddress(conn sqlx.SqlConn, chain *config.ChainConfig, _ch
 	} else if err != nil && !errors.Is(err, redis.Nil) {
 		logx.Errorf("GetVolume24HValue _poolAddress:%v  error:%v ", _poolAddress, err)
 		return "0"
+	}
+	if strings.EqualFold(_volume24H, "") {
+		_volume24H = "0"
 	}
 	return _volume24H
 }

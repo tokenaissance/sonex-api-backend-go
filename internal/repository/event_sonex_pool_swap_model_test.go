@@ -141,7 +141,9 @@ func Test_GetTransactionByPoolAddress(t *testing.T) {
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
-	records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
+	// records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
+
+	records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x324Bbefef6350cbcE6079a88aCe0D69e99354Dd8", true)
 	if err != nil {
 		t.Error(err)
 	}
