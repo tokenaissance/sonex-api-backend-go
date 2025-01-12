@@ -12,13 +12,12 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
-	contract_uniswap_v3 "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
+	contract_pre_deposit "sonex_api_backend_go/internal/lib/contract/pre_deposit"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -52,9 +51,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	global.AddCronJob("@every 1m", func() {
-		task.HandleRecordTokenPrice(&c)
-	})
 
 	opts := []rest.RunOption{}
 	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders("x-chain-id"))
@@ -100,6 +96,14 @@ func main() {
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)
 
+	// Register schedule handler
+	global.AddCronJob("@every 1m", func() {
+		task.HandleRecordTokenPrice(&c)
+	})
+	global.AddCronJob("0/30 * * * * ?", func() {
+		task.HandlePreDepositSnapshotDaily(&c)
+	})
+
 	// Register chain handler
 	for _, chain := range c.Chains {
 		// Sonex handler
@@ -110,10 +114,6 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				// Swap callback demo
-				handler.OnPoolSwap(func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *contract_uniswap_v3.UniswapV3PoolSwap) {
-					sonex.SwapCallback(c, chainId, pool, tx, event)
-				})
 				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
@@ -126,6 +126,9 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				handler.OnStaked(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.BridgeStakerStaked) {
+					pre_deposit.StakedCallback(c, chainId, tx, event)
+				})
 				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}

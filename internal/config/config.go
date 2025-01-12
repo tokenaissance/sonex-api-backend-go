@@ -6,14 +6,15 @@ import "github.com/zeromicro/go-zero/rest"
 type Config struct {
 	Debug bool `json:",env=DEBUG,default=false"`
 	rest.RestConf
-	Domains     []string           `json:",optional,default=[]"`
-	PostgreSQL  PgConfig           `json:","`
-	Chains      []ChainConfig      `json:","`
-	Sonexes     []SonexConfig      `json:",optional"`
-	PreDeposits []PreDepositConfig `json:",optional"`
-	Xpools      []XpoolConfig      `json:",optional"`
-	Farms       []FarmConfig       `json:",optional"`
-	Redis       RedisConfig        `json:","`
+	Domains       []string             `json:",optional,default=[]"`
+	PostgreSQL    PgConfig             `json:","`
+	Redis         RedisConfig          `json:","`
+	PointsService *PointsServiceConfig `json:",optional"`
+	Chains        []ChainConfig        `json:","`
+	Sonexes       []SonexConfig        `json:",optional"`
+	PreDeposits   []PreDepositConfig   `json:",optional"`
+	Xpools        []XpoolConfig        `json:",optional"`
+	Farms         []FarmConfig         `json:",optional"`
 }
 
 // Get general configuration of a blockchain of `chainId`.

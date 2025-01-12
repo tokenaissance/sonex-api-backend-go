@@ -23,7 +23,7 @@ func HandleRecordTokenPrice(config *config.Config) {
 	conn := repository.NewConn(config.PostgreSQL.DateSource())
 
 	for _, chainConf := range config.Chains {
-		err := Update(chainConf, conn)
+		err := RecordTokenPrice(chainConf, conn)
 		if err != nil {
 			logx.Errorf("Token history price update failed: %d %s", chainConf.ChainId, err)
 			continue
@@ -32,7 +32,7 @@ func HandleRecordTokenPrice(config *config.Config) {
 	logx.Info("Token history price updated")
 }
 
-func Update(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
+func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 	tokenModel := repository.NewTokenModel(conn)
 
 	tokens, err := tokenModel.QueryByChainId(context.Background(), chainConf.ChainId)

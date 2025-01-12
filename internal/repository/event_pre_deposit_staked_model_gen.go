@@ -52,7 +52,7 @@ type (
 		Value          string    `db:"value"`
 		EventUser      string    `db:"event_user"`
 		EventToken     string    `db:"event_token"`
-		EventAmount    int64     `db:"event_amount"`
+		EventAmount    string    `db:"event_amount"`
 		EventTimestamp int64     `db:"event_timestamp"`
 	}
 )
