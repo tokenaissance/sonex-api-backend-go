@@ -510,7 +510,7 @@ type PoolInfoResponse {
 	Vol24h float64 `json:"vol24h"`
 	Vol24hRatio string `json:"vol24hRatio"`
 	IsVol24hNegative bool `json:"isVol24hNegative"`
-	Fee24h int64 `json:"fee24h"`
+	Fee24h float64 `json:"fee24h"`
 }
 
 
