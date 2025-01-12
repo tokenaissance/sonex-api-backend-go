@@ -41,6 +41,7 @@ type (
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 		SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) (map[int64]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
+		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
 	}
 
 	customEventSonexPoolSwapModel struct {
@@ -831,6 +832,36 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Cont
 	}
 
 	return poolVolumesMap, nil
+}
+
+// getTransaction By pool address
+// _poolAddress checksum address
+func (m *customEventSonexPoolSwapModel) GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error) {
+
+	volumeQuery := fmt.Sprintf(`
+		SELECT
+			tx_hash 	
+		FROM
+			%s S
+		WHERE S.chain_id = $1 and extra_pool=$2
+	`, m.table)
+
+	if last24Hours {
+		// Assuming `transaction_time` is a timestamp column in your table
+		volumeQuery += " AND S.tx_at >= NOW() - INTERVAL '24 HOURS'"
+	}
+
+	// Complete the query with grouping
+	// volumeQuery += " GROUP BY S.extra_pool,S.id,C.event_token0, C.event_token1"
+
+	// Execute the query and scan results into poolVolumes slice
+	var _txhashes []string
+	err := m.conn.QueryRowsCtx(ctx, &_txhashes, volumeQuery, chainId, _poolAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	return _txhashes, nil
 }
 
 type SwapData struct {

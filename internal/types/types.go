@@ -230,7 +230,7 @@ type PoolInfoResponse struct {
 	Vol24h           float64             `json:"vol24h"`
 	Vol24hRatio      string              `json:"vol24hRatio"`
 	IsVol24hNegative bool                `json:"isVol24hNegative"`
-	Fee24h           int64               `json:"fee24h"`
+	Fee24h           float64             `json:"fee24h"`
 }
 
 type PoolPositionData struct {
@@ -358,9 +358,8 @@ type PositionValuesResponse struct {
 }
 
 type PositionsRequest struct {
-	Address    string `form:"address"`
-	FilterType string `form:"filterType,optional,default=none"`
-	ChainId    int64  `form:"chainId,default=1946,optional"`
+	Address string `form:"address"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type PositionsResponse struct {

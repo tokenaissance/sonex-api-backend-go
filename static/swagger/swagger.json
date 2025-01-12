@@ -486,13 +486,6 @@
             "type": "string"
           },
           {
-            "name": "filterType",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "default": "none"
-          },
-          {
             "name": "chainId",
             "in": "query",
             "required": false,
@@ -1992,8 +1985,8 @@
           "format": "boolean"
         },
         "fee24h": {
-          "type": "integer",
-          "format": "int64"
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "PoolInfoResponse",
@@ -2480,10 +2473,6 @@
       "properties": {
         "address": {
           "type": "string"
-        },
-        "filterType": {
-          "type": "string",
-          "default": "none"
         },
         "chainId": {
           "type": "integer",

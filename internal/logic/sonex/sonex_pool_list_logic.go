@@ -414,7 +414,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	})
 
 	// calculate volume
-	_swapAmoutEthAndUsdMap, err := CalucatedVolume24H(req, conn, chain)
+	_swapAmoutEthAndUsdMap, err, _ := CalucatedVolume24H(conn, chain, req.ChainId, cacher)
 	if err != nil {
 		return &response.ApiResponse{
 			Data: []*types.PoolsResponse_Pool{},
@@ -459,7 +459,8 @@ type SwapAmoutEthAndUsd struct {
 	UsdAmount *big.Float //
 }
 
-func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *config.ChainConfig) (map[string]*SwapAmoutEthAndUsd, error) {
+// 如果 _specialPoolAddress 不为空，就把 _specialPoolAddress对应的volume24H 返回
+func CalucatedVolume24H(conn sqlx.SqlConn, chain *config.ChainConfig, _chainId int64, cacher cache.ICache, _specialPoolAddress ...string) (map[string]*SwapAmoutEthAndUsd, error, string) {
 
 	/*
 		USD: amount1
@@ -469,10 +470,10 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	ctx := context.Background()
 	// 获取 event_sonex_pool_swap 里面的交易详情
-	poolVolumesMap, err := eventSonexPoolSwapModel.SummarizePoolVolumesUsd(ctx, req.ChainId, true)
+	poolVolumesMap, err := eventSonexPoolSwapModel.SummarizePoolVolumesUsd(ctx, _chainId, true)
 	if err != nil {
 		logx.Errorf("[refreshCache]: SummarizePoolVolumesUsd error: %s", err)
-		return nil, err
+		return nil, err, ""
 	}
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	//  poolVolumesMapAfterProcessedItems 条目
@@ -603,6 +604,8 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 	// _usdPriceFloat, _ := new(big.Float).SetString(_usdPrice)
 
 	// assign value
+
+	_specialPoolAddressVolume24H := ""
 	for i, v := range _swapAmoutEthAndUsdMap {
 		// _swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(new(big.Float).Mul(_wethPriceFloat, new(big.Float).Quo(v.EthAmount, new(big.Float).SetFloat64(math.Pow10(18)))), v.UsdAmount)
 		// 数据库里面拿出来ethValue（也就是数据库里面value字段），要除以10**18，根据数据库里面保存的是 18位精度  event_sonex_pool_swap
@@ -612,11 +615,35 @@ func CalucatedVolume24H(req *types.PoolsRequest, conn sqlx.SqlConn, chain *confi
 		_ethValue := new(big.Float).Mul(_wethPriceFloatQuo6pow10, _ethAmountDiv18)
 
 		_usdAmountDiv6 := new(big.Float).Quo(v.UsdAmount, new(big.Float).SetFloat64(math.Pow10(_usdPriceForUsdDecimals)))
+		_volume24HBigFloat := new(big.Float).Add(_ethValue, _usdAmountDiv6)
 
-		_swapAmoutEthAndUsdMap[i].Volume24H = new(big.Float).Add(_ethValue, _usdAmountDiv6)
+		_volume24HBigFloatString := _volume24HBigFloat.String()
+		_swapAmoutEthAndUsdMap[i].Volume24H = _volume24HBigFloat
 
+		if len(_specialPoolAddress) == 1 {
+			if strings.EqualFold(i, _specialPoolAddress[0]) {
+				_specialPoolAddressVolume24H = _volume24HBigFloatString
+			}
+		}
+
+		// 24 小时过期
+		err := SetVolume24HValue(cacher, i, _volume24HBigFloatString)
+		if err != nil {
+			logx.Errorf("SetVolume24HValue %v errpr:%v ", i, err)
+		}
 		logx.Debugf(" i:%v v:%#v _wethPriceFloatQuo6pow10:%v v.EthAmount:%v _ethAmountDiv18:%v ,_ethValue:%v, v.UsdAmount:%v _usdAmountDiv6:%v  	_swapAmoutEthAndUsdMap[i].Volume24H :%v  ", i, v, _wethPriceFloatQuo6pow10, v.EthAmount, _ethAmountDiv18, _ethValue, v.UsdAmount, _usdAmountDiv6, _swapAmoutEthAndUsdMap[i].Volume24H)
 	}
 
-	return _swapAmoutEthAndUsdMap, nil
+	return _swapAmoutEthAndUsdMap, nil, _specialPoolAddressVolume24H
+}
+
+// key : fmt.Sprintf("volume24H_%v", _keyPoolAddress)
+// value: volume24H ,string
+// expiration : 24H
+func GetVolume24HValue(cacher cache.ICache, _keyPoolAddress string) (string, error) {
+	return cacher.Get(fmt.Sprintf("volume24H_%v", _keyPoolAddress))
+}
+
+func SetVolume24HValue(cacher cache.ICache, _keyPoolAddress string, _valueVolume24H string) error {
+	return cacher.Set(fmt.Sprintf("volume24H_%v", _keyPoolAddress), _valueVolume24H, 24*time.Hour)
 }
