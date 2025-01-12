@@ -43,6 +43,10 @@ func (handler *PreDepositHandler) OnWithdrawn(callback func(chainId int64, tx *n
 	handler.onWithdrawn = append(handler.onWithdrawn, callback)
 }
 
+func (handler *PreDepositHandler) OnRewardClaimed(callback func(chainId int64, tx *node_caller.Transaction, event *pre_deposit.RewardClaimerRewardClaimed)) {
+	handler.onRewardClaimed = append(handler.onRewardClaimed, callback)
+}
+
 func (handler *PreDepositHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
 	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain)
 	if err != nil {
@@ -193,7 +197,7 @@ func (handler *PreDepositHandler) Execute(client *ethclient.Client, opt *bind.Fi
 
 	// RewardClaimer
 	{
-		bridgeStaker, err := pre_deposit.NewRewardClaimer(common.HexToAddress(handler.config.BridgeStaker), client)
+		bridgeStaker, err := pre_deposit.NewRewardClaimer(common.HexToAddress(handler.config.RewardClaimer), client)
 		if err != nil {
 			return err, false
 		}
