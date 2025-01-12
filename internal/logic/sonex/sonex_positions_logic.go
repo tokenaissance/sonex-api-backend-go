@@ -38,8 +38,24 @@ type PositionsResponseWrapper struct {
 	*types.PositionsResponse
 }
 
+const (
+	CacheKey = "sonex_dex:uniswap:positions:%s"
+)
+
+// DelCache 删除缓存
+func (l *SonexPositionsLogic) DelCache(address string) error {
+	address = common.HexToAddress(address).Hex()
+	cacheKey := fmt.Sprintf(CacheKey, address)
+	err := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB).Del(cacheKey)
+	if err != nil {
+		logx.Errorf("[SonexPositionsLogic] DelCache error: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
 func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp *PositionsResponseWrapper, err error) {
-	cacheKey := fmt.Sprintf("sonex_dex:uniswap:positions:%s:%s", req.Address, req.FilterType)
+	cacheKey := fmt.Sprintf(CacheKey, req.Address)
 
 	// Check cache
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
@@ -93,24 +109,88 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 
 	positionTokenIds := make([]int64, 0)
 	positionTransferItemMap := make(map[int64]*types.Position)
-	token0Decimals := make([]int, 0)
-	token0Addresses := make([]string, 0)
-	token1Decimals := make([]int, 0)
-	token1Addresses := make([]string, 0)
+	token0Decimals, token1Decimals := make([]int, 0), make([]int, 0)
+	token0Addresses, token1Addresses := make([]string, 0), make([]string, 0)
 	for _, item := range items {
 		if !item.IsBurnt {
 			tokenId := item.TokenID
 			positionTokenIds = append(positionTokenIds, tokenId)
 			positionTransferItemMap[tokenId] = item
-			token0Decimals = append(token0Decimals, item.Pool.Token0.Decimals)
-			token1Decimals = append(token1Decimals, item.Pool.Token1.Decimals)
-			token0Addresses = append(token0Addresses, item.Pool.Token0.Address)
-			token1Addresses = append(token1Addresses, item.Pool.Token1.Address)
+		}
+	}
+
+	pv := NewSonexPositionLogic(l.ctx, l.svcCtx)
+	tokenIds, err := pv.GetAddressTokenIds(ctx, req.Address)
+	if err != nil {
+		logx.Errorf("[SonexPositionsLogic] GetAddressTokenIds error: %s", err.Error())
+	}
+
+	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
+	positions, err := caller.BatchGetPositions(
+		ctx,
+		req.ChainId,
+		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
+		func(tokenIds []int64) []*big.Int {
+			// Create a map to track unique tokenIds
+			uniqueIds := make(map[int64]bool)
+			for _, id := range tokenIds {
+				uniqueIds[id] = true
+			}
+
+			// Convert unique ids to slice
+			converted := make([]*big.Int, 0, len(uniqueIds))
+			for id := range uniqueIds {
+				converted = append(converted, big.NewInt(id))
+			}
+			return converted
+		}(append(positionTokenIds, tokenIds...)),
+	)
+
+	for _, p := range positions {
+		token0, err := global.GetToken(req.ChainId, p.Token0.Hex())
+		if err != nil {
+			logx.Errorf("[SonexPositionsLogic] GetToken error: %s", err.Error())
+			return nil, err
+		}
+		token1, err := global.GetToken(req.ChainId, p.Token1.Hex())
+		if err != nil {
+			logx.Errorf("[SonexPositionsLogic] GetToken error: %s", err.Error())
+			return nil, err
+		}
+
+		token0Decimals = append(token0Decimals, int(token0.Decimals))
+		token1Decimals = append(token1Decimals, int(token1.Decimals))
+		token0Addresses = append(token0Addresses, token0.Address)
+		token1Addresses = append(token1Addresses, token1.Address)
+
+		if _, ok := positionTransferItemMap[p.TokenId.Int64()]; !ok {
+			positionTransferItemMap[p.TokenId.Int64()] = &types.Position{
+				TokenID: p.TokenId.Int64(),
+				Origin:  p.Owner.Hex(),
+				Pool: types.Token_PoolDetail{
+					Token0: types.Token_TokenInfo{
+						Address:  token0.Address,
+						Decimals: int(token0.Decimals),
+						Symbol:   token0.Symbol,
+						Name:     token0.Name,
+					},
+					Token1: types.Token_TokenInfo{
+						Address:  token1.Address,
+						Decimals: int(token1.Decimals),
+						Symbol:   token1.Symbol,
+						Name:     token1.Name,
+					},
+					Tick: p.Pool.Slot0.Tick.String(),
+				},
+				TickUpper:   p.TickUpper.String(),
+				TickLower:   p.TickLower.String(),
+				PositionAge: 0,
+			}
 		}
 	}
 
 	var wg sync.WaitGroup
-	results := make(chan taskResult, 3)
+	results := make(chan taskResult, 2)
 
 	// Task 1: Get collected fees
 	wg.Add(1)
@@ -120,27 +200,7 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 		results <- taskResult{collectedPairs: pairs, err: err}
 	}()
 
-	// Task 2: Get positions
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
-		pos, err := caller.BatchGetPositions(
-			context.Background(),
-			req.ChainId,
-			common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
-			func(tokenIds []int64) []*big.Int {
-				converted := make([]*big.Int, len(tokenIds))
-				for i, tokenId := range tokenIds {
-					converted[i] = big.NewInt(tokenId)
-				}
-				return converted
-			}(positionTokenIds),
-		)
-		results <- taskResult{positions: pos, err: err}
-	}()
-
-	// Task 3: Get token prices
+	// Task 2: Get token prices
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -156,7 +216,6 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 
 	// Collect results
 	var collectedPairs = make(map[int64]*sonex.TokenPair)
-	var positions = make([]*sonex.Position, 0)
 	var tokenPricesRecords = make(map[string]*repository.TokenPriceRecord)
 
 	for result := range results {
@@ -166,9 +225,6 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 		}
 		if result.collectedPairs != nil {
 			collectedPairs = result.collectedPairs
-		}
-		if result.positions != nil {
-			positions = result.positions
 		}
 		if result.tokenPricesRecords != nil {
 			tokenPricesRecords = result.tokenPricesRecords

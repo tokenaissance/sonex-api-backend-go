@@ -355,6 +355,41 @@
         ]
       }
     },
+    "/sonex/pools/info/{address}": {
+      "get": {
+        "operationId": "SonexPoolInfoHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PoolInfoResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/pools/position/{tokenId}": {
       "get": {
         "operationId": "SonexPositionHandler",
@@ -736,6 +771,41 @@
             "type": "boolean",
             "format": "boolean",
             "default": "false"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/sonex/tokens/info/{address}": {
+      "get": {
+        "operationId": "SonexTokensInfoHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TokenInfoResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1946"
           }
         ],
         "tags": [
@@ -1844,6 +1914,111 @@
         "fee"
       ]
     },
+    "PoolInfoRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "PoolInfoRequest"
+    },
+    "PoolInfoResponse": {
+      "type": "object",
+      "properties": {
+        "statusCode": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "address": {
+          "type": "string"
+        },
+        "token0": {
+          "$ref": "#/definitions/PoolsResponse_Token"
+        },
+        "token1": {
+          "$ref": "#/definitions/PoolsResponse_Token"
+        },
+        "token0Price": {
+          "type": "string"
+        },
+        "token1Price": {
+          "type": "string"
+        },
+        "feeTier": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "liquidity": {
+          "type": "string"
+        },
+        "volumeToken0": {
+          "type": "number",
+          "format": "double"
+        },
+        "volumeToken1": {
+          "type": "number",
+          "format": "double"
+        },
+        "tvlUSD": {
+          "type": "string"
+        },
+        "amountPrice0": {
+          "type": "number",
+          "format": "double"
+        },
+        "amountPrice1": {
+          "type": "number",
+          "format": "double"
+        },
+        "tvlRatio": {
+          "type": "string"
+        },
+        "isTvlNegative": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "vol24h": {
+          "type": "number",
+          "format": "double"
+        },
+        "vol24hRatio": {
+          "type": "string"
+        },
+        "isVol24hNegative": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "fee24h": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "PoolInfoResponse",
+      "required": [
+        "statusCode",
+        "address",
+        "token0",
+        "token1",
+        "token0Price",
+        "token1Price",
+        "feeTier",
+        "liquidity",
+        "volumeToken0",
+        "volumeToken1",
+        "tvlUSD",
+        "amountPrice0",
+        "amountPrice1",
+        "tvlRatio",
+        "isTvlNegative",
+        "vol24h",
+        "vol24hRatio",
+        "isVol24hNegative",
+        "fee24h"
+      ]
+    },
     "PoolPositionData": {
       "type": "object",
       "properties": {
@@ -2724,6 +2899,23 @@
         "priceUSD"
       ]
     },
+    "TokenInfoResponse": {
+      "type": "object",
+      "properties": {
+        "statusCode": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token": {
+          "$ref": "#/definitions/PoolsResponse_Token"
+        }
+      },
+      "title": "TokenInfoResponse",
+      "required": [
+        "statusCode",
+        "token"
+      ]
+    },
     "TokenPriceRequest": {
       "type": "object",
       "properties": {
@@ -3283,6 +3475,17 @@
         "amount",
         "decimals"
       ]
+    },
+    "TokensInfoRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1946"
+        }
+      },
+      "title": "TokensInfoRequest"
     },
     "TokensRequest": {
       "type": "object",

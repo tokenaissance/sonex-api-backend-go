@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Implements adapter of the SONEX dApp
 type StaticCaller struct {
 	c config.Config
 }
@@ -25,6 +26,7 @@ func NewStaticCaller(config config.Config) (*StaticCaller, error) {
 	}, nil
 }
 
+// Batch query ERC20 balances for given accounts and tokens
 func (staticCaller *StaticCaller) BatchBalanceOf(ctx context.Context, chainId int64, addresses []common.Address, tokens []common.Address) (map[string]map[string]*big.Int, error) {
 	chain := staticCaller.c.GetChainConfig(chainId)
 	if chain == nil {
@@ -92,6 +94,7 @@ func (staticCaller *StaticCaller) BatchBalanceOf(ctx context.Context, chainId in
 	return result, nil
 }
 
+// Batch query pools' states
 func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int64, pools []common.Address) ([]*Pool, error) {
 	chain := staticCaller.c.GetChainConfig(chainId)
 	if chain == nil {
@@ -243,6 +246,7 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 	return result, nil
 }
 
+// Batch get the positions about specified NFT token IDs.
 func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId int64, positionManager common.Address, tokenIds []*big.Int) ([]*Position, error) {
 	chain := staticCaller.c.GetChainConfig(chainId)
 	if chain == nil {

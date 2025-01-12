@@ -9,6 +9,7 @@ import (
 	"sonex_api_backend_go/internal/types"
 	"time"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -29,6 +30,7 @@ type (
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error)
 		SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error)
 		GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error)
+		GetPoolInfo(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -303,4 +305,78 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	}
 
 	return pools, meta, nil
+}
+
+// GetPoolList returns a map of pool data and pagination meta
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolInfo(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, error) {
+	var poolData []PoolData
+	logx.Info("GetPoolInfoGetPoolInfoGetPoolInfo")
+	baseQuery := fmt.Sprintf(`
+		FROM %s AS pool
+		INNER JOIN sonex_token AS token0 ON pool.event_token0 = token0.address AND token0."isHidden" = false
+		INNER JOIN sonex_token AS token1 ON pool.event_token1 = token1.address AND token1."isHidden" = false
+		WHERE pool.chain_id = $1 `, m.table)
+	args := []interface{}{params.ChainId}
+
+	paramIndex := 2
+
+	if params.Token0Address != "" {
+		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
+		args = append(args, params.Token0Address)
+		paramIndex++
+	}
+
+	if params.Token1Address != "" {
+		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
+		args = append(args, params.Token1Address)
+		paramIndex++
+	}
+
+	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token0.decimals AS token0_decimals, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional, token1.decimals AS token1_decimals %s", baseQuery)
+	switch params.Order {
+	case "ASC":
+		dataQuery += " ORDER BY pool.id ASC"
+	default:
+		dataQuery += " ORDER BY pool.id DESC"
+	}
+	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", 1, 0)
+
+	err := m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	pools := make(map[string]*sonex.PoolFromDB)
+	for _, pd := range poolData {
+		var token0Additional types.PoolsResponse_TokenAdditional
+		var token1Additional types.PoolsResponse_TokenAdditional
+		_ = json.Unmarshal([]byte(pd.Token0Additional.String), &token0Additional)
+		_ = json.Unmarshal([]byte(pd.Token1Additional.String), &token1Additional)
+
+		pool := &sonex.PoolFromDB{
+			ChainId: params.ChainId,
+			Id:      pd.EventPool,
+			Address: pd.EventPool,
+			FeeTier: pd.EventFee,
+			Token0: &types.PoolsResponse_Token{
+				Address:    pd.Token0Address.String,
+				Symbol:     pd.Token0Symbol.String,
+				Name:       pd.Token0Name.String,
+				Logo:       pd.Token0Logo.String,
+				Decimals:   int(pd.Token0Decimals.Int64),
+				Additional: token0Additional,
+			},
+			Token1: &types.PoolsResponse_Token{
+				Address:    pd.Token1Address.String,
+				Symbol:     pd.Token1Symbol.String,
+				Name:       pd.Token1Name.String,
+				Logo:       pd.Token1Logo.String,
+				Decimals:   int(pd.Token1Decimals.Int64),
+				Additional: token1Additional,
+			},
+		}
+		pools[pool.Id] = pool
+	}
+
+	return pools, nil
 }

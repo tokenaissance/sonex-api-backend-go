@@ -33,6 +33,7 @@ var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
 var tokenCachersLock sync.RWMutex
 
+// Initialize application's components
 func Initialize(config config.Config) error {
 	c = config
 
@@ -63,28 +64,34 @@ func Initialize(config config.Config) error {
 	return nil
 }
 
+// Adds a scanning handler to specified blockchain scanner
 func AddChainHandler(chainId int64, handler chain_scanner.IHandler) {
 	chainHandlerManager.AddHandler(chainId, handler)
 }
 
+// Register a replay (rescan) task
 func Replay(chainId int64, request chain_scanner.Replay) {
 	chainHandlerManager.Replay(chainId, request)
 }
 
+// Add a scheduled job to Cron
 func AddCronJob(cron string, job func()) (cron.EntryID, error) {
 	return cronExecuter.AddFunc(cron, job)
 }
 
+// Starts application's components
 func Start() {
 	chainHandlerManager.Start()
 	cronExecuter.Start()
 }
 
+// Stop application's components
 func Stop() {
 	chainHandlerManager.Stop()
 	cronExecuter.Stop()
 }
 
+// Init Unique ID generater
 func InitIdGenerater(workerId int64) error {
 	generater, err := id_generater.NewIdGenerater(workerId)
 	if err != nil {
@@ -94,6 +101,7 @@ func InitIdGenerater(workerId int64) error {
 	return nil
 }
 
+// Returns a new unique ID
 func NewId() (int64, error) {
 	if idGenerater == nil {
 		return 0, fmt.Errorf("%s", "Id generater not initialized")
@@ -101,6 +109,7 @@ func NewId() (int64, error) {
 	return idGenerater.Generate()
 }
 
+// Get token's metadata from cache
 func GetToken(chainId int64, address string) (*cache.Token, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
@@ -111,6 +120,7 @@ func GetToken(chainId int64, address string) (*cache.Token, error) {
 	return cacher.Get(common.HexToAddress(address))
 }
 
+// Cache token's metadata
 func SetToken(chainId int64, address string) error {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
@@ -125,6 +135,7 @@ func SetToken(chainId int64, address string) error {
 	return nil
 }
 
+// Calculates `amount / (10 ** decimals)`, assumes that it's USD token on `chainId`
 func PriceToUSD(chainId int64, price *big.Int) (float64, error) {
 	chainConf := c.GetChainConfig(chainId)
 	if chainConf == nil {
@@ -139,6 +150,8 @@ func PriceToUSD(chainId int64, price *big.Int) (float64, error) {
 	return val, nil
 }
 
+// Get prices in USD of `token`,
+// and sort the prices by defined strategy.
 func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool, maxLength int64) (*cache.Price, []cache.Price, []cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
@@ -243,6 +256,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 	return bestPrice, successedPrices, failedPrices, nil
 }
 
+// Wrap [*cache.TokenCacher.QuoteExactInput] and sort the result by defined strategy
 func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountIn *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
 	chainConf := c.GetChainConfig(chainId)
 	if chainConf == nil {
@@ -415,6 +429,7 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 	return successedPrices, failedPrices, nil
 }
 
+// Wrap [*cache.TokenCacher.QuoteExactOutput] and sort the result by defined strategy
 func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountOut *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
 	chainConf := c.GetChainConfig(chainId)
 	if chainConf == nil {
@@ -600,6 +615,7 @@ type SummarizePositionsResult struct {
 	Details         []SummarizePositionsResult_Detail
 }
 
+// Returns summary of `positions`
 func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, positions []*sonex.Position) (*big.Int, *big.Int, []SummarizePositionsResult_Detail, error) {
 	totalBalanceUSD := big.NewInt(0)
 	totalEarnedUSD := big.NewInt(0)
@@ -718,6 +734,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 	return totalBalanceUSD, totalEarnedUSD, details, nil
 }
 
+// Query current positions of an LP of `userAddress`, returns summary.
 func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
@@ -770,6 +787,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 	}, nil
 }
 
+// Query closed positions of an LP of `userAddress`, returns summary.
 func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
@@ -822,6 +840,7 @@ func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId i
 	}, nil
 }
 
+// Batch query tokens' total supplies
 func BatchGetTotalSupplies(ctx context.Context, chainId int64, tokens []common.Address) (map[common.Address]*big.Int, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]

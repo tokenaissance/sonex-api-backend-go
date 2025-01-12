@@ -22,6 +22,7 @@ type (
 		GetTokenVolumes(ctx context.Context) ([]types.TokenVolume, error)
 		FindAllToMap(ctx context.Context) (map[string]SonexToken, error)
 		QueryLogo(ctx context.Context) (map[string]string, error)
+		FindByOneAddress(ctx context.Context, address string) (PoolsResponse_Token, error)
 	}
 
 	customSonexTokenModel struct {
@@ -209,4 +210,25 @@ func (m *customSonexTokenModel) QueryLogo(ctx context.Context) (map[string]strin
 		tokenMap[token.Address] = token.Logo.String
 	}
 	return tokenMap, nil
+}
+
+type PoolsResponse_Token struct {
+	Address    string         `db:"address"`
+	Symbol     string         `db:"symbol"`
+	Name       string         `db:"name"`
+	Decimals   int            `db:"decimals"`
+	Logo       string         `db:"logo"`
+	Additional sql.NullString `db:"additional"`
+}
+
+func (m *customSonexTokenModel) FindByOneAddress(ctx context.Context, address string) (PoolsResponse_Token, error) {
+	query := fmt.Sprintf(`
+		SELECT address,symbol,name,decimals,logo,additional  FROM %s WHERE address = $1  limit 1 
+	`, m.table)
+	var resp PoolsResponse_Token
+	err := m.conn.QueryRowCtx(ctx, &resp, query, address)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
 }

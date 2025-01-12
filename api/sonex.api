@@ -437,7 +437,6 @@ type PositionValuesResponse {
 
 type PositionsRequest {
 	Address    string `form:"address"`
-	FilterType string `form:"filterType,optional,default=none"`
 	ChainId    int64  `form:"chainId,default=1946,optional"`
 }
 
@@ -475,6 +474,46 @@ type PortfolioResponse {
 	ClaimableFees float64 `json:"claimableFees"`
 }
 
+type TokensInfoRequest {
+	Address string `path:"address"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+
+type TokenInfoResponse {
+	StatusCode int64  `json:"statusCode"`
+	Token	            PoolsResponse_Token `json:"token"`
+}
+
+
+type PoolInfoRequest {
+	Address string `path:"address"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
+}
+
+type PoolInfoResponse {
+	StatusCode         int              `json:"statusCode"`
+	Address            string              `json:"address"`
+	Token0             PoolsResponse_Token `json:"token0"`
+	Token1             PoolsResponse_Token `json:"token1"`
+	Token0Price string `json:"token0Price"`
+	Token1Price string `json:"token1Price"`
+	FeeTier            int64               `json:"feeTier"`
+	Liquidity          string              `json:"liquidity"`
+	VolumeToken0  		float64 `json:"volumeToken0"`
+	VolumeToken1 		float64 `json:"volumeToken1"`
+	TvlUSD              string              `json:"tvlUSD"`
+	AmountPrice0       float64           `json:"amountPrice0"`
+	AmountPrice1      float64           `json:"amountPrice1"`	
+	TvlRatio    string `json:"tvlRatio"`
+	IsTvlNegative  bool `json:"isTvlNegative"`
+	Vol24h float64 `json:"vol24h"`
+	Vol24hRatio string `json:"vol24hRatio"`
+	IsVol24hNegative bool `json:"isVol24hNegative"`
+	Fee24h int64 `json:"fee24h"`
+}
+
+
 @server (
 	prefix: /sonex
 	group:  sonex
@@ -503,6 +542,12 @@ service sonex_api_backend_go {
 
 	@handler SonexPositionHandler
 	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)
+
+	@handler SonexTokensInfoHandler
+	get /tokens/info/:address (TokensInfoRequest)  returns (TokenInfoResponse)
+
+	@handler SonexPoolInfoHandler
+	get /pools/info/:address (PoolInfoRequest) returns (PoolInfoResponse)
 
 	@handler SonexPositionValuesHandler
 	get /pools/position_values (PositionValuesRequest) returns (PositionValuesResponse)
