@@ -1,0 +1,44 @@
+Name: sonex_api_backend_go
+Host: 0.0.0.0
+Port: 8888
+Log:
+  Level: debug
+Domains:
+  - prenet.sonex.so
+PostgreSQL:
+  Host: PG_HOST
+  Port: PG_PORT
+  User: PG_USER
+  Password: PG_PWD
+  DbName: PG_DBNAME
+Redis:
+  Host: REDIS_HOST
+  Port: REDIS_PORT
+  Password:
+  Db: 0
+Chains:
+  - ChainId: 1868
+    Name: Soneium
+    Nodes:
+      # URL:Weight
+      http://10.1.30.111:8545: 50
+      http://10.1.30.112:8545: 50
+    MinConfirmations: 5
+    MinDelayWaitMillisecond: 2000
+    MaxLogsNumber: 5000
+    Multicall: 0xB981161Be7D05d7a291Ffa5CE32c2771422De385
+    Tokens:
+      - Address: 0x4200000000000000000000000000000000000006
+      - Address: 0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369
+    ETH:
+      Name: Ethereum
+      Symbol: ETH
+      Decimals: 18
+    WETH: 0x4200000000000000000000000000000000000006
+    USD: 0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369
+Sonexes:
+  - ChainId: 1868
+    Factory: 0xE18387401AA03310BbB2F8561419Ce30Feee9050
+    PositionManager: 0x93cCfa6dDb2e0951675B39fbd8F4C8489dDf26f3
+    Quoter: 0xAb06B5a9364d57baDC03DBCAA727B84F4eC1E63F
+    SwapRouter: 0x46EF9cC6d5380B7435464bc4F81B6430a1ED1f26
