@@ -43,6 +43,9 @@ type sonexPositionResult struct {
 	collectedPairs map[int64]*sonex.TokenPair
 	position       *sonex.Position
 	prices         map[string]*repository.TokenPriceRecord
+	totalInvested  *sonex.TokenPair
+	totalWithdrawn *sonex.TokenPair
+	totalCollected *sonex.TokenPair
 	err            error
 }
 
@@ -96,6 +99,8 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
+	increaseLiquidityModel := repository.NewEventSonexPositionManagerIncreaseLiquidityModel(conn)
+	decreaseLiquidityModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn)
 
 	// Task 1: Get transfer event
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
@@ -196,8 +201,34 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 			position.Pool.Token1.Decimals)
 		results <- sonexPositionResult{collectedPairs: collectedPairs, err: err}
 	}()
-
-	// Task 4: Get current prices
+	// Task 2: Get total collected amounts
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		totalCollected, err := collectModel.TotalAmounts(ctx, req.ChainId, req.TokenId,
+			position.Pool.Token0.Decimals,
+			position.Pool.Token1.Decimals)
+		results <- sonexPositionResult{totalCollected: totalCollected, err: err}
+	}()
+	// Task 3: Get total invested amounts
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		totalInvested, err := increaseLiquidityModel.TotalAmounts(ctx, req.ChainId, req.TokenId,
+			position.Pool.Token0.Decimals,
+			position.Pool.Token1.Decimals)
+		results <- sonexPositionResult{totalInvested: totalInvested, err: err}
+	}()
+	// Task 4: Get total withdrawn amounts
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		totalWithdrawn, err := decreaseLiquidityModel.TotalAmounts(ctx, req.ChainId, req.TokenId,
+			position.Pool.Token0.Decimals,
+			position.Pool.Token1.Decimals)
+		results <- sonexPositionResult{totalWithdrawn: totalWithdrawn, err: err}
+	}()
+	// Task 5: Get current prices
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -225,6 +256,15 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		}
 		if result.collectedPairs != nil {
 			collectedPairs = result.collectedPairs
+		}
+		if result.totalInvested != nil {
+			position.TotalInvested = *result.totalInvested.ToTokenValuePair()
+		}
+		if result.totalWithdrawn != nil {
+			position.TotalWithdrawn = *result.totalWithdrawn.ToTokenValuePair()
+		}
+		if result.totalCollected != nil {
+			position.TotalCollected = *result.totalCollected.ToTokenValuePair()
 		}
 	}
 
@@ -254,12 +294,14 @@ type priceResult struct {
 	err         error
 }
 
-func (l *SonexPositionLogic) fillPosition(ctx context.Context,
+func (l *SonexPositionLogic) fillPosition(
+	ctx context.Context,
 	req *types.PositionRequest,
 	position *types.Position,
 	innnerPosition *sonex.Position,
 	pricesRecords map[string]*repository.TokenPriceRecord,
-	collectedPairs map[int64]*sonex.TokenPair) (*types.Position, error) {
+	collectedPairs map[int64]*sonex.TokenPair,
+) (*types.Position, error) {
 	position.TokenID = innnerPosition.TokenId.Int64()
 	position.TickUpper = innnerPosition.TickUpper.String()
 	position.TickLower = innnerPosition.TickLower.String()

@@ -407,21 +407,29 @@ type PositionValuesRequest {
 }
 
 type Position {
-	TokenID       int64            `json:"tokenId"`
-	Position      float64          `json:"position"`
-	ClaimableFees float64          `json:"claimableFees"`
-	IsBurnt       bool             `json:"isBurnt"`
-	TickUpper     string           `json:"tickUpper"`
-	TickLower     string           `json:"tickLower"`
-	PNL           float64          `json:"pnl"`
-	Origin        string           `json:"origin"`
-	Pool          Token_PoolDetail `json:"pool"`
-	PositionAge   int              `json:"positionAge"`
-	UnclaimedFee0 float64          `json:"unclaimedFee0"`
-	UnclaimedFee1 float64          `json:"unclaimedFee1"`
-	TokenValue0   Token_TokenValue `json:"tokenValue0"`
-	TokenValue1   Token_TokenValue `json:"tokenValue1"`
-	IsHolding     bool             `json:"isHolding"`
+	TokenID        int64            `json:"tokenId"`
+	Position       float64          `json:"position"`
+	ClaimableFees  float64          `json:"claimableFees"`
+	IsBurnt        bool             `json:"isBurnt"`
+	TickUpper      string           `json:"tickUpper"`
+	TickLower      string           `json:"tickLower"`
+	PNL            float64          `json:"pnl"`
+	Origin         string           `json:"origin"`
+	Pool           Token_PoolDetail `json:"pool"`
+	PositionAge    int              `json:"positionAge"`
+	UnclaimedFee0  float64          `json:"unclaimedFee0"`
+	UnclaimedFee1  float64          `json:"unclaimedFee1"`
+	TokenValue0    Token_TokenValue `json:"tokenValue0"`
+	TokenValue1    Token_TokenValue `json:"tokenValue1"`
+	IsHolding      bool             `json:"isHolding"`
+	TotalInvested  TokenValuePair   `json:"totalInvested,omitempty"`
+	TotalWithdrawn TokenValuePair   `json:"totalWithdrawn,omitempty"`
+	TotalCollected TokenValuePair   `json:"totalCollected,omitempty"`
+}
+
+type TokenValuePair {
+	Token0 Token_TokenValue `json:"token0"`
+	Token1 Token_TokenValue `json:"token1"`
 }
 
 type PositionValueRecord {
@@ -436,8 +444,8 @@ type PositionValuesResponse {
 }
 
 type PositionsRequest {
-	Address    string `form:"address"`
-	ChainId    int64  `form:"chainId,default=1946,optional"`
+	Address string `form:"address"`
+	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type PositionsResponse {
@@ -479,12 +487,10 @@ type TokensInfoRequest {
 	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
-
 type TokenInfoResponse {
-	StatusCode int64  `json:"statusCode"`
-	Token	            PoolsResponse_Token `json:"token"`
+	StatusCode int64               `json:"statusCode"`
+	Token      PoolsResponse_Token `json:"token"`
 }
-
 
 type PoolInfoRequest {
 	Address string `path:"address"`
@@ -492,27 +498,26 @@ type PoolInfoRequest {
 }
 
 type PoolInfoResponse {
-	StatusCode         int              `json:"statusCode"`
-	Address            string              `json:"address"`
-	Token0             PoolsResponse_Token `json:"token0"`
-	Token1             PoolsResponse_Token `json:"token1"`
-	Token0Price string `json:"token0Price"`
-	Token1Price string `json:"token1Price"`
-	FeeTier            int64               `json:"feeTier"`
-	Liquidity          string              `json:"liquidity"`
-	VolumeToken0  		float64 `json:"volumeToken0"`
-	VolumeToken1 		float64 `json:"volumeToken1"`
-	TvlUSD              string              `json:"tvlUSD"`
-	AmountPrice0       float64           `json:"amountPrice0"`
-	AmountPrice1      float64           `json:"amountPrice1"`	
-	TvlRatio    string `json:"tvlRatio"`
-	IsTvlNegative  bool `json:"isTvlNegative"`
-	Vol24h float64 `json:"vol24h"`
-	Vol24hRatio string `json:"vol24hRatio"`
-	IsVol24hNegative bool `json:"isVol24hNegative"`
-	Fee24h float64 `json:"fee24h"`
+	StatusCode       int                 `json:"statusCode"`
+	Address          string              `json:"address"`
+	Token0           PoolsResponse_Token `json:"token0"`
+	Token1           PoolsResponse_Token `json:"token1"`
+	Token0Price      string              `json:"token0Price"`
+	Token1Price      string              `json:"token1Price"`
+	FeeTier          int64               `json:"feeTier"`
+	Liquidity        string              `json:"liquidity"`
+	VolumeToken0     float64             `json:"volumeToken0"`
+	VolumeToken1     float64             `json:"volumeToken1"`
+	TvlUSD           string              `json:"tvlUSD"`
+	AmountPrice0     float64             `json:"amountPrice0"`
+	AmountPrice1     float64             `json:"amountPrice1"`
+	TvlRatio         string              `json:"tvlRatio"`
+	IsTvlNegative    bool                `json:"isTvlNegative"`
+	Vol24h           float64             `json:"vol24h"`
+	Vol24hRatio      string              `json:"vol24hRatio"`
+	IsVol24hNegative bool                `json:"isVol24hNegative"`
+	Fee24h           float64             `json:"fee24h"`
 }
-
 
 @server (
 	prefix: /sonex

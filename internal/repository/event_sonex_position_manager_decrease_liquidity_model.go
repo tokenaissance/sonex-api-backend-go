@@ -19,6 +19,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPositionManagerDecreaseLiquidityModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error
 		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error)
+		TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error)
 	}
 
 	customEventSonexPositionManagerDecreaseLiquidityModel struct {
@@ -45,4 +46,8 @@ func (m *customEventSonexPositionManagerDecreaseLiquidityModel) New(ctx context.
 
 func (m *customEventSonexPositionManagerDecreaseLiquidityModel) AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error) {
 	return aggregateAmounts(ctx, m.conn, m.table, chainId, eventTokenId, decimal0, decimal1)
+}
+
+func (m *customEventSonexPositionManagerDecreaseLiquidityModel) TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error) {
+	return totalAmounts(ctx, m.conn, m.table, chainId, eventTokenId, decimal0, decimal1)
 }
