@@ -52,6 +52,8 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 		return &types.PoolInfoResponse{StatusCode: 500}, errors.New("invalid param")
 	}
 
+	logx.Infof("TAGFORALLreq.ChainId : %v  sonex:%#v ", req.ChainId, sonex)
+
 	// checksum address
 	_poolAddressWithCheckSum := common.HexToAddress(_poolAddress).Hex()
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
