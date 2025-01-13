@@ -55,6 +55,5 @@ PreDeposits:
     SignerPrivateKey: 4a25798164b5e9afba289cbf2bfc95d97dfff2925fd32f38923ffc394e33210b
     PointsRate: 10
     SubTitle: PreDeposit
-    StakeTokenDecimals: 18
     RewardToken: 0xe3336b3E0d36aacCddEcCC1B4c5d75D5216e932d
     RewardRate: 10

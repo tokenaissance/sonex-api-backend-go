@@ -76,6 +76,7 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 	if err != nil {
 		return err
 	}
+	rewardAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
 
 	eventPreDepositStakedModel := repository.NewEventPreDepositStakedModel(conn)
 	eventPreDepositWithdrawnModel := repository.NewEventPreDepositWithdrawnModel(conn)
@@ -89,6 +90,27 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 	if err != nil {
 		return err
 	}
+
+	rewardDailyAmount := new(big.Int).Mul(big.NewInt(preDepositConf.RewardDaily), rewardAccuracy)
+	totalStakedAmount := common.Big0
+	totalWithdrawnAmount := common.Big0
+	for _, item := range totalStakeds {
+		for token, value := range item {
+			switch token {
+			case wastrToken.Address:
+				fallthrough
+			case vastrToken.Address:
+				totalStakedAmount = new(big.Int).Add(totalStakedAmount, value)
+			default:
+				continue
+			}
+		}
+	}
+	for _, item := range totalWithdrawns {
+		totalWithdrawnAmount = new(big.Int).Add(new(big.Int).Add(totalWithdrawnAmount, item.WASTR), item.VASTR)
+	}
+	currentTotalStatedAmount := new(big.Int).Sub(totalStakedAmount, totalWithdrawnAmount)
+	rewardRate, _ := new(big.Float).Quo(new(big.Float).SetInt(rewardDailyAmount), new(big.Float).SetInt(currentTotalStatedAmount)).Float64()
 
 	for user, tokenStakeds := range totalStakeds {
 		for token, tokenStaked := range tokenStakeds {
@@ -124,8 +146,9 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 
 			// Calculate reward
 			stakeAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(stakedToken.Decimals), nil)
-			rewardAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
-			reward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(currentStaked, big.NewInt(int64(preDepositConf.RewardRate*100))), rewardAccuracy), big.NewInt(100)), stakeAccuracy)
+			reward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(currentStaked, big.NewInt(int64(rewardRate*100))), rewardAccuracy), big.NewInt(100)), stakeAccuracy)
+			a := reward.String()
+			_ = a
 			if reward.Cmp(common.Big0) <= 0 {
 				continue
 			}
