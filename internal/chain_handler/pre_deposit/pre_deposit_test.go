@@ -24,6 +24,9 @@ func TestExecute(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	handler.OnStaked(func(chainId int64, tx *node_caller.Transaction, event *pre_deposit.BridgeStakerStaked) {
+		StakedCallback(c, 1946, tx, event)
+	})
 	handler.OnRewardClaimed(func(chainId int64, tx *node_caller.Transaction, event *pre_deposit.RewardClaimerRewardClaimed) {
 		RewardClaimedCallback(c, 1946, tx, event)
 	})
@@ -32,8 +35,8 @@ func TestExecute(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	var start uint64 = 6752568
-	var end uint64 = 6752568
+	var start uint64 = 6771189
+	var end uint64 = 6771189
 	err, _ = handler.Execute(client, &bind.FilterOpts{Context: context.Background(), Start: start, End: &end}, false)
 	if err != nil {
 		t.Error(err)
