@@ -28,36 +28,6 @@ type Position struct {
 	TokensOwed1              *big.Int       `json:"tokensOwed1"`
 }
 
-func (position *Position) getFeeGrowthInsideX128() (*big.Int, *big.Int) {
-	currentTick := GetTickAtSqrtPrice(position.Pool.Slot0.SqrtPriceX96)
-
-	var feeGrowthBelow0X128 *big.Int
-	var feeGrowthBelow1X128 *big.Int
-	var feeGrowthAbove0X128 *big.Int
-	var feeGrowthAbove1X128 *big.Int
-
-	if currentTick.Cmp(position.TickLower) >= 0 {
-		feeGrowthBelow0X128 = position.LowerTick.FeeGrowthOutside0X128
-		feeGrowthBelow1X128 = position.LowerTick.FeeGrowthOutside1X128
-	} else {
-		feeGrowthBelow0X128 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal0X128, position.LowerTick.FeeGrowthOutside0X128)
-		feeGrowthBelow1X128 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal1X128, position.LowerTick.FeeGrowthOutside1X128)
-	}
-
-	if currentTick.Cmp(position.TickUpper) < 0 {
-		feeGrowthAbove0X128 = position.UpperTick.FeeGrowthOutside0X128
-		feeGrowthAbove1X128 = position.UpperTick.FeeGrowthOutside1X128
-	} else {
-		feeGrowthAbove0X128 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal0X128, position.UpperTick.FeeGrowthOutside0X128)
-		feeGrowthAbove1X128 = new(big.Int).Sub(position.Pool.FeeGrowthGlobal1X128, position.UpperTick.FeeGrowthOutside1X128)
-	}
-
-	feeGrowthInside0X128 := new(big.Int).Sub(new(big.Int).Sub(position.Pool.FeeGrowthGlobal0X128, feeGrowthBelow0X128), feeGrowthAbove0X128)
-	feeGrowthInside1X128 := new(big.Int).Sub(new(big.Int).Sub(position.Pool.FeeGrowthGlobal1X128, feeGrowthBelow1X128), feeGrowthAbove1X128)
-
-	return feeGrowthInside0X128, feeGrowthInside1X128
-}
-
 func (position *Position) Amounts() (*big.Int, *big.Int) {
 	Q96 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 96))
 

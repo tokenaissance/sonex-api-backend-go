@@ -259,6 +259,76 @@
         ]
       }
     },
+    "/pre_deposit/claim": {
+      "get": {
+        "summary": "Get claim signature",
+        "operationId": "ClaimHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ClaimResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "user_address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "pre_deposit"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/pre_deposit/summary": {
+      "get": {
+        "summary": "Query data about pre deposit",
+        "operationId": "SummaryHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SummaryResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "user_address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "pre_deposit"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/replay": {
       "post": {
         "operationId": "ReplayHandler",
@@ -1116,6 +1186,43 @@
         "chainId",
         "height",
         "updateAt"
+      ]
+    },
+    "ClaimRequest": {
+      "type": "object",
+      "properties": {
+        "user_address": {
+          "type": "string"
+        }
+      },
+      "title": "ClaimRequest",
+      "required": [
+        "user_address"
+      ]
+    },
+    "ClaimResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "signature": {
+          "type": "string"
+        }
+      },
+      "title": "ClaimResponse",
+      "required": [
+        "token",
+        "amount",
+        "nonce",
+        "signature"
       ]
     },
     "Comparison": {
@@ -2634,6 +2741,39 @@
       "title": "SonexTokenPricesResponse",
       "required": [
         "message"
+      ]
+    },
+    "SummaryRequest": {
+      "type": "object",
+      "properties": {
+        "user_address": {
+          "type": "string"
+        }
+      },
+      "title": "SummaryRequest",
+      "required": [
+        "user_address"
+      ]
+    },
+    "SummaryResponse": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "reward_token": {
+          "type": "string"
+        },
+        "unclaimed_reward_amount": {
+          "type": "string"
+        }
+      },
+      "title": "SummaryResponse",
+      "required": [
+        "points",
+        "reward_token",
+        "unclaimed_reward_amount"
       ]
     },
     "SwapEvent": {

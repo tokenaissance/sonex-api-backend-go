@@ -103,6 +103,9 @@ func InitIdGenerater(workerId int64) error {
 
 // Returns a new unique ID
 func NewId() (int64, error) {
+	if idGenerater == nil {
+		return 0, fmt.Errorf("%s", "Id generater not initialized")
+	}
 	return idGenerater.Generate()
 }
 

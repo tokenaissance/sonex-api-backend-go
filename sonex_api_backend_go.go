@@ -6,19 +6,18 @@ import (
 	"fmt"
 	"net/http"
 	"sonex_api_backend_go/internal/chain_handler/farm"
+	"sonex_api_backend_go/internal/chain_handler/pre_deposit"
 	"sonex_api_backend_go/internal/chain_handler/sonex"
 	"sonex_api_backend_go/internal/chain_handler/xpool"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
-	contract_uniswap_v3 "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
+	contract_pre_deposit "sonex_api_backend_go/internal/lib/contract/pre_deposit"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
 
-	"github.com/ahmetb/go-linq/v3"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -52,9 +51,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	global.AddCronJob("@every 1m", func() {
-		task.HandleRecordTokenPrice(&c)
-	})
 
 	opts := []rest.RunOption{}
 	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders("x-chain-id"))
@@ -100,48 +96,67 @@ func main() {
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)
 
+	// Register schedule handler
+	global.AddCronJob("@every 1m", func() {
+		task.HandleRecordTokenPrice(&c)
+	})
+	global.AddCronJob("0/30 * * * * ?", func() {
+		task.HandlePreDepositSnapshotDaily(&c)
+	})
+
 	// Register chain handler
 	for _, chain := range c.Chains {
 		// Sonex handler
 		{
-			configA := linq.From(c.Sonexes).SingleWithT(func(item config.SonexConfig) bool { return item.ChainId == chain.ChainId })
-			if configA != nil {
-				config, _ := configA.(config.SonexConfig)
-				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, config)
+			config := c.GetSonexConfig(chain.ChainId)
+			if config != nil {
+				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
-				// Swap callback demo
-				handler.OnPoolSwap(func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *contract_uniswap_v3.UniswapV3PoolSwap) {
-					sonex.SwapCallback(c, chainId, pool, tx, event)
+				global.AddChainHandler(chain.ChainId, handler)
+			}
+		}
+
+		// Per deposit handler
+		{
+			config := c.GetPreDepositConfig(chain.ChainId)
+			if config != nil {
+				handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DateSource(), chain, *config)
+				if err != nil {
+					panic(err)
+				}
+				handler.OnStaked(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.BridgeStakerStaked) {
+					pre_deposit.StakedCallback(c, chainId, tx, event)
 				})
-				global.AddChainHandler(1946, handler)
+				handler.OnRewardClaimed(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.RewardClaimerRewardClaimed) {
+					pre_deposit.RewardClaimedCallback(c, chainId, tx, event)
+				})
+				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
 
 		// X Pool handler
 		{
-			configA := linq.From(c.Xpools).SingleWithT(func(item config.XpoolConfig) bool { return item.ChainId == chain.ChainId })
-			if configA != nil {
-				config, _ := configA.(config.XpoolConfig)
-				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, config)
+			config := c.GetXpoolConfig(chain.ChainId)
+			if config != nil {
+				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
-				global.AddChainHandler(1946, handler)
+				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
 
 		// Farm handler
 		{
-			configA := linq.From(c.Farms).SingleWithT(func(item config.FarmConfig) bool { return item.ChainId == chain.ChainId })
-			if configA != nil {
-				config, _ := configA.(config.FarmConfig)
-				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, config)
+			config := c.GetFarmConfig(chain.ChainId)
+			if config != nil {
+				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
-				global.AddChainHandler(1946, handler)
+				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
 	}

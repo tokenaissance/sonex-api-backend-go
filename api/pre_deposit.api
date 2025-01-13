@@ -1,0 +1,43 @@
+syntax = "v1"
+
+import "./common.api"
+
+type SummaryRequest {
+	ChainRequest
+	UserAddress string `form:"user_address"`
+}
+
+type SummaryResponse {
+	Points                int64  `json:"points"`
+	RewardToken           string `json:"reward_token"`
+	UnclaimedRewardAmount string `json:"unclaimed_reward_amount"`
+}
+
+type ClaimRequest {
+	ChainRequest
+	UserAddress string `form:"user_address"`
+}
+
+type ClaimResponse {
+	Token     string `json:"token"`
+	Amount    string `json:"amount"`
+	Nonce     int64  `json:"nonce"`
+	Signature string `json:"signature"`
+}
+
+@server (
+	prefix: /pre_deposit
+	group:  pre_deposit
+)
+service sonex_api_backend_go {
+	@doc (
+		summary: "Query data about pre deposit"
+	)
+	@handler SummaryHandler
+	get /summary (SummaryRequest) returns (SummaryResponse)
+	@doc (
+		summary: "Get claim signature"
+	)
+	@handler ClaimHandler
+	get /claim (ClaimRequest) returns (ClaimResponse)
+}
