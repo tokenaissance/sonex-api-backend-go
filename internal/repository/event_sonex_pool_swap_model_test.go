@@ -124,7 +124,7 @@ func TestEventSonexPoolBurnModelPageQueryWithExtra(t *testing.T) {
 
 func Test_volumesUsd(t *testing.T) {
 	var c config.Config
-	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
 	records, err := model.SummarizePoolVolumesUsd(context.Background(), 1946, true)
@@ -132,7 +132,6 @@ func Test_volumesUsd(t *testing.T) {
 		t.Error(err)
 	}
 	_ = records
-	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
 
 }
 
