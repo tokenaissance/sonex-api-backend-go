@@ -64,6 +64,14 @@ func HandlePreDepositSnapshotDaily(config *config.Config) {
 }
 
 func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf config.ChainConfig, preDepositConf config.PreDepositConfig) error {
+	wastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.WASTR)
+	if err != nil {
+		return err
+	}
+	vastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.VASTR)
+	if err != nil {
+		return err
+	}
 	rewardToken, err := global.GetToken(chainConf.ChainId, preDepositConf.RewardToken)
 	if err != nil {
 		return err
@@ -82,31 +90,53 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 		return err
 	}
 
-	for user, totalStaked := range totalStakeds {
-		currentStaked := totalStaked
-		if totalWithdrawn, ok := totalWithdrawns[user]; ok {
-			currentStaked = new(big.Int).Sub(totalStaked, totalWithdrawn)
-		}
-		if currentStaked.Cmp(common.Big0) <= 0 {
-			continue
-		}
+	for user, tokenStakeds := range totalStakeds {
+		for token, tokenStaked := range tokenStakeds {
+			currentStaked := tokenStaked
 
-		// Calculate reward
-		stakeAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(preDepositConf.StakeTokenDecimals), nil)
-		currentStakedValue := new(big.Int).Div(currentStaked, stakeAccuracy)
-		rewardValue := new(big.Int).Div(new(big.Int).Mul(currentStakedValue, big.NewInt(int64(preDepositConf.RewardRate*100))), big.NewInt(100))
-		rewardAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
-		reward := new(big.Int).Mul(rewardValue, rewardAccuracy)
-		if reward.Cmp(common.Big0) <= 0 {
-			continue
-		}
-		id, err := global.NewId()
-		if err != nil {
-			return err
-		}
-		err = preDepositRewardSnapshotModel.New(ctx, id, chainConf.ChainId, user, currentStaked.String(), preDepositConf.RewardToken, reward)
-		if err != nil {
-			return err
+			if totalWithdrawn, ok := totalWithdrawns[user]; ok {
+				switch token {
+				case wastrToken.Address:
+					currentStaked = new(big.Int).Sub(tokenStaked, totalWithdrawn.WASTR)
+				case vastrToken.Address:
+					currentStaked = new(big.Int).Sub(tokenStaked, totalWithdrawn.VASTR)
+				default:
+					continue
+				}
+			}
+			if currentStaked.Cmp(common.Big0) <= 0 {
+				continue
+			}
+
+			stakedToken, err := global.GetToken(chainConf.ChainId, token)
+			if err != nil {
+				logx.Errorf("Can not get token[%s]: %s", token, err)
+				continue
+			}
+			wastrAmount := common.Big0
+			vastrAmount := common.Big0
+			if stakedToken.Address == common.HexToAddress(preDepositConf.WASTR).Hex() {
+				wastrAmount = currentStaked
+			}
+			if stakedToken.Address == common.HexToAddress(preDepositConf.VASTR).Hex() {
+				vastrAmount = currentStaked
+			}
+
+			// Calculate reward
+			stakeAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(stakedToken.Decimals), nil)
+			rewardAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil)
+			reward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(currentStaked, big.NewInt(int64(preDepositConf.RewardRate*100))), rewardAccuracy), big.NewInt(100)), stakeAccuracy)
+			if reward.Cmp(common.Big0) <= 0 {
+				continue
+			}
+			id, err := global.NewId()
+			if err != nil {
+				return err
+			}
+			err = preDepositRewardSnapshotModel.New(ctx, id, chainConf.ChainId, user, wastrAmount, vastrAmount, preDepositConf.RewardToken, reward)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

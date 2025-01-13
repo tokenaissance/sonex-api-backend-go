@@ -16,7 +16,7 @@ type (
 	PreDepositRewardSnapshotModel interface {
 		preDepositRewardSnapshotModel
 		withSession(session sqlx.Session) PreDepositRewardSnapshotModel
-		New(ctx context.Context, id int64, chainId int64, user string, amount string, rewardToken string, rewardAmount *big.Int) error
+		New(ctx context.Context, id int64, chainId int64, user string, wastrAmount *big.Int, vastrAmount *big.Int, rewardToken string, rewardAmount *big.Int) error
 		FindLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*PreDepositRewardSnapshot, error)
 		SummarizeTotalRewardByChainIdUserToken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error)
 	}
@@ -37,9 +37,9 @@ func (m *customPreDepositRewardSnapshotModel) withSession(session sqlx.Session) 
 	return NewPreDepositRewardSnapshotModel(sqlx.NewSqlConnFromSession(session))
 }
 
-func (m *customPreDepositRewardSnapshotModel) New(ctx context.Context, id int64, chainId int64, user string, amount string, rewardToken string, rewardAmount *big.Int) error {
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", m.table, preDepositRewardSnapshotRows)
-	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, user, amount, rewardToken, rewardAmount.String())
+func (m *customPreDepositRewardSnapshotModel) New(ctx context.Context, id int64, chainId int64, user string, wastrAmount *big.Int, vastrAmount *big.Int, rewardToken string, rewardAmount *big.Int) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", m.table, preDepositRewardSnapshotRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, user, wastrAmount.String(), vastrAmount.String(), rewardToken, rewardAmount.String())
 	return err
 }
 

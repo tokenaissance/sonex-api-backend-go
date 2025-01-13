@@ -18,6 +18,7 @@ func TestExecute(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
+	global.Initialize(c)
 	global.InitIdGenerater(0)
 	handler, err := NewPreDepositHandler(c.PostgreSQL.DateSource(), *c.GetChainConfig(1946), *c.GetPreDepositConfig(1946))
 	if err != nil {
@@ -43,5 +44,5 @@ func TestExecute(t *testing.T) {
 		return
 	}
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Minute * 1)
 }
