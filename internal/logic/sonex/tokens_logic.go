@@ -559,18 +559,17 @@ func (l *TokensLogic) comparePrices(currentPrice, comparePrice *big.Int) (string
 	currentPriceF := new(big.Float).SetInt(currentPrice)
 	comparePriceF := new(big.Float).SetInt(comparePrice)
 	var comparison string
-	var diff *big.Float
-	if currentPrice.Cmp(comparePrice) > 0 {
+	var percentage *big.Float
+	diff := new(big.Float).Sub(currentPriceF, comparePriceF)
+	if diff.Cmp(big.NewFloat(0)) > 0 {
 		comparison = "UP"
-	} else if currentPrice.Cmp(comparePrice) < 0 {
+		percentage = new(big.Float).Quo(new(big.Float).Mul(diff, big.NewFloat(100)), comparePriceF)
+	} else if diff.Cmp(big.NewFloat(0)) < 0 {
 		comparison = "DOWN"
+		percentage = new(big.Float).Quo(new(big.Float).Mul(diff, big.NewFloat(100)), comparePriceF)
 	} else {
 		comparison = "SAME"
+		percentage = big.NewFloat(0)
 	}
-	diff = new(big.Float).Sub(currentPriceF, comparePriceF)
-	if comparePriceF.Cmp(big.NewFloat(0)) == 0 {
-		comparePriceF = big.NewFloat(1)
-	}
-	percentage := new(big.Float).Quo(diff, comparePriceF)
 	return comparison, percentage
 }

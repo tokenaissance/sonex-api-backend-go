@@ -100,7 +100,7 @@ func main() {
 	global.AddCronJob("@every 1m", func() {
 		task.HandleRecordTokenPrice(&c)
 	})
-	global.AddCronJob("0/30 * * * * ?", func() {
+	global.AddCronJob("0 30 0 * * ?", func() {
 		task.HandlePreDepositSnapshotDaily(&c)
 	})
 
