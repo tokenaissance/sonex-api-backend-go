@@ -42,6 +42,16 @@ Sonexes:
     PositionManager: 0x3231734Cb30f7B5dc42D6354Ea42b4BAE54618Ab
     Quoter: 0x331c6643D472648C220686169Ec1D15BeE9a63a2
     SwapRouter: 0x6321199D6E1ed41771ff89eb757479600E4427d9
+PreDeposits:
+  - ChainId: 1946
+    BridgeStaker: 0xAb9F0d4379782CCc3fc09984e93c6559d389C7e2
+    RewardClaimer: 0x580E1361943F0fFC8076D358d02F5bB055A2E272
+    SignerPrivateKey: 4a25798164b5e9afba289cbf2bfc95d97dfff2925fd32f38923ffc394e33210b
+    PointsRate: 1
+    SubTitle: PreDeposit
+    StakeTokenDecimals: 18
+    RewardToken: 0xe3336b3E0d36aacCddEcCC1B4c5d75D5216e932d
+    RewardRate: 1
 # Xpools:
 #   - ChainId: 1946
 #     Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531
