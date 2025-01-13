@@ -329,8 +329,8 @@ type AggregatedAmounts {
 }
 
 type PositionRequest {
+	ChainRequest
 	TokenId int64 `path:"tokenId"`
-	ChainId int64 `form:"chainId,default=1946,optional"`
 }
 
 type PositionResponse {
@@ -338,6 +338,7 @@ type PositionResponse {
 }
 
 type SwapEventRequest {
+	ChainRequest
 	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
 	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
@@ -346,7 +347,6 @@ type SwapEventRequest {
 	Token       string `form:"token,optional"`
 	Token0      string `form:"token0,optional"`
 	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
 }
 
 type SwapEvent {
@@ -370,13 +370,13 @@ type SwapEventResponse {
 }
 
 type SwapVolumeRequest {
+	ChainRequest
 	PoolAddress string `form:"poolAddress"` // Pool address
 	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
 	Address     string `form:"address,optional"`
 	Token       string `form:"token,optional"`
 	Token0      string `form:"token0,optional"`
 	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
 }
 type SwapVolume {
 	Timestamp int64   `json:"timestamp"`
@@ -401,9 +401,9 @@ type PoolVolume {
 }
 
 type PositionValuesRequest {
+	ChainRequest
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
-	ChainId  int64  `form:"chainId,default=1946,optional"`
 }
 
 type Position {
@@ -444,8 +444,8 @@ type PositionValuesResponse {
 }
 
 type PositionsRequest {
+	ChainRequest
 	Address string `form:"address"`
-	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type PositionsResponse {
@@ -473,8 +473,8 @@ type SonexTokenKlineResponse {
 }
 
 type PortfolioRequest {
+	ChainRequest
 	Address string `form:"address"`
-	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type PortfolioResponse {
