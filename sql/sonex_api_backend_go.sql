@@ -1329,8 +1329,8 @@ COMMIT;
 -- Records of token
 -- ----------------------------
 BEGIN;
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (3, 1946, 'Wrapped Ethereum', 'WETH', 18, '0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C', 'https://img.sonex.so/weth-logo.png', 999, 'f');
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (2, 1946, 'ETH', 'ETH', 18, '0x0000000000000000000000000000000000000000', 'https://img.sonex.so/eth-logo.png', 1000, 'f');
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (4, 1946, 'Bridged USDC', 'USDC.e', 6, '0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391', 'https://img.sonex.so/usdc-logo.png', 998, 'f');
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (5, 1946, 'Astar Token', 'ASTR', 18, '0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655', 'https://img.sonex.so/astar-logo.png', 900, 'f');
+INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (1, 1946, 'ETH', 'ETH', 18, '0x0000000000000000000000000000000000000000', 'https://img.sonex.so/eth-logo.png', 1000, 'f');
+INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (2, 1946, 'Wrapped Ethereum', 'WETH', 18, '0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C', 'https://img.sonex.so/weth-logo.png', 999, 'f');
+INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (3, 1946, 'Bridged USDC', 'USDC.e', 6, '0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391', 'https://img.sonex.so/usdc-logo.png', 998, 'f');
+INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (4, 1946, 'Astar Token', 'ASTR', 18, '0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655', 'https://img.sonex.so/astar-logo.png', 900, 'f');
 COMMIT;
