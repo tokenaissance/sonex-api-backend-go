@@ -168,6 +168,7 @@ func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher c
 				TokenID: p.TokenId.Int64(),
 				Origin:  p.Owner.Hex(),
 				Pool: types.Token_PoolDetail{
+					Address: p.Pool.Address.Hex(),
 					FeeTier: int(p.Pool.Fee.Int64()),
 					Token0: types.Token_TokenInfo{
 						Address:  token0.Address,
