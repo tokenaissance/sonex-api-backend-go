@@ -2868,12 +2868,30 @@
     "SummaryResponse": {
       "type": "object",
       "properties": {
+        "totalWastr": {
+          "type": "string"
+        },
+        "totalVastr": {
+          "type": "string"
+        },
+        "wastrPriceUSD": {
+          "type": "number",
+          "format": "double"
+        },
+        "vastrPriceUSD": {
+          "type": "number",
+          "format": "double"
+        },
         "points": {
           "type": "integer",
           "format": "int64"
         },
         "rewardToken": {
           "type": "string"
+        },
+        "rewardPriceUSD": {
+          "type": "number",
+          "format": "double"
         },
         "claimedRewardAmount": {
           "type": "string"
@@ -2882,14 +2900,18 @@
           "type": "string"
         },
         "apr": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         }
       },
       "title": "SummaryResponse",
       "required": [
+        "totalWastr",
+        "totalVastr",
+        "wastrPriceUSD",
+        "vastrPriceUSD",
         "points",
         "rewardToken",
+        "rewardPriceUSD",
         "claimedRewardAmount",
         "unclaimedRewardAmount",
         "apr"

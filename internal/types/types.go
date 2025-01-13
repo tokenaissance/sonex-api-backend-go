@@ -443,11 +443,16 @@ type SummaryRequest struct {
 }
 
 type SummaryResponse struct {
+	TotalWastr            string  `json:"totalWastr"`
+	TotalVastr            string  `json:"totalVastr"`
+	WastrPriceUSD         float64 `json:"wastrPriceUSD"`
+	VastrPriceUSD         float64 `json:"vastrPriceUSD"`
 	Points                int64   `json:"points"`
 	RewardToken           string  `json:"rewardToken"`
+	RewardPriceUSD        float64 `json:"rewardPriceUSD"`
 	ClaimedRewardAmount   string  `json:"claimedRewardAmount"`
 	UnclaimedRewardAmount string  `json:"unclaimedRewardAmount"`
-	APR                   float64 `json:"apr"`
+	APR                   string  `json:"apr"`
 }
 
 type SwapEvent struct {
