@@ -173,6 +173,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	}
 
 	position.Origin = innerPosition.Owner.Hex()
+	position.Pool.FeeTier = int(innerPosition.Pool.Fee.Int64())
 	position.Pool.Token0 = types.Token_TokenInfo{
 		Address:  token0.Address,
 		Decimals: int(token0.Decimals),
