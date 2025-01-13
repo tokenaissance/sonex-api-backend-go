@@ -133,6 +133,8 @@ func (handler *PreDepositHandler) Execute(client *ethclient.Client, opt *bind.Fi
 					if err != nil {
 						return err
 					}
+
+					callableStakedEvents = append(callableStakedEvents, event)
 				}
 			}
 
@@ -171,6 +173,8 @@ func (handler *PreDepositHandler) Execute(client *ethclient.Client, opt *bind.Fi
 					if err != nil {
 						return err
 					}
+
+					callableWithdrawnEvents = append(callableWithdrawnEvents, event)
 				}
 			}
 

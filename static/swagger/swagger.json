@@ -2774,6 +2774,9 @@
         "reward_token": {
           "type": "string"
         },
+        "claimed_reward_amount": {
+          "type": "string"
+        },
         "unclaimed_reward_amount": {
           "type": "string"
         }
@@ -2782,6 +2785,7 @@
       "required": [
         "points",
         "reward_token",
+        "claimed_reward_amount",
         "unclaimed_reward_amount"
       ]
     },

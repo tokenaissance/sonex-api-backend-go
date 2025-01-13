@@ -19,7 +19,7 @@ type (
 		eventPreDepositWithdrawnModel
 		withSession(session sqlx.Session) EventPreDepositWithdrawnModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, wastrAmount string, vastrAmount string, timestamp int64) error
-		SummarizeTotalByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
+		SummarizeTotalByChainId(ctx context.Context, chainId int64) (map[string]UserTotalWithdrawn, error)
 		SummarizeTotalByChainIdUserToken(ctx context.Context, chainId int64, user string) (*big.Int, error)
 	}
 
@@ -27,6 +27,12 @@ type (
 		*defaultEventPreDepositWithdrawnModel
 	}
 )
+
+type UserTotalWithdrawn struct {
+	User  string   `db:"event_user"`
+	WASTR *big.Int `db:"wastr"`
+	VASTR *big.Int `db:"vastr"`
+}
 
 // NewEventPreDepositWithdrawnModel returns a model for the database table.
 func NewEventPreDepositWithdrawnModel(conn sqlx.SqlConn) EventPreDepositWithdrawnModel {
@@ -45,31 +51,39 @@ func (m *customEventPreDepositWithdrawnModel) New(ctx context.Context, id int64,
 	return err
 }
 
-func (m *customEventPreDepositWithdrawnModel) SummarizeTotalByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error) {
-	query := fmt.Sprintf("SELECT event_user, (COALESCE(SUM(event_wastr_amount::NUMERIC),0) + COALESCE(SUM(event_vastr_amount::NUMERIC),0))::VARCHAR AS total FROM %s WHERE chain_id = $1 GROUP BY event_user", m.table)
+func (m *customEventPreDepositWithdrawnModel) SummarizeTotalByChainId(ctx context.Context, chainId int64) (map[string]UserTotalWithdrawn, error) {
+	query := fmt.Sprintf("SELECT event_user, COALESCE(SUM(event_wastr_amount::NUMERIC),0)::VARCHAR AS wastr, COALESCE(SUM(event_vastr_amount::NUMERIC),0)::VARCHAR AS vastr FROM %s WHERE chain_id = $1 GROUP BY event_user", m.table)
 	var resp []struct {
 		User  string `db:"event_user"`
-		Total string `db:"total"`
+		WASTR string `db:"wastr"`
+		VASTR string `db:"vastr"`
 	}
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId)
 	if err != nil {
 		return nil, err
 	}
-	result := map[string]*big.Int{}
+	result := map[string]UserTotalWithdrawn{}
 	linq.From(resp).ToMapByT(
 		&result,
 		func(item struct {
 			User  string `db:"event_user"`
-			Total string `db:"total"`
+			WASTR string `db:"wastr"`
+			VASTR string `db:"vastr"`
 		}) string {
 			return item.User
 		},
 		func(item struct {
 			User  string `db:"event_user"`
-			Total string `db:"total"`
-		}) *big.Int {
-			value, _ := new(big.Int).SetString(item.Total, 10)
-			return value
+			WASTR string `db:"wastr"`
+			VASTR string `db:"vastr"`
+		}) UserTotalWithdrawn {
+			wastr, _ := new(big.Int).SetString(item.WASTR, 10)
+			vastr, _ := new(big.Int).SetString(item.VASTR, 10)
+			return UserTotalWithdrawn{
+				User:  item.User,
+				WASTR: wastr,
+				VASTR: vastr,
+			}
 		},
 	)
 	return result, nil

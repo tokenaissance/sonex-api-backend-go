@@ -42,7 +42,8 @@ type (
 		UpdatedAt    time.Time `db:"updated_at"`
 		ChainId      int64     `db:"chain_id"`
 		UserAddress  string    `db:"user_address"`
-		Amount       string    `db:"amount"`
+		WastrAmount  string    `db:"wastr_amount"`
+		VastrAmount  string    `db:"vastr_amount"`
 		RewardToken  string    `db:"reward_token"`
 		RewardAmount string    `db:"reward_amount"`
 	}
@@ -76,14 +77,14 @@ func (m *defaultPreDepositRewardSnapshotModel) FindOne(ctx context.Context, id i
 }
 
 func (m *defaultPreDepositRewardSnapshotModel) Insert(ctx context.Context, data *PreDepositRewardSnapshot) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6)", m.table, preDepositRewardSnapshotRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.Amount, data.RewardToken, data.RewardAmount)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7)", m.table, preDepositRewardSnapshotRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.WastrAmount, data.VastrAmount, data.RewardToken, data.RewardAmount)
 	return ret, err
 }
 
 func (m *defaultPreDepositRewardSnapshotModel) Update(ctx context.Context, data *PreDepositRewardSnapshot) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, preDepositRewardSnapshotRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.Amount, data.RewardToken, data.RewardAmount)
+	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.WastrAmount, data.VastrAmount, data.RewardToken, data.RewardAmount)
 	return err
 }
 

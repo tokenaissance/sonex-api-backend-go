@@ -431,6 +431,7 @@ type SummaryRequest struct {
 type SummaryResponse struct {
 	Points                int64  `json:"points"`
 	RewardToken           string `json:"reward_token"`
+	ClaimedRewardAmount   string `json:"claimed_reward_amount"`
 	UnclaimedRewardAmount string `json:"unclaimed_reward_amount"`
 }
 
