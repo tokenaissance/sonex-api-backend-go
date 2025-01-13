@@ -70,6 +70,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: pre_deposit.ClaimHandler(serverCtx),
 			},
 			{
+				// Query reward details
+				Method:  http.MethodGet,
+				Path:    "/reward_details",
+				Handler: pre_deposit.RewardDetailsHandler(serverCtx),
+			},
+			{
 				// Query data about pre deposit
 				Method:  http.MethodGet,
 				Path:    "/summary",

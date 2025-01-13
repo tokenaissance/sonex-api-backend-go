@@ -280,10 +280,62 @@
             "format": "int64"
           },
           {
-            "name": "user_address",
+            "name": "userAddress",
             "in": "query",
             "required": true,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "pre_deposit"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/pre_deposit/reward_details": {
+      "get": {
+        "summary": "Query reward details",
+        "operationId": "RewardDetailsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RewardDetailsResponse_Record"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "userAddress",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -315,7 +367,7 @@
             "format": "int64"
           },
           {
-            "name": "user_address",
+            "name": "userAddress",
             "in": "query",
             "required": true,
             "type": "string"
@@ -1191,13 +1243,13 @@
     "ClaimRequest": {
       "type": "object",
       "properties": {
-        "user_address": {
+        "userAddress": {
           "type": "string"
         }
       },
       "title": "ClaimRequest",
       "required": [
-        "user_address"
+        "userAddress"
       ]
     },
     "ClaimResponse": {
@@ -2659,6 +2711,55 @@
       "type": "object",
       "title": "ReplayResponse"
     },
+    "RewardDetailsRequest": {
+      "type": "object",
+      "properties": {
+        "userAddress": {
+          "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "RewardDetailsRequest",
+      "required": [
+        "userAddress"
+      ]
+    },
+    "RewardDetailsResponse_Record": {
+      "type": "object",
+      "properties": {
+        "wastrAmount": {
+          "type": "string"
+        },
+        "vastrAmount": {
+          "type": "string"
+        },
+        "rewardToken": {
+          "type": "string"
+        },
+        "rewardAmount": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "RewardDetailsResponse_Record",
+      "required": [
+        "wastrAmount",
+        "vastrAmount",
+        "rewardToken",
+        "rewardAmount",
+        "timestamp"
+      ]
+    },
     "SonexTokenKlineRequest": {
       "type": "object",
       "properties": {
@@ -2755,13 +2856,13 @@
     "SummaryRequest": {
       "type": "object",
       "properties": {
-        "user_address": {
+        "userAddress": {
           "type": "string"
         }
       },
       "title": "SummaryRequest",
       "required": [
-        "user_address"
+        "userAddress"
       ]
     },
     "SummaryResponse": {
@@ -2771,22 +2872,27 @@
           "type": "integer",
           "format": "int64"
         },
-        "reward_token": {
+        "rewardToken": {
           "type": "string"
         },
-        "claimed_reward_amount": {
+        "claimedRewardAmount": {
           "type": "string"
         },
-        "unclaimed_reward_amount": {
+        "unclaimedRewardAmount": {
           "type": "string"
+        },
+        "apr": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "SummaryResponse",
       "required": [
         "points",
-        "reward_token",
-        "claimed_reward_amount",
-        "unclaimed_reward_amount"
+        "rewardToken",
+        "claimedRewardAmount",
+        "unclaimedRewardAmount",
+        "apr"
       ]
     },
     "SwapEvent": {

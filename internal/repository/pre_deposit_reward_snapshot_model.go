@@ -18,6 +18,7 @@ type (
 		withSession(session sqlx.Session) PreDepositRewardSnapshotModel
 		New(ctx context.Context, id int64, chainId int64, user string, wastrAmount *big.Int, vastrAmount *big.Int, rewardToken string, rewardAmount *big.Int) error
 		FindLatestByChainIdUser(ctx context.Context, chainId int64, user string) (*PreDepositRewardSnapshot, error)
+		PageQueryByChainIdUser(ctx context.Context, chainId int64, user string, pageSize int64, pageIndex int64) ([]PreDepositRewardSnapshot, int64, error)
 		SummarizeTotalRewardByChainIdUserToken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error)
 	}
 
@@ -55,6 +56,22 @@ func (m *customPreDepositRewardSnapshotModel) FindLatestByChainIdUser(ctx contex
 	default:
 		return nil, err
 	}
+}
+
+func (m *customPreDepositRewardSnapshotModel) PageQueryByChainIdUser(ctx context.Context, chainId int64, user string, pageSize int64, pageIndex int64) ([]PreDepositRewardSnapshot, int64, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 AND user_address = $2 ORDER BY created_at DESC OFFSET $3 LIMIT $4", preDepositRewardSnapshotRows, m.table)
+	var resp []PreDepositRewardSnapshot
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, pageSize*(pageIndex-1), pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	var total int64 = 0
+	query = fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE chain_id = $1 AND user_address = $2", m.table)
+	err = m.conn.QueryRowCtx(ctx, &total, query, chainId, user)
+	if err != nil {
+		return nil, 0, err
+	}
+	return resp, total, err
 }
 
 func (m *customPreDepositRewardSnapshotModel) SummarizeTotalRewardByChainIdUserToken(ctx context.Context, chainId int64, user string, token string) (*big.Int, error) {
