@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 13/01/2025 09:58:13
+ Date: 13/01/2025 17:04:01
 */
 
 
@@ -115,7 +115,8 @@ CREATE TABLE "public"."pre_deposit_reward_snapshot" (
   "updated_at" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
   "user_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "wastr_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "vastr_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "reward_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
