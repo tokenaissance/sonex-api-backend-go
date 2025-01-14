@@ -64,14 +64,8 @@ func HandlePreDepositSnapshotDaily(config *config.Config) {
 }
 
 func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf config.ChainConfig, preDepositConf config.PreDepositConfig) error {
-	wastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.WASTR)
-	if err != nil {
-		return err
-	}
-	vastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.VASTR)
-	if err != nil {
-		return err
-	}
+	wastrAddress := common.HexToAddress(preDepositConf.WASTR)
+	vastrAddress := common.HexToAddress(preDepositConf.VASTR)
 	rewardToken, err := global.GetToken(chainConf.ChainId, preDepositConf.RewardToken)
 	if err != nil {
 		return err
@@ -97,9 +91,9 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 	for _, item := range totalStakeds {
 		for token, value := range item {
 			switch token {
-			case wastrToken.Address:
+			case wastrAddress.Hex():
 				fallthrough
-			case vastrToken.Address:
+			case wastrAddress.Hex():
 				totalStakedAmount = new(big.Int).Add(totalStakedAmount, value)
 			default:
 				continue
@@ -118,9 +112,9 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 
 			if totalWithdrawn, ok := totalWithdrawns[user]; ok {
 				switch token {
-				case wastrToken.Address:
+				case wastrAddress.Hex():
 					currentStaked = new(big.Int).Sub(tokenStaked, totalWithdrawn.WASTR)
-				case vastrToken.Address:
+				case vastrAddress.Hex():
 					currentStaked = new(big.Int).Sub(tokenStaked, totalWithdrawn.VASTR)
 				default:
 					continue
