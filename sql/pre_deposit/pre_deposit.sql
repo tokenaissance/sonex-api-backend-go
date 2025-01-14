@@ -84,7 +84,6 @@ CREATE TABLE "public"."event_pre_deposit_withdrawn" (
   "event_timestamp" int8 NOT NULL
 )
 ;
-ALTER TABLE "public"."event_pre_deposit_withdrawn" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for pre_deposit_points_record
@@ -102,7 +101,6 @@ CREATE TABLE "public"."pre_deposit_points_record" (
   "tx_at" timestamptz(6) NOT NULL
 )
 ;
-ALTER TABLE "public"."pre_deposit_points_record" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for pre_deposit_reward_claim_record
