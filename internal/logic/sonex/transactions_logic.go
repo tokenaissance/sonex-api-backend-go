@@ -41,7 +41,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	}
 
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
-	if chainConf == nil {
+	if sonexConf == nil {
 		return nil, fmt.Errorf("%s", "Miss sonex configure")
 	}
 
