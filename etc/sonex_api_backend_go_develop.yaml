@@ -56,4 +56,4 @@ PreDeposits:
     PointsRate: 10
     SubTitle: PreDeposit
     RewardToken: 0xe3336b3E0d36aacCddEcCC1B4c5d75D5216e932d
-    RewardRate: 10
+    RewardDaily: 1000
