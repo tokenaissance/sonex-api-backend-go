@@ -19,7 +19,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPositionManagerDecreaseLiquidityModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error
 		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error)
-		GetDecreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenId int64) (map[int64]*EventSonexPositionManagerDecreaseLiquidity, error)
+		GetDecreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenIds []int64) (map[int64][]*EventSonexPositionManagerDecreaseLiquidity, error)
 		TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error)
 	}
 
@@ -45,22 +45,22 @@ func (m *customEventSonexPositionManagerDecreaseLiquidityModel) New(ctx context.
 	return err
 }
 
-func (m *customEventSonexPositionManagerDecreaseLiquidityModel) GetDecreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenId int64) (map[int64]*EventSonexPositionManagerDecreaseLiquidity, error) {
+func (m *customEventSonexPositionManagerDecreaseLiquidityModel) GetDecreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenIds []int64) (map[int64][]*EventSonexPositionManagerDecreaseLiquidity, error) {
 	var events []*EventSonexPositionManagerDecreaseLiquidity
 	query := fmt.Sprintf(`
 	SELECT *
 	FROM %s
-	WHERE chain_id = $1 AND event_token_id = $2
+	WHERE chain_id = $1 AND event_token_id = ANY ($2)
 	`, m.table)
 
-	err := m.conn.QueryRowsCtx(ctx, &events, query, chainId, eventTokenId)
+	err := m.conn.QueryRowsCtx(ctx, &events, query, chainId, eventTokenIds)
 	if err != nil {
 		return nil, err
 	}
 
-	decreaseLiquidityEvents := make(map[int64]*EventSonexPositionManagerDecreaseLiquidity)
+	decreaseLiquidityEvents := make(map[int64][]*EventSonexPositionManagerDecreaseLiquidity)
 	for _, event := range events {
-		decreaseLiquidityEvents[event.EventTokenId] = event
+		decreaseLiquidityEvents[event.EventTokenId] = append(decreaseLiquidityEvents[event.EventTokenId], event)
 	}
 
 	return decreaseLiquidityEvents, nil
