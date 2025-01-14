@@ -158,7 +158,7 @@ func (record *EventSonexMergePoolSwapWithExtra) FromToken() string {
 	return from
 }
 
-func (record *EventSonexMergePoolSwapWithExtra) ToToken() string {
+func (record *EventSonexMergePoolSwapWithExtra) ToToken(swapRouter string) string {
 	amount0_0, _ := new(big.Int).SetString(record.EventAmount0_0, 10)
 	amount1_0, _ := new(big.Int).SetString(record.EventAmount1_0, 10)
 	var to string
@@ -168,7 +168,7 @@ func (record *EventSonexMergePoolSwapWithExtra) ToToken() string {
 		} else {
 			to = record.ExtraToken1_0
 		}
-		if record.EventSender_0 == record.EventRecipient_0 {
+		if record.EventSender_0 == record.EventRecipient_0 && record.EventSender_0 == swapRouter {
 			to = (common.Address{}).Hex()
 		}
 	} else {
@@ -179,7 +179,7 @@ func (record *EventSonexMergePoolSwapWithExtra) ToToken() string {
 		} else {
 			to = record.ExtraToken1_1.String
 		}
-		if record.EventSender_1.String == record.EventRecipient_1.String {
+		if record.EventSender_1.String == record.EventRecipient_1.String && record.EventSender_1.String == swapRouter {
 			to = (common.Address{}).Hex()
 		}
 	}
