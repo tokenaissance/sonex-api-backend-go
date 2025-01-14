@@ -68,6 +68,10 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
 			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
 			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+			if err != nil {
+				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
+				return
+			}
 			var bestPrice *cache.Price
 			if len(successed) > 0 {
 				price := linq.From(successed).
@@ -81,10 +85,10 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				bestPrice = &price
 			}
 			// bestPrice, successed, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
-			if err != nil {
-				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
-				return
-			}
+			// if err != nil {
+			// 	logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
+			// 	return
+			// }
 			if bestPrice == nil {
 				failedList := []string{}
 				for _, item := range failed {

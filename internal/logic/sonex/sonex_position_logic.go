@@ -14,9 +14,11 @@ import (
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -376,12 +378,53 @@ func (l *SonexPositionLogic) fillPosition(
 			}
 
 			logx.Errorf("[convertPosition] Token price not found from db for address: %s", tokenAddr.Hex())
-			bestPrice, _, _, err := global.GetPrices(ctx, nil, req.ChainId, tokenAddr.Hex(), true, 2)
-			if err == nil && bestPrice != nil {
-				p := new(big.Float).SetInt(bestPrice.Value)
-				resultChan <- priceResult{index: index, price: p, priceString: bestPrice.Value.String()}
+			t, err := global.GetToken(chainConf.ChainId, token.Hex())
+			if err != nil {
+				resultChan <- priceResult{err: err}
 				return
 			}
+			usdToken, err := global.GetToken(chainConf.ChainId, common.HexToAddress(chainConf.USD).Hex())
+			if err != nil || usdToken == nil {
+				resultChan <- priceResult{err: fmt.Errorf("Get USD token[%s] failed: %s", chainConf.USD, err)}
+				return
+			}
+			usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(t.Decimals-usdToken.Decimals), nil))
+			successed, failed, err := global.QuoteExactInput(context.Background(), nil, chainConf.ChainId, t.Address, chainConf.USD, amountIn, 2)
+			if err != nil {
+				resultChan <- priceResult{err: fmt.Errorf("Get %s[%s] price failed: %s", t.Address, t.Symbol, err)}
+				return
+			}
+			var bestPrice *cache.Price
+			if len(successed) > 0 {
+				price := linq.From(successed).
+					WhereT(func(item cache.Price) bool {
+						return item.Value.Cmp(common.Big0) > 0
+					}).
+					OrderByT(func(item cache.Price) float64 {
+						return item.PriceImpact
+					}).First().(cache.Price)
+				price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
+				bestPrice = &price
+			}
+			if bestPrice == nil {
+				failedList := []string{}
+				for _, item := range failed {
+					pools := []string{}
+					for _, pool := range item.Pools {
+						pools = append(pools, fmt.Sprintf("%s:%s[%d]", pool.Token0, pool.Token1, pool.Fee))
+					}
+					failedList = append(failedList, fmt.Sprintf("Path: %s, Error: %s", strings.Join(pools, " -> "), item.Err.Error()))
+				}
+				resultChan <- priceResult{err: fmt.Errorf("Get %s[%s] best price failed,Success count: %d, Failed list: %v", t.Address, t.Symbol, len(successed), failedList)}
+				return
+			}
+			// bestPrice, _, _, err := global.GetPrices(ctx, nil, req.ChainId, tokenAddr.Hex(), true, 2)
+			// if err == nil && bestPrice != nil {
+			// 	p := new(big.Float).SetInt(bestPrice.Value)
+			// 	resultChan <- priceResult{index: index, price: p, priceString: bestPrice.Value.String()}
+			// 	return
+			// }
 			resultChan <- priceResult{
 				index: index,
 				err:   fmt.Errorf("failed to get price for token%d", index),
