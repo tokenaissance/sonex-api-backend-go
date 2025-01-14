@@ -235,11 +235,16 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		for tokenId, collectEvents := range collectEventsMap {
 			decreEvents, _ := decreaseLiquidityEventsMap[tokenId]
 			for _, collectEvent := range collectEvents {
+				isDecreaseLiquidityEvent := false
 				for _, decreEvent := range decreEvents {
 					if collectEvent.TxHash == decreEvent.TxHash {
 						// this collect event is decrease liquidity event, do not count it.
-						continue
+						isDecreaseLiquidityEvent = true
+						break
 					}
+				}
+				if isDecreaseLiquidityEvent {
+					continue
 				}
 				// count collected pairs
 				tokenValue0 = tokenValue0.AmountAdd(collectEvent.EventAmount0)
