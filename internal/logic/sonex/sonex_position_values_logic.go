@@ -62,7 +62,7 @@ func (l *SonexPositionValuesLogic) SonexPositionValuesMethod(chainId int64, addr
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
-	items, err := transferModel.GetTransferEvents(l.ctx, address, true)
+	items, err := transferModel.GetTransferEvents(l.ctx, chainId, address, true)
 	if err != nil {
 		logx.Errorf("[SonexPositionsLogic] GetTransferEvents error: %s", err.Error())
 		return nil, err
