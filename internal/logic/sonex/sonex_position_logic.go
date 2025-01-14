@@ -208,13 +208,13 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		collectEvents, err := collectModel.GetCollectEvents(ctx, req.ChainId, req.TokenId)
+		collectEventsMap, err := collectModel.GetCollectEvents(ctx, req.ChainId, []int64{req.TokenId})
 		if err != nil {
 			logx.Errorf("[SonexPosition] GetCollectEvents error: %s", err.Error())
 			results <- sonexPositionResult{err: err}
 			return
 		}
-		decreaseLiquidityEvents, err := decreaseLiquidityModel.GetDecreaseLiquidityEvents(ctx, req.ChainId, req.TokenId)
+		decreaseLiquidityEventsMap, err := decreaseLiquidityModel.GetDecreaseLiquidityEvents(ctx, req.ChainId, []int64{req.TokenId})
 		if err != nil {
 			logx.Errorf("[SonexPosition] GetDecreaseLiquidityEvents error: %s", err.Error())
 			results <- sonexPositionResult{err: err}
@@ -232,14 +232,19 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 			results <- sonexPositionResult{err: err}
 			return
 		}
-		for _, collectEvent := range collectEvents {
-			if decreEvent, ok := decreaseLiquidityEvents[collectEvent.EventTokenId]; ok && collectEvent.TxHash == decreEvent.TxHash {
-				// this collect event is decrease liquidity event, do not count it.
-				continue
+		for tokenId, collectEvents := range collectEventsMap {
+			decreEvents, _ := decreaseLiquidityEventsMap[tokenId]
+			for _, collectEvent := range collectEvents {
+				for _, decreEvent := range decreEvents {
+					if collectEvent.TxHash == decreEvent.TxHash {
+						// this collect event is decrease liquidity event, do not count it.
+						continue
+					}
+				}
+				// count collected pairs
+				tokenValue0 = tokenValue0.AmountAdd(collectEvent.EventAmount0)
+				tokenValue1 = tokenValue1.AmountAdd(collectEvent.EventAmount1)
 			}
-			// count collected pairs
-			tokenValue0 = tokenValue0.AmountAdd(collectEvent.EventAmount0)
-			tokenValue1 = tokenValue1.AmountAdd(collectEvent.EventAmount1)
 		}
 		collectedPair := sonex.NewTokenPair(tokenValue0, tokenValue1)
 		results <- sonexPositionResult{totalCollected: collectedPair, err: nil}
