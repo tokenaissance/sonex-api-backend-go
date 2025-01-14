@@ -753,7 +753,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
-	items, err := model.GetTransferEvents(ctx, userAddress.Hex(), true)
+	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -806,7 +806,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
-	items, err := model.GetTransferEvents(ctx, userAddress.Hex(), false)
+	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), false)
 	if err != nil {
 		return nil, err
 	}

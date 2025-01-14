@@ -92,13 +92,15 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		dataResult = data
 
 		// Set cache
-		respBytes, err := json.Marshal(CacheWarpper{Data: data, LastUpdate: time.Now().UTC()})
-		if err != nil {
-			logx.Errorf("Marshal response error: %v", err)
-		}
-		err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
-		if err != nil {
-			logx.Errorf("Set cache error: %v", err)
+		if len(data) > 0 {
+			respBytes, err := json.Marshal(CacheWarpper{Data: data, LastUpdate: time.Now().UTC()})
+			if err != nil {
+				logx.Errorf("Marshal response error: %v", err)
+			}
+			err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
+			if err != nil {
+				logx.Errorf("Set cache error: %v", err)
+			}
 		}
 	}
 

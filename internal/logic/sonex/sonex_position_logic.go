@@ -41,7 +41,6 @@ type PositionResponseWrapper struct {
 
 type sonexPositionResult struct {
 	transferItem   *types.Position
-	collectedPairs map[int64]*sonex.TokenPair
 	position       *sonex.Position
 	prices         map[string]*repository.TokenPriceRecord
 	totalInvested  *sonex.TokenPair
@@ -105,7 +104,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 
 	// Task 1: Get transfer event
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
-	itemM, err := transferModel.GetTransferEvent(ctx, req.TokenId, true)
+	itemM, err := transferModel.GetTransferEvent(ctx, req.ChainId, req.TokenId, true)
 	if err != nil {
 		logx.Errorf("[SonexPosition] GetTransferEvent error: %s", err.Error())
 		return nil, err
@@ -129,7 +128,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		return response, nil
 	}
 
-	// Task 2: Get positions
+	// Task1: Get positions
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
 	positions, err := caller.BatchGetPositions(
 		ctx,
@@ -190,28 +189,60 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	}
 
 	// Collect results
-	var collectedPairs = make(map[int64]*sonex.TokenPair)
 	var prices = make(map[string]*repository.TokenPriceRecord)
 
 	var wg sync.WaitGroup
-	results := make(chan sonexPositionResult, 2)
-	// Task 1: Get collected amounts
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		collectedPairs, err := collectModel.AggregateAmounts(ctx, req.ChainId, req.TokenId,
-			position.Pool.Token0.Decimals,
-			position.Pool.Token1.Decimals)
-		results <- sonexPositionResult{collectedPairs: collectedPairs, err: err}
-	}()
+	results := make(chan sonexPositionResult, 4)
+
 	// Task 2: Get total collected amounts
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		totalCollected, err := collectModel.TotalAmounts(ctx, req.ChainId, req.TokenId,
-			position.Pool.Token0.Decimals,
-			position.Pool.Token1.Decimals)
-		results <- sonexPositionResult{totalCollected: totalCollected, err: err}
+		collectEventsMap, err := collectModel.GetCollectEvents(ctx, req.ChainId, []int64{req.TokenId})
+		if err != nil {
+			logx.Errorf("[SonexPosition] GetCollectEvents error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		decreaseLiquidityEventsMap, err := decreaseLiquidityModel.GetDecreaseLiquidityEvents(ctx, req.ChainId, []int64{req.TokenId})
+		if err != nil {
+			logx.Errorf("[SonexPosition] GetDecreaseLiquidityEvents error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		tokenValue0, err := sonex.NewTokenValue("0", position.Pool.Token0.Decimals)
+		if err != nil {
+			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		tokenValue1, err := sonex.NewTokenValue("0", position.Pool.Token1.Decimals)
+		if err != nil {
+			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		for tokenId, collectEvents := range collectEventsMap {
+			decreEvents, _ := decreaseLiquidityEventsMap[tokenId]
+			for _, collectEvent := range collectEvents {
+				isDecreaseLiquidityEvent := false
+				for _, decreEvent := range decreEvents {
+					if collectEvent.TxHash == decreEvent.TxHash {
+						// this collect event is decrease liquidity event, do not count it.
+						isDecreaseLiquidityEvent = true
+						break
+					}
+				}
+				if isDecreaseLiquidityEvent {
+					continue
+				}
+				// count collected pairs
+				tokenValue0 = tokenValue0.AmountAdd(collectEvent.EventAmount0)
+				tokenValue1 = tokenValue1.AmountAdd(collectEvent.EventAmount1)
+			}
+		}
+		collectedPair := sonex.NewTokenPair(tokenValue0, tokenValue1)
+		results <- sonexPositionResult{totalCollected: collectedPair, err: nil}
 	}()
 	// Task 3: Get total invested amounts
 	wg.Add(1)
@@ -257,9 +288,6 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		if result.prices != nil {
 			prices = result.prices
 		}
-		if result.collectedPairs != nil {
-			collectedPairs = result.collectedPairs
-		}
 		if result.totalInvested != nil {
 			position.TotalInvested = *result.totalInvested.ToTokenValuePair()
 		}
@@ -271,7 +299,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		}
 	}
 
-	position, err = l.fillPosition(ctx, req, position, innerPosition, prices, collectedPairs)
+	position, err = l.fillPosition(ctx, req, position, innerPosition, prices)
 	if err != nil {
 		logx.Errorf("[SonexPosition] fillPosition error: %s", err.Error())
 		return nil, err
@@ -303,7 +331,6 @@ func (l *SonexPositionLogic) fillPosition(
 	position *types.Position,
 	innnerPosition *sonex.Position,
 	pricesRecords map[string]*repository.TokenPriceRecord,
-	collectedPairs map[int64]*sonex.TokenPair,
 ) (*types.Position, error) {
 	position.TokenID = innnerPosition.TokenId.Int64()
 	position.TickUpper = innnerPosition.TickUpper.String()
@@ -412,14 +439,21 @@ func (l *SonexPositionLogic) fillPosition(
 	position.UnclaimedFee1, _ = claimableToken1Value.ValueFloat64()
 
 	pnl := position.ClaimableFees
-	if collectedPair, ok := collectedPairs[req.TokenId]; ok {
-		// set collected token price
-		collectedPair.Token0().SetTokenPrice(price0String, usdDecimals)
-		collectedPair.Token1().SetTokenPrice(price1String, usdDecimals)
-		collectedFees, _ := collectedPair.ValueFloat64()
-		pnl = pnl + collectedFees
+	collectedPair := position.TotalCollected
+	token0Value, err = sonex.NewTokenValue(collectedPair.Token0.Amount, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		return nil, err
 	}
-	position.PNL = pnl
+	token1Value, err = sonex.NewTokenValue(collectedPair.Token1.Amount, position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		return nil, err
+	}
+	tokenPair = sonex.NewTokenPair(token0Value, token1Value)
+	collectedFees, _ := tokenPair.ValueFloat64()
+
+	position.PNL = pnl + collectedFees
 	// 5. fill tokenValue0, tokenValue1
 	position.TokenValue0 = types.Token_TokenValue{
 		Amount:   amount0.String(),

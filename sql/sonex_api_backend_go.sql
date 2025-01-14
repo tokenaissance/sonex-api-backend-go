@@ -1,18 +1,18 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : postgres
+ Source Server         : sonex-api-backend-go
  Source Server Type    : PostgreSQL
- Source Server Version : 160003 (160003)
- Source Host           : 10.0.0.150:5432
- Source Catalog        : sonex_api_backend
+ Source Server Version : 160004 (160004)
+ Source Host           : 10.1.84.8:5432
+ Source Catalog        : sonex-api-backend-go
  Source Schema         : public
 
  Target Server Type    : PostgreSQL
- Target Server Version : 160003 (160003)
+ Target Server Version : 160004 (160004)
  File Encoding         : 65001
 
- Date: 09/01/2025 01:17:45
+ Date: 14/01/2025 20:44:18
 */
 
 -- ----------------------------
@@ -302,6 +302,75 @@ CREATE TABLE "public"."event_farm_unpaused" (
   "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_account" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+)
+;
+
+-- ----------------------------
+-- Table structure for event_pre_deposit_claimer_reward_claimed
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_pre_deposit_claimer_reward_claimed";
+CREATE TABLE "public"."event_pre_deposit_claimer_reward_claimed" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_nonce" int8 NOT NULL
+)
+;
+
+-- ----------------------------
+-- Table structure for event_pre_deposit_staked
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_pre_deposit_staked";
+CREATE TABLE "public"."event_pre_deposit_staked" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_timestamp" int8 NOT NULL
+)
+;
+
+-- ----------------------------
+-- Table structure for event_pre_deposit_withdrawn
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_pre_deposit_withdrawn";
+CREATE TABLE "public"."event_pre_deposit_withdrawn" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_wastr_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_vastr_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_timestamp" int8 NOT NULL
 )
 ;
 
@@ -608,6 +677,60 @@ CREATE TABLE "public"."event_xpool_pool_withdrawed" (
   "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_height" int8 NOT NULL
+)
+;
+
+-- ----------------------------
+-- Table structure for pre_deposit_points_record
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."pre_deposit_points_record";
+CREATE TABLE "public"."pre_deposit_points_record" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "user_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "points" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL
+)
+;
+
+-- ----------------------------
+-- Table structure for pre_deposit_reward_claim_record
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."pre_deposit_reward_claim_record";
+CREATE TABLE "public"."pre_deposit_reward_claim_record" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "user_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "nonce" int8 NOT NULL,
+  "signature" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default",
+  "tx_index" int8,
+  "tx_at" timestamptz(6)
+)
+;
+
+-- ----------------------------
+-- Table structure for pre_deposit_reward_snapshot
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."pre_deposit_reward_snapshot";
+CREATE TABLE "public"."pre_deposit_reward_snapshot" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "user_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "wastr_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "vastr_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "reward_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
 
@@ -941,6 +1064,63 @@ ALTER TABLE "public"."event_farm_unpaused" ADD CONSTRAINT "event_farm_paused_cop
 ALTER TABLE "public"."event_farm_unpaused" ADD CONSTRAINT "event_farm_paused_copy1_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
+-- Indexes structure for table event_pre_deposit_claimer_reward_claimed
+-- ----------------------------
+CREATE UNIQUE INDEX "event_claimer_reward_claimed_index_chain_id_tx_hash_tx_index" ON "public"."event_pre_deposit_claimer_reward_claimed" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_pre_deposit_claimer_reward_claimed
+-- ----------------------------
+ALTER TABLE "public"."event_pre_deposit_claimer_reward_claimed" ADD CONSTRAINT "event_pre_deposit_staked_copy1_tx_hash_chain_id_key1" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_pre_deposit_claimer_reward_claimed
+-- ----------------------------
+ALTER TABLE "public"."event_pre_deposit_claimer_reward_claimed" ADD CONSTRAINT "event_pre_deposit_staked_copy1_pkey1" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_pre_deposit_staked
+-- ----------------------------
+CREATE UNIQUE INDEX "event_pre_deposit_staked_index_chain_id_tx_hash_tx_index" ON "public"."event_pre_deposit_staked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_pre_deposit_staked
+-- ----------------------------
+ALTER TABLE "public"."event_pre_deposit_staked" ADD CONSTRAINT "event_farm_token_staked_copy1_tx_hash_chain_id_key1" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_pre_deposit_staked
+-- ----------------------------
+ALTER TABLE "public"."event_pre_deposit_staked" ADD CONSTRAINT "event_farm_token_staked_copy1_pkey1" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_pre_deposit_withdrawn
+-- ----------------------------
+CREATE UNIQUE INDEX "event_pre_deposit_withdrawn_index_chain_id_tx_hash_tx_index" ON "public"."event_pre_deposit_withdrawn" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_pre_deposit_withdrawn
+-- ----------------------------
+ALTER TABLE "public"."event_pre_deposit_withdrawn" ADD CONSTRAINT "event_pre_deposit_staked_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_pre_deposit_withdrawn
+-- ----------------------------
+ALTER TABLE "public"."event_pre_deposit_withdrawn" ADD CONSTRAINT "event_pre_deposit_staked_copy1_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
 -- Indexes structure for table event_sonex_factory_pool_created
 -- ----------------------------
 CREATE INDEX "sonex_factory_pool_created_index_chain_id_block_number" ON "public"."event_sonex_factory_pool_created" USING btree (
@@ -1267,6 +1447,61 @@ CREATE INDEX "xpool_pool_withdrawed_index_chain_id_user" ON "public"."event_xpoo
 ALTER TABLE "public"."event_xpool_pool_withdrawed" ADD CONSTRAINT "event_xpool_pool_claimed_copy1_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
+-- Indexes structure for table pre_deposit_points_record
+-- ----------------------------
+CREATE INDEX "pre_deposit_points_record_chain_user" ON "public"."pre_deposit_points_record" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "user_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "pre_deposit_points_record_index_chain_id_tx_hash_tx_index" ON "public"."pre_deposit_points_record" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table pre_deposit_points_record
+-- ----------------------------
+ALTER TABLE "public"."pre_deposit_points_record" ADD CONSTRAINT "pre_deposit_reward_claim_record_copy1_pkey1" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table pre_deposit_reward_claim_record
+-- ----------------------------
+CREATE UNIQUE INDEX "pre_deposit_reward_claim_record_index_chain_id_signature" ON "public"."pre_deposit_reward_claim_record" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "signature" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "pre_deposit_reward_claim_record_index_chain_id_tx_hash_tx_index" ON "public"."pre_deposit_reward_claim_record" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "pre_deposit_reward_claim_record_index_chain_id_user_nonce" ON "public"."pre_deposit_reward_claim_record" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "user_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "nonce" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table pre_deposit_reward_claim_record
+-- ----------------------------
+ALTER TABLE "public"."pre_deposit_reward_claim_record" ADD CONSTRAINT "astar_claim_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table pre_deposit_reward_snapshot
+-- ----------------------------
+CREATE INDEX "pre_deposit_reward_snapshot_index_chain_id_user_token" ON "public"."pre_deposit_reward_snapshot" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "user_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "reward_token" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table pre_deposit_reward_snapshot
+-- ----------------------------
+ALTER TABLE "public"."pre_deposit_reward_snapshot" ADD CONSTRAINT "pre_deposit_reward_claim_record_copy1_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
 -- Indexes structure for table sonex_token
 -- ----------------------------
 CREATE INDEX "idx_token_address" ON "public"."sonex_token" USING btree (
@@ -1308,29 +1543,3 @@ CREATE UNIQUE INDEX "token_index_chain_id_address" ON "public"."token" USING btr
 -- Primary Key structure for table token
 -- ----------------------------
 ALTER TABLE "public"."token" ADD CONSTRAINT "token_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
--- Records of chain_scanner_prograss
--- ----------------------------
-BEGIN;
-INSERT INTO "public"."chain_scanner_prograss" ("id", "created_at", "updated_at", "chain_id", "height") VALUES (124502484323401728, '2024-12-09 00:00:00+00', '2024-12-09 00:00:00+00', 1946, 6500000);
-COMMIT;
-
--- ----------------------------
--- Records of sonex_token
--- ----------------------------
-BEGIN;
-INSERT INTO "public"."sonex_token" ("id", "created_at", "updated_at", "deleted_at", "name", "symbol", "address", "decimals", "logo", "sort", "recommendOrder", "isHidden", "volume", "additional") VALUES (1, '2025-01-09 03:41:47.6758+00', '2025-01-09 03:41:47.6758+00', NULL, 'ETH', 'ETH', '0x0000000000000000000000000000000000000000', 18, 'https://img.sonex.so/eth-logo.png', 0, 0, 'f', 0.000000000000000000, '{"audits": "", "social": {"github": "https://github.com/ethereum/go-ethereum", "reddit": "https://reddit.com/r/ethereum", "discord": "", "twitter": "https://twitter.com/ethereum", "bitclout": "", "telegram": ""}, "website": "https://www.ethereum.org/", "whitepaper": "https://github.com/ethereum/wiki/wiki/White-Paper", "description": "Ethereum is a decentralized blockchain with smart contract functionality. Ether is the native cryptocurrency of the platform. Among cryptocurrencies, ether is second only to bitcoin in market capitalization. It is open-source software."}');
-INSERT INTO "public"."sonex_token" ("id", "created_at", "updated_at", "deleted_at", "name", "symbol", "address", "decimals", "logo", "sort", "recommendOrder", "isHidden", "volume", "additional") VALUES (2, '2025-01-09 03:42:14.659032+00', '2025-01-09 03:42:14.659032+00', NULL, 'Wrapped Ethereum', 'WETH', '0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C', 18, 'https://img.sonex.so/weth-logo.png', 0, 0, 'f', 0.000000000000000000, '{"audits": "https://hacken.io/audits/singularitydao/", "social": {"github": "", "reddit": "", "discord": "", "twitter": "", "bitclout": "", "telegram": ""}, "website": "", "whitepaper": "", "description": "What is WETH (Wrapped ETH)? WETH is the tokenized/packaged form of ETH that you use to pay for items when you interact with Ethereum dApps. WETH follows the ERC-20 token standards, enabling it to achieve interoperability with other ERC-20 tokens.  This offers more utility to holders as they can use it across networks and dApps. You can stake, yield farm, lend, and provide liquidity to various liquidity pools with WETH.  Also, unlike ETH, which doesn’t conform to its own ERC-20 standard and thus has lower interoperability as it can’t be used on other chains besides Ethereum, WETH can be used on cheaper and high throughput alternatives like Binance, Polygon, Solana, and Cardano. The price of WETH will always be the same as ETH because it maintains a 1:1 wrapping ratio."}');
-INSERT INTO "public"."sonex_token" ("id", "created_at", "updated_at", "deleted_at", "name", "symbol", "address", "decimals", "logo", "sort", "recommendOrder", "isHidden", "volume", "additional") VALUES (3, '2025-01-09 03:43:02.235669+00', '2025-01-09 03:43:02.235669+00', NULL, 'Bridged USDC', 'USDC.e', '0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391', 6, 'https://img.sonex.so/usdc-logo.png', 0, 3, 'f', 0.000000000000000000, '{"audits":"","social":{"github":"","reddit":"","discord":"","twitter":"","bitclout":"","telegram":""},"website":"https://www.usdc.com/","whitepaper":"https://f.hubspotusercontent30.net/hubfs/9304636/PDF/centre-whitepaper.pdf","description":"USDC is a digital dollar. It combines the power and stability of US Dollars with the speed of the internet. You can use USDC just like you would any dollar – to buy and trade assets, to send and receive payments, or to save your money."}');
-INSERT INTO "public"."sonex_token" ("id", "created_at", "updated_at", "deleted_at", "name", "symbol", "address", "decimals", "logo", "sort", "recommendOrder", "isHidden", "volume", "additional") VALUES (4, '2025-01-09 03:43:10.847477+00', '2025-01-09 03:43:10.847477+00', NULL, 'Astar Token', 'ASTR', '0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655', 18, 'https://img.sonex.so/astar-logo.png', 0, 1, 'f', 0.000000000000000000, '{"audits": "https://certificate.quantstamp.com/view/a-star-network-custom-signature", "social": {"github": "https://github.com/AstarNetwork/Astar", "reddit": "", "discord": "https://discord.gg/astarnetwork", "twitter": "https://twitter.com/AstarNetwork", "bitclout": "", "telegram": "https://t.me/PlasmAnnouncement"}, "website": "https://astar.network/", "whitepaper": "https://docs.astar.network/", "description": "Astar Network helps developers build decentralized applications (dApps) and layer 2 solutions by providing interoperable web 3.0 infrastructure, financial incentives, incubation programmes and technical support. It seeks to provide the best solution for all developers by supporting EVM and making a parachain where EVM and WASM smart contracts can co-exist and communicate with each other."}');
-COMMIT;
--- ----------------------------
--- Records of token
--- ----------------------------
-BEGIN;
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (1, 1946, 'ETH', 'ETH', 18, '0x0000000000000000000000000000000000000000', 'https://img.sonex.so/eth-logo.png', 1000, 'f');
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (2, 1946, 'Wrapped Ethereum', 'WETH', 18, '0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C', 'https://img.sonex.so/weth-logo.png', 999, 'f');
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (3, 1946, 'Bridged USDC', 'USDC.e', 6, '0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391', 'https://img.sonex.so/usdc-logo.png', 998, 'f');
-INSERT INTO "public"."token" ("id", "chain_id", "name", "symbol", "decimals", "address", "logo", "sort", "hidden") VALUES (4, 1946, 'Astar Token', 'ASTR', 18, '0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655', 'https://img.sonex.so/astar-logo.png', 900, 'f');
-COMMIT;
