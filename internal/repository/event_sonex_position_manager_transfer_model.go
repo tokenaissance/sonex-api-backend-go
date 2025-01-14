@@ -22,7 +22,7 @@ type (
 		eventSonexPositionManagerTransferModel
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
-		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
+		GetValidTransferEvents(ctx context.Context, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
 	}
@@ -74,20 +74,20 @@ type transferData struct {
 	IsBurnt          sql.NullBool   `db:"is_burnt"`
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEvents(ctx context.Context, address string) ([]*EventSonexPositionManagerTransfer, error) {
 	// 过滤掉当前地址已经销毁的 position，以及当前地址操作通过钱包转移的 position，交易记录的 event_from 是当前地址
 	query := fmt.Sprintf(`
 		SELECT * FROM %s
 		WHERE
-			chain_id = $1 AND event_to = $2
+			event_to = $1
 		 	AND event_token_id NOT IN (
-				SELECT event_token_id FROM %s WHERE event_from = $2
+				SELECT event_token_id FROM %s WHERE event_from = $1
 			)
 	 
 	`, m.table, m.table)
 	var resp []*EventSonexPositionManagerTransfer
 	address = common.HexToAddress(address).Hex()
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, address)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 	address = common.HexToAddress(address).Hex()
 
 	// query valid events by address
-	validEvents, err := m.GetValidTransferEvents(ctx, 1946, address)
+	validEvents, err := m.GetValidTransferEvents(ctx, address)
 	if err != nil {
 		return nil, err
 	}
