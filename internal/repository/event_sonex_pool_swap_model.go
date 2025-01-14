@@ -39,7 +39,7 @@ type (
 		PageQueryMergeByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
-		SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) (map[int64]*PoolVolumeUsd, error)
+		SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
 	}
@@ -63,13 +63,8 @@ type (
 	}
 
 	PoolVolumeUsd struct {
-		Id          int64  `json:"id"`           // id
-		ExtraPool   string `json:"extra_pool"`   // pool address
-		Value       string `json:"value"`        // 购买代币时,交易里面的ETHvalue
-		Amount0     string `json:"amount0"`      // amount 0
-		Amount1     string `json:"amount1"`      // amount 1
-		ExtraToken0 string `json:"extra_token0"` // token0
-		ExtraToken1 string `json:"extra_token1"` // token1
+		Value     string `json:"value"`      // 购买代币时,交易里面的ETHvalue
+		ExtraPool string `json:"extra_pool"` // pool address
 	}
 )
 
@@ -792,31 +787,17 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context
 	return poolVolumesMap, nil
 }
 
-func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) (map[int64]*PoolVolumeUsd, error) {
-	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error) {
 
-	volumeQuery := fmt.Sprintf(`
-		SELECT
-			S.id ,
-			S.extra_pool AS extra_pool,
-			S.value AS value,
-			S.event_amount0 AS amount0,
-			S.event_amount1 AS amount1,
-			C.event_token0 AS extra_token0, 
-			C.event_token1 AS extra_token1
-		FROM
-			%s S
-		JOIN %s C ON S.extra_pool = C.event_pool 
-		WHERE S.chain_id = $1
-	`, m.table, eventSonexFactoryPoolCreatedModel.tableName())
-
-	if last24Hours {
-		// Assuming `transaction_time` is a timestamp column in your table
-		volumeQuery += " AND S.tx_at >= NOW() - INTERVAL '24 HOURS'"
-	}
-
-	// Complete the query with grouping
-	volumeQuery += " GROUP BY S.extra_pool,S.id,C.event_token0, C.event_token1"
+	volumeQuery := `
+SELECT CAST
+	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+	t1.extra_pool 
+FROM
+	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
+	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
+	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
+`
 
 	// Execute the query and scan results into poolVolumes slice
 	var poolVolumesUsd []*PoolVolumeUsd
@@ -825,13 +806,7 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Cont
 		return nil, fmt.Errorf("failed to execute volume query: %w", err)
 	}
 
-	// key id , body 是 volume 其他数值
-	poolVolumesMap := make(map[int64]*PoolVolumeUsd)
-	for _, pv := range poolVolumesUsd {
-		poolVolumesMap[pv.Id] = pv
-	}
-
-	return poolVolumesMap, nil
+	return poolVolumesUsd, nil
 }
 
 // getTransaction By pool address

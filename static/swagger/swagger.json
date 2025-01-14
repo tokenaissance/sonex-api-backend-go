@@ -29,8 +29,7 @@
         },
         "parameters": [
           {
-            "name": "chainId",
-            "description": " 链ID",
+            "name": "x-chain-id",
             "in": "query",
             "required": true,
             "type": "integer",
@@ -117,10 +116,9 @@
         },
         "parameters": [
           {
-            "name": "chainId",
-            "description": " 链ID",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
             "format": "int64"
           },
@@ -154,10 +152,9 @@
         },
         "parameters": [
           {
-            "name": "chainId",
-            "description": " 链ID",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
             "format": "int64"
           },
@@ -213,10 +210,9 @@
         },
         "parameters": [
           {
-            "name": "chainId",
-            "description": " 链ID",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
             "format": "int64"
           },
@@ -444,19 +440,15 @@
             "type": "string"
           },
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
-            "format": "int64",
-            "default": "1946"
+            "format": "int64"
           }
         ],
         "tags": [
           "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
         ]
       }
     },
@@ -479,19 +471,15 @@
             "type": "string"
           },
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
-            "format": "int64",
-            "default": "1946"
+            "format": "int64"
           }
         ],
         "tags": [
           "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
         ]
       }
     },
@@ -508,6 +496,13 @@
         },
         "parameters": [
           {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "address",
             "in": "query",
             "required": true,
@@ -519,14 +514,6 @@
             "required": false,
             "type": "string",
             "default": "1d"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           }
         ],
         "tags": [
@@ -550,18 +537,17 @@
         },
         "parameters": [
           {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "address",
             "in": "query",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           }
         ],
         "tags": [
@@ -585,18 +571,17 @@
         },
         "parameters": [
           {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "address",
             "in": "query",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           }
         ],
         "tags": [
@@ -619,6 +604,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
           {
             "name": "poolAddress",
             "description": " Pool address",
@@ -661,14 +653,6 @@
             "in": "query",
             "required": false,
             "type": "string"
-          },
-          {
-            "name": "chainId",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int64",
-            "default": "1946"
           }
         ],
         "tags": [
@@ -863,19 +847,15 @@
             "type": "string"
           },
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
-            "format": "int64",
-            "default": "1946"
+            "format": "int64"
           }
         ],
         "tags": [
           "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
         ]
       }
     },
@@ -1245,11 +1225,6 @@
     "FarmIncentivesRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
-        },
         "userAddress": {
           "type": "string",
           "description": " 用户地址"
@@ -1290,7 +1265,6 @@
       },
       "title": "FarmIncentivesRequest",
       "required": [
-        "chainId",
         "stakedOnly",
         "pageSize",
         "pageIndex"
@@ -1319,14 +1293,17 @@
     "FarmIncentivesResponse_Data": {
       "type": "object",
       "properties": {
-        "incentiveId": {
+        "pageSize": {
           "type": "integer",
           "format": "int64"
         },
-        "chainId": {
+        "pageIndex": {
           "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
+          "format": "int64"
+        },
+        "incentiveId": {
+          "type": "integer",
+          "format": "int64"
         },
         "poolAddress": {
           "type": "string",
@@ -1423,7 +1400,6 @@
       "title": "FarmIncentivesResponse_Data",
       "required": [
         "incentiveId",
-        "chainId",
         "poolAddress",
         "feeRatio",
         "rewardTokenAddress",
@@ -1452,11 +1428,6 @@
     "FarmPoolLiquidityRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
-        },
         "incentiveId": {
           "type": "string",
           "description": " 质押池ID"
@@ -1535,11 +1506,6 @@
     "FarmPoolRoiRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
-        },
         "incentiveId": {
           "type": "string",
           "description": " 质押池ID"
@@ -1625,11 +1591,6 @@
     "FarmUserAssetDetailRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 链ID"
-        },
         "incentiveId": {
           "type": "string",
           "description": " 质押池ID"
@@ -2016,13 +1977,6 @@
     },
     "PoolInfoRequest": {
       "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
       "title": "PoolInfoRequest"
     },
     "PoolInfoResponse": {
@@ -2381,11 +2335,6 @@
       "properties": {
         "address": {
           "type": "string"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
         }
       },
       "title": "PortfolioRequest",
@@ -2499,13 +2448,6 @@
     },
     "PositionRequest": {
       "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
       "title": "PositionRequest"
     },
     "PositionResponse": {
@@ -2547,11 +2489,6 @@
         "interval": {
           "type": "string",
           "default": "1d"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
         }
       },
       "title": "PositionValuesRequest",
@@ -2589,11 +2526,6 @@
       "properties": {
         "address": {
           "type": "string"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
         }
       },
       "title": "PositionsRequest",
@@ -2875,11 +2807,6 @@
         },
         "token1": {
           "type": "string"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
         }
       },
       "title": "SwapEventRequest",
@@ -2977,11 +2904,6 @@
         },
         "token1": {
           "type": "string"
-        },
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
         }
       },
       "title": "SwapVolumeRequest",
@@ -3636,13 +3558,6 @@
     },
     "TokensInfoRequest": {
       "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1946"
-        }
-      },
       "title": "TokensInfoRequest"
     },
     "TokensRequest": {

@@ -113,6 +113,7 @@ type PaginationMeta {
 }
 
 type SonexTokenPricesRequest {
+	ChainRequest
 	Name string `path:"name,options=you|me"`
 }
 
@@ -200,6 +201,7 @@ type TokenTopResponse {
 }
 
 type PriceComparisonResult {
+	ChainRequest
 	Comparison string  `json:"comparison"`
 	Percentage float64 `json:"percentage"`
 }
@@ -483,8 +485,8 @@ type PortfolioResponse {
 }
 
 type TokensInfoRequest {
+	ChainRequest
 	Address string `path:"address"`
-	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type TokenInfoResponse {
@@ -493,8 +495,8 @@ type TokenInfoResponse {
 }
 
 type PoolInfoRequest {
+	ChainRequest
 	Address string `path:"address"`
-	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type PoolInfoResponse {

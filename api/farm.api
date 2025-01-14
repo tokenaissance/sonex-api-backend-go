@@ -4,7 +4,7 @@ syntax = "v1"
 Farm Module
 */
 type FarmIncentivesRequest {
-	ChainId     int64  `form:"chainId"`                               // 链ID
+	ChainRequest
 	UserAddress string `form:"userAddress,optional"`                  // 用户地址
 	Status      string `form:"status,optional,options=active|closed"` // 运行状态
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
@@ -15,8 +15,8 @@ type FarmIncentivesRequest {
 }
 
 type FarmIncentivesResponse_Data {
+	PageRequest
 	IncentiveId         int64  `json:"incentiveId"`
-	ChainId             int64  `json:"chainId"`     // 链ID
 	PoolAddress         string `json:"poolAddress"` // 池子合约地址
 	FeeRatio            string `json:"feeRatio"`    // 池子手续费率
 	RewardTokenAddress  string `json:"rewardTokenAddress"`
@@ -57,7 +57,7 @@ type UserAssetData {
 }
 
 type FarmUserAssetDetailRequest {
-	ChainId     int64  `form:"chainId,optional"` // 链ID
+	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
 	UserAddress string `form:"userAddress"`      // 用户地址
 }
@@ -72,7 +72,7 @@ type FarmUserAssetDetailResponse {
 }
 
 type FarmPoolRoiRequest {
-	ChainId     int64  `form:"chainId,optional"`                 // 链ID
+	ChainRequest
 	IncentiveId string `form:"incentiveId"`                      // 质押池ID
 	Amount      string `form:"amount"`                           // 金额（USD）
 	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
@@ -91,7 +91,7 @@ type FarmPoolRoiResponse {
 }
 
 type FarmPoolLiquidityRequest {
-	ChainId     int64  `form:"chainId,optional"` // 链ID
+	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
 }
 

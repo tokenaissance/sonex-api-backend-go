@@ -408,7 +408,6 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
-					ChainId:             incincentiveCreatedRecord.ChainId,
 					PoolAddress:         record.EventPool,
 					FeeRatio:            record.ExtraFee,
 					RewardTokenAddress:  rewardToken.Address,
@@ -437,7 +436,6 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
-					ChainId:             incincentiveCreatedRecord.ChainId,
 					PoolAddress:         record.EventPool,
 					FeeRatio:            record.ExtraFee,
 					RewardTokenAddress:  rewardToken.Address,
