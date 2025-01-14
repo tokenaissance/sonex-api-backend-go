@@ -171,7 +171,7 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 			return nil, err
 		}
 
-		points = pointsResult.Points
+		points = pointsResult.ExtraPoints
 	}
 
 	// Summary reward

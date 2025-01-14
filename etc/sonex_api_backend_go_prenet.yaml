@@ -17,6 +17,10 @@ Redis:
   Port: REDIS_PORT
   Password:
   Db: 0
+PointsService:
+  Host: https://prenet-api-point.sonex.so/
+  Source: 00000000-0000-0000-0000-00000000000
+  PrivateKey: POINTPRIVATEKEY
 Chains:
   - ChainId: 1868
     Name: Soneium
@@ -43,3 +47,19 @@ Sonexes:
     PositionManager: 0x93cCfa6dDb2e0951675B39fbd8F4C8489dDf26f3
     Quoter: 0xAb06B5a9364d57baDC03DBCAA727B84F4eC1E63F
     SwapRouter: 0x46EF9cC6d5380B7435464bc4F81B6430a1ED1f26
+PreDeposits:
+  - ChainId: 1868
+    WASTR: 0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441
+    VASTR: "0x000000000000000000000000000000000000000F"
+    ASTR: 0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441
+    BridgeStaker: 0x053C1DF2e0c99b2E7f11C11F952e87C3197A6373
+    RewardClaimer: 0x3e1327299b6e2860E285382C1401E8864017C3dD
+    SignerPrivateKey: SIGNERPRIVATEKEY
+    PointsRate: 10
+    PointsUserCap: 6000
+    PointsTotalCap: 60000000
+    SubTitle: PreDeposit
+    RewardToken: 0x27a131ab51dDD12c31A7C28213A7A4584758bdE7
+    RewardDaily: 10000
+    RewardPrice: 1 # USD
+
