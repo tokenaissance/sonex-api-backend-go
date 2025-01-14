@@ -47,6 +47,8 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 	if preDepositConf == nil {
 		return nil, fmt.Errorf("%s", "Miss pre deposit configure")
 	}
+	wastrTokenAddress := common.HexToAddress(preDepositConf.WASTR)
+	vastrTokenAddress := common.HexToAddress(preDepositConf.VASTR)
 	rewardTokenAddress := common.HexToAddress(preDepositConf.RewardToken)
 	pointsServiceConf := l.svcCtx.Config.PointsService
 
@@ -61,15 +63,18 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 	currentWastrTotalStatedAmount := common.Big0
 	currentVastrTotalStatedAmount := common.Big0
 	var rewardPriceUSD float64
-	var wastrPriceUSD float64
-	var vastrPriceUSD float64
+	var astrPriceUSD float64
 	var apr float64
 	{
 		wastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.WASTR)
 		if err != nil {
 			return nil, err
 		}
-		vastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.VASTR)
+		// vastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.VASTR)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		astrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.ASTR)
 		if err != nil {
 			return nil, err
 		}
@@ -86,17 +91,20 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 		if err != nil {
 			return nil, err
 		}
-		prices, err := tokenPriceModel.GetCurrentPrices([]string{wastrToken.Address, vastrToken.Address, rewardToken.Address})
+		prices, err := tokenPriceModel.GetCurrentPrices([]string{astrToken.Address, rewardToken.Address})
 		if err != nil {
 			return nil, err
 		}
 
-		rewardPriceI := common.Big0
-		rewardPrice, ok := prices[rewardToken.Address]
-		if ok {
-			rewardPriceI, _ = new(big.Int).SetString(rewardPrice.Price, 10)
-			rewardPriceUSD, _ = global.PriceToUSD(req.ChainId, rewardPriceI)
+		usdToken, err := global.GetToken(req.ChainId, common.HexToAddress(chainConf.USD).Hex())
+		if err != nil {
+			return nil, err
 		}
+		wastrAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(wastrToken.Decimals), nil)
+		// vastrAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(vastrToken.Decimals), nil)
+		usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+		rewardPriceI := new(big.Int).Mul(big.NewInt(preDepositConf.RewardPrice), usdAccuracy)
+		rewardPriceUSD, _ = global.PriceToUSD(req.ChainId, rewardPriceI)
 		rewardEveryYearUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Mul(new(big.Int).Mul(big.NewInt(preDepositConf.RewardDaily), rewardPriceI), big.NewInt(365)))
 		if err != nil {
 			return nil, err
@@ -104,9 +112,9 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 		for _, item := range totalStakeds {
 			for token, value := range item {
 				switch token {
-				case wastrToken.Address:
+				case wastrTokenAddress.Hex():
 					currentWastrTotalStatedAmount = new(big.Int).Add(currentWastrTotalStatedAmount, value)
-				case vastrToken.Address:
+				case vastrTokenAddress.Hex():
 					currentVastrTotalStatedAmount = new(big.Int).Add(currentVastrTotalStatedAmount, value)
 				default:
 					continue
@@ -117,26 +125,21 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 			currentWastrTotalStatedAmount = new(big.Int).Sub(currentWastrTotalStatedAmount, item.WASTR)
 			currentVastrTotalStatedAmount = new(big.Int).Sub(currentVastrTotalStatedAmount, item.VASTR)
 		}
-		wastrPriceI := common.Big0
-		wastrPrice, ok := prices[wastrToken.Address]
+		astrPriceI := common.Big0
+		astrPrice, ok := prices[astrToken.Address]
 		if ok {
-			wastrPriceI, _ = new(big.Int).SetString(wastrPrice.Price, 10)
-			wastrPriceUSD, _ = global.PriceToUSD(req.ChainId, wastrPriceI)
+			astrPriceI, _ = new(big.Int).SetString(astrPrice.Price, 10)
+			astrPriceUSD, _ = global.PriceToUSD(req.ChainId, astrPriceI)
 		}
-		currentWastrTotalStatedUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Mul(currentWastrTotalStatedAmount, wastrPriceI))
+		currentWastrTotalStatedUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(currentWastrTotalStatedAmount, astrPriceI), wastrAccuracy))
 		if err != nil {
 			return nil, err
 		}
-		vastrPriceI := common.Big0
-		vastrPrice, ok := prices[vastrToken.Address]
-		if ok {
-			vastrPriceI, _ = new(big.Int).SetString(vastrPrice.Price, 10)
-			vastrPriceUSD, _ = global.PriceToUSD(req.ChainId, vastrPriceI)
-		}
-		currentVastrTotalStatedUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Mul(currentVastrTotalStatedAmount, vastrPriceI))
-		if err != nil {
-			return nil, err
-		}
+		// currentVastrTotalStatedUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(currentVastrTotalStatedAmount, astrPriceI), vastrAccuracy))
+		// if err != nil {
+		// 	return nil, err
+		// }
+		var currentVastrTotalStatedUSD float64 = 0
 
 		if rewardEveryYearUSD != 0 && currentWastrTotalStatedUSD+currentVastrTotalStatedUSD != 0 {
 			apr = rewardEveryYearUSD / (currentWastrTotalStatedUSD + currentVastrTotalStatedUSD) * 100
@@ -185,8 +188,7 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 	return &types.SummaryResponse{
 		TotalWastr:            currentWastrTotalStatedAmount.String(),
 		TotalVastr:            currentVastrTotalStatedAmount.String(),
-		WastrPriceUSD:         wastrPriceUSD,
-		VastrPriceUSD:         vastrPriceUSD,
+		ASTRPriceUSD:          astrPriceUSD,
 		Points:                points,
 		RewardToken:           rewardTokenAddress.Hex(),
 		RewardPriceUSD:        rewardPriceUSD,
