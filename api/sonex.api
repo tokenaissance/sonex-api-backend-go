@@ -521,6 +521,14 @@ type PoolInfoResponse {
 	Fee24h           float64             `json:"fee24h"`
 }
 
+type GalaxeSwapRequest {
+	Address string `form:"address"`
+}
+
+type GalaxeSwapResponse {
+	isSwapOrNot    bool                `json:"isSwapOrNot"`
+}
+
 @server (
 	prefix: /sonex
 	group:  sonex
@@ -567,4 +575,7 @@ service sonex_api_backend_go {
 
 	@handler SonexPortfolioHandler
 	get /portfolio (PortfolioRequest) returns (PortfolioResponse)
+
+	@handler SonexGalaxeswapHandler
+	get /galaxeswap (GalaxeSwapRequest) returns (GalaxeSwapResponse)
 }

@@ -83,6 +83,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
+				Path:    "/galaxeswap",
+				Handler: sonex.SonexGalaxeswapHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/pools",
 				Handler: sonex.SonexPoolListHandler(serverCtx),
 			},
