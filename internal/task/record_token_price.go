@@ -65,13 +65,19 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				logx.Errorf("Get USD token[%s] failed: %s", chainConf.USD, err)
 				return
 			}
-			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
+			usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
 			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
 			var bestPrice *cache.Price
 			if len(successed) > 0 {
-				price := linq.From(successed).OrderByT(func(item cache.Price) float64 {
-					return item.PriceImpact
-				}).First().(cache.Price)
+				price := linq.From(successed).
+					WhereT(func(item cache.Price) bool {
+						return item.Value.Cmp(common.Big0) > 0
+					}).
+					OrderByT(func(item cache.Price) float64 {
+						return item.PriceImpact
+					}).First().(cache.Price)
+				price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
 				bestPrice = &price
 			}
 			// bestPrice, successed, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
