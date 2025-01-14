@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 13/01/2025 17:04:01
+ Date: 14/01/2025 19:35:45
 */
 
 
@@ -84,6 +84,25 @@ CREATE TABLE "public"."event_pre_deposit_withdrawn" (
   "event_timestamp" int8 NOT NULL
 )
 ;
+ALTER TABLE "public"."event_pre_deposit_withdrawn" OWNER TO "postgres";
+
+-- ----------------------------
+-- Table structure for pre_deposit_points_record
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."pre_deposit_points_record";
+CREATE TABLE "public"."pre_deposit_points_record" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "user_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "points" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL
+)
+;
+ALTER TABLE "public"."pre_deposit_points_record" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for pre_deposit_reward_claim_record
@@ -178,6 +197,24 @@ ALTER TABLE "public"."event_pre_deposit_withdrawn" ADD CONSTRAINT "event_pre_dep
 -- Primary Key structure for table event_pre_deposit_withdrawn
 -- ----------------------------
 ALTER TABLE "public"."event_pre_deposit_withdrawn" ADD CONSTRAINT "event_pre_deposit_staked_copy1_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table pre_deposit_points_record
+-- ----------------------------
+CREATE INDEX "pre_deposit_points_record_chain_user" ON "public"."pre_deposit_points_record" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "user_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "pre_deposit_points_record_index_chain_id_tx_hash_tx_index" ON "public"."pre_deposit_points_record" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table pre_deposit_points_record
+-- ----------------------------
+ALTER TABLE "public"."pre_deposit_points_record" ADD CONSTRAINT "pre_deposit_reward_claim_record_copy1_pkey1" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table pre_deposit_reward_claim_record

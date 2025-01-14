@@ -447,8 +447,7 @@ type SummaryRequest struct {
 type SummaryResponse struct {
 	TotalWastr            string  `json:"totalWastr"`
 	TotalVastr            string  `json:"totalVastr"`
-	WastrPriceUSD         float64 `json:"wastrPriceUSD"`
-	VastrPriceUSD         float64 `json:"vastrPriceUSD"`
+	ASTRPriceUSD          float64 `json:"astrPriceUSD"`
 	Points                int64   `json:"points"`
 	RewardToken           string  `json:"rewardToken"`
 	RewardPriceUSD        float64 `json:"rewardPriceUSD"`
