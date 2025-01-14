@@ -40,6 +40,11 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		return nil, fmt.Errorf("%s", "Miss chain configure")
 	}
 
+	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
+	}
+
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
@@ -208,7 +213,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			TxHash:     record.TxHash,
 			TxAt:       record.TxAt.Unix(),
 			From:       record.FromToken(),
-			To:         record.ToToken(),
+			To:         record.ToToken(common.HexToAddress(sonexConf.SwapRouter).Hex()),
 			FromAmount: record.FromAmount().String(),
 			ToAmount:   record.ToAmount().String(),
 			ValueUSD:   fmt.Sprintf("%f", valueUSD),
