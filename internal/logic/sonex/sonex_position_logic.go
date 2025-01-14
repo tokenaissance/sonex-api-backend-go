@@ -208,10 +208,41 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		totalCollected, err := collectModel.TotalAmounts(ctx, req.ChainId, req.TokenId,
-			position.Pool.Token0.Decimals,
-			position.Pool.Token1.Decimals)
-		results <- sonexPositionResult{totalCollected: totalCollected, err: err}
+		collectEvents, err := collectModel.GetCollectEvents(ctx, req.ChainId, req.TokenId)
+		if err != nil {
+			logx.Errorf("[SonexPosition] GetCollectEvents error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		decreaseLiquidityEvents, err := decreaseLiquidityModel.GetDecreaseLiquidityEvents(ctx, req.ChainId, req.TokenId)
+		if err != nil {
+			logx.Errorf("[SonexPosition] GetDecreaseLiquidityEvents error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		tokenValue0, err := sonex.NewTokenValue("0", position.Pool.Token0.Decimals)
+		if err != nil {
+			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		tokenValue1, err := sonex.NewTokenValue("0", position.Pool.Token1.Decimals)
+		if err != nil {
+			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			results <- sonexPositionResult{err: err}
+			return
+		}
+		for _, collectEvent := range collectEvents {
+			if decreEvent, ok := decreaseLiquidityEvents[collectEvent.EventTokenId]; ok && collectEvent.TxHash == decreEvent.TxHash {
+				// this collect event is decrease liquidity event, do not count it.
+				continue
+			}
+			// count collected pairs
+			tokenValue0 = tokenValue0.AmountAdd(collectEvent.EventAmount0)
+			tokenValue1 = tokenValue1.AmountAdd(collectEvent.EventAmount1)
+		}
+		collectedPair := sonex.NewTokenPair(tokenValue0, tokenValue1)
+		results <- sonexPositionResult{totalCollected: collectedPair, err: nil}
 	}()
 	// Task 3: Get total invested amounts
 	wg.Add(1)
