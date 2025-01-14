@@ -19,6 +19,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPositionManagerDecreaseLiquidityModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error
 		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error)
+		GetDecreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenId int64) (map[int64]*EventSonexPositionManagerDecreaseLiquidity, error)
 		TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error)
 	}
 
@@ -42,6 +43,27 @@ func (m *customEventSonexPositionManagerDecreaseLiquidityModel) New(ctx context.
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", m.table, eventSonexPositionManagerDecreaseLiquidityRows)
 	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 	return err
+}
+
+func (m *customEventSonexPositionManagerDecreaseLiquidityModel) GetDecreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenId int64) (map[int64]*EventSonexPositionManagerDecreaseLiquidity, error) {
+	var events []*EventSonexPositionManagerDecreaseLiquidity
+	query := fmt.Sprintf(`
+	SELECT *
+	FROM %s
+	WHERE chain_id = $1 AND event_token_id = $2
+	`, m.table)
+
+	err := m.conn.QueryRowsCtx(ctx, &events, query, chainId, eventTokenId)
+	if err != nil {
+		return nil, err
+	}
+
+	decreaseLiquidityEvents := make(map[int64]*EventSonexPositionManagerDecreaseLiquidity)
+	for _, event := range events {
+		decreaseLiquidityEvents[event.EventTokenId] = event
+	}
+
+	return decreaseLiquidityEvents, nil
 }
 
 func (m *customEventSonexPositionManagerDecreaseLiquidityModel) AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error) {
