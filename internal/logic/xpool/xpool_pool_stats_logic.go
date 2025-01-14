@@ -29,7 +29,7 @@ func NewXpoolPoolStatsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xp
 func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (resp *types.XpoolPoolStatsResponse, err error) {
 
 	if req.ChainId == 0 {
-		req.ChainId = 1946
+		req.ChainId = 1868
 	}
 	if req.PoolAddress != "" && !common.IsHexAddress(req.PoolAddress) {
 		return nil, fmt.Errorf("%s", "Invalid parameter: pool_address")
