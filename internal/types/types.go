@@ -20,7 +20,7 @@ type ChainSyncPrograss struct {
 
 type ClaimRequest struct {
 	ChainRequest
-	UserAddress string `form:"user_address"`
+	UserAddress string `form:"userAddress"`
 }
 
 type ClaimResponse struct {
@@ -396,6 +396,20 @@ type ReplayRequest struct {
 type ReplayResponse struct {
 }
 
+type RewardDetailsRequest struct {
+	ChainRequest
+	UserAddress string `form:"userAddress"`
+	PageRequest
+}
+
+type RewardDetailsResponse_Record struct {
+	WastrAmount  string `json:"wastrAmount"`
+	VastrAmount  string `json:"vastrAmount"`
+	RewardToken  string `json:"rewardToken"`
+	RewardAmount string `json:"rewardAmount"`
+	Timestamp    int64  `json:"timestamp"`
+}
+
 type SonexTokenKlineRequest struct {
 	ChainRequest
 	Address  string `form:"address"`
@@ -427,14 +441,20 @@ type SonexTokenPricesResponse struct {
 
 type SummaryRequest struct {
 	ChainRequest
-	UserAddress string `form:"user_address"`
+	UserAddress string `form:"userAddress"`
 }
 
 type SummaryResponse struct {
-	Points                int64  `json:"points"`
-	RewardToken           string `json:"reward_token"`
-	ClaimedRewardAmount   string `json:"claimed_reward_amount"`
-	UnclaimedRewardAmount string `json:"unclaimed_reward_amount"`
+	TotalWastr            string  `json:"totalWastr"`
+	TotalVastr            string  `json:"totalVastr"`
+	WastrPriceUSD         float64 `json:"wastrPriceUSD"`
+	VastrPriceUSD         float64 `json:"vastrPriceUSD"`
+	Points                int64   `json:"points"`
+	RewardToken           string  `json:"rewardToken"`
+	RewardPriceUSD        float64 `json:"rewardPriceUSD"`
+	ClaimedRewardAmount   string  `json:"claimedRewardAmount"`
+	UnclaimedRewardAmount string  `json:"unclaimedRewardAmount"`
+	APR                   string  `json:"apr"`
 }
 
 type SwapEvent struct {

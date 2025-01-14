@@ -10,5 +10,5 @@ type PreDepositConfig struct {
 	PointsRate       float64 `json:","`
 	SubTitle         string  `json:","`
 	RewardToken      string  `json:","`
-	RewardRate       float64 `json:","`
+	RewardDaily      int64   `json:","`
 }

@@ -4,19 +4,39 @@ import "./common.api"
 
 type SummaryRequest {
 	ChainRequest
-	UserAddress string `form:"user_address"`
+	UserAddress string `form:"userAddress"`
 }
 
 type SummaryResponse {
-	Points                int64  `json:"points"`
-	RewardToken           string `json:"reward_token"`
-	ClaimedRewardAmount   string `json:"claimed_reward_amount"`
-	UnclaimedRewardAmount string `json:"unclaimed_reward_amount"`
+	TotalWastr            string  `json:"totalWastr"`
+	TotalVastr            string  `json:"totalVastr"`
+	WastrPriceUSD         float64 `json:"wastrPriceUSD"`
+	VastrPriceUSD         float64 `json:"vastrPriceUSD"`
+	Points                int64   `json:"points"`
+	RewardToken           string  `json:"rewardToken"`
+	RewardPriceUSD        float64 `json:"rewardPriceUSD"`
+	ClaimedRewardAmount   string  `json:"claimedRewardAmount"`
+	UnclaimedRewardAmount string  `json:"unclaimedRewardAmount"`
+	APR                   string  `json:"apr"`
+}
+
+type RewardDetailsRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`
+	PageRequest
+}
+
+type RewardDetailsResponse_Record {
+	WastrAmount  string `json:"wastrAmount"`
+	VastrAmount  string `json:"vastrAmount"`
+	RewardToken  string `json:"rewardToken"`
+	RewardAmount string `json:"rewardAmount"`
+	Timestamp    int64  `json:"timestamp"`
 }
 
 type ClaimRequest {
 	ChainRequest
-	UserAddress string `form:"user_address"`
+	UserAddress string `form:"userAddress"`
 }
 
 type ClaimResponse {
@@ -36,6 +56,11 @@ service sonex_api_backend_go {
 	)
 	@handler SummaryHandler
 	get /summary (SummaryRequest) returns (SummaryResponse)
+	@doc (
+		summary: "Query reward details"
+	)
+	@handler RewardDetailsHandler
+	get /reward_details (RewardDetailsRequest) returns ([]RewardDetailsResponse_Record)
 	@doc (
 		summary: "Get claim signature"
 	)
