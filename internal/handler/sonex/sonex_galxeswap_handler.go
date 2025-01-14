@@ -9,16 +9,16 @@ import (
 	"sonex_api_backend_go/internal/types"
 )
 
-func SonexGalaxeswapHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func SonexGalxeswapHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.GalaxeSwapRequest
+		var req types.GalxeSwapRequest
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
 
-		l := sonex.NewSonexGalaxeswapLogic(r.Context(), svcCtx)
-		resp, err := l.SonexGalaxeswap(&req)
+		l := sonex.NewSonexGalxeswapLogic(r.Context(), svcCtx)
+		resp, err := l.SonexGalxeswap(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

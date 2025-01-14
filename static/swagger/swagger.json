@@ -351,14 +351,14 @@
         ]
       }
     },
-    "/sonex/galaxeswap": {
+    "/sonex/galxeswap": {
       "get": {
-        "operationId": "SonexGalaxeswapHandler",
+        "operationId": "SonexGalxeswapHandler",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/GalaxeSwapResponse"
+              "$ref": "#/definitions/GalxeSwapResponse"
             }
           }
         },
@@ -1690,19 +1690,19 @@
         "feeAmount1"
       ]
     },
-    "GalaxeSwapRequest": {
+    "GalxeSwapRequest": {
       "type": "object",
       "properties": {
         "address": {
           "type": "string"
         }
       },
-      "title": "GalaxeSwapRequest",
+      "title": "GalxeSwapRequest",
       "required": [
         "address"
       ]
     },
-    "GalaxeSwapResponse": {
+    "GalxeSwapResponse": {
       "type": "object",
       "properties": {
         "isSwapOrNot": {
@@ -1710,7 +1710,7 @@
           "format": "boolean"
         }
       },
-      "title": "GalaxeSwapResponse",
+      "title": "GalxeSwapResponse",
       "required": [
         "isSwapOrNot"
       ]
