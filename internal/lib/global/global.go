@@ -33,6 +33,21 @@ var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
 var tokenCachersLock sync.RWMutex
 
+// key : fmt.Sprintf("volume24H_%v", _keyPoolAddress)
+// value: volume24H ,string
+// expiration : 24H
+// volume24H
+var Volume24HKey = "Volume24H"
+var Tvl24HKey = "Tvl24HKey"
+
+func GetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string) (string, error) {
+	return cacher.Get(fmt.Sprintf("%v_%v", _key, _keyPoolAddress))
+}
+
+func SetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string, _valueVolume24H string) error {
+	return cacher.Set(fmt.Sprintf("%v_%v", _key, _keyPoolAddress), _valueVolume24H, 24*time.Hour)
+}
+
 // Initialize application's components
 func Initialize(config config.Config) error {
 	c = config

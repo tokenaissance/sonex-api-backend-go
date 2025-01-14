@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -310,7 +311,7 @@ func (l *SonexPositionLogic) fillPosition(
 
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	if chainConf == nil {
-		return nil, fmt.Errorf("Miss chain configure")
+		return nil, errors.New("Miss chain configure")
 	}
 	usdToken, err := global.GetToken(req.ChainId, common.HexToAddress(chainConf.USD).Hex())
 	if err != nil {

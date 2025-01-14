@@ -14,6 +14,7 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	module_sonex "sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
@@ -101,12 +102,12 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 			}
 
 			multicallABI, err1 := abi.JSON(strings.NewReader(contract_common.MulticallABI))
-			if err != nil {
+			if err1 != nil {
 				logx.Infof("abi.JSON in  multicallABI :%v  ", err1)
 				return &types.PoolInfoResponse{StatusCode: 500}, errors.New("internal  error")
 			}
 			erc20ABI, err2 := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
-			if err != nil {
+			if err2 != nil {
 				logx.Infof("erc20ABI in  NewNodeCaller :%v  ", err2)
 				return &types.PoolInfoResponse{StatusCode: 500}, errors.New("internal  error")
 
@@ -160,7 +161,7 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 			}
 
 			prices, err4 := tokenPriceModel.GetCurrentPrices([]string{common.HexToAddress(poolFromDB.Token0.Address).Hex(), common.HexToAddress(poolFromDB.Token1.Address).Hex(), common.HexToAddress(chain.WETH).Hex()})
-			if err != nil {
+			if err4 != nil {
 				logx.Errorf("GetCurrentPrices:%v ", err4)
 				return &types.PoolInfoResponse{StatusCode: 500}, errors.New("internal  error")
 			}
@@ -169,7 +170,6 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 			price0Decimal := int64(1)
 			price1 := big.NewInt(1)
 			price1Decimal := int64(1)
-			mockYields := []float64{0.00000347, 0.00000412, 0.00000289, 0.00000378, 0.00000456, 0.00000234, 0.00000467, 0.00000312, 0.00000398, 0.00000289, 0.00000312, 0.00000398, 0.00000289}
 
 			_eth_price := "4000229509" // default price
 			_eth_price_decimals := 6
@@ -206,19 +206,12 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 			_amountPrice0, _ := balance0QuoDecimal.Float64()
 			_amountPrice1, _ := balance1QuoDecimal.Float64()
 
-			num := new(big.Int)
-			num.SetString(poolFromDB.Address, 16)
-			result := new(big.Int).Mod(num, big.NewInt(10))
-			digit2 := int(result.Int64())
-			yield24h := _tvlUSD
-			yield24h.Mul(yield24h, big.NewFloat(mockYields[digit2]))
-			yield24hFloat, _ := yield24h.Float64()
-
 			rand.Seed(time.Now().UnixNano())
+			// _oldtvlUsdString, err8 := global.GetVolume24HTvlValue(cacher, global.Tvl24HKey, poolFromDB.Address)
 
 			// get volume24H
 
-			_volume24HString := getVolume24HOfPoolAddress(conn, chain, req.ChainId, cacher, _poolAddressWithCheckSum)
+			_volume24HString := getVolume24HOfPoolAddress(conn, req.ChainId, cacher, _poolAddressWithCheckSum)
 
 			_fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
 
@@ -243,8 +236,8 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 				IsVol24hNegative: false,
 				Vol24h:           _volume24HFloat64,
 				Fee24h:           _fee24H,
-				TvlRatio:         fmt.Sprintf("%f%v", yield24hFloat, "%"),
-				Vol24hRatio:      fmt.Sprintf("%f%v", yield24hFloat, "%"),
+				TvlRatio:         returnVol24HOrTvl24H(cacher, _tvlUSD, global.Tvl24HKey, poolFromDB.Address),
+				Vol24hRatio:      returnVol24HOrTvl24H(cacher, _volume24HBigFloat64, global.Volume24HKey, poolFromDB.Address),
 			}
 
 		}
@@ -253,24 +246,19 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 }
 
 // 获取 string ,自己再转为float64
-func getVolume24HOfPoolAddress(conn sqlx.SqlConn, chain *config.ChainConfig, _chainId int64, cacher cache.ICache, _poolAddress string) string {
-	_volume24H, err := GetVolume24HValue(cacher, strings.ToLower(_poolAddress))
-	if errors.Is(err, redis.Nil) {
-		// 没有值,则更新一遍
-		_, err, volume24HValue := CalucatedVolume24H(conn, chain, _chainId, cacher, _poolAddress)
-		if err != nil {
-			logx.Errorf("CalucatedVolume24H error :%v ", err)
-		} else {
-			return volume24HValue
-		}
-	} else if err != nil && !errors.Is(err, redis.Nil) {
-		logx.Errorf("GetVolume24HValue _poolAddress:%v  error:%v ", _poolAddress, err)
+func getVolume24HOfPoolAddress(conn sqlx.SqlConn, _chainId int64, cacher cache.ICache, _poolAddress string) string {
+	_, volume24HValue, err := CalucatedVolume24H(conn, _chainId, _poolAddress)
+	if err != nil {
+		logx.Errorf(" getVolume24HOfPoolAddress error:%v", err)
 		return "0"
+	} else {
+		if strings.EqualFold(volume24HValue, "") {
+			volume24HValue = "0"
+		}
 	}
-	if strings.EqualFold(_volume24H, "") {
-		_volume24H = "0"
-	}
-	return _volume24H
+
+	return volume24HValue
+
 }
 
 // _poolAddress checksum address
@@ -286,7 +274,7 @@ func GetTxhashFeesByExtraPool(conn sqlx.SqlConn, chain *config.ChainConfig, cach
 		var wg sync.WaitGroup
 		mu := &sync.Mutex{}
 
-		logx.Infof("xxxxZZZZZ:%v", len(_txhashes))
+		logx.Infof("GetTxhashFeesByExtraPool:%v", len(_txhashes))
 		if len(_txhashes) > 0 {
 			poolChan := make(chan string, len(_txhashes))
 			pools := make([]string, 0, len(_txhashes))
@@ -301,7 +289,7 @@ func GetTxhashFeesByExtraPool(conn sqlx.SqlConn, chain *config.ChainConfig, cach
 					txHash := _txhashes[i]
 					_feeCostSaved, err := GetTxhashCost(cacher, txHash)
 
-					_feeCostStringQuo18String := ""
+					_feeCostStringQuo18String := "0"
 					if errors.Is(err, redis.Nil) {
 						client, err := ethclient.Dial(chain.GetNode())
 						if err != nil {
@@ -361,15 +349,17 @@ func GetTxhashFeesByExtraPool(conn sqlx.SqlConn, chain *config.ChainConfig, cach
 
 			// total usd
 			_feeTotalUSD_bigFloat := new(big.Float).SetFloat64(0)
-			for _, _oneItemsFeeString := range pools {
-				_oneItemsFeeBigFloat, _ := new(big.Float).SetString(_oneItemsFeeString)
-				_oneItemsFeeBigFloatMulPrice := new(big.Float).Mul(_oneItemsFeeBigFloat, _ethPrice)
-				_feeTotalUSD_bigFloat = new(big.Float).Add(_feeTotalUSD_bigFloat, _oneItemsFeeBigFloatMulPrice)
+
+			if len(pools) > 0 {
+				for _, _oneItemsFeeString := range pools {
+					_oneItemsFeeBigFloat, _ := new(big.Float).SetString(_oneItemsFeeString)
+					_oneItemsFeeBigFloatMulPrice := new(big.Float).Mul(_oneItemsFeeBigFloat, _ethPrice)
+					_feeTotalUSD_bigFloat = new(big.Float).Add(_feeTotalUSD_bigFloat, _oneItemsFeeBigFloatMulPrice)
+				}
+				_feeTotalUSD_bigFloat_Int64, _ := _feeTotalUSD_bigFloat.Float64()
+				logx.Infof("token info fee24H:%v, poolAddress:%v ", _feeTotalUSD_bigFloat_Int64, _poolAddress)
+				return _feeTotalUSD_bigFloat_Int64, nil
 			}
-			_feeTotalUSD_bigFloat_Int64, _ := _feeTotalUSD_bigFloat.Float64()
-			// _feeTotalUSD_bigFloatString := _feeTotalUSD_bigFloat.String()
-			logx.Infof("token info fee24H:%v, poolAddress:%v ", _feeTotalUSD_bigFloat_Int64, _poolAddress)
-			return _feeTotalUSD_bigFloat_Int64, nil
 		}
 	}
 	return 0, nil
@@ -381,4 +371,31 @@ func GetTxhashCost(cacher cache.ICache, _txhash string) (string, error) {
 
 func SetTxhashCost(cacher cache.ICache, _txhash, _feeCost string) error {
 	return cacher.Set(fmt.Sprintf("txhashcost_%v", _txhash), _feeCost, 0)
+}
+
+func returnVol24HOrTvl24H(cacher cache.ICache, _tvlUSD *big.Float, _key string, _poolAddress string) string {
+	// _oldtvlUsdString, err8 := global.GetVolume24HTvlValue(cacher, global.Tvl24HKey, poolFromDB.Address)
+
+	logx.Infof("key:%v poolAddress:%v number:%v ", _key, _poolAddress, _tvlUSD)
+	_oldtvlUsdString, err8 := global.GetVolume24HTvlValue(cacher, _key, _poolAddress)
+	_offsetValueQuo100_percentage, _ := new(big.Float).SetString("0")
+	if errors.Is(err8, redis.Nil) {
+		_offsetValueQuo100_percentage = new(big.Float).SetInt64(0)
+	} else if err8 != nil && !errors.Is(err8, redis.Nil) {
+		logx.Errorf("GetVolume24HTvlValue for volume:%v ", err8)
+	} else {
+		// assign value
+		if strings.EqualFold(_oldtvlUsdString, "") {
+			_oldtvlUsdString = "0"
+		}
+
+		_oldtvlUsdString_bigFloat, _ := new(big.Float).SetString(_oldtvlUsdString)
+
+		_offsetValue := new(big.Float).Sub(_tvlUSD, _oldtvlUsdString_bigFloat)
+
+		_offsetValueQuo := new(big.Float).Quo(_offsetValue, _oldtvlUsdString_bigFloat)
+		_offsetValueQuo100_bigFloat := new(big.Float).Mul(_offsetValueQuo, new(big.Float).SetInt64(100))
+		_offsetValueQuo100_percentage = _offsetValueQuo100_bigFloat
+	}
+	return _offsetValueQuo100_percentage.String()
 }
