@@ -5,11 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"sonex_api_backend_go/internal/chain_handler/pre_deposit"
 	"sonex_api_backend_go/internal/chain_handler/sonex"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
+	contract_pre_deposit "sonex_api_backend_go/internal/lib/contract/pre_deposit"
 	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
 
@@ -95,9 +98,14 @@ func main() {
 	global.AddCronJob("@every 1m", func() {
 		task.HandleRecordTokenPrice(&c)
 	})
-	// global.AddCronJob("0 30 0 * * ?", func() {
-	// 	task.HandlePreDepositSnapshotDaily(&c)
-	// })
+	global.AddCronJob("0 30 0 * * ?", func() {
+		task.HandlePreDepositSnapshotDaily(&c)
+	})
+
+	// every 6 hours,calcuate the vol and Tvl for pool
+	global.AddCronJob("@every 6h", func() {
+		task.HandleRecordVol24hTvl24h(&c)
+	})
 
 	// every 6 hours,calcuate the vol and Tvl for pool
 	global.AddCronJob("@every 6h", func() {
@@ -119,22 +127,22 @@ func main() {
 		}
 
 		// Per deposit handler
-		// {
-		// 	config := c.GetPreDepositConfig(chain.ChainId)
-		// 	if config != nil {
-		// 		handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DateSource(), chain, *config)
-		// 		if err != nil {
-		// 			panic(err)
-		// 		}
-		// 		handler.OnStaked(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.BridgeStakerStaked) {
-		// 			pre_deposit.StakedCallback(c, chainId, tx, event)
-		// 		})
-		// 		handler.OnRewardClaimed(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.RewardClaimerRewardClaimed) {
-		// 			pre_deposit.RewardClaimedCallback(c, chainId, tx, event)
-		// 		})
-		// 		global.AddChainHandler(chain.ChainId, handler)
-		// 	}
-		// }
+		{
+			config := c.GetPreDepositConfig(chain.ChainId)
+			if config != nil {
+				handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DateSource(), chain, *config)
+				if err != nil {
+					panic(err)
+				}
+				handler.OnStaked(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.BridgeStakerStaked) {
+					pre_deposit.StakedCallback(c, chainId, tx, event)
+				})
+				handler.OnRewardClaimed(func(chainId int64, tx *node_caller.Transaction, event *contract_pre_deposit.RewardClaimerRewardClaimed) {
+					pre_deposit.RewardClaimedCallback(c, chainId, tx, event)
+				})
+				global.AddChainHandler(chain.ChainId, handler)
+			}
+		}
 
 		// X Pool handler
 		// {

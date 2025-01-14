@@ -10,6 +10,7 @@ import (
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	module_pre_deposit "sonex_api_backend_go/internal/module/pre_deposit"
+	"sonex_api_backend_go/internal/repository"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/rest/httpc"
 )
 
@@ -50,42 +52,79 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				return nil
 			}
 
-			req := struct {
-				User      string            `json:"user_address"`
-				Points    int64             `json:"points"`
-				Source    string            `json:"source"`
-				SubTitle  string            `json:"sub_title"`
-				ExtraId   string            `json:"extra_id"`
-				Extra     map[string]string `json:"extra"`
-				Signature string            `json:"signature"`
-			}{
-				User:     event.User.Hex(),
-				Points:   points.Int64(),
-				Source:   pointsServiceConf.Source,
-				SubTitle: preDepositConf.SubTitle,
-				ExtraId:  fmt.Sprintf("%s-%d", event.Raw.TxHash.Hex(), event.Raw.TxIndex),
-				Extra: map[string]string{
-					"TxHash":    event.Raw.TxHash.Hex(),
-					"TxIndex":   strconv.FormatUint(uint64(event.Raw.TxIndex), 10),
-					"User":      event.User.Hex(),
-					"Token":     event.Token.Hex(),
-					"Amount":    event.Amount.String(),
-					"Timestamp": event.Timestamp.String(),
-				},
-			}
-			signature, err := module_pre_deposit.Sign(&req, pointsServiceConf.PrivateKey)
-			if err != nil {
-				return fmt.Errorf("%s", fmt.Sprintf("Sign failed: %s", err))
-			}
-			req.Signature = signature
+			conn := repository.NewConn(conf.PostgreSQL.DateSource())
+			err = conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
+				pointsValue := points.Int64()
 
-			url := fmt.Sprintf("%s/extra/increase_points", strings.TrimRight(pointsServiceConf.Host, "/"))
-			resp, err := httpc.Do(context.Background(), http.MethodPost, url, req)
+				preDepositPointsRecordModel := repository.NewPreDepositPointsRecordModel(sqlx.NewSqlConnFromSession(s))
+				totalPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainId(ctx, chainId)
+				if err != nil {
+					return err
+				}
+				if totalPoints+pointsValue > preDepositConf.PointsTotalCap {
+					pointsValue = preDepositConf.PointsTotalCap - totalPoints
+				}
+				userPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainId(ctx, chainId)
+				if err != nil {
+					return err
+				}
+				if userPoints+pointsValue > preDepositConf.PointsUserCap {
+					pointsValue = preDepositConf.PointsUserCap - userPoints
+				}
+				if pointsValue <= 0 {
+					return nil
+				}
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = preDepositPointsRecordModel.New(ctx, id, chainId, event.User.Hex(), pointsValue, event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex), tx.TxAt)
+				if err != nil {
+					return err
+				}
+
+				req := struct {
+					User      string            `json:"user_address"`
+					Points    int64             `json:"points"`
+					Source    string            `json:"source"`
+					SubTitle  string            `json:"sub_title"`
+					ExtraId   string            `json:"extra_id"`
+					Extra     map[string]string `json:"extra"`
+					Signature string            `json:"signature"`
+				}{
+					User:     event.User.Hex(),
+					Points:   pointsValue,
+					Source:   pointsServiceConf.Source,
+					SubTitle: preDepositConf.SubTitle,
+					ExtraId:  fmt.Sprintf("%s-%d", event.Raw.TxHash.Hex(), event.Raw.TxIndex),
+					Extra: map[string]string{
+						"TxHash":    event.Raw.TxHash.Hex(),
+						"TxIndex":   strconv.FormatUint(uint64(event.Raw.TxIndex), 10),
+						"User":      event.User.Hex(),
+						"Token":     event.Token.Hex(),
+						"Amount":    event.Amount.String(),
+						"Timestamp": event.Timestamp.String(),
+					},
+				}
+				signature, err := module_pre_deposit.Sign(&req, pointsServiceConf.PrivateKey)
+				if err != nil {
+					return fmt.Errorf("%s", fmt.Sprintf("Sign failed: %s", err))
+				}
+				req.Signature = signature
+
+				url := fmt.Sprintf("%s/extra/increase_points", strings.TrimRight(pointsServiceConf.Host, "/"))
+				resp, err := httpc.Do(context.Background(), http.MethodPost, url, req)
+				if err != nil {
+					return err
+				}
+				if resp.StatusCode != http.StatusOK {
+					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s", resp.Status))
+				}
+
+				return nil
+			})
 			if err != nil {
 				return err
-			}
-			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s", resp.Status))
 			}
 
 			return nil
