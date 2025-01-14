@@ -63,17 +63,16 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	if err == nil && len(cachedResponse) > 0 {
 		var cachedResp PositionsResponseWrapper
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
-			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
+			ctx := context.Background()
+			go l.refreshCache(ctx, req, redisCache, cacheKey, &cachedResp)
 			return &cachedResp, nil
 		}
 	}
 
-	return l.refreshCache(req, redisCache, cacheKey, nil)
+	return l.refreshCache(l.ctx, req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexPositionsLogic) refreshCache(req *types.PositionsRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionsResponseWrapper) (resp *PositionsResponseWrapper, err error) {
-	ctx := context.Background()
-
+func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.PositionsRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionsResponseWrapper) (resp *PositionsResponseWrapper, err error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 
 	var lockAcquired bool
