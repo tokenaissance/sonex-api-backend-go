@@ -18,6 +18,10 @@ Redis:
   Port: REDIS_PORT
   Password:
   Db: 0
+PointsService:
+  Host: https://api-point.sonex.so/
+  Source: 00000000-0000-0000-0000-00000000000
+  PrivateKey: POINTPRIVATEKEY
 Chains:
   - ChainId: 1868
     Name: Soneium
