@@ -413,8 +413,14 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	position.UnclaimedFee1, _ = unclaimedFee1.Float64()
 
 	// 3. claimableFees
-	claimableToken0Value, _ := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
-	claimableToken1Value, _ := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	claimableToken0Value, err := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
+	if err != nil {
+		return nil, err
+	}
+	claimableToken1Value, err := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	if err != nil {
+		return nil, err
+	}
 	claimableTokenPair := sonex.NewTokenPair(claimableToken0Value, claimableToken1Value)
 	position.ClaimableFees, _ = claimableTokenPair.ValueFloat64()
 

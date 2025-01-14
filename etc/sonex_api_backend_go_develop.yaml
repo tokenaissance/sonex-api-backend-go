@@ -21,6 +21,8 @@ PointsService:
   Host: https://sonex-devnet-cloudrun-points-service-dev-356426870748.asia-southeast1.run.app/
   Source: 00000000-0000-0000-0000-00000000000
   PrivateKey: POINTPRIVATEKEY
+Galxe:
+  Url: https://sonex-devnet-cloudrun-sonex-mini-app-backend-acti-i4lu42aqsq-as.a.run.app
 Chains:
   - ChainId: 1946
     Name: Minato
