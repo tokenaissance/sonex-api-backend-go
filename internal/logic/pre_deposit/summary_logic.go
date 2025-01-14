@@ -115,7 +115,7 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 		}
 		for _, item := range totalWithdrawns {
 			currentWastrTotalStatedAmount = new(big.Int).Sub(currentWastrTotalStatedAmount, item.WASTR)
-			currentVastrTotalStatedAmount = new(big.Int).Sub(currentWastrTotalStatedAmount, item.VASTR)
+			currentVastrTotalStatedAmount = new(big.Int).Sub(currentVastrTotalStatedAmount, item.VASTR)
 		}
 		wastrPriceI := common.Big0
 		wastrPrice, ok := prices[wastrToken.Address]
