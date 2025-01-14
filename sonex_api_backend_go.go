@@ -107,6 +107,11 @@ func main() {
 		task.HandleRecordVol24hTvl24h(&c)
 	})
 
+	// every 6 hours,calcuate the vol and Tvl for pool
+	global.AddCronJob("@every 6h", func() {
+		task.HandleRecordVol24hTvl24h(&c)
+	})
+
 	// Register chain handler
 	for _, chain := range c.Chains {
 		// Sonex handler

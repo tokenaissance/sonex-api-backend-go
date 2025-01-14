@@ -7,6 +7,7 @@ Domains:
   - app.sonex.so
   - api-swap.sonex.so
   - api-point.sonex.so
+  - sonex-9ybwjtvxi3hr38z3p13d8e.vercel.app
 PostgreSQL:
   Host: PG_HOST
   Port: PG_PORT
