@@ -4,8 +4,9 @@ Port: 8888
 Log:
   Level: debug
 Domains:
-  - prenet.sonex.so
-  - prenet-api-swap.sonex.so
+  - app.sonex.so
+  - api-swap.sonex.so
+  - api-point.sonex.so
 PostgreSQL:
   Host: PG_HOST
   Port: PG_PORT
