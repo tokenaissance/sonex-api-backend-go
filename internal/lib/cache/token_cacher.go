@@ -329,21 +329,13 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 		}
 		from = common.HexToAddress(cacher.chainConf.WETH)
 	case to:
-		if cacher.chainConf.USD == "" || !common.IsHexAddress(cacher.chainConf.USD) {
-			return nil, fmt.Errorf("%s", "Miss USD configure")
-		}
-		usdToken, err := cacher.Get(common.HexToAddress(cacher.chainConf.USD))
-		if err != nil {
-			return nil, err
-		}
-		usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
 		return []Price{
 			{
 				From:                        from.Hex(),
 				To:                          to.Hex(),
 				Pools:                       []quoter.Pool{},
 				Path:                        []byte{},
-				Value:                       usdAccuracy,
+				Value:                       amountIn,
 				SqrtPriceX96AfterList:       []*big.Int{},
 				InitializedTicksCrossedList: []uint32{},
 				GasEstimate:                 big.NewInt(0),
