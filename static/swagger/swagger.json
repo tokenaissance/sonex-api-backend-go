@@ -430,6 +430,34 @@
         ]
       }
     },
+    "/sonex/galxetgid": {
+      "get": {
+        "operationId": "SonexGalxeTgidHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/GalxeTgIdResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tgid",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/pools": {
       "get": {
         "operationId": "SonexPoolListHandler",
@@ -1765,6 +1793,32 @@
       "title": "GalxeSwapResponse",
       "required": [
         "isSwapOrNot"
+      ]
+    },
+    "GalxeTgIdRequest": {
+      "type": "object",
+      "properties": {
+        "tgid": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "GalxeTgIdRequest",
+      "required": [
+        "tgid"
+      ]
+    },
+    "GalxeTgIdResponse": {
+      "type": "object",
+      "properties": {
+        "isPlayedOrNot": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "GalxeTgIdResponse",
+      "required": [
+        "isPlayedOrNot"
       ]
     },
     "Invested": {

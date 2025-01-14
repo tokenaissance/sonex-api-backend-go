@@ -529,6 +529,14 @@ type GalxeSwapResponse {
 	isSwapOrNot    bool                `json:"isSwapOrNot"`
 }
 
+type GalxeTgIdRequest {
+	Tgid int64 `form:"tgid"`	
+}
+
+type GalxeTgIdResponse {
+	IsPlayedOrNot    bool                `json:"isPlayedOrNot"`
+}
+
 @server (
 	prefix: /sonex
 	group:  sonex
@@ -578,4 +586,7 @@ service sonex_api_backend_go {
 
 	@handler SonexGalxeswapHandler
 	get /galxeswap (GalxeSwapRequest) returns (GalxeSwapResponse)
+
+	@handler SonexGalxeTgidHandler
+	get /galxetgid (GalxeTgIdRequest) returns (GalxeTgIdResponse)
 }
