@@ -98,12 +98,12 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 					SubTitle: preDepositConf.SubTitle,
 					ExtraId:  fmt.Sprintf("%s-%d", event.Raw.TxHash.Hex(), event.Raw.TxIndex),
 					Extra: map[string]string{
-						"TxHash":    event.Raw.TxHash.Hex(),
-						"TxIndex":   strconv.FormatUint(uint64(event.Raw.TxIndex), 10),
-						"User":      event.User.Hex(),
-						"Token":     event.Token.Hex(),
-						"Amount":    event.Amount.String(),
-						"Timestamp": event.Timestamp.String(),
+						"txHash":    event.Raw.TxHash.Hex(),
+						"txIndex":   strconv.FormatUint(uint64(event.Raw.TxIndex), 10),
+						"user":      event.User.Hex(),
+						"token":     event.Token.Hex(),
+						"amount":    event.Amount.String(),
+						"timestamp": event.Timestamp.String(),
 					},
 				}
 				signature, err := module_pre_deposit.Sign(&req, pointsServiceConf.PrivateKey)
