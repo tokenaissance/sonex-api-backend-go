@@ -351,6 +351,33 @@
         ]
       }
     },
+    "/sonex/galxeswap": {
+      "get": {
+        "operationId": "SonexGalxeswapHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/GalxeSwapResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/pools": {
       "get": {
         "operationId": "SonexPoolListHandler",
@@ -1661,6 +1688,31 @@
       "required": [
         "feeAmount0",
         "feeAmount1"
+      ]
+    },
+    "GalxeSwapRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      },
+      "title": "GalxeSwapRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "GalxeSwapResponse": {
+      "type": "object",
+      "properties": {
+        "isSwapOrNot": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "GalxeSwapResponse",
+      "required": [
+        "isSwapOrNot"
       ]
     },
     "Invested": {

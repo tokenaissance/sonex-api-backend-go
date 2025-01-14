@@ -137,6 +137,14 @@ type Fees struct {
 	FeeAmount1 string `json:"feeAmount1"`
 }
 
+type GalxeSwapRequest struct {
+	Address string `form:"address"`
+}
+
+type GalxeSwapResponse struct {
+	IsSwapOrNot bool `json:"isSwapOrNot"`
+}
+
 type Invested struct {
 	InvestedAmount0 string `json:"investedAmount0"`
 	InvestedAmount1 string `json:"investedAmount1"`
