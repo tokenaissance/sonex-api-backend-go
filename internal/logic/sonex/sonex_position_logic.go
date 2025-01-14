@@ -105,7 +105,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 
 	// Task 1: Get transfer event
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
-	itemM, err := transferModel.GetTransferEvent(ctx, req.TokenId, true)
+	itemM, err := transferModel.GetTransferEvent(ctx, req.ChainId, req.TokenId, true)
 	if err != nil {
 		logx.Errorf("[SonexPosition] GetTransferEvent error: %s", err.Error())
 		return nil, err
