@@ -120,7 +120,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		return nil, err
 	}
 	if len(positions) == 0 {
-		logx.Errorf("[SonexPosition]:refreshCache BatchGetPositions error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache BatchGetPositions error, positions length is 0")
 		return nil, err
 	}
 	innerPosition := positions[0]
@@ -456,10 +456,12 @@ func (l *SonexPositionLogic) fillPosition(
 	// 3. claimableFees
 	claimableToken0Value, err := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
 	if err != nil {
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, unclaimedFee0: %s", err.Error(), unclaimedFee0.String())
 		return nil, err
 	}
 	claimableToken1Value, err := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
 	if err != nil {
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, unclaimedFee1: %s", err.Error(), unclaimedFee1.String())
 		return nil, err
 	}
 	claimableTokenPair := sonex.NewTokenPair(claimableToken0Value, claimableToken1Value)
@@ -472,12 +474,12 @@ func (l *SonexPositionLogic) fillPosition(
 	collectedPair := position.TotalCollected
 	token0Value, err = sonex.NewTokenValue(collectedPair.Token0.Amount, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, collectedPair: %v", err.Error(), collectedPair)
 		return nil, err
 	}
 	token1Value, err = sonex.NewTokenValue(collectedPair.Token1.Amount, position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, collectedPair: %v", err.Error(), collectedPair)
 		return nil, err
 	}
 	tokenPair = sonex.NewTokenPair(token0Value, token1Value)

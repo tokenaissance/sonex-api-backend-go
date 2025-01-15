@@ -73,7 +73,7 @@ func (l *SonexPositionValuesLogic) SonexPositionValuesMethod(chainId int64, addr
 	// Fetch from database if not cached
 	items, err := l.transferModel.GetTransferEvents(l.ctx, chainId, address, true)
 	if err != nil {
-		logx.Errorf("[SonexPositionsLogic] GetTransferEvents error: %s", err.Error())
+		logx.Errorf("[SonexPositionValuesMethod] GetTransferEvents error: %s", err.Error())
 		return nil, err
 	}
 
@@ -146,7 +146,7 @@ func (l *SonexPositionValuesLogic) SonexPositionValuesMethod(chainId int64, addr
 
 	for result := range results {
 		if result.err != nil {
-			logx.Errorf("[SonexPositions] waitgroup error: %s", result.err.Error())
+			logx.Errorf("[SonexPositionValuesMethod] waitgroup error: %s", result.err.Error())
 			return nil, result.err
 		}
 		if result.collectedPairs != nil {
@@ -174,7 +174,7 @@ func (l *SonexPositionValuesLogic) SonexPositionValuesMethod(chainId int64, addr
 		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
 			convertedPosition, err := l.fillPosition(l.ctx, chainId, positionTransferItem, position, tokenPricesRecords)
 			if err != nil {
-				logx.Errorf("[SonexPositionValues] fillPosition error: %s", err.Error())
+				logx.Errorf("[SonexPositionValuesMethod] fillPosition error: %s", err.Error())
 				return nil, err
 			}
 			positionValues.TotalPosition += convertedPosition.Position
@@ -194,6 +194,7 @@ func (l *SonexPositionValuesLogic) SonexPositionValuesMethod(chainId int64, addr
 func (l *SonexPositionValuesLogic) SonexPositionValues(req *types.PositionValuesRequest) (resp *PositionValuesResponseWrapper, err error) {
 	positionValues, err := l.SonexPositionValuesMethod(req.ChainId, req.Address)
 	if err != nil {
+		logx.Errorf("[SonexPositionValues] SonexPositionValuesMethod error: %s", err.Error())
 		return nil, err
 	}
 
@@ -212,12 +213,12 @@ func (l *SonexPositionValuesLogic) SonexPositionValues(req *types.PositionValues
 func (l *SonexPositionValuesLogic) getCollectedPairs(ctx context.Context, chainId int64, positionTokenIds []int64, token0Decimals, token1Decimals []int) (map[int64]*sonex.TokenPair, error) {
 	collectEventsMap, err := l.collectModel.GetCollectEvents(ctx, chainId, positionTokenIds)
 	if err != nil {
-		logx.Errorf("[SonexPosition] GetCollectEvents error: %s", err.Error())
+		logx.Errorf("[SonexPositionValuesMethod]:getCollectedPairs GetCollectEvents error: %s", err.Error())
 		return nil, err
 	}
 	decreaseLiquidityEventsMap, err := l.decreaseLiquidityModel.GetDecreaseLiquidityEvents(ctx, chainId, positionTokenIds)
 	if err != nil {
-		logx.Errorf("[SonexPosition] GetDecreaseLiquidityEvents error: %s", err.Error())
+		logx.Errorf("[SonexPositionValuesMethod]:getCollectedPairs GetDecreaseLiquidityEvents error: %s", err.Error())
 		return nil, err
 	}
 	collectedPairs := make(map[int64]*sonex.TokenPair)
@@ -225,12 +226,12 @@ func (l *SonexPositionValuesLogic) getCollectedPairs(ctx context.Context, chainI
 		// 1. initial token pair
 		tokenValue0, err := sonex.NewTokenValue("0", token0Decimals[i])
 		if err != nil {
-			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			logx.Errorf("[SonexPositionValuesMethod]:getCollectedPairs NewTokenValue error: %s", err.Error())
 			return nil, err
 		}
 		tokenValue1, err := sonex.NewTokenValue("0", token1Decimals[i])
 		if err != nil {
-			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			logx.Errorf("[SonexPositionValuesMethod]:getCollectedPairs NewTokenValue error: %s", err.Error())
 			return nil, err
 		}
 		collectedPairs[tokenId] = sonex.NewTokenPair(tokenValue0, tokenValue1)
@@ -280,6 +281,7 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	}
 	usdToken, err := global.GetToken(chainId, common.HexToAddress(chainConf.USD).Hex())
 	if err != nil {
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition GetToken error: %s", err.Error())
 		return nil, err
 	}
 
@@ -293,12 +295,15 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 		price0, _ = price0.SetString(price0Record.Price)
 		price0String = price0Record.Price
 	} else {
-		logx.Errorf("[convertPosition] Token0 price not found from db for address: %s", innnerPosition.Token0.Hex())
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition Token0 price not found from db for address: %s", innnerPosition.Token0.Hex())
 
 		bestPrice0, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token0.Hex(), true, 2)
 		if err == nil && bestPrice0 != nil {
 			price0.SetInt(bestPrice0.Value)
 			price0String = bestPrice0.Value.String()
+		}
+		if err != nil {
+			logx.Errorf("[SonexPositionValuesMethod]:fillPosition GetPrices error: %s", err.Error())
 		}
 	}
 
@@ -306,12 +311,15 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 		price1, _ = price1.SetString(price1Record.Price)
 		price1String = price1Record.Price
 	} else {
-		logx.Errorf("[convertPosition] Token1 price not found from db for address: %s", innnerPosition.Token1.Hex())
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition Token1 price not found from db for address: %s", innnerPosition.Token1.Hex())
 
 		bestPrice1, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token1.Hex(), true, 2)
 		if err == nil && bestPrice1 != nil {
 			price1.SetInt(bestPrice1.Value)
 			price1String = bestPrice1.Value.String()
+		}
+		if err != nil {
+			logx.Errorf("[SonexPositionValuesMethod]:fillPosition GetPrices error: %s", err.Error())
 		}
 	}
 
@@ -331,12 +339,12 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	amount1String := amount1.String()
 	token0Value, err := sonex.NewTokenValue(amount0String, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[fillPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition NewTokenValue error: %s", err.Error())
 		return nil, err
 	}
 	token1Value, err := sonex.NewTokenValue(amount1String, position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[fillPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition NewTokenValue error: %s", err.Error())
 		return nil, err
 	}
 	tokenPair := sonex.NewTokenPair(token0Value, token1Value)
@@ -347,8 +355,16 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	position.UnclaimedFee1, _ = unclaimedFee1.Float64()
 
 	// 3. claimableFees
-	claimableToken0Value, _ := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
-	claimableToken1Value, _ := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	claimableToken0Value, err := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition NewTokenValue error: %s", err.Error())
+		return nil, err
+	}
+	claimableToken1Value, err := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition NewTokenValue error: %s", err.Error())
+		return nil, err
+	}
 	claimableTokenPair := sonex.NewTokenPair(claimableToken0Value, claimableToken1Value)
 	position.ClaimableFees, _ = claimableTokenPair.ValueFloat64()
 
@@ -359,12 +375,12 @@ func (l *SonexPositionValuesLogic) fillPosition(ctx context.Context,
 	collectedPair := position.TotalCollected
 	token0Value, err = sonex.NewTokenValue(collectedPair.Token0.Amount, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition NewTokenValue error: %s", err.Error())
 		return nil, err
 	}
 	token1Value, err = sonex.NewTokenValue(collectedPair.Token1.Amount, position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPositionValuesMethod]:fillPosition NewTokenValue error: %s", err.Error())
 		return nil, err
 	}
 	tokenPair = sonex.NewTokenPair(token0Value, token1Value)
