@@ -111,10 +111,15 @@ func (l *SonexPositionValuesLogic) SonexPositionValuesMethod(chainId int64, addr
 	go func() {
 		defer wg.Done()
 		caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
+		chainConf := l.svcCtx.Config.GetSonexConfig(chainId)
+		if chainConf == nil {
+			results <- pvTaskResult{err: fmt.Errorf("Miss chain configure")}
+			return
+		}
 		pos, err := caller.BatchGetPositions(
-			context.Background(),
+			l.ctx,
 			chainId,
-			common.HexToAddress(l.svcCtx.Config.GetSonexConfig(chainId).PositionManager),
+			common.HexToAddress(chainConf.PositionManager),
 			func(tokenIds []int64) []*big.Int {
 				converted := make([]*big.Int, len(tokenIds))
 				for i, tokenId := range tokenIds {
