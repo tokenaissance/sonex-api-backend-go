@@ -54,16 +54,17 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 
 			conn := repository.NewConn(conf.PostgreSQL.DateSource())
 			err = conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
+				preDepositPointsRecordModel := repository.NewPreDepositPointsRecordModel(sqlx.NewSqlConnFromSession(s))
 				pointsValue := points.Int64()
 
-				preDepositPointsRecordModel := repository.NewPreDepositPointsRecordModel(sqlx.NewSqlConnFromSession(s))
-				totalPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainId(ctx, chainId)
-				if err != nil {
-					return err
-				}
-				if totalPoints+pointsValue > preDepositConf.PointsTotalCap {
-					pointsValue = preDepositConf.PointsTotalCap - totalPoints
-				}
+				logx.Infof(
+					"StakedCallback info: TxHash %s, User %s, Amount %s, Points: %d",
+					event.Raw.TxHash.Hex(),
+					event.User.Hex(),
+					event.Amount.String(),
+					pointsValue,
+				)
+
 				userPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainIdUser(ctx, chainId, event.User.Hex())
 				if err != nil {
 					return err
@@ -71,24 +72,28 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				if userPoints+pointsValue > preDepositConf.PointsUserCap {
 					pointsValue = preDepositConf.PointsUserCap - userPoints
 				}
-
-				logx.Infof(
-					"StakedCallback filtered into: %f, staked token[%s]: %d %s, points: %d",
-					preDepositConf.PointsRate,
-					stakedToken.Address,
-					stakedToken.Decimals,
-					event.Amount.String(),
-					pointsValue,
-				)
-
+				logx.Infof("TxHash %s, Cap %d, User points %d, Points %d", event.Raw.TxHash.Hex(), preDepositConf.PointsUserCap, userPoints, pointsValue)
 				if pointsValue <= 0 {
 					return nil
 				}
+
+				totalPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainId(ctx, chainId)
+				if err != nil {
+					return err
+				}
+				if totalPoints+pointsValue > preDepositConf.PointsTotalCap {
+					pointsValue = preDepositConf.PointsTotalCap - totalPoints
+				}
+				logx.Infof("TxHash %s, Cap %d, Total points %d, Points %d", event.Raw.TxHash.Hex(), preDepositConf.PointsTotalCap, totalPoints, pointsValue)
+				if pointsValue <= 0 {
+					return nil
+				}
+
+				// If existed, not handle
 				_, err = preDepositPointsRecordModel.FindOneByChainIdTxHashTxIndex(ctx, chainId, event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex))
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
-					logx.Infof("%s %d is existed", event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex))
 					return nil
 				default:
 					return err
