@@ -14,7 +14,6 @@ import (
 	"sonex_api_backend_go/internal/types"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -88,33 +87,10 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 	// 	}
 	// }
 
-	return l.refreshCache(l.ctx, req, redisCache, cacheKey, nil)
+	return l.refreshCache(l.ctx, req, redisCache, cacheKey)
 }
 
-func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.PositionsRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionsResponseWrapper) (resp *PositionsResponseWrapper, err error) {
-	lockKey := fmt.Sprintf("lock:%s", cacheKey)
-
-	var lockAcquired bool
-
-	if cachedResp != nil {
-		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
-		if err != nil {
-			return cachedResp, nil
-		}
-
-		if !success {
-			return cachedResp, nil
-		}
-
-		lockAcquired = true
-	}
-
-	defer func() {
-		if lockAcquired {
-			cacher.Del(lockKey)
-		}
-	}()
-
+func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.PositionsRequest, cacher cache.ICache, cacheKey string) (resp *PositionsResponseWrapper, err error) {
 	items, err := l.transferModel.GetTransferEvents(ctx, req.ChainId, req.Address, true)
 	if err != nil {
 		logx.Errorf("[SonexPositionsLogic] GetTransferEvents error: %s", err.Error())
