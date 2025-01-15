@@ -114,7 +114,7 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	if err != nil {
 		logx.Errorf("[SonexPositionsLogic] GetAddressTokenIds error: %s", err.Error())
 	}
-	logx.Info("[SonexPositionsLogic:GetAddressTokenIds]: address: ", req.Address, "tokenIds:", tokenIds)
+	logx.Info("[SonexPositionsLogic:GetAddressTokenIds]: address: ", req.Address, " tokenIds:", tokenIds)
 
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
 	positions, err := caller.BatchGetPositions(
