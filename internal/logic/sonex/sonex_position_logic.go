@@ -155,12 +155,10 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	}
 
 	// del cache
-	if !ok {
-		ps := NewSonexPositionsLogic(ctx, l.svcCtx)
-		err = ps.DelCache(innerPosition.Owner.Hex())
-		if err != nil {
-			logx.Errorf("[SonexPosition] NewSonexPositionsLogic DelCache error: %s", err.Error())
-		}
+	ps := NewSonexPositionsLogic(ctx, l.svcCtx)
+	err = ps.DelCache(innerPosition.Owner.Hex())
+	if err != nil {
+		logx.Errorf("[SonexPosition] NewSonexPositionsLogic DelCache error: %s", err.Error())
 	}
 
 	token0, err := global.GetToken(req.ChainId, innerPosition.Token0.Hex())
