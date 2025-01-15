@@ -111,7 +111,12 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 		}
 		var tIds []*big.Int
 		linq.From(tokenIds).SelectT(func(item int64) *big.Int { return big.NewInt(item) }).ToSlice(&tIds)
-		positions, err := staticCaller.BatchGetPositions(context.Background(), req.ChainId, common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager), tIds)
+		chainConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+		if chainConf == nil {
+			logx.Errorf("[FarmPoolLiquidity]:Miss chain configure")
+			return nil, fmt.Errorf("%s", "Miss chain configure")
+		}
+		positions, err := staticCaller.BatchGetPositions(context.Background(), req.ChainId, common.HexToAddress(chainConf.PositionManager), tIds)
 		if err != nil {
 			return nil, err
 		}

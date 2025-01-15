@@ -109,10 +109,15 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 
 	// Task1: Get positions
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
+	chainConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if chainConf == nil {
+		logx.Errorf("[SonexPosition]:refreshCache Miss chain configure")
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
 	positions, err := caller.BatchGetPositions(
 		ctx,
 		req.ChainId,
-		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
+		common.HexToAddress(chainConf.PositionManager),
 		[]*big.Int{big.NewInt(req.TokenId)},
 	)
 	if err != nil {
