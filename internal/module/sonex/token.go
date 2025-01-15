@@ -68,6 +68,10 @@ func (ta *TokenAmount) AmountWithoutDecimals() string {
 
 // SetAmount 设置数量
 func (ta *TokenAmount) SetAmount(amount string) error {
+	// fix empty amount
+	if amount == "" {
+		amount = "0"
+	}
 	if _, ok := new(big.Float).SetString(amount); !ok {
 		return fmt.Errorf("invalid amount format: %s", amount)
 	}
