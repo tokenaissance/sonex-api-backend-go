@@ -131,10 +131,15 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	}(append(positionTokenIds, tokenIds...))
 
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
+	chainConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if chainConf == nil {
+		logx.Errorf("[SonexPositions]:refreshCache Miss chain configure")
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
 	positions, err := caller.BatchGetPositions(
 		ctx,
 		req.ChainId,
-		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
+		common.HexToAddress(chainConf.PositionManager),
 		func(tokenIds []int64) []*big.Int {
 			// Convert unique ids to bitInt slice
 			converted := make([]*big.Int, 0, len(tokenIds))

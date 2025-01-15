@@ -52,10 +52,14 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	fromAddress := common.HexToAddress(req.From)
 	toAddress := common.HexToAddress(req.To)
 	stablecoinAddress := common.HexToAddress(chainConf.USD)
-
+	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if sonexConf == nil {
+		logx.Errorf("[SonexTokenQuote]:Miss sonex configure")
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
+	}
 	if amount.Cmp(big.NewInt(0)) <= 0 {
 		return &types.TokenQuoteResponse{
-			SwapRouter: l.svcCtx.Config.GetSonexConfig(req.ChainId).SwapRouter,
+			SwapRouter: sonexConf.SwapRouter,
 			BestRouter: &types.TokenQuoteResponse_Router{
 				TokenIn:                     common.HexToAddress(req.From).Hex(),
 				TokenOut:                    common.HexToAddress(req.To).Hex(),
@@ -242,7 +246,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		ToSlice(&routerResult)
 
 	return &types.TokenQuoteResponse{
-		SwapRouter: l.svcCtx.Config.GetSonexConfig(req.ChainId).SwapRouter,
+		SwapRouter: sonexConf.SwapRouter,
 		BestRouter: bestRouterResult,
 		Routers:    routerResult,
 	}, nil
