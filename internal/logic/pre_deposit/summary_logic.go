@@ -83,11 +83,11 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 			return nil, err
 		}
 
-		totalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainId(context.Background(), chainConf.ChainId)
+		totalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
 		if err != nil {
 			return nil, err
 		}
-		totalWithdrawns, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainId(context.Background(), chainConf.ChainId)
+		totalWastrWithdrawn, totalVastrWithdrawn, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
 		if err != nil {
 			return nil, err
 		}
@@ -109,22 +109,18 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 		if err != nil {
 			return nil, err
 		}
-		for _, item := range totalStakeds {
-			for token, value := range item {
-				switch token {
-				case wastrTokenAddress.Hex():
-					currentWastrTotalStatedAmount = new(big.Int).Add(currentWastrTotalStatedAmount, value)
-				case vastrTokenAddress.Hex():
-					currentVastrTotalStatedAmount = new(big.Int).Add(currentVastrTotalStatedAmount, value)
-				default:
-					continue
-				}
+		for token, value := range totalStakeds {
+			switch token {
+			case wastrTokenAddress.Hex():
+				currentWastrTotalStatedAmount = new(big.Int).Add(currentWastrTotalStatedAmount, value)
+			case vastrTokenAddress.Hex():
+				currentVastrTotalStatedAmount = new(big.Int).Add(currentVastrTotalStatedAmount, value)
+			default:
+				continue
 			}
 		}
-		for _, item := range totalWithdrawns {
-			currentWastrTotalStatedAmount = new(big.Int).Sub(currentWastrTotalStatedAmount, item.WASTR)
-			currentVastrTotalStatedAmount = new(big.Int).Sub(currentVastrTotalStatedAmount, item.VASTR)
-		}
+		currentWastrTotalStatedAmount = new(big.Int).Sub(currentWastrTotalStatedAmount, totalWastrWithdrawn)
+		currentVastrTotalStatedAmount = new(big.Int).Sub(currentVastrTotalStatedAmount, totalVastrWithdrawn)
 		astrPriceI := common.Big0
 		astrPrice, ok := prices[astrToken.Address]
 		if ok {
@@ -151,27 +147,29 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 	{
 		url := fmt.Sprintf("%s/extra/points_records/%s/%s", strings.TrimRight(pointsServiceConf.Host, "/"), pointsServiceConf.Source, userAddress.Hex())
 		pointsResp, err := httpc.Do(l.ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer pointsResp.Body.Close()
-		pointsResult := struct {
-			Points      int64 `json:"points"`
-			ExtraPoints int64 `json:"extra_points"`
-			Records     []struct {
-				Time     int64             `json:"time"`
-				Points   int64             `json:"points"`
-				Extra    map[string]string `json:"extra"`
-				SubTitle string            `json:"sub_title"`
-			} `json:"records"`
-			Total int64 `json:"total"`
-		}{}
-		err = json.NewDecoder(pointsResp.Body).Decode(&pointsResult)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			defer pointsResp.Body.Close()
+			pointsResult := struct {
+				Points      int64 `json:"points"`
+				ExtraPoints int64 `json:"extra_points"`
+				Records     []struct {
+					Time     int64             `json:"time"`
+					Points   int64             `json:"points"`
+					Extra    map[string]string `json:"extra"`
+					SubTitle string            `json:"sub_title"`
+				} `json:"records"`
+				Total int64 `json:"total"`
+			}{}
+			err = json.NewDecoder(pointsResp.Body).Decode(&pointsResult)
+			if err == nil {
+				points = pointsResult.ExtraPoints
+			} else {
+				logx.Errorf("Decode body failed: %s", err)
+			}
+		} else {
+			logx.Errorf("Call points service failed: %s", err)
 		}
 
-		points = pointsResult.ExtraPoints
 	}
 
 	// Summary reward

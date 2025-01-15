@@ -80,12 +80,12 @@ func (m *customEventPreDepositStakedModel) SummarizeTotalByChainId(ctx context.C
 }
 
 func (m *customEventPreDepositStakedModel) SummarizeTotalByChainIdUser(ctx context.Context, chainId int64, user string) (map[string]*big.Int, error) {
-	query := fmt.Sprintf("SELECT event_token, COALESCE(SUM(event_amount::NUMERIC),0) FROM %s WHERE chain_id = $1 AND event_user = $2 GROUP BY event_token", m.table)
+	query := fmt.Sprintf("SELECT event_token, COALESCE(SUM(event_amount::NUMERIC),0) AS total FROM %s WHERE chain_id = $1 AND event_user = $2 GROUP BY event_token", m.table)
 	var resp []struct {
 		Token string `db:"event_token"`
 		Total string `db:"total"`
 	}
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user)
 	if err != nil {
 		return nil, err
 	}
