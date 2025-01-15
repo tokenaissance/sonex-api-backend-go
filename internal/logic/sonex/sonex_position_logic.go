@@ -70,33 +70,10 @@ func (l *SonexPositionLogic) SonexPosition(req *types.PositionRequest) (resp *Po
 }
 
 func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.PositionRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionResponseWrapper) (resp *PositionResponseWrapper, err error) {
-	lockKey := fmt.Sprintf("lock:%s", cacheKey)
-
-	var lockAcquired bool
-
-	if cachedResp != nil {
-		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
-		if err != nil {
-			return cachedResp, nil
-		}
-
-		if !success {
-			return cachedResp, nil
-		}
-
-		lockAcquired = true
-	}
-
 	// Continue with the rest of the logic using transferItem, collectedItem, and positions
 	response := &PositionResponseWrapper{
 		PositionResponse: &types.PositionResponse{},
 	}
-
-	defer func() {
-		if lockAcquired {
-			cacher.Del(lockKey)
-		}
-	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
@@ -153,6 +130,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	if err != nil {
 		logx.Errorf("[SonexPosition] cacheAddressTokenIds error: %s", err.Error())
 	}
+	logx.Info("[SonexPosition:cacheAddressTokenIds] cacheAddressTokenIds address: ", innerPosition.Owner.Hex(), " tokenId: ", req.TokenId)
 
 	// if /position is query, del cache anyway
 	ps := NewSonexPositionsLogic(ctx, l.svcCtx)
