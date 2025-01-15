@@ -154,7 +154,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		logx.Errorf("[SonexPosition] cacheAddressTokenIds error: %s", err.Error())
 	}
 
-	// del cache
+	// if /position is query, del cache anyway
 	ps := NewSonexPositionsLogic(ctx, l.svcCtx)
 	err = ps.DelCache(innerPosition.Owner.Hex())
 	if err != nil {
@@ -537,7 +537,7 @@ func (l *SonexPositionLogic) cacheAddressTokenIds(ctx context.Context, address s
 	}
 
 	// set expire time
-	err = cacher.Expire(cacheKey, 30*time.Second)
+	err = cacher.Expire(cacheKey, 5*time.Minute)
 	if err != nil {
 		return err
 	}
