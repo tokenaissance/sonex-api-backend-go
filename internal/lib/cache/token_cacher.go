@@ -368,15 +368,60 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 
 	pathBytes := [][]byte{}
 	linq.From(paths).SelectT(func(item quoter.Path) []byte { return item.ToBytes() }).ToSlice(&pathBytes)
-	results, err := q.BatchQuoteExactInputs(ctx, pathBytes, amountIn)
-	if err != nil {
-		return nil, err
+
+	var wg sync.WaitGroup
+	results := make(chan struct {
+		Res map[string]*quoter.QuoteExactInputResult
+		Err error
+	}, len(pathBytes))
+	batch := 10
+	for i := 0; i*batch < len(pathBytes); i++ {
+		wg.Add(1)
+		go func(ch chan struct {
+			Res map[string]*quoter.QuoteExactInputResult
+			Err error
+		}) {
+			defer wg.Done()
+
+			start := i * batch
+			end := start + batch
+			if end > len(pathBytes) {
+				end = len(pathBytes)
+			}
+			quoteResults, err := q.BatchQuoteExactInputs(ctx, pathBytes[start:end], amountIn)
+			if err != nil {
+				ch <- struct {
+					Res map[string]*quoter.QuoteExactInputResult
+					Err error
+				}{Err: err}
+				return
+			}
+			ch <- struct {
+				Res map[string]*quoter.QuoteExactInputResult
+				Err error
+			}{Res: quoteResults}
+		}(results)
 	}
+	wg.Wait()
+	close(results)
 
 	// Handle results
+	quoteResults := map[string]*quoter.QuoteExactInputResult{}
+	for result := range results {
+		if result.Err != nil {
+			continue
+		}
+		for key, value := range result.Res {
+			if value.Error != nil {
+				continue
+			}
+			quoteResults[key] = value
+		}
+	}
+
 	var prices []Price
 	for _, path := range paths {
-		result, ok := results[common.Bytes2Hex(path.ToBytes())]
+		result, ok := quoteResults[common.Bytes2Hex(path.ToBytes())]
 		if !ok {
 			continue
 		}
@@ -459,24 +504,80 @@ func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.
 
 	pathBytes := [][]byte{}
 	linq.From(paths).SelectT(func(item quoter.Path) []byte { return item.ToBytes() }).ToSlice(&pathBytes)
-	results, err := q.BatchQuoteExactOutputs(ctx, pathBytes, amountOut)
-	if err != nil {
-		return nil, err
+
+	var wg sync.WaitGroup
+	results := make(chan struct {
+		Res map[string]*quoter.QuoteExactOutputResult
+		Err error
+	}, len(pathBytes))
+	batch := 10
+	for i := 0; i*batch < len(pathBytes); i++ {
+		wg.Add(1)
+		go func(ch chan struct {
+			Res map[string]*quoter.QuoteExactOutputResult
+			Err error
+		}) {
+			defer wg.Done()
+
+			start := i * batch
+			end := start + batch
+			if end > len(pathBytes) {
+				end = len(pathBytes)
+			}
+			quoteResults, err := q.BatchQuoteExactOutputs(ctx, pathBytes[start:end], amountOut)
+			if err != nil {
+				ch <- struct {
+					Res map[string]*quoter.QuoteExactOutputResult
+					Err error
+				}{Err: err}
+				return
+			}
+			ch <- struct {
+				Res map[string]*quoter.QuoteExactOutputResult
+				Err error
+			}{Res: quoteResults}
+		}(results)
 	}
+	wg.Wait()
+	close(results)
 
 	// Handle results
+	quoteResults := map[string]*quoter.QuoteExactOutputResult{}
+	for result := range results {
+		if result.Err != nil {
+			continue
+		}
+		for key, value := range result.Res {
+			if value.Error != nil {
+				continue
+			}
+			quoteResults[key] = value
+		}
+	}
+
 	var prices []Price
-	for i, path := range paths {
-		prices = append(prices, Price{
-			From:                        fromToken.Address,
-			To:                          toToken.Address,
-			Pools:                       path.Pools,
-			Path:                        path.ToBytes(),
-			Value:                       results[i].AmountIn,
-			SqrtPriceX96AfterList:       results[i].SqrtPriceX96AfterList,
-			InitializedTicksCrossedList: results[i].InitializedTicksCrossedList,
-			GasEstimate:                 results[i].GasEstimate,
-		})
+	for _, path := range paths {
+		result, ok := quoteResults[common.Bytes2Hex(path.ToBytes())]
+		if !ok {
+			continue
+		}
+
+		price := Price{
+			From:  fromToken.Address,
+			To:    toToken.Address,
+			Pools: path.Pools,
+			Path:  path.ToBytes(),
+		}
+		if result.Error != nil {
+			price.Err = result.Error
+		} else {
+			price.Value = result.AmountIn
+			price.SqrtPriceX96AfterList = result.SqrtPriceX96AfterList
+			price.InitializedTicksCrossedList = result.InitializedTicksCrossedList
+			price.GasEstimate = result.GasEstimate
+		}
+
+		prices = append(prices, price)
 	}
 
 	return prices, nil

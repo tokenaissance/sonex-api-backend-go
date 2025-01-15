@@ -227,7 +227,7 @@ func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountO
 }
 
 // Batch version of [Quoter.QuoteExactOutput]
-func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte, amountIn *big.Int) ([]*QuoteExactOutputResult, error) {
+func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte, amountIn *big.Int) (map[string]*QuoteExactOutputResult, error) {
 	quoterAddress := common.HexToAddress(quoter.sonexConf.Quoter)
 
 	quoterABI, err := abi.JSON(strings.NewReader(uniswap_v3.IquoterV2MetaData.ABI))
@@ -265,19 +265,20 @@ func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte
 		return nil, err
 	}
 
-	result := []*QuoteExactOutputResult{}
-	for i := range paths {
+	result := map[string]*QuoteExactOutputResult{}
+	for i, path := range paths {
 		var output QuoteExactOutputResult
 		multicallResult := multicallResults[i]
-		if multicallResult.Success {
+		if !multicallResult.Success {
 			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
 			output = QuoteExactOutputResult{Error: errors.New(errMsg)}
+		} else {
+			err = quoterABI.UnpackIntoInterface(&output, "quoteExactOutput", multicallResult.ReturnData)
+			if err != nil {
+				return nil, err
+			}
 		}
-		err = quoterABI.UnpackIntoInterface(&output, "quoteExactOutput", multicallResult.ReturnData)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, &output)
+		result[common.Bytes2Hex(path)] = &output
 	}
 
 	return result, nil
