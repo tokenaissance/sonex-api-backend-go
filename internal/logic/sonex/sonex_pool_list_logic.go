@@ -55,6 +55,17 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *respo
 	}
 
 	cacheKey := "sonex_dex:uniswap:pool_list"
+	if req.PageIndex != nil {
+		cacheKey = fmt.Sprintf("%s:%d", cacheKey, *req.PageIndex)
+	}
+
+	if req.PageSize != nil {
+		cacheKey = fmt.Sprintf("%s:%d", cacheKey, *req.PageSize)
+	}
+
+	if req.Order != "" {
+		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Order)
+	}
 	if req.Token0Address != "" {
 		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Token0Address)
 	}
