@@ -44,9 +44,14 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
 
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+
 	fromAddress := common.HexToAddress(req.From)
 	toAddress := common.HexToAddress(req.To)
-	stablecoinAddress := common.HexToAddress(l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
+	stablecoinAddress := common.HexToAddress(chainConf.USD)
 
 	if amount.Cmp(big.NewInt(0)) <= 0 {
 		return &types.TokenQuoteResponse{
