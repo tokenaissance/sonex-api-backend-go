@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
@@ -10,7 +11,6 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
@@ -74,6 +74,9 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			}
 			if len(successed) > 0 {
 				priceA := linq.From(successed).
+					WhereT(func(item cache.Price) bool {
+						return math.Abs(item.PriceImpact) < 0.1
+					}).
 					OrderByT(func(item cache.Price) float64 {
 						return item.PriceImpact
 					}).First()
@@ -83,7 +86,30 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			}
 
 			if bestPrice == nil {
-				usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals/2), nil)
+				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals/2), nil))
+				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+				if err != nil {
+					logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
+					return
+				}
+				if len(successed) > 0 {
+					priceA := linq.From(successed).
+						WhereT(func(item cache.Price) bool {
+							return math.Abs(item.PriceImpact) < 0.1
+						}).
+						OrderByT(func(item cache.Price) float64 {
+							return item.PriceImpact
+						}).First()
+					if price, ok := priceA.(cache.Price); ok {
+						price.Value = new(big.Int).Mul(price.Value, accuracy)
+						bestPrice = &price
+					}
+				}
+			}
+
+			if bestPrice == nil {
+				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
 				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
 				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
 				if err != nil {
@@ -92,11 +118,14 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				}
 				if len(successed) > 0 {
 					priceA := linq.From(successed).
+						WhereT(func(item cache.Price) bool {
+							return math.Abs(item.PriceImpact) < 0.1
+						}).
 						OrderByT(func(item cache.Price) float64 {
 							return item.PriceImpact
 						}).First()
 					if price, ok := priceA.(cache.Price); ok {
-						price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
+						price.Value = new(big.Int).Mul(price.Value, accuracy)
 						bestPrice = &price
 					}
 				}
@@ -114,11 +143,12 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				logx.Errorf("Get %s[%s] best price failed,Success count: %d, Failed list: %v", item.Address, item.Symbol, len(successed), failedList)
 				return
 			}
-			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"), usdToken.Decimals)
-			if err != nil {
-				logx.Errorf("Insert %s[%s] price failed: %s", item.Address, item.Symbol, err)
-				return
-			}
+			fmt.Printf("%s %s %s\n", item.Symbol, item.Address, bestPrice.Value.String())
+			// err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"), usdToken.Decimals)
+			// if err != nil {
+			// 	logx.Errorf("Insert %s[%s] price failed: %s", item.Address, item.Symbol, err)
+			// 	return
+			// }
 		}(&token)
 	}
 	wg.Wait()
