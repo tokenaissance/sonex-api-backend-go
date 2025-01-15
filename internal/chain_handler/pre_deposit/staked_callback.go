@@ -115,10 +115,10 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				url := fmt.Sprintf("%s/extra/increase_points", strings.TrimRight(pointsServiceConf.Host, "/"))
 				resp, err := httpc.Do(context.Background(), http.MethodPost, url, req)
 				if err != nil {
-					return err
+					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s %v", err, req))
 				}
 				if resp.StatusCode != http.StatusOK {
-					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s", resp.Status))
+					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s %v", resp.Status, req))
 				}
 
 				return nil
@@ -134,7 +134,7 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 		retry.Attempts(0),
 		retry.OnRetry(func(n uint, err error) {
 			retrys += 1
-			logx.Infof("%s", err)
+			logx.Infof("StakedCallback error: %s", err)
 		}),
 	)
 	if err != nil {
