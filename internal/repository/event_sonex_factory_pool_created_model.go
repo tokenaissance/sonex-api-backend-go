@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/types"
+	"strconv"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -30,7 +30,7 @@ type (
 		FindByPoolAddress(ctx context.Context, poolAddress string) (*EventSonexFactoryPoolCreated, error)
 		SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error)
 		GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error)
-		GetPoolInfo(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, error)
+		GetPoolInfo(ctx context.Context, chainId int64, poolAddress string) (*sonex.PoolFromDB, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -90,7 +90,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdPositionManager(
 }
 
 type PoolData struct {
-	ID               int64          `json:"id"`
+	ID               int64          `db:"id"`
 	EventFee         int64          `db:"event_fee"`
 	EventPool        string         `db:"event_pool"`
 	Token0Name       sql.NullString `db:"token0_name"`
@@ -105,6 +105,36 @@ type PoolData struct {
 	Token1Logo       sql.NullString `db:"token1_logo"`
 	Token1Additional sql.NullString `db:"token1_additional"`
 	Token1Decimals   sql.NullInt64  `db:"token1_decimals"`
+}
+
+func (p *PoolData) ToPoolFromDB(chainId int64) *sonex.PoolFromDB {
+	var additional0 types.PoolsResponse_TokenAdditional
+	var additional1 types.PoolsResponse_TokenAdditional
+	_ = json.Unmarshal([]byte(p.Token0Additional.String), &additional0)
+	_ = json.Unmarshal([]byte(p.Token1Additional.String), &additional1)
+
+	return &sonex.PoolFromDB{
+		Id:      strconv.Itoa(int(p.ID)),
+		ChainId: chainId,
+		Address: p.EventPool,
+		FeeTier: p.EventFee,
+		Token0: &types.PoolsResponse_Token{
+			Address:    p.Token0Address.String,
+			Symbol:     p.Token0Symbol.String,
+			Name:       p.Token0Name.String,
+			Decimals:   int(p.Token0Decimals.Int64),
+			Logo:       p.Token0Logo.String,
+			Additional: additional0,
+		},
+		Token1: &types.PoolsResponse_Token{
+			Address:    p.Token1Address.String,
+			Symbol:     p.Token1Symbol.String,
+			Name:       p.Token1Name.String,
+			Decimals:   int(p.Token1Decimals.Int64),
+			Logo:       p.Token1Logo.String,
+			Additional: additional1,
+		},
+	}
 }
 
 func (m *customEventSonexFactoryPoolCreatedModel) GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error) {
@@ -308,75 +338,37 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 }
 
 // GetPoolList returns a map of pool data and pagination meta
-func (m *customEventSonexFactoryPoolCreatedModel) GetPoolInfo(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, error) {
-	var poolData []PoolData
-	logx.Info("GetPoolInfoGetPoolInfoGetPoolInfo")
-	baseQuery := fmt.Sprintf(`
-		FROM %s AS pool
-		INNER JOIN sonex_token AS token0 ON pool.event_token0 = token0.address AND token0."isHidden" = false
-		INNER JOIN sonex_token AS token1 ON pool.event_token1 = token1.address AND token1."isHidden" = false
-		WHERE pool.chain_id = $1 `, m.table)
-	args := []interface{}{params.ChainId}
+func (m *customEventSonexFactoryPoolCreatedModel) GetPoolInfo(ctx context.Context, chainId int64, poolAddress string) (*sonex.PoolFromDB, error) {
+	stmt := fmt.Sprintf(`
+		SELECT 
+			t1.id,
+			t1.event_fee,
+			t1.event_pool,
+			t2.name       AS token0_name,
+			t2.symbol     AS token0_symbol,
+			t2.address    AS token0_address,
+			t2.logo       AS token0_logo,
+			t2.additional AS token0_additional,
+			t2.decimals   AS token0_decimals,
+			t3.name       AS token1_name,
+			t3.symbol     AS token1_symbol,
+			t3.address    AS token1_address,
+			t3.logo       AS token1_logo,
+			t3.additional AS token1_additional,
+			t3.decimals   AS token1_decimals
+		FROM %s AS t1
 
-	paramIndex := 2
+		JOIN sonex_token AS t2 ON t2.address = t1.event_token0
+		JOIN sonex_token AS t3 ON t3.address = t1.event_token1
 
-	if params.Token0Address != "" {
-		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
-		args = append(args, params.Token0Address)
-		paramIndex++
-	}
+		WHERE
+			t1.chain_id = $1 AND t1.event_pool = $2
+	`, m.table)
 
-	if params.Token1Address != "" {
-		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
-		args = append(args, params.Token1Address)
-		paramIndex++
-	}
-
-	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token0.decimals AS token0_decimals, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional, token1.decimals AS token1_decimals %s", baseQuery)
-	switch params.Order {
-	case "ASC":
-		dataQuery += " ORDER BY pool.id ASC"
-	default:
-		dataQuery += " ORDER BY pool.id DESC"
-	}
-	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", 1, 0)
-
-	err := m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
+	var pool PoolData
+	err := m.conn.QueryRowPartialCtx(ctx, &pool, stmt, chainId, poolAddress)
 	if err != nil {
 		return nil, err
 	}
-
-	pools := make(map[string]*sonex.PoolFromDB)
-	for _, pd := range poolData {
-		var token0Additional types.PoolsResponse_TokenAdditional
-		var token1Additional types.PoolsResponse_TokenAdditional
-		_ = json.Unmarshal([]byte(pd.Token0Additional.String), &token0Additional)
-		_ = json.Unmarshal([]byte(pd.Token1Additional.String), &token1Additional)
-
-		pool := &sonex.PoolFromDB{
-			ChainId: params.ChainId,
-			Id:      pd.EventPool,
-			Address: pd.EventPool,
-			FeeTier: pd.EventFee,
-			Token0: &types.PoolsResponse_Token{
-				Address:    pd.Token0Address.String,
-				Symbol:     pd.Token0Symbol.String,
-				Name:       pd.Token0Name.String,
-				Logo:       pd.Token0Logo.String,
-				Decimals:   int(pd.Token0Decimals.Int64),
-				Additional: token0Additional,
-			},
-			Token1: &types.PoolsResponse_Token{
-				Address:    pd.Token1Address.String,
-				Symbol:     pd.Token1Symbol.String,
-				Name:       pd.Token1Name.String,
-				Logo:       pd.Token1Logo.String,
-				Decimals:   int(pd.Token1Decimals.Int64),
-				Additional: token1Additional,
-			},
-		}
-		pools[pool.Id] = pool
-	}
-
-	return pools, nil
+	return pool.ToPoolFromDB(chainId), nil
 }
