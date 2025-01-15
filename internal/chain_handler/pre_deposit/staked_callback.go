@@ -57,9 +57,9 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				preDepositPointsRecordModel := repository.NewPreDepositPointsRecordModel(sqlx.NewSqlConnFromSession(s))
 				pointsValue := points.Int64()
 
-				logx.Errorf("TxHash %s, TxIndex %d, User %s, Amount %s, Points: %d",
+				logx.Errorf("TxHash %s, Index %d, User %s, Amount %s, Points: %d",
 					event.Raw.TxHash.Hex(),
-					int64(event.Raw.TxIndex),
+					int64(event.Raw.Index),
 					event.User.Hex(),
 					event.Amount.String(),
 					pointsValue,
@@ -72,9 +72,9 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				if userPoints+pointsValue > preDepositConf.PointsUserCap {
 					pointsValue = preDepositConf.PointsUserCap - userPoints
 				}
-				logx.Errorf("TxHash %s, TxIndex %d, User %s, Cap %d, User points %d, Points %d",
+				logx.Errorf("TxHash %s, Index %d, User %s, Cap %d, User points %d, Points %d",
 					event.Raw.TxHash.Hex(),
-					int64(event.Raw.TxIndex),
+					int64(event.Raw.Index),
 					event.User.Hex(),
 					preDepositConf.PointsUserCap,
 					userPoints,
@@ -90,9 +90,9 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				if totalPoints+pointsValue > preDepositConf.PointsTotalCap {
 					pointsValue = preDepositConf.PointsTotalCap - totalPoints
 				}
-				logx.Errorf("TxHash %s, TxIndex %d, User %s, Cap %d, Total points %d, Points %d",
+				logx.Errorf("TxHash %s, Index %d, User %s, Cap %d, Total points %d, Points %d",
 					event.Raw.TxHash.Hex(),
-					int64(event.Raw.TxIndex),
+					int64(event.Raw.Index),
 					event.User.Hex(),
 					preDepositConf.PointsTotalCap,
 					totalPoints,
@@ -103,13 +103,13 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				}
 
 				// If existed, not handle
-				_, err = preDepositPointsRecordModel.FindOneByChainIdTxHashTxIndex(ctx, chainId, event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex))
+				_, err = preDepositPointsRecordModel.FindOneByChainIdTxHashTxIndex(ctx, chainId, event.Raw.TxHash.Hex(), int64(event.Raw.Index))
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
-					logx.Errorf("TxHash %s, TxIndex %d, User %s, %s",
+					logx.Errorf("TxHash %s, Index %d, User %s, %s",
 						event.Raw.TxHash.Hex(),
-						int64(event.Raw.TxIndex),
+						int64(event.Raw.Index),
 						event.User.Hex(),
 						"Existed",
 					)
@@ -122,7 +122,7 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				if err != nil {
 					return err
 				}
-				err = preDepositPointsRecordModel.New(ctx, id, chainId, event.User.Hex(), pointsValue, event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex), tx.TxAt)
+				err = preDepositPointsRecordModel.New(ctx, id, chainId, event.User.Hex(), pointsValue, event.Raw.TxHash.Hex(), int64(event.Raw.Index), tx.TxAt)
 				if err != nil {
 					return err
 				}
@@ -140,10 +140,10 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 					Points:   pointsValue,
 					Source:   pointsServiceConf.Source,
 					SubTitle: preDepositConf.SubTitle,
-					ExtraId:  fmt.Sprintf("%s-%d", event.Raw.TxHash.Hex(), event.Raw.TxIndex),
+					ExtraId:  fmt.Sprintf("%s-%d", event.Raw.TxHash.Hex(), event.Raw.Index),
 					Extra: map[string]string{
 						"txHash":    event.Raw.TxHash.Hex(),
-						"txIndex":   strconv.FormatUint(uint64(event.Raw.TxIndex), 10),
+						"txIndex":   strconv.FormatUint(uint64(event.Raw.Index), 10),
 						"user":      event.User.Hex(),
 						"token":     event.Token.Hex(),
 						"amount":    event.Amount.String(),
@@ -159,18 +159,18 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				url := fmt.Sprintf("%s/extra/increase_points", strings.TrimRight(pointsServiceConf.Host, "/"))
 				resp, err := httpc.Do(context.Background(), http.MethodPost, url, req)
 				if err != nil {
-					logx.Errorf("TxHash %s, TxIndex %d, User %s, %s",
+					logx.Errorf("TxHash %s, Index %d, User %s, %s",
 						event.Raw.TxHash.Hex(),
-						int64(event.Raw.TxIndex),
+						int64(event.Raw.Index),
 						event.User.Hex(),
 						fmt.Sprintf("Increase points failed: %s %v", err, req),
 					)
 					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s %v", err, req))
 				}
 				if resp.StatusCode != http.StatusOK {
-					logx.Errorf("TxHash %s, TxIndex %d, User %s, %s",
+					logx.Errorf("TxHash %s, Index %d, User %s, %s",
 						event.Raw.TxHash.Hex(),
-						int64(event.Raw.TxIndex),
+						int64(event.Raw.Index),
 						event.User.Hex(),
 						fmt.Sprintf("Increase points failed: %s %v", resp.Status, req),
 					)
