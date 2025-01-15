@@ -39,6 +39,10 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 	if err != nil {
 		return err
 	}
+	usdToken, err := global.GetToken(chainConf.ChainId, common.HexToAddress(chainConf.USD).Hex())
+	if err != nil || usdToken == nil {
+		return fmt.Errorf("%s", fmt.Sprintf("Get USD token[%s] failed: %s", chainConf.USD, err))
+	}
 
 	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address,price, created_at, usd_decimals) values (?,?,?,?,?)")
 	if err != nil {
@@ -60,34 +64,44 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				}
 			}()
 
-			usdToken, err := global.GetToken(chainConf.ChainId, common.HexToAddress(chainConf.USD).Hex())
-			if err != nil || usdToken == nil {
-				logx.Errorf("Get USD token[%s] failed: %s", chainConf.USD, err)
-				return
-			}
-			usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
-			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
+			var bestPrice *cache.Price
+
+			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
 			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
 			if err != nil {
 				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
 			}
-			var bestPrice *cache.Price
 			if len(successed) > 0 {
 				priceA := linq.From(successed).
 					OrderByT(func(item cache.Price) float64 {
 						return item.PriceImpact
 					}).First()
 				if price, ok := priceA.(cache.Price); ok {
-					price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
 					bestPrice = &price
 				}
 			}
-			// bestPrice, successed, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
-			// if err != nil {
-			// 	logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
-			// 	return
-			// }
+
+			if bestPrice == nil {
+				usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
+				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+				if err != nil {
+					logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
+					return
+				}
+				if len(successed) > 0 {
+					priceA := linq.From(successed).
+						OrderByT(func(item cache.Price) float64 {
+							return item.PriceImpact
+						}).First()
+					if price, ok := priceA.(cache.Price); ok {
+						price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
+						bestPrice = &price
+					}
+				}
+			}
+
 			if bestPrice == nil {
 				failedList := []string{}
 				for _, item := range failed {

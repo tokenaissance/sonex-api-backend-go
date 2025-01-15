@@ -12,7 +12,7 @@ import (
 
 func TestHandleRecordTokenPrice(t *testing.T) {
 	var c config.Config
-	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
+	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
 	err := global.Initialize(c)
 	if err != nil {
