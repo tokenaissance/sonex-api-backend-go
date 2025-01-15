@@ -49,12 +49,12 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 			stakeAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(stakedToken.Decimals), nil)
 			points := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(event.Amount, big.NewInt(int64(preDepositConf.PointsRate*100))), big.NewInt(100)), stakeAccuracy)
 			logx.Infof(
-				"StakedCallback into: %f, staked token[%s]: %d %s, points: %s",
+				"StakedCallback raw into: %f, staked token[%s]: %d %s, points: %d",
 				preDepositConf.PointsRate,
 				stakedToken.Address,
 				stakedToken.Decimals,
 				event.Amount.String(),
-				points.String(),
+				points.Int64(),
 			)
 			if points.Cmp(common.Big0) <= 0 {
 				return nil
@@ -79,9 +79,27 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				if userPoints+pointsValue > preDepositConf.PointsUserCap {
 					pointsValue = preDepositConf.PointsUserCap - userPoints
 				}
+
+				logx.Infof(
+					"StakedCallback filtered into: %f, staked token[%s]: %d %s, points: %d",
+					preDepositConf.PointsRate,
+					stakedToken.Address,
+					stakedToken.Decimals,
+					event.Amount.String(),
+					pointsValue,
+				)
+
 				if pointsValue <= 0 {
 					return nil
 				}
+				_, err = preDepositPointsRecordModel.FindOneByChainIdTxHashTxIndex(ctx, chainId, event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex))
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+					logx.Infof("%s %d is existed", event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex))
+					return nil
+				}
+
 				id, err := global.NewId()
 				if err != nil {
 					return err
