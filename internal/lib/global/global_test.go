@@ -69,7 +69,7 @@ func TestQuote(t *testing.T) {
 	Initialize(c)
 	amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(12), nil))
 	st := time.Now()
-	prices, _, err := QuoteExactInput(context.Background(), nil, 1868, "0x4200000000000000000000000000000000000006", "0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369", amountIn, 2)
+	prices, _, err := QuoteExactInput(context.Background(), nil, 1868, "0xc67476893C166c537afd9bc6bc87b3f228b44337", "0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369", amountIn, 2)
 	if err != nil {
 		t.Error(err)
 		return

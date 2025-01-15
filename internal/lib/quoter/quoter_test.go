@@ -143,7 +143,7 @@ func TestBatchQuoteExactOutputs(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	for i, path := range paths {
-		fmt.Printf("%v ===> %v\n", path, outputs[i])
+	for _, path := range paths {
+		fmt.Printf("%v ===> %v\n", path, outputs[common.Bytes2Hex(path.ToBytes())])
 	}
 }

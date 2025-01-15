@@ -374,7 +374,7 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 		Res map[string]*quoter.QuoteExactInputResult
 		Err error
 	}, len(pathBytes))
-	batch := 10
+	batch := 5
 	for i := 0; i*batch < len(pathBytes); i++ {
 		wg.Add(1)
 		go func(ch chan struct {
@@ -510,7 +510,7 @@ func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.
 		Res map[string]*quoter.QuoteExactOutputResult
 		Err error
 	}, len(pathBytes))
-	batch := 10
+	batch := 5
 	for i := 0; i*batch < len(pathBytes); i++ {
 		wg.Add(1)
 		go func(ch chan struct {

@@ -67,11 +67,23 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			}
 			usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
 			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
-			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+			successed0, failed0, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
 			if err != nil {
 				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
 			}
+			amountIn = new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals/2), nil))
+			successed1, failed1, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+			if err != nil {
+				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
+				return
+			}
+			successed := []cache.Price{}
+			successed = append(successed, successed0...)
+			successed = append(successed, successed1...)
+			failed := []cache.Price{}
+			failed = append(failed, failed0...)
+			failed = append(failed, failed1...)
 			var bestPrice *cache.Price
 			if len(successed) > 0 {
 				priceA := linq.From(successed).
