@@ -48,6 +48,14 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 
 			stakeAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(stakedToken.Decimals), nil)
 			points := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(event.Amount, big.NewInt(int64(preDepositConf.PointsRate*100))), big.NewInt(100)), stakeAccuracy)
+			logx.Infof(
+				"StakedCallback into: %f, staked token[%s]: %d %s, points: %s",
+				preDepositConf.PointsRate,
+				stakedToken.Address,
+				stakedToken.Decimals,
+				event.Amount.String(),
+				points.String(),
+			)
 			if points.Cmp(common.Big0) <= 0 {
 				return nil
 			}
