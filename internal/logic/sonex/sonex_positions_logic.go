@@ -115,25 +115,35 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 		logx.Errorf("[SonexPositions]:refreshCache GetAddressTokenIds error: %s", err.Error())
 	}
 
+	// merge positionTokenIds and tokenIds, and remove duplicate
+	positionTokenIds = func(tokenIds []int64) []int64 {
+		// Create a map to track unique tokenIds
+		uniqueIds := make(map[int64]bool)
+		for _, id := range tokenIds {
+			uniqueIds[id] = true
+		}
+
+		// Convert unique ids to slice
+		filtered := make([]int64, 0, len(uniqueIds))
+		for id := range uniqueIds {
+			filtered = append(filtered, id)
+		}
+		return filtered
+	}(append(positionTokenIds, tokenIds...))
+
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
 	positions, err := caller.BatchGetPositions(
 		ctx,
 		req.ChainId,
 		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
 		func(tokenIds []int64) []*big.Int {
-			// Create a map to track unique tokenIds
-			uniqueIds := make(map[int64]bool)
+			// Convert unique ids to bitInt slice
+			converted := make([]*big.Int, 0, len(tokenIds))
 			for _, id := range tokenIds {
-				uniqueIds[id] = true
-			}
-
-			// Convert unique ids to slice
-			converted := make([]*big.Int, 0, len(uniqueIds))
-			for id := range uniqueIds {
 				converted = append(converted, big.NewInt(id))
 			}
 			return converted
-		}(append(positionTokenIds, tokenIds...)),
+		}(positionTokenIds),
 	)
 
 	for _, p := range positions {
