@@ -78,15 +78,15 @@ func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp 
 
 	// Check cache
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-	cachedResponse, err := redisCache.Get(cacheKey)
-	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp PositionsResponseWrapper
-		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
-			ctx := context.Background()
-			go l.refreshCache(ctx, req, redisCache, cacheKey, &cachedResp)
-			return &cachedResp, nil
-		}
-	}
+	// cachedResponse, err := redisCache.Get(cacheKey)
+	// if err == nil && len(cachedResponse) > 0 {
+	// 	var cachedResp PositionsResponseWrapper
+	// 	if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
+	// 		ctx := context.Background()
+	// 		go l.refreshCache(ctx, req, redisCache, cacheKey, &cachedResp)
+	// 		return &cachedResp, nil
+	// 	}
+	// }
 
 	return l.refreshCache(l.ctx, req, redisCache, cacheKey, nil)
 }
