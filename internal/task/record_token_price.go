@@ -74,15 +74,14 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			}
 			var bestPrice *cache.Price
 			if len(successed) > 0 {
-				price := linq.From(successed).
-					WhereT(func(item cache.Price) bool {
-						return item.Value.Cmp(common.Big0) > 0
-					}).
+				priceA := linq.From(successed).
 					OrderByT(func(item cache.Price) float64 {
 						return item.PriceImpact
-					}).First().(cache.Price)
-				price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
-				bestPrice = &price
+					}).First()
+				if price, ok := priceA.(cache.Price); ok {
+					price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
+					bestPrice = &price
+				}
 			}
 			// bestPrice, successed, failed, err := global.GetPrices(context.Background(), nil, item.ChainId, item.Address, false, 2, &chainConf.USD)
 			// if err != nil {
