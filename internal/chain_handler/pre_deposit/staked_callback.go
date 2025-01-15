@@ -48,14 +48,6 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 
 			stakeAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(stakedToken.Decimals), nil)
 			points := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(event.Amount, big.NewInt(int64(preDepositConf.PointsRate*100))), big.NewInt(100)), stakeAccuracy)
-			logx.Infof(
-				"StakedCallback raw into: %f, staked token[%s]: %d %s, points: %d",
-				preDepositConf.PointsRate,
-				stakedToken.Address,
-				stakedToken.Decimals,
-				event.Amount.String(),
-				points.Int64(),
-			)
 			if points.Cmp(common.Big0) <= 0 {
 				return nil
 			}
@@ -72,7 +64,7 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				if totalPoints+pointsValue > preDepositConf.PointsTotalCap {
 					pointsValue = preDepositConf.PointsTotalCap - totalPoints
 				}
-				userPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainId(ctx, chainId)
+				userPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainIdUser(ctx, chainId, event.User.Hex())
 				if err != nil {
 					return err
 				}
@@ -98,6 +90,8 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				case nil:
 					logx.Infof("%s %d is existed", event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex))
 					return nil
+				default:
+					return err
 				}
 
 				id, err := global.NewId()
