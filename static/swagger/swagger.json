@@ -531,6 +531,37 @@
         ]
       }
     },
+    "/sonex/pools/kline/{address}": {
+      "get": {
+        "operationId": "SonexPoolInfoKlineRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SonexPoolInfoKlineResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ]
+      }
+    },
     "/sonex/pools/position/{tokenId}": {
       "get": {
         "operationId": "SonexPositionHandler",
@@ -2744,6 +2775,25 @@
         "timestamp"
       ]
     },
+    "SonexPoolInfoKlineRequest": {
+      "type": "object",
+      "title": "SonexPoolInfoKlineRequest"
+    },
+    "SonexPoolInfoKlineResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/VolumeDetailsRecord"
+          }
+        }
+      },
+      "title": "SonexPoolInfoKlineResponse",
+      "required": [
+        "records"
+      ]
+    },
     "SonexTokenKlineRequest": {
       "type": "object",
       "properties": {
@@ -3932,6 +3982,30 @@
         "decimals",
         "lpBalance",
         "lpStakedNum"
+      ]
+    },
+    "VolumeDetailsRecord": {
+      "type": "object",
+      "properties": {
+        "volumeratio": {
+          "type": "number",
+          "format": "double",
+          "description": " 跟过去一天的volume最后一组24H的相比，相比的,是增加还是减弱 ,保留两位精度"
+        },
+        "volumeusd": {
+          "type": "number",
+          "format": "double"
+        },
+        "createdat": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "VolumeDetailsRecord",
+      "required": [
+        "volumeratio",
+        "volumeusd",
+        "createdat"
       ]
     },
     "Withdrawn": {
