@@ -154,7 +154,13 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 		return nil, err
 	}
 
+	// positionTokenIds 中部分 tokenId 可能被销毁，但是 event 监听未及时处理
+	// 所以 BatchGetPositions 返回的有效 position 数量可能小于 positionTokenIds 数量
+	validTokenIds := make([]int64, 0)
+
 	for _, p := range positions {
+		validTokenIds = append(validTokenIds, p.TokenId.Int64())
+
 		token0, err := global.GetToken(req.ChainId, p.Token0.Hex())
 		if err != nil {
 			logx.Errorf("[SonexPositions]:refreshCache GetToken error: %s", err.Error())
@@ -206,7 +212,7 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		pairs, err := l.getCollectedPairs(ctx, req.ChainId, positionTokenIds, token0Decimals, token1Decimals)
+		pairs, err := l.getCollectedPairs(ctx, req.ChainId, validTokenIds, token0Decimals, token1Decimals)
 		results <- psTaskResult{collectedPairs: pairs, err: err}
 	}()
 
