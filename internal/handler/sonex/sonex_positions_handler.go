@@ -6,8 +6,13 @@ import (
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
+
+type PositionsResponseWrapper struct {
+	*types.PositionsResponse
+}
 
 func SonexPositionsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -18,11 +23,17 @@ func SonexPositionsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := sonex.NewSonexPositionsLogic(r.Context(), svcCtx)
-		resp, err := l.SonexPositions(&req)
+		positions, err := l.SonexPositions(r.Context(), req.ChainId, req.Address)
 		if err != nil {
+			logx.Errorf("[SonexPositionsHandler]: SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			response := PositionsResponseWrapper{
+				PositionsResponse: &types.PositionsResponse{
+					Positions: positions,
+				},
+			}
+			httpx.OkJsonCtx(r.Context(), w, response)
 		}
 	}
 }
