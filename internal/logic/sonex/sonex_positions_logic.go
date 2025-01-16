@@ -156,6 +156,7 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 		token0Addresses = append(token0Addresses, token0.Address)
 		token1Addresses = append(token1Addresses, token1.Address)
 
+		// merge cached position and position from db
 		if _, ok := positionTransferItemMap[p.TokenId.Int64()]; !ok {
 			positionTransferItemMap[p.TokenId.Int64()] = &types.Position{
 				TokenID: p.TokenId.Int64(),
@@ -245,7 +246,7 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 	}
 
 	// sort by position in DESC
-	sort.Slice(positions, func(i, j int) bool {
+	sort.SliceStable(positions, func(i, j int) bool {
 		return positions[i].Position > positions[j].Position
 	})
 
