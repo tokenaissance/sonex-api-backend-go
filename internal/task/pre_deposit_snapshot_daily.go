@@ -104,7 +104,6 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 		totalWithdrawnAmount = new(big.Int).Add(new(big.Int).Add(totalWithdrawnAmount, item.WASTR), item.VASTR)
 	}
 	currentTotalStatedAmount := new(big.Int).Sub(totalStakedAmount, totalWithdrawnAmount)
-	rewardRate, _ := new(big.Float).Quo(new(big.Float).SetInt(rewardDailyAmount), new(big.Float).SetInt(currentTotalStatedAmount)).Float64()
 
 	for user, tokenStakeds := range totalStakeds {
 		for token, tokenStaked := range tokenStakeds {
@@ -139,18 +138,17 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 			}
 
 			// Calculate reward
-			stakeAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(stakedToken.Decimals), nil)
-			reward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(currentStaked, big.NewInt(int64(rewardRate*100))), rewardAccuracy), big.NewInt(100)), stakeAccuracy)
-			a := reward.String()
-			_ = a
-			if reward.Cmp(common.Big0) <= 0 {
+			rewardRate := new(big.Float).Quo(new(big.Float).SetInt(currentStaked), new(big.Float).SetInt(currentTotalStatedAmount))
+			reward := new(big.Float).Mul(rewardRate, new(big.Float).SetInt(rewardDailyAmount))
+			rewardI, _ := reward.Int(nil)
+			if rewardI.Cmp(common.Big0) <= 0 {
 				continue
 			}
 			id, err := global.NewId()
 			if err != nil {
 				return err
 			}
-			err = preDepositRewardSnapshotModel.New(ctx, id, chainConf.ChainId, user, wastrAmount, vastrAmount, preDepositConf.RewardToken, reward)
+			err = preDepositRewardSnapshotModel.New(ctx, id, chainConf.ChainId, user, wastrAmount, vastrAmount, preDepositConf.RewardToken, rewardI)
 			if err != nil {
 				return err
 			}

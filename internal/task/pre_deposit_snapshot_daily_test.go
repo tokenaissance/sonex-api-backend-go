@@ -12,7 +12,7 @@ import (
 
 func TestHandlePreDepositSnapshotDaily(t *testing.T) {
 	var c config.Config
-	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+	conf.MustLoad("../../etc/sonex_api_backend_go_test.yaml", &c)
 
 	err := global.Initialize(c)
 	if err != nil {
