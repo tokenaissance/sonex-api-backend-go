@@ -115,7 +115,8 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 		logx.Errorf("[SonexPositions]: Miss chain configure")
 		return nil, fmt.Errorf("%s", "Miss chain configure")
 	}
-	positionlist, err := caller.BatchGetPositions(
+
+	positionM, err := caller.BatchGetPositionMap(
 		ctx,
 		chainId,
 		common.HexToAddress(chainConf.PositionManager),
@@ -129,7 +130,7 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 		}(positionTokenIds),
 	)
 	if err != nil {
-		logx.Errorf("[SonexPositions]: BatchGetPositions error: %s", err.Error())
+		logx.Errorf("[SonexPositions]: BatchGetPositionMap error: %s", err.Error())
 		return nil, err
 	}
 
@@ -137,8 +138,8 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 	// 所以 BatchGetPositions 返回的有效 position 数量可能小于 positionTokenIds 数量
 	validTokenIds := make([]int64, 0)
 
-	for _, p := range positionlist {
-		validTokenIds = append(validTokenIds, p.TokenId.Int64())
+	for tokenId, p := range positionM {
+		validTokenIds = append(validTokenIds, tokenId)
 
 		token0, err := global.GetToken(chainId, p.Token0.Hex())
 		if err != nil {
@@ -157,9 +158,9 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 		token1Addresses = append(token1Addresses, token1.Address)
 
 		// merge cached position and position from db
-		if _, ok := positionTransferItemMap[p.TokenId.Int64()]; !ok {
-			positionTransferItemMap[p.TokenId.Int64()] = &types.Position{
-				TokenID: p.TokenId.Int64(),
+		if _, ok := positionTransferItemMap[tokenId]; !ok {
+			positionTransferItemMap[tokenId] = &types.Position{
+				TokenID: tokenId,
 				Origin:  p.Owner.Hex(),
 				Pool: types.Token_PoolDetail{
 					Address: p.Pool.Address.Hex(),
@@ -234,8 +235,8 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 	positions = make([]*types.Position, 0)
 
 	// Collect results
-	for _, position := range positionlist {
-		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
+	for tokenId, position := range positionM {
+		if positionTransferItem, exists := positionTransferItemMap[tokenId]; exists {
 			convertedPosition, err := l.fillPosition(ctx, chainId, positionTransferItem, position, tokenPricesRecords)
 			if err != nil {
 				logx.Errorf("[SonexPositions]:refreshCache fillPosition error: %s", err.Error())
