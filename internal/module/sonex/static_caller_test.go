@@ -75,9 +75,9 @@ func TestBatchGetPositions(t *testing.T) {
 
 	caller, _ := NewStaticCaller(c)
 	positions, err := caller.BatchGetPositions(
-		context.Background(), 1868,
-		common.HexToAddress(c.GetSonexConfig(1868).PositionManager),
-		[]*big.Int{big.NewInt(238)},
+		context.Background(), 1946,
+		common.HexToAddress(c.GetSonexConfig(1946).PositionManager),
+		[]*big.Int{big.NewInt(8)},
 	)
 	if err != nil {
 		t.Error(err)
