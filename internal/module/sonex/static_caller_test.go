@@ -71,13 +71,13 @@ func TestBatchGetPools(t *testing.T) {
 
 func TestBatchGetPositions(t *testing.T) {
 	var c config.Config
-	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
+	conf.MustLoad("../../../etc/sonex_api_backend_go.yaml", &c)
 
 	caller, _ := NewStaticCaller(c)
 	positions, err := caller.BatchGetPositions(
-		context.Background(), 1946,
-		common.HexToAddress("0x8e4D565832783738A0560688CA1A8A1c131a636B"),
-		[]*big.Int{big.NewInt(17)},
+		context.Background(), 1868,
+		common.HexToAddress(c.GetSonexConfig(1868).PositionManager),
+		[]*big.Int{big.NewInt(238)},
 	)
 	if err != nil {
 		t.Error(err)
