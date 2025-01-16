@@ -1,7 +1,6 @@
 package sonex
 
 import (
-	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/types"
 
@@ -70,10 +69,6 @@ func (position *Position) UnclaimedFees() (*big.Int, *big.Int) {
 	var tickLowerFeeGrowthBelow1 *big.Int
 	var tickUpperFeeGrowthAbove0 *big.Int
 	var tickUpperFeeGrowthAbove1 *big.Int
-
-	fmt.Printf("CurrentTick: %s\nTickUpper: %s\nTickLower: %s\n", currentTick.String(), position.TickUpper.String(), position.TickLower.String())
-	fmt.Printf("FeeGrowthGlobal0X128: %s\nFeeGrowthGlobal1X128: %s\n", position.Pool.FeeGrowthGlobal0X128.String(), position.Pool.FeeGrowthGlobal1X128.String())
-	fmt.Printf("FeeGrowthOutside0X128: %s\nFeeGrowthOutside0X128: %s\n", position.UpperTick.FeeGrowthOutside0X128.String(), position.UpperTick.FeeGrowthOutside0X128.String())
 
 	if currentTick.Cmp(position.TickUpper) >= 0 {
 		tickUpperFeeGrowthAbove0 = subIn256(position.Pool.FeeGrowthGlobal0X128, position.UpperTick.FeeGrowthOutside0X128)
