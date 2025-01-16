@@ -183,13 +183,13 @@ func multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) err
 	erc20ABI, _ := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
 
 	call3 := make([]contract_common.Multicall3Call3, len(calls))
-	for _, c := range calls {
+	for i, c := range calls {
 		data, _ := erc20ABI.Pack(c.method, c.args...)
-		call3 = append(call3, contract_common.Multicall3Call3{
+		call3[i] = contract_common.Multicall3Call3{
 			Target:       c.contract,
 			AllowFailure: true,
 			CallData:     data,
-		})
+		}
 	}
 
 	multicallABI, _ := abi.JSON(strings.NewReader(contract_common.MulticallABI))
