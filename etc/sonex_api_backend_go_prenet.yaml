@@ -21,6 +21,8 @@ PointsService:
   Host: https://prenet-api-point.sonex.so/
   Source: 00000000-0000-0000-0000-00000000000
   PrivateKey: POINTPRIVATEKEY
+Galxe:
+  Url: https://api-miniapp.sonex.so
 Chains:
   - ChainId: 1868
     Name: Soneium
