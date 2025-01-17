@@ -7,6 +7,7 @@ type Config struct {
 	Debug bool `json:",env=DEBUG,default=false"`
 	rest.RestConf
 	Domains       []string             `json:",optional,default=[]"`
+	Sentry        SentryConfig         `json:","`
 	PostgreSQL    PgConfig             `json:","`
 	Redis         RedisConfig          `json:","`
 	PointsService *PointsServiceConfig `json:",optional"`
