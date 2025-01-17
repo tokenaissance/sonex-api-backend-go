@@ -19,7 +19,7 @@ import (
 var (
 	sonexPoolTvlRecordFieldNames          = builder.RawFieldNames(&SonexPoolTvlRecord{}, true)
 	sonexPoolTvlRecordRows                = strings.Join(sonexPoolTvlRecordFieldNames, ",")
-	sonexPoolTvlRecordRowsExpectAutoSet   = strings.Join(stringx.Remove(sonexPoolTvlRecordFieldNames, "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
+	sonexPoolTvlRecordRowsExpectAutoSet   = strings.Join(stringx.Remove(sonexPoolTvlRecordFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
 	sonexPoolTvlRecordRowsWithPlaceHolder = builder.PostgreSqlJoin(stringx.Remove(sonexPoolTvlRecordFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"))
 )
 
@@ -40,8 +40,10 @@ type (
 		Id          int64     `db:"id"`
 		PoolAddress string    `db:"pool_address"`
 		Tvl         string    `db:"tvl"`
-		CreatedAt   time.Time `db:"created_at"`
+		Created     time.Time `db:"created"`
 		UsdDecimals int64     `db:"usd_decimals"`
+		ChainId     int64     `db:"chain_id"`
+		Updated     time.Time `db:"updated"`
 	}
 )
 
@@ -73,14 +75,14 @@ func (m *defaultSonexPoolTvlRecordModel) FindOne(ctx context.Context, id int64) 
 }
 
 func (m *defaultSonexPoolTvlRecordModel) Insert(ctx context.Context, data *SonexPoolTvlRecord) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4)", m.table, sonexPoolTvlRecordRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.PoolAddress, data.Tvl, data.UsdDecimals)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6)", m.table, sonexPoolTvlRecordRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.PoolAddress, data.Tvl, data.Created, data.UsdDecimals, data.ChainId, data.Updated)
 	return ret, err
 }
 
 func (m *defaultSonexPoolTvlRecordModel) Update(ctx context.Context, data *SonexPoolTvlRecord) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, sonexPoolTvlRecordRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.PoolAddress, data.Tvl, data.UsdDecimals)
+	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.PoolAddress, data.Tvl, data.Created, data.UsdDecimals, data.ChainId, data.Updated)
 	return err
 }
 
