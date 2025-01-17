@@ -60,20 +60,12 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 	// APR
-	currentWastrTotalStatedAmount := common.Big0
-	currentVastrTotalStatedAmount := common.Big0
+	currentUserWastrTotalStatedAmount := common.Big0
+	currentUserVastrTotalStatedAmount := common.Big0
 	var rewardPriceUSD float64
 	var astrPriceUSD float64
 	var apr float64
 	{
-		wastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.WASTR)
-		if err != nil {
-			return nil, err
-		}
-		// vastrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.VASTR)
-		// if err != nil {
-		// 	return nil, err
-		// }
 		astrToken, err := global.GetToken(chainConf.ChainId, preDepositConf.ASTR)
 		if err != nil {
 			return nil, err
@@ -83,11 +75,39 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 			return nil, err
 		}
 
-		totalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
+		totalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainId(context.Background(), chainConf.ChainId)
 		if err != nil {
 			return nil, err
 		}
-		totalWastrWithdrawn, totalVastrWithdrawn, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
+		totalWithdrawns, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainId(context.Background(), chainConf.ChainId)
+		if err != nil {
+			return nil, err
+		}
+
+		totalStakedAmount := common.Big0
+		totalWithdrawnAmount := common.Big0
+		for _, item := range totalStakeds {
+			for token, value := range item {
+				switch token {
+				case common.HexToAddress(preDepositConf.WASTR).Hex():
+					fallthrough
+				case common.HexToAddress(preDepositConf.VASTR).Hex():
+					totalStakedAmount = new(big.Int).Add(totalStakedAmount, value)
+				default:
+					continue
+				}
+			}
+		}
+		for _, item := range totalWithdrawns {
+			totalWithdrawnAmount = new(big.Int).Add(new(big.Int).Add(totalWithdrawnAmount, item.WASTR), item.VASTR)
+		}
+		currentTotalStatedAmount := new(big.Int).Sub(totalStakedAmount, totalWithdrawnAmount)
+
+		userTotalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
+		if err != nil {
+			return nil, err
+		}
+		userTotalWastrWithdrawn, userTotalVastrWithdrawn, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
 		if err != nil {
 			return nil, err
 		}
@@ -100,8 +120,7 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 		if err != nil {
 			return nil, err
 		}
-		wastrAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(wastrToken.Decimals), nil)
-		// vastrAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(vastrToken.Decimals), nil)
+		astrAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(astrToken.Decimals), nil)
 		usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
 		rewardPriceI := new(big.Int).Mul(big.NewInt(preDepositConf.RewardPrice), usdAccuracy)
 		rewardPriceUSD, _ = global.PriceToUSD(req.ChainId, rewardPriceI)
@@ -109,36 +128,31 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 		if err != nil {
 			return nil, err
 		}
-		for token, value := range totalStakeds {
+		for token, value := range userTotalStakeds {
 			switch token {
 			case wastrTokenAddress.Hex():
-				currentWastrTotalStatedAmount = new(big.Int).Add(currentWastrTotalStatedAmount, value)
+				currentUserWastrTotalStatedAmount = new(big.Int).Add(currentUserWastrTotalStatedAmount, value)
 			case vastrTokenAddress.Hex():
-				currentVastrTotalStatedAmount = new(big.Int).Add(currentVastrTotalStatedAmount, value)
+				currentUserVastrTotalStatedAmount = new(big.Int).Add(currentUserVastrTotalStatedAmount, value)
 			default:
 				continue
 			}
 		}
-		currentWastrTotalStatedAmount = new(big.Int).Sub(currentWastrTotalStatedAmount, totalWastrWithdrawn)
-		currentVastrTotalStatedAmount = new(big.Int).Sub(currentVastrTotalStatedAmount, totalVastrWithdrawn)
+		currentUserWastrTotalStatedAmount = new(big.Int).Sub(currentUserWastrTotalStatedAmount, userTotalWastrWithdrawn)
+		currentUserVastrTotalStatedAmount = new(big.Int).Sub(currentUserVastrTotalStatedAmount, userTotalVastrWithdrawn)
 		astrPriceI := common.Big0
 		astrPrice, ok := prices[astrToken.Address]
 		if ok {
 			astrPriceI, _ = new(big.Int).SetString(astrPrice.Price, 10)
 			astrPriceUSD, _ = global.PriceToUSD(req.ChainId, astrPriceI)
 		}
-		currentWastrTotalStatedUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(currentWastrTotalStatedAmount, astrPriceI), wastrAccuracy))
+		currentTotalStatedUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(currentTotalStatedAmount, astrPriceI), astrAccuracy))
 		if err != nil {
 			return nil, err
 		}
-		// currentVastrTotalStatedUSD, err := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(currentVastrTotalStatedAmount, astrPriceI), vastrAccuracy))
-		// if err != nil {
-		// 	return nil, err
-		// }
-		var currentVastrTotalStatedUSD float64 = 0
 
-		if rewardEveryYearUSD != 0 && currentWastrTotalStatedUSD+currentVastrTotalStatedUSD != 0 {
-			apr = rewardEveryYearUSD / (currentWastrTotalStatedUSD + currentVastrTotalStatedUSD) * 100
+		if rewardEveryYearUSD != 0 && currentTotalStatedUSD != 0 {
+			apr = rewardEveryYearUSD / currentTotalStatedUSD * 100
 		}
 	}
 
@@ -184,8 +198,8 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 	unclaimedReward := new(big.Int).Sub(totalReward, totalClaimed)
 
 	return &types.SummaryResponse{
-		TotalWastr:            currentWastrTotalStatedAmount.String(),
-		TotalVastr:            currentVastrTotalStatedAmount.String(),
+		TotalWastr:            currentUserWastrTotalStatedAmount.String(),
+		TotalVastr:            currentUserVastrTotalStatedAmount.String(),
 		ASTRPriceUSD:          astrPriceUSD,
 		Points:                points,
 		RewardToken:           rewardTokenAddress.Hex(),
