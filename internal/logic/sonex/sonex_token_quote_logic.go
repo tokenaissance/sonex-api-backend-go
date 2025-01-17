@@ -184,6 +184,11 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	case "OUTPUT":
 		amountIn, amountOut = bestRouter.Value, amount
 	}
+	priceImpactValue := math.Abs(bestRouter.PriceImpact)
+	priceImpact := fmt.Sprintf("%f%%", priceImpactValue*100)
+	if priceImpactValue > 1 {
+		priceImpact = "> 100%"
+	}
 	bestRouterResult := &types.TokenQuoteResponse_Router{
 		TokenIn:                     fromAddress.Hex(),
 		TokenOut:                    toAddress.Hex(),
@@ -197,7 +202,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 		InitializedTicksCrossedList: initializedTicksCrossedList,
 		GasEstimate:                 bestRouter.GasEstimate.String(),
-		PriceImpact:                 fmt.Sprintf("%.2f%%", bestRouter.PriceImpact*100),
+		PriceImpact:                 priceImpact,
 		FeeRate:                     fmt.Sprintf("%.2f%%", bestRouter.FeeRate*100),
 	}
 
