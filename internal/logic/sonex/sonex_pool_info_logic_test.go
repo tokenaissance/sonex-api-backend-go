@@ -29,7 +29,7 @@ func Test_Multiple(t *testing.T) {
 	poolAddress := common.HexToAddress("0xF53dD72f9D4076286DF1965dA87F0180cA90D64E")
 	token0 := common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655")
 	token1 := common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391")
-	multicall(context.TODO(), *c.GetChainConfig(1946),
+	Multicall(context.TODO(), *c.GetChainConfig(1946),
 		Call{
 			contract: token0,
 			method:   "balanceOf",

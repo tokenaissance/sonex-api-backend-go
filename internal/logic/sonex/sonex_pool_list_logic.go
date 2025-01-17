@@ -202,21 +202,20 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			defer wg.Done()
 
 			balance0, balance1 := big.NewInt(0), big.NewInt(0)
-			multicall(
+			Multicall(
 				ctx,
 				*chain,
 				Call{
-					contract: common.HexToAddress(pool.Token0.Address),
-					// token0,
-					method: "balanceOf",
-					args:   []interface{}{common.HexToAddress(pool.Address)},
-					result: &balance0,
+					Contract: common.HexToAddress(pool.Token0.Address),
+					Method:   "balanceOf",
+					Args:     []interface{}{common.HexToAddress(pool.Address)},
+					Result:   &balance0,
 				},
 				Call{
-					contract: common.HexToAddress(pool.Token1.Address),
-					method:   "balanceOf",
-					args:     []interface{}{common.HexToAddress(pool.Address)},
-					result:   &balance1,
+					Contract: common.HexToAddress(pool.Token1.Address),
+					Method:   "balanceOf",
+					Args:     []interface{}{common.HexToAddress(pool.Address)},
+					Result:   &balance1,
 				},
 			)
 			prices, err := tokenPriceModel.GetCurrentPrices([]string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})

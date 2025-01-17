@@ -71,20 +71,20 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 
 	// get balances
 	balance0, balance1 := big.NewInt(0), big.NewInt(0)
-	multicall(
+	Multicall(
 		ctx,
 		*chain,
 		Call{
-			contract: token0,
-			method:   "balanceOf",
-			args:     []interface{}{poolAddress},
-			result:   &balance0,
+			Contract: token0,
+			Method:   "balanceOf",
+			Args:     []interface{}{poolAddress},
+			Result:   &balance0,
 		},
 		Call{
-			contract: token1,
-			method:   "balanceOf",
-			args:     []interface{}{poolAddress},
-			result:   &balance1,
+			Contract: token1,
+			Method:   "balanceOf",
+			Args:     []interface{}{poolAddress},
+			Result:   &balance1,
 		},
 	)
 
@@ -167,20 +167,20 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 }
 
 type Call struct {
-	contract common.Address
-	method   string
-	args     []interface{}
-	result   interface{}
+	Contract common.Address
+	Method   string
+	Args     []interface{}
+	Result   interface{}
 }
 
-func multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
+func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
 	erc20ABI, _ := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
 
 	call3 := make([]contract_common.Multicall3Call3, len(calls))
 	for i, c := range calls {
-		data, _ := erc20ABI.Pack(c.method, c.args...)
+		data, _ := erc20ABI.Pack(c.Method, c.Args...)
 		call3[i] = contract_common.Multicall3Call3{
-			Target:       c.contract,
+			Target:       c.Contract,
 			AllowFailure: true,
 			CallData:     data,
 		}
@@ -208,7 +208,7 @@ func multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) err
 
 	for i, r := range results {
 		c := calls[i]
-		err := erc20ABI.UnpackIntoInterface(c.result, c.method, r.ReturnData)
+		err := erc20ABI.UnpackIntoInterface(c.Result, c.Method, r.ReturnData)
 		if err != nil {
 			return err
 		}
