@@ -135,10 +135,6 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	_amountPrice0, _ := balance0QuoDecimal.Float64()
 	_amountPrice1, _ := balance1QuoDecimal.Float64()
 
-	// _oldtvlUsdString, err8 := global.GetVolume24HTvlValue(cacher, global.Tvl24HKey, poolFromDB.Address)
-
-	// get volume24H
-
 	_volume24HString := getVolume24HOfPoolAddress(conn, req.ChainId, cacher, _poolAddressWithCheckSum)
 
 	_fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
@@ -362,10 +358,15 @@ func returnVol24HOrTvl24H(cacher cache.ICache, _tvlUSD *big.Float, _key string, 
 	} else {
 		// assign value
 		if strings.EqualFold(_oldtvlUsdString, "") {
-			_oldtvlUsdString = "0"
+			return "0"
 		}
 
 		_oldtvlUsdString_bigFloat, _ := new(big.Float).SetString(_oldtvlUsdString)
+
+		// false check error
+		if _oldtvlUsdString_bigFloat.Cmp(new(big.Float).SetFloat64(0)) == 0 {
+			_oldtvlUsdString_bigFloat = new(big.Float).SetFloat64(1)
+		}
 
 		_offsetValue := new(big.Float).Sub(_tvlUSD, _oldtvlUsdString_bigFloat)
 

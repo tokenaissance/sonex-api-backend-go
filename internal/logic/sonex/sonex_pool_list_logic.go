@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"math/rand"
 	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/cache"
-	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/lib/node_caller"
 	module_sonex "sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -21,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -205,59 +201,24 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		go func(pool *types.PoolsResponse_Pool) {
 			defer wg.Done()
 
-			nodeCaller, err := node_caller.NewNodeCaller(*chain)
-			if err != nil {
-				return
-			}
-			multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
-			if err != nil {
-				return
-			}
-			erc20ABI, err := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
-			if err != nil {
-				return
-			}
-
-			callDatas := []contract_common.Multicall3Call3{}
-			data, err := erc20ABI.Pack("balanceOf", common.HexToAddress(pool.Address))
-			if err != nil {
-				return
-			}
-			callDatas = append(callDatas, contract_common.Multicall3Call3{
-				Target:       common.HexToAddress(pool.Token0.Address),
-				AllowFailure: true,
-				CallData:     data,
-			})
-			callDatas = append(callDatas, contract_common.Multicall3Call3{
-				Target:       common.HexToAddress(pool.Token1.Address),
-				AllowFailure: true,
-				CallData:     data,
-			})
-			data, err = multicallABI.Pack("aggregate3", callDatas)
-			if err != nil {
-				return
-			}
-			var multicallResults []contract_common.Multicall3Result
-			err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &multicallResults)
-			if err != nil {
-				return
-			}
-			if !multicallResults[0].Success {
-				logx.Errorf("%s", fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", multicallResults[0].ReturnData[4:])))
-				return
-			}
-			balance0 := big.NewInt(0)
-			balance1 := big.NewInt(0)
-
-			err = erc20ABI.UnpackIntoInterface(&balance0, "balanceOf", multicallResults[0].ReturnData)
-			if err != nil {
-				return
-			}
-			err = erc20ABI.UnpackIntoInterface(&balance1, "balanceOf", multicallResults[1].ReturnData)
-			if err != nil {
-				return
-			}
-
+			balance0, balance1 := big.NewInt(0), big.NewInt(0)
+			multicall(
+				ctx,
+				*chain,
+				Call{
+					contract: common.HexToAddress(pool.Token0.Address),
+					// token0,
+					method: "balanceOf",
+					args:   []interface{}{common.HexToAddress(pool.Address)},
+					result: &balance0,
+				},
+				Call{
+					contract: common.HexToAddress(pool.Token1.Address),
+					method:   "balanceOf",
+					args:     []interface{}{common.HexToAddress(pool.Address)},
+					result:   &balance1,
+				},
+			)
 			prices, err := tokenPriceModel.GetCurrentPrices([]string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
 			if err != nil {
 				logx.Errorf("GetCurrentPrices:%v ", err)
@@ -267,6 +228,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			price0 := big.NewInt(0)
 			price0Decimal := int64(0)
 			price1 := big.NewInt(0)
+			price1Decimal := int64(0)
 
 			for _, v := range prices {
 				if strings.EqualFold(v.TokenAddress, common.HexToAddress(pool.Token0.Address).Hex()) {
@@ -276,11 +238,9 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 
 				if strings.EqualFold(v.TokenAddress, common.HexToAddress(pool.Token1.Address).Hex()) {
 					price1, _ = new(big.Int).SetString(v.Price, 10)
-					// price1Decimal = int64(v.UsdDecimals)
+					price1Decimal = int64(v.UsdDecimals)
 				}
 			}
-
-			logx.Infof("XXXXXXXXXXXXXtoken0 %v balance0 :%v price0 :%v token1:%v balance1:%v   price1:%v  ", pool.Token0.Address, balance0, price0, pool.Token1.Address, balance1, price1)
 
 			_tokenInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chain.ChainId, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
 			if err != nil {
@@ -305,13 +265,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			pool.Price0 = price0.String()
 
 			pool.Price1 = price1.String()
-			// daiDecimals := 18
-			// token0, _ := module_sonex.NewTokenValue(balance0.String(), pool.Token0.Decimals)
-			// token1, _ := module_sonex.NewTokenValue(balance1.String(), pool.Token1.Decimals)
-			// token0.SetTokenPrice(price0.String(), pool.Token0.Decimals)
-			// token1.SetTokenPrice(price1.String(), pool.Token1.Decimals)
-			// tokenPair := module_sonex.NewTokenPair(token0, token1)
-
 			mu.Lock()
 			pool.Token0Balance = balance0.String()
 			pool.Token1Balance = balance1.String()
@@ -328,17 +281,16 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			balance0Float, _ := new(big.Float).SetString(balance0.String())
 			_balance0divdeimals0 := new(big.Float).Quo(balance0Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals0))))
 
-			// balance1Float, _ := new(big.Float).SetString(balance1.String())
-			// _balance1divdeimals1 := new(big.Float).Quo(balance1Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals1))))
+			balance1Float, _ := new(big.Float).SetString(balance1.String())
+			_balance1divdeimals1 := new(big.Float).Quo(balance1Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals1))))
 
 			_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(price0Decimal))))
-			// _price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(price1Decimal))))
+			_price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(price1Decimal))))
 
-			//
-			// 其中一个代币的价格*余额*2
 			_token0Volume := new(big.Float).Mul(_balance0divdeimals0, _price0divUsdDecimals)
+			_token1Volume := new(big.Float).Mul(_balance1divdeimals1, _price1divUsdDecimals)
 
-			_tvlUSD := new(big.Float).Mul(_token0Volume, big.NewFloat(2))
+			_tvlUSD := new(big.Float).Add(_token0Volume, _token1Volume)
 
 			pool.Liquidity = _tvlUSD.String()
 			pool.TvlUSD = _tvlUSD.String()
@@ -363,15 +315,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			yield24hFloat, _ := yield24h.Float64()
 			pool.Yield24h = fmt.Sprintf("%f", yield24hFloat)
 
-			rand.Seed(time.Now().UnixNano())
-
-			// if strings.Compare(pool.TvlUSD, "0") == 0 {
-			// 	pool.Volume = "0"
-			// } else {
-			// 	volumeFloat, _ := yield24h.Quo(yield24h, big.NewFloat(0.015)).Float64()
-			// 	pool.Volume = fmt.Sprintf("%f", volumeFloat)
-			// }
-
 			mu.Unlock()
 
 			poolChan <- pool
@@ -388,23 +331,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	for pool := range poolChan {
 		pools = append(pools, pool)
 	}
-
-	// Update the data slice with processed pools
-	// poolVolumesMap, err := eventSonexPoolSwapModel.SummarizePoolVolumes(ctx, req.ChainId, true)
-	// if err != nil {
-	// 	logx.Errorf("[refreshCache]: SummarizePoolVolumes error: %s", err)
-	// 	return nil, err
-	// }
-
-	// for _, pool := range pools {
-	// 	poolVolume, ok := poolVolumesMap[pool.Address]
-	// 	if ok {
-	// 		token0, _ := module_sonex.NewTokenValue(poolVolume.Amount0, 18, module_sonex.WithPrice(pool.Token0Price.Price, pool.Token0Price.Decimals))
-	// 		token1, _ := module_sonex.NewTokenValue(poolVolume.Amount1, 18, module_sonex.WithPrice(pool.Token1Price.Price, pool.Token1Price.Decimals))
-	// 		tokenPair := module_sonex.NewTokenPair(token0, token1)
-	// 		pool.Volume = tokenPair.Value()
-	// 	}
-	// }
 
 	// sort pool tvl
 	sort.SliceStable(pools, func(i, j int) bool {
