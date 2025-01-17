@@ -94,6 +94,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/galxetgid",
+				Handler: sonex.SonexGalxeTgidHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/pools",
 				Handler: sonex.SonexPoolListHandler(serverCtx),
 			},

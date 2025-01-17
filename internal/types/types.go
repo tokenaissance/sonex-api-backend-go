@@ -145,6 +145,14 @@ type GalxeSwapResponse struct {
 	IsSwapOrNot bool `json:"isSwapOrNot"`
 }
 
+type GalxeTgIdRequest struct {
+	Tgid int64 `form:"tgid"`
+}
+
+type GalxeTgIdResponse struct {
+	IsPlayedOrNot bool `json:"isPlayedOrNot"`
+}
+
 type Invested struct {
 	InvestedAmount0 string `json:"investedAmount0"`
 	InvestedAmount1 string `json:"investedAmount1"`
