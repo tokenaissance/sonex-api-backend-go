@@ -61,7 +61,10 @@ func RewardClaimedCallback(conf config.Config, chainId int64, tx *node_caller.Tr
 		retry.Delay(time.Second*5),
 		retry.DelayType(retry.FixedDelay),
 		retry.Attempts(0),
-		retry.OnRetry(func(n uint, err error) { retrys += 1 }),
+		retry.OnRetry(func(n uint, err error) {
+			retrys += 1
+			logx.Infof("RewardClaimedCallback error: %s", err)
+		}),
 	)
 	if err != nil {
 		logx.Errorf("RewardClaimedCallback error: %s", err)

@@ -20,7 +20,7 @@ type (
 		withSession(session sqlx.Session) EventPreDepositWithdrawnModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, wastrAmount string, vastrAmount string, timestamp int64) error
 		SummarizeTotalByChainId(ctx context.Context, chainId int64) (map[string]UserTotalWithdrawn, error)
-		SummarizeTotalByChainIdUserToken(ctx context.Context, chainId int64, user string) (*big.Int, error)
+		SummarizeTotalByChainIdUser(ctx context.Context, chainId int64, user string) (*big.Int, *big.Int, error)
 	}
 
 	customEventPreDepositWithdrawnModel struct {
@@ -89,13 +89,21 @@ func (m *customEventPreDepositWithdrawnModel) SummarizeTotalByChainId(ctx contex
 	return result, nil
 }
 
-func (m *customEventPreDepositWithdrawnModel) SummarizeTotalByChainIdUserToken(ctx context.Context, chainId int64, user string) (*big.Int, error) {
-	query := fmt.Sprintf("SELECT COALESCE(SUM(event_wastr_amount::NUMERIC),0) + COALESCE(SUM(event_vastr_amount::NUMERIC),0) FROM %s WHERE chain_id = $1 AND event_user = $2", m.table)
-	var resp string
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user)
-	if err != nil {
-		return nil, err
+func (m *customEventPreDepositWithdrawnModel) SummarizeTotalByChainIdUser(ctx context.Context, chainId int64, user string) (*big.Int, *big.Int, error) {
+	query := fmt.Sprintf("SELECT COALESCE(SUM(event_wastr_amount::NUMERIC),0)::VARCHAR AS wastr, COALESCE(SUM(event_vastr_amount::NUMERIC),0)::VARCHAR AS vastr FROM %s WHERE chain_id = $1 AND event_user = $2", m.table)
+	var resp struct {
+		WASTR string `db:"wastr"`
+		VASTR string `db:"vastr"`
 	}
-	value, _ := new(big.Int).SetString(resp, 10)
-	return value, nil
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, user)
+	switch err {
+	case nil:
+	case sqlx.ErrNotFound:
+		return nil, nil, ErrNotFound
+	default:
+		return nil, nil, err
+	}
+	wastr, _ := new(big.Int).SetString(resp.WASTR, 10)
+	vastr, _ := new(big.Int).SetString(resp.VASTR, 10)
+	return wastr, vastr, nil
 }

@@ -76,8 +76,37 @@ func TestBatchGetPositions(t *testing.T) {
 	caller, _ := NewStaticCaller(c)
 	positions, err := caller.BatchGetPositions(
 		context.Background(), 1946,
-		common.HexToAddress("0x8e4D565832783738A0560688CA1A8A1c131a636B"),
-		[]*big.Int{big.NewInt(17)},
+		common.HexToAddress(c.GetSonexConfig(1946).PositionManager),
+		[]*big.Int{big.NewInt(8)},
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for _, position := range positions {
+		amount0, amount1 := position.Amounts()
+		unclaimedFee0, unclaimedFee1 := position.UnclaimedFees()
+		fmt.Printf(
+			"Pool: %s Token ID: %s\nTickLower: %s TickUpper:%s CurrentTick: %s\nToken0: %s Amount0: %s UnclaimedFee0: %s\nToken1: %s Amount1: %s UnclaimedFee1: %s\n",
+			position.Pool.Address,
+			position.TokenId.String(),
+			position.TickLower.String(), position.TickUpper.String(), position.Pool.Slot0.Tick.String(),
+			position.Token0.Hex(), amount0.String(), unclaimedFee0.String(),
+			position.Token1.Hex(), amount1.String(), unclaimedFee1.String(),
+		)
+	}
+}
+
+func TestBatchGetPositionMap(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
+
+	caller, _ := NewStaticCaller(c)
+	positions, err := caller.BatchGetPositionMap(
+		context.Background(), 1946,
+		common.HexToAddress(c.GetSonexConfig(1946).PositionManager),
+		[]*big.Int{big.NewInt(8), big.NewInt(238)},
 	)
 	if err != nil {
 		t.Error(err)

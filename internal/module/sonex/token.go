@@ -68,6 +68,10 @@ func (ta *TokenAmount) AmountWithoutDecimals() string {
 
 // SetAmount 设置数量
 func (ta *TokenAmount) SetAmount(amount string) error {
+	// fix empty amount
+	if amount == "" {
+		amount = "0"
+	}
 	if _, ok := new(big.Float).SetString(amount); !ok {
 		return fmt.Errorf("invalid amount format: %s", amount)
 	}
@@ -122,6 +126,10 @@ func (tp *TokenPrice) Decimals() int {
 
 // SetPrice 设置价格
 func (tp *TokenPrice) SetPrice(price string) error {
+	// TODO 临时处理
+	if price == "" {
+		price = "0"
+	}
 	if _, ok := new(big.Float).SetString(price); !ok {
 		return fmt.Errorf("invalid price format: %s", price)
 	}

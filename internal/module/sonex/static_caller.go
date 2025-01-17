@@ -434,3 +434,194 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 
 	return positions, nil
 }
+
+func (staticCaller *StaticCaller) BatchGetPositionMap(ctx context.Context, chainId int64, positionManager common.Address, tokenIds []*big.Int) (map[int64]*Position, error) {
+	chain := staticCaller.c.GetChainConfig(chainId)
+	if chain == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+	if chain.Multicall == "" || !common.IsHexAddress(chain.Multicall) {
+		return nil, fmt.Errorf("%s", "Invalid multicall contract")
+	}
+
+	nodeCaller, err := node_caller.NewNodeCaller(*chain)
+	if err != nil {
+		return nil, err
+	}
+	multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+	if err != nil {
+		return nil, err
+	}
+	positionManagerABI, err := abi.JSON(strings.NewReader(uniswap_v3.NonfungiblePositionManagerABI))
+	if err != nil {
+		return nil, err
+	}
+	uniswapV3PoolABI, err := abi.JSON(strings.NewReader(uniswap_v3.UniswapV3PoolABI))
+	if err != nil {
+		return nil, err
+	}
+	var multicallResults []contract_common.Multicall3Result
+
+	// Get positions
+	callDatas := []contract_common.Multicall3Call3{}
+	data, err := positionManagerABI.Pack("factory")
+	if err != nil {
+		return nil, err
+	}
+	callDatas = append(callDatas, contract_common.Multicall3Call3{
+		Target:       positionManager,
+		AllowFailure: true,
+		CallData:     data,
+	})
+	for _, tokenId := range tokenIds {
+		positionsData, err := positionManagerABI.Pack("positions", tokenId)
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       positionManager,
+			AllowFailure: true,
+			CallData:     positionsData,
+		})
+
+		ownerOfData, err := positionManagerABI.Pack("ownerOf", tokenId)
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       positionManager,
+			AllowFailure: true,
+			CallData:     ownerOfData,
+		})
+	}
+	data, err = multicallABI.Pack("aggregate3", callDatas)
+	if err != nil {
+		return nil, err
+	}
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &multicallResults)
+	if err != nil {
+		return nil, err
+	}
+	multicallResult := multicallResults[0]
+	if !multicallResult.Success {
+		_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+		return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", errMsg))
+	}
+	var factory common.Address
+	err = positionManagerABI.UnpackIntoInterface(&factory, "factory", multicallResult.ReturnData)
+	if err != nil {
+		return nil, err
+	}
+
+	positions := make([]*Position, 0)
+	fieldNumber := 2
+	for i, tokenId := range tokenIds {
+		multicallResult := multicallResults[i*fieldNumber+1]
+		if !multicallResult.Success {
+			continue
+		}
+		var position Position
+		err = positionManagerABI.UnpackIntoInterface(&position, "positions", multicallResult.ReturnData)
+		if err != nil {
+			continue
+		}
+
+		multicallResult = multicallResults[i*fieldNumber+2]
+		if !multicallResult.Success {
+			continue
+		}
+		var owner common.Address
+		err = positionManagerABI.UnpackIntoInterface(&owner, "ownerOf", multicallResult.ReturnData)
+		if err != nil {
+			continue
+		}
+
+		position.Factory = factory
+		position.Owner = owner
+		position.TokenId = tokenId
+		positions = append(positions, &position)
+	}
+
+	// Get pool
+	poolMap := map[string]*Pool{}
+	callDatas = []contract_common.Multicall3Call3{}
+	for _, position := range positions {
+		poolAddress := ComputePoolAddress(position.Factory, position.Token0, position.Token1, position.Fee)
+		poolMap[poolAddress.Hex()] = nil
+
+		ticksData, err := uniswapV3PoolABI.Pack("ticks", position.TickLower)
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       poolAddress,
+			AllowFailure: true,
+			CallData:     ticksData,
+		})
+
+		ticksData, err = uniswapV3PoolABI.Pack("ticks", position.TickUpper)
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call3{
+			Target:       poolAddress,
+			AllowFailure: true,
+			CallData:     ticksData,
+		})
+	}
+	data, err = multicallABI.Pack("aggregate3", callDatas)
+	if err != nil {
+		return nil, err
+	}
+	err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &multicallResults)
+	if err != nil {
+		return nil, err
+	}
+
+	poolAddresses := []common.Address{}
+	for key := range poolMap {
+		poolAddresses = append(poolAddresses, common.HexToAddress(key))
+	}
+	pools, err := staticCaller.BatchGetPools(ctx, chainId, poolAddresses)
+	if err != nil {
+		return nil, err
+	}
+	for i, pool := range pools {
+		poolMap[pool.Address.Hex()] = pools[i]
+	}
+	for i, position := range positions {
+		poolAddress := ComputePoolAddress(position.Factory, position.Token0, position.Token1, position.Fee)
+		position.Pool = poolMap[poolAddress.Hex()]
+
+		multicallResult := multicallResults[i*2]
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", errMsg, position.TokenId.String()))
+		}
+		var lowerTick Tick
+		err = uniswapV3PoolABI.UnpackIntoInterface(&lowerTick, "ticks", multicallResult.ReturnData)
+		if err != nil {
+			return nil, err
+		}
+		position.LowerTick = &lowerTick
+
+		multicallResult = multicallResults[i*2+1]
+		if !multicallResult.Success {
+			_, errMsg := lib_common.DecodeRevert(multicallResult.ReturnData)
+			return nil, fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s, token id: %s", errMsg, position.TokenId.String()))
+		}
+		var upperTick Tick
+		err = uniswapV3PoolABI.UnpackIntoInterface(&upperTick, "ticks", multicallResult.ReturnData)
+		if err != nil {
+			return nil, err
+		}
+		position.UpperTick = &upperTick
+	}
+
+	positionMap := map[int64]*Position{}
+	for _, position := range positions {
+		tokenId := position.TokenId.Int64()
+		positionMap[tokenId] = position
+	}
+	return positionMap, nil
+}

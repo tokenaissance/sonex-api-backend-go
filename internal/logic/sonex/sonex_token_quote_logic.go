@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sync"
 
@@ -44,13 +45,22 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
 
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+
 	fromAddress := common.HexToAddress(req.From)
 	toAddress := common.HexToAddress(req.To)
-	stablecoinAddress := common.HexToAddress(l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
-
+	stablecoinAddress := common.HexToAddress(chainConf.USD)
+	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if sonexConf == nil {
+		logx.Errorf("[SonexTokenQuote]:Miss sonex configure")
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
+	}
 	if amount.Cmp(big.NewInt(0)) <= 0 {
 		return &types.TokenQuoteResponse{
-			SwapRouter: l.svcCtx.Config.GetSonexConfig(req.ChainId).SwapRouter,
+			SwapRouter: sonexConf.SwapRouter,
 			BestRouter: &types.TokenQuoteResponse_Router{
 				TokenIn:                     common.HexToAddress(req.From).Hex(),
 				TokenOut:                    common.HexToAddress(req.To).Hex(),
@@ -217,6 +227,11 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			case "OUTPUT":
 				amountIn, amountOut = item.Value, amount
 			}
+			priceImpactValue := math.Abs(item.PriceImpact)
+			priceImpact := fmt.Sprintf("%f%%", priceImpactValue*100)
+			if priceImpactValue > 1 {
+				priceImpact = "> 100%"
+			}
 			return types.TokenQuoteResponse_Router{
 				TokenIn:                     fromAddress.Hex(),
 				TokenOut:                    toAddress.Hex(),
@@ -230,14 +245,14 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),
-				PriceImpact:                 fmt.Sprintf("%f%%", item.PriceImpact*100),
+				PriceImpact:                 priceImpact,
 				FeeRate:                     fmt.Sprintf("%.2f%%", item.FeeRate*100),
 			}
 		}).
 		ToSlice(&routerResult)
 
 	return &types.TokenQuoteResponse{
-		SwapRouter: l.svcCtx.Config.GetSonexConfig(req.ChainId).SwapRouter,
+		SwapRouter: sonexConf.SwapRouter,
 		BestRouter: bestRouterResult,
 		Routers:    routerResult,
 	}, nil

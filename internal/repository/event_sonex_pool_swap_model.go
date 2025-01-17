@@ -39,6 +39,9 @@ type (
 		PageQueryMergeByWalletWithExtra(ctx context.Context, wallet string, pageSize int64, pageIndex int64) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
+
+		SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error)
+
 		SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
@@ -225,6 +228,57 @@ func NewEventSonexPoolSwapModel(conn sqlx.SqlConn) EventSonexPoolSwapModel {
 	return &customEventSonexPoolSwapModel{
 		defaultEventSonexPoolSwapModel: newEventSonexPoolSwapModel(conn),
 	}
+}
+
+/*
+type VolumeDetailsRecord struct {
+	VolumeRatio float64 `json:"volumeratio"` // 跟过去一天的volume最后一组24H的相比，相比的,是增加还是减弱 ,保留两位精度
+	VolumeUsd   float64 `json:"volumeusd"`
+	CreatedAt   int64   `json:"createdat"`
+}
+*/
+
+func (m *customEventSonexPoolSwapModel) SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error) {
+	items := 1 - offsetDay*24 // 每天24条, -1 作为偏移量
+
+	query := fmt.Sprintf(`
+SELECT
+concat(
+        CASE WHEN amount0 is null or last_amount0 is null THEN 0
+            ELSE ((amount0 - last_amount0) / last_amount0 )::FLOAT
+        END
+    ) AS volumeratio,
+	  t.volumeusd,
+    t.createdat
+    
+FROM (
+    SELECT
+        t2.amount0,
+        LAG(t2.amount0) OVER () AS last_amount0,
+        COALESCE(t2.amount0 / 1000000000000000000 * t4.price / 1000000, '0')  AS volumeusd, 
+        EXTRACT (EPOCH FROM now() + concat(t1.day,'hours')::interval ) ::INT  AS createdat
+    FROM (
+        SELECT generate_series(0,%v,-1) AS day
+    ) AS t1
+    LEFT JOIN (
+        SELECT
+            EXTRACT(EPOCH FROM tx_at-now())::INTEGER / 3600 AS day,
+            SUM(ABS(event_amount0::NUMERIC)) AS amount0
+        FROM event_sonex_pool_swap
+        WHERE extra_pool = $1 AND  tx_at < NOW()  and tx_at >= CURRENT_DATE -  %v  AND chain_id = %v
+        GROUP BY day
+    ) AS t2 ON t2.day = t1.day
+    JOIN event_sonex_factory_pool_created AS t3 ON  t3.event_pool = $1 
+    JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t4 ON t4.token_address = t3.event_token0
+    ORDER BY t1.day
+) AS t
+	`, items, offsetDay, chainId)
+	var resp []types.VolumeDetailsRecord
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, pooladdress)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
 }
 
 func (m *customEventSonexPoolSwapModel) withSession(session sqlx.Session) EventSonexPoolSwapModel {

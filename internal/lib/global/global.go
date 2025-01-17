@@ -307,7 +307,7 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 			ToSlice(&pools)
 	}
 
-	prices, err := cacher.QuoteExactInput(ctx, pools, fromAddress, toAddress, amountIn, maxLength, 100)
+	prices, err := cacher.QuoteExactInput(ctx, pools, fromAddress, toAddress, amountIn, maxLength, 200)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -480,7 +480,7 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 			ToSlice(&pools)
 	}
 
-	prices, err := cacher.QuoteExactOutput(ctx, pools, fromAddress, toAddress, amountOut, maxLength, 100)
+	prices, err := cacher.QuoteExactOutput(ctx, pools, fromAddress, toAddress, amountOut, maxLength, 200)
 	if err != nil {
 		return nil, nil, err
 	}

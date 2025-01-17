@@ -54,9 +54,35 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 
 			conn := repository.NewConn(conf.PostgreSQL.DateSource())
 			err = conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
+				preDepositPointsRecordModel := repository.NewPreDepositPointsRecordModel(sqlx.NewSqlConnFromSession(s))
 				pointsValue := points.Int64()
 
-				preDepositPointsRecordModel := repository.NewPreDepositPointsRecordModel(sqlx.NewSqlConnFromSession(s))
+				logx.Errorf("TxHash %s, Index %d, User %s, Amount %s, Points: %d",
+					event.Raw.TxHash.Hex(),
+					int64(event.Raw.Index),
+					event.User.Hex(),
+					event.Amount.String(),
+					pointsValue,
+				)
+
+				userPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainIdUser(ctx, chainId, event.User.Hex())
+				if err != nil {
+					return err
+				}
+				if userPoints+pointsValue > preDepositConf.PointsUserCap {
+					pointsValue = preDepositConf.PointsUserCap - userPoints
+				}
+				logx.Errorf("TxHash %s, Index %d, User %s, Cap %d, User points %d, Points %d",
+					event.Raw.TxHash.Hex(),
+					int64(event.Raw.Index),
+					event.User.Hex(),
+					preDepositConf.PointsUserCap,
+					userPoints,
+					pointsValue,
+				)
+				if pointsValue <= 0 {
+					return nil
+				}
 				totalPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainId(ctx, chainId)
 				if err != nil {
 					return err
@@ -64,21 +90,39 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				if totalPoints+pointsValue > preDepositConf.PointsTotalCap {
 					pointsValue = preDepositConf.PointsTotalCap - totalPoints
 				}
-				userPoints, err := preDepositPointsRecordModel.SummarizeTotalByChainId(ctx, chainId)
-				if err != nil {
-					return err
-				}
-				if userPoints+pointsValue > preDepositConf.PointsUserCap {
-					pointsValue = preDepositConf.PointsUserCap - userPoints
-				}
+				logx.Errorf("TxHash %s, Index %d, User %s, Cap %d, Total points %d, Points %d",
+					event.Raw.TxHash.Hex(),
+					int64(event.Raw.Index),
+					event.User.Hex(),
+					preDepositConf.PointsTotalCap,
+					totalPoints,
+					pointsValue,
+				)
 				if pointsValue <= 0 {
 					return nil
 				}
+
+				// If existed, not handle
+				_, err = preDepositPointsRecordModel.FindOneByChainIdTxHashTxIndex(ctx, chainId, event.Raw.TxHash.Hex(), int64(event.Raw.Index))
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+					logx.Errorf("TxHash %s, Index %d, User %s, %s",
+						event.Raw.TxHash.Hex(),
+						int64(event.Raw.Index),
+						event.User.Hex(),
+						"Existed",
+					)
+					return nil
+				default:
+					return err
+				}
+
 				id, err := global.NewId()
 				if err != nil {
 					return err
 				}
-				err = preDepositPointsRecordModel.New(ctx, id, chainId, event.User.Hex(), pointsValue, event.Raw.TxHash.Hex(), int64(event.Raw.TxIndex), tx.TxAt)
+				err = preDepositPointsRecordModel.New(ctx, id, chainId, event.User.Hex(), pointsValue, event.Raw.TxHash.Hex(), int64(event.Raw.Index), tx.TxAt)
 				if err != nil {
 					return err
 				}
@@ -96,10 +140,10 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 					Points:   pointsValue,
 					Source:   pointsServiceConf.Source,
 					SubTitle: preDepositConf.SubTitle,
-					ExtraId:  fmt.Sprintf("%s-%d", event.Raw.TxHash.Hex(), event.Raw.TxIndex),
+					ExtraId:  fmt.Sprintf("%s-%d", event.Raw.TxHash.Hex(), event.Raw.Index),
 					Extra: map[string]string{
 						"txHash":    event.Raw.TxHash.Hex(),
-						"txIndex":   strconv.FormatUint(uint64(event.Raw.TxIndex), 10),
+						"txIndex":   strconv.FormatUint(uint64(event.Raw.Index), 10),
 						"user":      event.User.Hex(),
 						"token":     event.Token.Hex(),
 						"amount":    event.Amount.String(),
@@ -115,10 +159,22 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 				url := fmt.Sprintf("%s/extra/increase_points", strings.TrimRight(pointsServiceConf.Host, "/"))
 				resp, err := httpc.Do(context.Background(), http.MethodPost, url, req)
 				if err != nil {
-					return err
+					logx.Errorf("TxHash %s, Index %d, User %s, %s",
+						event.Raw.TxHash.Hex(),
+						int64(event.Raw.Index),
+						event.User.Hex(),
+						fmt.Sprintf("Increase points failed: %s %v", err, req),
+					)
+					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s %v", err, req))
 				}
 				if resp.StatusCode != http.StatusOK {
-					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s", resp.Status))
+					logx.Errorf("TxHash %s, Index %d, User %s, %s",
+						event.Raw.TxHash.Hex(),
+						int64(event.Raw.Index),
+						event.User.Hex(),
+						fmt.Sprintf("Increase points failed: %s %v", resp.Status, req),
+					)
+					return fmt.Errorf("%s", fmt.Sprintf("Increase points failed: %s %v", resp.Status, req))
 				}
 
 				return nil
@@ -134,7 +190,7 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 		retry.Attempts(0),
 		retry.OnRetry(func(n uint, err error) {
 			retrys += 1
-			logx.Infof("%s", err)
+			logx.Infof("StakedCallback error: %s", err)
 		}),
 	)
 	if err != nil {

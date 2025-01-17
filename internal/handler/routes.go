@@ -109,6 +109,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/pools/kline/:address",
+				Handler: sonex.SonexPoolInfoKlineRequestHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/pools/position/:tokenId",
 				Handler: sonex.SonexPositionHandler(serverCtx),
 			},

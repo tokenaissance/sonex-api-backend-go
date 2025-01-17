@@ -152,3 +152,21 @@ func Test_GetTransactionByPoolAddress(t *testing.T) {
 	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
 
 }
+
+func Test_SummarizePoolInfoKineData(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	// records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
+
+	records, err := model.SummarizePoolInfoKineData(context.Background(), 1946, "0x1da5AA5a75932FcD2c44517C46CCF936f20Cb8D0", 10)
+	if err != nil {
+		t.Error(err)
+	}
+	for i, v := range records {
+		t.Logf("i:%v v is %#v", i, v)
+	}
+	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
+
+}

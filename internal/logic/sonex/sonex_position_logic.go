@@ -14,9 +14,11 @@ import (
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -68,33 +70,10 @@ func (l *SonexPositionLogic) SonexPosition(req *types.PositionRequest) (resp *Po
 }
 
 func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.PositionRequest, cacher cache.ICache, cacheKey string, cachedResp *PositionResponseWrapper) (resp *PositionResponseWrapper, err error) {
-	lockKey := fmt.Sprintf("lock:%s", cacheKey)
-
-	var lockAcquired bool
-
-	if cachedResp != nil {
-		success, err := cacher.SetNX(lockKey, "locked", 30*time.Second)
-		if err != nil {
-			return cachedResp, nil
-		}
-
-		if !success {
-			return cachedResp, nil
-		}
-
-		lockAcquired = true
-	}
-
 	// Continue with the rest of the logic using transferItem, collectedItem, and positions
 	response := &PositionResponseWrapper{
 		PositionResponse: &types.PositionResponse{},
 	}
-
-	defer func() {
-		if lockAcquired {
-			cacher.Del(lockKey)
-		}
-	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
@@ -106,7 +85,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 	itemM, err := transferModel.GetTransferEvent(ctx, req.ChainId, req.TokenId, true)
 	if err != nil {
-		logx.Errorf("[SonexPosition] GetTransferEvent error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache GetTransferEvent error: %s", err.Error())
 		return nil, err
 	}
 
@@ -122,7 +101,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		if err == nil {
 			err = cacher.Set(cacheKey, responseBytes, 0)
 			if err != nil {
-				l.Error("Failed to cache response", err)
+				l.Error("[SonexPosition]:refreshCache Failed to cache response", err)
 			}
 		}
 		return response, nil
@@ -130,18 +109,23 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 
 	// Task1: Get positions
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
+	chainConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if chainConf == nil {
+		logx.Errorf("[SonexPosition]:refreshCache Miss chain configure")
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
 	positions, err := caller.BatchGetPositions(
 		ctx,
 		req.ChainId,
-		common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager),
+		common.HexToAddress(chainConf.PositionManager),
 		[]*big.Int{big.NewInt(req.TokenId)},
 	)
 	if err != nil {
-		logx.Errorf("[SonexPosition] BatchGetPositions error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache BatchGetPositions error: %s", err.Error())
 		return nil, err
 	}
 	if len(positions) == 0 {
-		logx.Errorf("[SonexPosition] BatchGetPositions error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache BatchGetPositions error, positions length is 0")
 		return nil, err
 	}
 	innerPosition := positions[0]
@@ -149,26 +133,24 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	// cache tokenid
 	err = l.cacheAddressTokenIds(ctx, innerPosition.Owner.Hex(), req.TokenId)
 	if err != nil {
-		logx.Errorf("[SonexPosition] cacheAddressTokenIds error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache cacheAddressTokenIds error: %s", err.Error())
 	}
 
-	// del cache
-	if !ok {
-		ps := NewSonexPositionsLogic(ctx, l.svcCtx)
-		err = ps.DelCache(innerPosition.Owner.Hex())
-		if err != nil {
-			logx.Errorf("[SonexPosition] NewSonexPositionsLogic DelCache error: %s", err.Error())
-		}
+	// if /position is query, del cache anyway
+	ps := NewSonexPositionsLogic(ctx, l.svcCtx)
+	err = ps.DelCache(innerPosition.Owner.Hex())
+	if err != nil {
+		logx.Errorf("[SonexPosition]:refreshCache NewSonexPositionsLogic DelCache error: %s", err.Error())
 	}
 
 	token0, err := global.GetToken(req.ChainId, innerPosition.Token0.Hex())
 	if err != nil {
-		logx.Errorf("[SonexPosition] GetToken error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache GetToken error: %s", err.Error())
 		return nil, err
 	}
 	token1, err := global.GetToken(req.ChainId, innerPosition.Token1.Hex())
 	if err != nil {
-		logx.Errorf("[SonexPosition] GetToken error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache GetToken error: %s", err.Error())
 		return nil, err
 	}
 
@@ -200,25 +182,25 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		defer wg.Done()
 		collectEventsMap, err := collectModel.GetCollectEvents(ctx, req.ChainId, []int64{req.TokenId})
 		if err != nil {
-			logx.Errorf("[SonexPosition] GetCollectEvents error: %s", err.Error())
+			logx.Errorf("[SonexPosition]:refreshCache GetCollectEvents error: %s", err.Error())
 			results <- sonexPositionResult{err: err}
 			return
 		}
 		decreaseLiquidityEventsMap, err := decreaseLiquidityModel.GetDecreaseLiquidityEvents(ctx, req.ChainId, []int64{req.TokenId})
 		if err != nil {
-			logx.Errorf("[SonexPosition] GetDecreaseLiquidityEvents error: %s", err.Error())
+			logx.Errorf("[SonexPosition]:refreshCache GetDecreaseLiquidityEvents error: %s", err.Error())
 			results <- sonexPositionResult{err: err}
 			return
 		}
 		tokenValue0, err := sonex.NewTokenValue("0", position.Pool.Token0.Decimals)
 		if err != nil {
-			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			logx.Errorf("[SonexPosition]:refreshCache NewTokenValue error: %s", err.Error())
 			results <- sonexPositionResult{err: err}
 			return
 		}
 		tokenValue1, err := sonex.NewTokenValue("0", position.Pool.Token1.Decimals)
 		if err != nil {
-			logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+			logx.Errorf("[SonexPosition]:refreshCache NewTokenValue error: %s", err.Error())
 			results <- sonexPositionResult{err: err}
 			return
 		}
@@ -268,7 +250,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		defer wg.Done()
 		prices, err := tokenPriceModel.GetCurrentPrices([]string{innerPosition.Token0.Hex(), innerPosition.Token1.Hex()})
 		if err != nil {
-			logx.Errorf("[SonexPosition] GetCurrentPrices error: %s", err.Error())
+			logx.Errorf("[SonexPosition]:refreshCache GetCurrentPrices error: %s", err.Error())
 			results <- sonexPositionResult{prices: nil, err: err}
 			return
 		}
@@ -282,7 +264,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 
 	for result := range results {
 		if result.err != nil {
-			logx.Errorf("[SonexPosition] waitgroup error: %s", result.err.Error())
+			logx.Errorf("[SonexPosition]:refreshCache waitgroup error: %s", result.err.Error())
 			return nil, result.err
 		}
 		if result.prices != nil {
@@ -301,7 +283,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 
 	position, err = l.fillPosition(ctx, req, position, innerPosition, prices)
 	if err != nil {
-		logx.Errorf("[SonexPosition] fillPosition error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:refreshCache fillPosition error: %s", err.Error())
 		return nil, err
 	}
 
@@ -311,7 +293,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	if err == nil {
 		err = cacher.Set(cacheKey, responseBytes, 0)
 		if err != nil {
-			l.Error("Failed to cache response", err)
+			l.Error("[SonexPosition]:refreshCache Failed to cache response", err)
 		}
 	}
 
@@ -375,13 +357,54 @@ func (l *SonexPositionLogic) fillPosition(
 				}
 			}
 
-			logx.Errorf("[convertPosition] Token price not found from db for address: %s", tokenAddr.Hex())
-			bestPrice, _, _, err := global.GetPrices(ctx, nil, req.ChainId, tokenAddr.Hex(), true, 2)
-			if err == nil && bestPrice != nil {
-				p := new(big.Float).SetInt(bestPrice.Value)
-				resultChan <- priceResult{index: index, price: p, priceString: bestPrice.Value.String()}
+			logx.Errorf("[SonexPosition]:fillPosition Token price not found from db for address: %s", tokenAddr.Hex())
+			t, err := global.GetToken(chainConf.ChainId, token.Hex())
+			if err != nil {
+				resultChan <- priceResult{err: err}
 				return
 			}
+			usdToken, err := global.GetToken(chainConf.ChainId, common.HexToAddress(chainConf.USD).Hex())
+			if err != nil || usdToken == nil {
+				resultChan <- priceResult{err: fmt.Errorf("Get USD token[%s] failed: %s", chainConf.USD, err)}
+				return
+			}
+			usdAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
+			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(t.Decimals-usdToken.Decimals), nil))
+			successed, failed, err := global.QuoteExactInput(context.Background(), nil, chainConf.ChainId, t.Address, chainConf.USD, amountIn, 2)
+			if err != nil {
+				resultChan <- priceResult{err: fmt.Errorf("Get %s[%s] price failed: %s", t.Address, t.Symbol, err)}
+				return
+			}
+			var bestPrice *cache.Price
+			if len(successed) > 0 {
+				price := linq.From(successed).
+					WhereT(func(item cache.Price) bool {
+						return item.Value.Cmp(common.Big0) > 0
+					}).
+					OrderByT(func(item cache.Price) float64 {
+						return item.PriceImpact
+					}).First().(cache.Price)
+				price.Value = new(big.Int).Mul(price.Value, usdAccuracy)
+				bestPrice = &price
+			}
+			if bestPrice == nil {
+				failedList := []string{}
+				for _, item := range failed {
+					pools := []string{}
+					for _, pool := range item.Pools {
+						pools = append(pools, fmt.Sprintf("%s:%s[%d]", pool.Token0, pool.Token1, pool.Fee))
+					}
+					failedList = append(failedList, fmt.Sprintf("Path: %s, Error: %s", strings.Join(pools, " -> "), item.Err.Error()))
+				}
+				resultChan <- priceResult{err: fmt.Errorf("Get %s[%s] best price failed,Success count: %d, Failed list: %v", t.Address, t.Symbol, len(successed), failedList)}
+				return
+			}
+			// bestPrice, _, _, err := global.GetPrices(ctx, nil, req.ChainId, tokenAddr.Hex(), true, 2)
+			// if err == nil && bestPrice != nil {
+			// 	p := new(big.Float).SetInt(bestPrice.Value)
+			// 	resultChan <- priceResult{index: index, price: p, priceString: bestPrice.Value.String()}
+			// 	return
+			// }
 			resultChan <- priceResult{
 				index: index,
 				err:   fmt.Errorf("failed to get price for token%d", index),
@@ -397,8 +420,14 @@ func (l *SonexPositionLogic) fillPosition(
 
 	// Collect results
 	for result := range resultChan {
-		if result.err == nil {
+		if result.err != nil {
+			logx.Errorf("[SonexPosition]:fillPosition resultChan error: %s", result.err.Error())
+			return nil, result.err
+		}
+		if result.price != nil {
 			prices[result.index] = result.price
+		}
+		if result.priceString != "" {
 			priceStrings[result.index] = result.priceString
 		}
 	}
@@ -430,8 +459,16 @@ func (l *SonexPositionLogic) fillPosition(
 	position.UnclaimedFee1, _ = unclaimedFee1.Float64()
 
 	// 3. claimableFees
-	claimableToken0Value, _ := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
-	claimableToken1Value, _ := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	claimableToken0Value, err := sonex.NewTokenValue(unclaimedFee0.String(), position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, unclaimedFee0: %s", err.Error(), unclaimedFee0.String())
+		return nil, err
+	}
+	claimableToken1Value, err := sonex.NewTokenValue(unclaimedFee1.String(), position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
+	if err != nil {
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, unclaimedFee1: %s", err.Error(), unclaimedFee1.String())
+		return nil, err
+	}
 	claimableTokenPair := sonex.NewTokenPair(claimableToken0Value, claimableToken1Value)
 	position.ClaimableFees, _ = claimableTokenPair.ValueFloat64()
 
@@ -442,12 +479,12 @@ func (l *SonexPositionLogic) fillPosition(
 	collectedPair := position.TotalCollected
 	token0Value, err = sonex.NewTokenValue(collectedPair.Token0.Amount, position.Pool.Token0.Decimals, sonex.WithPrice(price0String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, collectedPair: %v", err.Error(), collectedPair)
 		return nil, err
 	}
 	token1Value, err = sonex.NewTokenValue(collectedPair.Token1.Amount, position.Pool.Token1.Decimals, sonex.WithPrice(price1String, usdDecimals))
 	if err != nil {
-		logx.Errorf("[SonexPosition] NewTokenValue error: %s", err.Error())
+		logx.Errorf("[SonexPosition]:fillPosition NewTokenValue error: %s, collectedPair: %v", err.Error(), collectedPair)
 		return nil, err
 	}
 	tokenPair = sonex.NewTokenPair(token0Value, token1Value)
@@ -490,7 +527,7 @@ func (l *SonexPositionLogic) cacheAddressTokenIds(ctx context.Context, address s
 	}
 
 	// set expire time
-	err = cacher.Expire(cacheKey, 30*time.Second)
+	err = cacher.Expire(cacheKey, 5*time.Minute)
 	if err != nil {
 		return err
 	}
