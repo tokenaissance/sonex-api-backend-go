@@ -533,3 +533,48 @@ CREATE UNIQUE INDEX "token_index_chain_id_address" ON "public"."token" USING btr
 -- Primary Key structure for table token
 -- ----------------------------
 ALTER TABLE "public"."token" ADD CONSTRAINT "token_pkey" PRIMARY KEY ("id");
+
+
+/*
+ Navicat Premium Dump SQL
+
+ Source Server         : test001
+ Source Server Type    : PostgreSQL
+ Source Server Version : 160004 (160004)
+ Source Host           : 10.1.84.8:5432
+ Source Catalog        : sonex-api-backend-go
+ Source Schema         : public
+
+ Target Server Type    : PostgreSQL
+ Target Server Version : 160004 (160004)
+ File Encoding         : 65001
+
+ Date: 17/01/2025 21:18:04
+*/
+
+
+-- ----------------------------
+-- Table structure for sonex_pool_tvl_record
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."sonex_pool_tvl_record";
+CREATE TABLE "public"."sonex_pool_tvl_record" (
+  "id" int8 NOT NULL DEFAULT nextval('sonex_token_price_record_id'::regclass),
+  "pool_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tvl" varchar COLLATE "pg_catalog"."default" NOT NULL,
+  "created_at" timestamp(6) NOT NULL,
+  "usd_decimals" int8 NOT NULL
+)
+;
+ALTER TABLE "public"."sonex_pool_tvl_record" OWNER TO "apibackendgo";
+
+-- ----------------------------
+-- Indexes structure for table sonex_pool_tvl_record
+-- ----------------------------
+CREATE INDEX "token_address_idx_copy1" ON "public"."sonex_pool_tvl_record" USING btree (
+  "pool_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table sonex_pool_tvl_record
+-- ----------------------------
+ALTER TABLE "public"."sonex_pool_tvl_record" ADD CONSTRAINT "sonex_token_price_record_copy1_pkey" PRIMARY KEY ("id");
