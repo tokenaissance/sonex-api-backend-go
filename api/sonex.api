@@ -536,6 +536,7 @@ type GalxeTgIdRequest {
 
 type GalxeTgIdResponse {
 	IsPlayedOrNot    bool                `json:"isPlayedOrNot"`
+}
 
 // pool info address
 type SonexPoolInfoKlineRequest {
