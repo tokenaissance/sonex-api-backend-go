@@ -2,8 +2,6 @@ package svc
 
 import (
 	"sonex_api_backend_go/internal/config"
-
-	_ "github.com/lib/pq"
 )
 
 type ServiceContext struct {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sonex_api_backend_go/internal/types"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -21,8 +22,9 @@ type (
 		eventSonexPositionManagerTransferModel
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
-		GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error)
-		GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error)
+		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
+		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
+		GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
 	}
 
 	customEventSonexPositionManagerTransferModel struct {
@@ -48,8 +50,8 @@ func (m *customEventSonexPositionManagerTransferModel) New(ctx context.Context, 
 }
 
 type transferData struct {
-	EventFrom        sql.NullString `db:"eventFrom"`
-	EventTo          sql.NullString `db:"eventTo"`
+	EventFrom        sql.NullString `db:"event_from"`
+	EventTo          sql.NullString `db:"event_to"`
 	TokenId          sql.NullInt64  `db:"event_token_id"`
 	Pool             sql.NullString `db:"extra_pool"`
 	PoolId           sql.NullInt64  `db:"pool_id"`
@@ -69,9 +71,43 @@ type transferData struct {
 	EventTickLower   sql.NullString `db:"event_tick_lower"`
 	EventTickUpper   sql.NullString `db:"event_tick_upper"`
 	TxAt             sql.NullTime   `db:"tx_at"`
+	IsBurnt          sql.NullBool   `db:"is_burnt"`
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, address string) ([]*types.Position, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error) {
+	// 过滤掉当前地址已经销毁的 position，以及当前地址操作通过钱包转移的 position，交易记录的 event_from 是当前地址
+	query := fmt.Sprintf(`
+		SELECT * FROM %s
+		WHERE
+			chain_id = $1 AND event_to = $2
+		 	AND event_token_id NOT IN (
+				SELECT event_token_id FROM %s WHERE chain_id = $1 AND event_from = $2
+			)
+	`, m.table, m.table)
+	var resp []*EventSonexPositionManagerTransfer
+	address = common.HexToAddress(address).Hex()
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// GetTransferEvents get transfer events by address
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error) {
+	address = common.HexToAddress(address).Hex()
+
+	// query valid events by address
+	validEvents, err := m.GetValidTransferEvents(ctx, chainId, address)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenIds := make([]int64, 0)
+	for _, event := range validEvents {
+		tokenIds = append(tokenIds, event.EventTokenId)
+	}
+
 	var items []*transferData
 
 	query := fmt.Sprintf(`
@@ -87,22 +123,26 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 			m.event_tick_upper,
 			token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
 			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional,
-			CASE WHEN m.extra_pool IS NULL THEN true ELSE false END AS is_closed
-		FROM %s t
+			CASE WHEN EXISTS (
+				SELECT 1 
+				FROM %[1]s 
+				WHERE event_token_id = t.event_token_id
+				AND event_to = '0x0000000000000000000000000000000000000000' AND chain_id = $2
+			) THEN true ELSE false END AS is_burnt
+		FROM %[1]s t
 		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		JOIN sonex_token token0 ON f.event_token0 = token0.address
 		JOIN sonex_token token1 ON f.event_token1 = token1.address
-		WHERE t.event_from = $1 OR t.event_to = $1
+		WHERE t.event_token_id = ANY($1) AND t.chain_id = $2
 	`, m.table)
 
-	err := m.conn.QueryRowsCtx(ctx, &items, query, common.HexToAddress(address).Hex())
+	err = m.conn.QueryRowsCtx(ctx, &items, query, tokenIds, chainId)
 	if err != nil {
 		return nil, err
 	}
 
 	positionMap := make(map[int64]*types.Position)
-	closedPositionMap := make(map[int64]int64)
 
 	for _, item := range items {
 		if item.Pool.Valid {
@@ -117,7 +157,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 			}
 
 			position := &types.Position{
-				Origin:      item.EventFrom.String,
+				Origin:      address,
 				TokenID:     item.TokenId.Int64,
 				TickUpper:   item.EventTickUpper.String,
 				TickLower:   item.EventTickLower.String,
@@ -145,21 +185,22 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 					},
 					Token0Price: "0",
 					Token1Price: "0",
-					Tick:        "0",
 					Volume:      "0",
 				},
-				IsClosed: false,
+				IsBurnt: item.IsBurnt.Bool,
+			}
+
+			// 当前地址是否持仓该 position
+			// 持仓：当前地址是 position 的 Owner，且 position 未被销毁
+			// 未持仓：当前地址是 Creator 但不是 Owner，或者 position 已被销毁
+			position.IsHolding = (strings.ToLower(item.EventTo.String) == strings.ToLower(address)) && !item.IsBurnt.Bool
+
+			// if filterBurnt and position is burnt, skip
+			if filterBurnt && position.IsBurnt {
+				continue
 			}
 
 			positionMap[item.TokenId.Int64] = position
-		} else {
-			closedPositionMap[item.TokenId.Int64] = item.TokenId.Int64
-		}
-	}
-
-	for tokenId := range closedPositionMap {
-		if position, exists := positionMap[tokenId]; exists {
-			position.IsClosed = true
 		}
 	}
 
@@ -171,7 +212,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 	return events, nil
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx context.Context, eventTokenId int64) (*types.Position, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error) {
 	var item transferData
 
 	query := fmt.Sprintf(`
@@ -186,19 +227,36 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			m.event_tick_lower,
 			m.event_tick_upper,
 			token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
-			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional
-		FROM %s t
+			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional,
+			CASE WHEN EXISTS (
+				SELECT 1 
+				FROM %[1]s 
+				WHERE event_token_id = $1 
+				AND event_to = '0x0000000000000000000000000000000000000000'
+				AND chain_id = $3
+			) THEN true ELSE false END AS is_burnt
+		FROM %[1]s t
 		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		JOIN sonex_token token0 ON f.event_token0 = token0.address
 		JOIN sonex_token token1 ON f.event_token1 = token1.address
-		WHERE t.event_token_id = $1 AND t.event_from = $2
+		WHERE t.event_token_id = $1 AND t.event_from = $2 AND t.chain_id = $3
 		LIMIT 1
 	`, m.table)
 
-	err := m.conn.QueryRowCtx(ctx, &item, query, eventTokenId, "0x0000000000000000000000000000000000000000")
-	if err != nil {
+	err := m.conn.QueryRowCtx(ctx, &item, query, eventTokenId, "0x0000000000000000000000000000000000000000", chainId)
+	switch err {
+	case sqlx.ErrNotFound:
+		return map[int64]*types.Position{}, nil
+	case nil:
+	default:
 		return nil, err
+	}
+	result := make(map[int64]*types.Position)
+
+	// return empty map if filterBurnt and the position is burnt
+	if filterBurnt && item.IsBurnt.Bool {
+		return result, nil
 	}
 
 	var token0Additional, token1Additional map[string]interface{}
@@ -215,7 +273,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 		TokenID:     item.TokenId.Int64,
 		TickUpper:   item.EventTickUpper.String,
 		TickLower:   item.EventTickLower.String,
-		Origin:      item.EventFrom.String,
+		Origin:      item.EventTo.String,
 		PositionAge: positionAge,
 		Pool: types.Token_PoolDetail{
 			ID:        item.PoolId.Int64,
@@ -240,10 +298,11 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			},
 			Token0Price: "0",
 			Token1Price: "0",
-			Tick:        "0",
 			Volume:      "0",
 		},
+		IsBurnt: item.IsBurnt.Bool,
 	}
+	result[eventTokenId] = position
 
-	return position, nil
+	return result, nil
 }

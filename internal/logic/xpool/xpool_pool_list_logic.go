@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"sonex_api_backend_go/internal/lib/cache"
-	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/module/xpool"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -101,7 +100,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
 		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
-		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserAddress(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
+		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUser(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
 		if err != nil {
 			return nil, err
 		}
@@ -123,14 +122,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	if req.OrderBy != "" {
 		switch req.OrderBy {
 		case "hot":
-			linq.From(resp.List).OrderByDescendingT(func(item types.FarmPoolData) int64 {
-				return item.JoinNum
-			}).ToSlice(&resp.List)
 		case "apr":
-			linq.From(resp.List).OrderByDescendingT(func(item types.FarmPoolData) lib_common.CompareableBigInt {
-				apr, _ := new(big.Int).SetString(item.APR, 10)
-				return lib_common.CompareableBigInt{Value: apr}
-			}).ToSlice(&resp.List)
 		}
 	}
 
@@ -176,7 +168,7 @@ func (l *XpoolPoolListLogic) getResponse(req *types.XpoolPoolListRequest) (resp 
 		return nil, err
 	}
 
-	prices, err := tokenPriceModel.GetAllLatestHistoryPrices()
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
 	if err != nil {
 		return nil, err
 	}

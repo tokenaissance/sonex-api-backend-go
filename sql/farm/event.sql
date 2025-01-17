@@ -1,12 +1,29 @@
+/*
+ Navicat Premium Dump SQL
+
+ Source Server         : postgres
+ Source Server Type    : PostgreSQL
+ Source Server Version : 160003 (160003)
+ Source Host           : 10.0.0.150:5432
+ Source Catalog        : sonex_api_backend
+ Source Schema         : public
+
+ Target Server Type    : PostgreSQL
+ Target Server Version : 160003 (160003)
+ File Encoding         : 65001
+
+ Date: 03/01/2025 17:43:50
+*/
+
+
 -- ----------------------------
 -- Table structure for event_farm_incentive_created
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_farm_incentive_created";
--- 创建质押池事件表
 CREATE TABLE "public"."event_farm_incentive_created" (
-  "id" int8 PRIMARY KEY,
-  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
   "block_number" int8 NOT NULL,
   "tx_index" int8 NOT NULL,
@@ -18,159 +35,19 @@ CREATE TABLE "public"."event_farm_incentive_created" (
   "event_reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_start_time" int8 NOT NULL,
-  "event_end_time" int8 NOT NULL,
-  "event_refundee" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_reward" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_incentive_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("tx_hash","chain_id")
-);
-
-DROP SEQUENCE IF EXISTS "event_farm_incentive_created_id_seq";
-CREATE SEQUENCE IF NOT EXISTS "event_farm_incentive_created_id_seq" START WITH 1;
-ALTER TABLE "public"."event_farm_incentive_created" ALTER COLUMN id SET DEFAULT nextval('event_farm_incentive_created_id_seq');
-
+  "event_weight" int8 NOT NULL,
+  "event_incentive_id" int8 NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_incentive_created" OWNER TO "postgres";
 COMMENT ON TABLE "public"."event_farm_incentive_created" IS '创建质押池事件表';
-COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_reward_token" IS '奖励代币地址';
-COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_pool" IS 'V3池子地址';
-COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_start_time" IS '质押池开放时间';
-COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_end_time" IS '质押池结束时间';
-COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_refundee" IS '剩余奖励代币接收地址';
-COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_reward" IS '奖励代币数量';
-COMMENT ON COLUMN "public"."event_farm_incentive_created"."event_incentive_id" IS '质押池ID';
-
-
--- ----------------------------
--- Table structure for event_farm_token_staked
--- ----------------------------
-DROP TABLE IF EXISTS "public"."event_farm_token_staked";
--- 质押事件表
-CREATE TABLE "public"."event_farm_token_staked" (
-  "id" int8 PRIMARY KEY,
-  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "chain_id" int8 NOT NULL,
-  "block_number" int8 NOT NULL,
-  "tx_index" int8 NOT NULL,
-  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "tx_at" timestamptz(6) NOT NULL,
-  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_token_id" int8 NOT NULL,
-  "event_incentive_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_liquidity" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("tx_hash","chain_id")
-);
-
-DROP SEQUENCE IF EXISTS "event_farm_token_staked_id_seq";
-CREATE SEQUENCE IF NOT EXISTS "event_farm_token_staked_id_seq" START WITH 1;
-ALTER TABLE "public"."event_farm_token_staked" ALTER COLUMN id SET DEFAULT nextval('event_farm_token_staked_id_seq');
-
-COMMENT ON TABLE "public"."event_farm_token_staked" IS '质押事件表';
-COMMENT ON COLUMN "public"."event_farm_token_staked"."event_token_id" IS '质押的LP Token ID';
-COMMENT ON COLUMN "public"."event_farm_token_staked"."event_liquidity" IS '质押的流动性数量';
-
-
--- ----------------------------
--- Table structure for event_farm_token_unstaked
--- ----------------------------
-DROP TABLE IF EXISTS "public"."event_farm_token_unstaked";
--- 解除质押事件表
-CREATE TABLE "public"."event_farm_token_unstaked" (
-  "id" int8 PRIMARY KEY,
-  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "chain_id" int8 NOT NULL,
-  "block_number" int8 NOT NULL,
-  "tx_index" int8 NOT NULL,
-  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "tx_at" timestamptz(6) NOT NULL,
-  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_token_id" int8 NOT NULL,
-  "event_incentive_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("tx_hash","chain_id")
-);
-
-DROP SEQUENCE IF EXISTS "event_farm_token_unstaked_id_seq";
-CREATE SEQUENCE IF NOT EXISTS "event_farm_token_unstaked_id_seq" START WITH 1;
-ALTER TABLE "public"."event_farm_token_unstaked" ALTER COLUMN id SET DEFAULT nextval('event_farm_token_unstaked_id_seq');
-
-COMMENT ON TABLE "public"."event_farm_token_unstaked" IS '解除质押事件表';
-COMMENT ON COLUMN "public"."event_farm_token_unstaked"."event_token_id" IS '解除质押的LP Token ID';
-
-
--- ----------------------------
--- Table structure for event_farm_reward_claimed
--- ----------------------------
-DROP TABLE IF EXISTS "public"."event_farm_reward_claimed";
--- 领取奖励事件表
-CREATE TABLE "public"."event_farm_reward_claimed" (
-  "id" int8 PRIMARY KEY,
-  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "chain_id" int8 NOT NULL,
-  "block_number" int8 NOT NULL,
-  "tx_index" int8 NOT NULL,
-  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "tx_at" timestamptz(6) NOT NULL,
-  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_to" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_reward" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("tx_hash","chain_id")
-);
-
-DROP SEQUENCE IF EXISTS "event_farm_reward_claimed_id_seq";
-CREATE SEQUENCE IF NOT EXISTS "event_farm_reward_claimed_id_seq" START WITH 1;
-ALTER TABLE "public"."event_farm_reward_claimed" ALTER COLUMN id SET DEFAULT nextval('event_farm_reward_claimed_id_seq');
-
-COMMENT ON TABLE "public"."event_farm_reward_claimed" IS '领取奖励事件表';
-COMMENT ON COLUMN "public"."event_farm_reward_claimed"."event_to" IS '接收奖励的地址';
-COMMENT ON COLUMN "public"."event_farm_reward_claimed"."event_reward" IS '提取的奖励数量';
-
-
--- ----------------------------
--- Table structure for event_farm_deposit_transferred
--- ----------------------------
-DROP TABLE IF EXISTS "public"."event_farm_deposit_transferred";
--- LP Token所有权转移事件表
-CREATE TABLE "public"."event_farm_deposit_transferred" (
-  "id" int8 PRIMARY KEY,
-  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "chain_id" int8 NOT NULL,
-  "block_number" int8 NOT NULL,
-  "tx_index" int8 NOT NULL,
-  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "tx_at" timestamptz(6) NOT NULL,
-  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_token_id" int8 NOT NULL,
-  "event_old_owner" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_new_owner" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("tx_hash","chain_id")
-);
-
-DROP SEQUENCE IF EXISTS "event_farm_deposit_transferred_id_seq";
-CREATE SEQUENCE IF NOT EXISTS "event_farm_deposit_transferred_id_seq" START WITH 1;
-ALTER TABLE "public"."event_farm_deposit_transferred" ALTER COLUMN id SET DEFAULT nextval('event_farm_deposit_transferred_id_seq');
-
-COMMENT ON TABLE "public"."event_farm_deposit_transferred" IS 'LP Token所有权转移事件表';
-COMMENT ON COLUMN "public"."event_farm_deposit_transferred"."event_token_id" IS 'LP Token ID';
-COMMENT ON COLUMN "public"."event_farm_deposit_transferred"."event_old_owner" IS '原Owner地址';
-COMMENT ON COLUMN "public"."event_farm_deposit_transferred"."event_new_owner" IS '新Owner地址';
 
 -- ----------------------------
 -- Table structure for event_farm_incentive_ended
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_farm_incentive_ended";
--- 质押池结束事件表
 CREATE TABLE "public"."event_farm_incentive_ended" (
-  "id" int8 PRIMARY KEY,
+  "id" int8 NOT NULL,
   "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "chain_id" int8 NOT NULL,
@@ -181,20 +58,375 @@ CREATE TABLE "public"."event_farm_incentive_ended" (
   "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_incentive_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_refund" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  UNIQUE ("tx_hash","chain_id")
+  "event_incentive_id" int8 NOT NULL,
+  "event_refund" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_incentive_ended" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_incentive_ended" IS '质押池结束事件表';
+
+-- ----------------------------
+-- Table structure for event_farm_paused
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_paused";
+CREATE TABLE "public"."event_farm_paused" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_account" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_paused" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_paused" IS '质押事件表';
+
+-- ----------------------------
+-- Table structure for event_farm_reward_claimed
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_reward_claimed";
+CREATE TABLE "public"."event_farm_reward_claimed" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_incentive_id" int8 NOT NULL,
+  "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_reward_claimed" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_reward_claimed" IS '领取奖励事件表';
+
+-- ----------------------------
+-- Table structure for event_farm_reward_rate_updated
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_reward_rate_updated";
+CREATE TABLE "public"."event_farm_reward_rate_updated" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_old_rate" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_new_rate" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_timestamp" int8 NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_reward_rate_updated" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_reward_rate_updated" IS '领取奖励事件表';
+
+-- ----------------------------
+-- Table structure for event_farm_token_deposited
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_token_deposited";
+CREATE TABLE "public"."event_farm_token_deposited" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_token_id" int8 NOT NULL,
+  "event_owner" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_token_deposited" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_token_deposited" IS 'LP Token所有权转移事件表';
+
+-- ----------------------------
+-- Table structure for event_farm_token_staked
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_token_staked";
+CREATE TABLE "public"."event_farm_token_staked" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_token_id" int8 NOT NULL,
+  "event_incentive_id" int8 NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_token_staked" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_token_staked" IS '质押事件表';
+
+-- ----------------------------
+-- Table structure for event_farm_token_unstaked
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_token_unstaked";
+CREATE TABLE "public"."event_farm_token_unstaked" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_token_id" int8 NOT NULL,
+  "event_incentive_id" int8 NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_token_unstaked" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_token_unstaked" IS '解除质押事件表';
+
+-- ----------------------------
+-- Table structure for event_farm_unpaused
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_unpaused";
+CREATE TABLE "public"."event_farm_unpaused" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamptz(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_account" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+)
+;
+ALTER TABLE "public"."event_farm_unpaused" OWNER TO "postgres";
+COMMENT ON TABLE "public"."event_farm_unpaused" IS '质押事件表';
+
+-- ----------------------------
+-- Indexes structure for table event_farm_incentive_created
+-- ----------------------------
+CREATE UNIQUE INDEX "event_farm_incentive_created_chain_id_incentive_id" ON "public"."event_farm_incentive_created" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "event_farm_incentive_created_index_chain_id_tx_hash" ON "public"."event_farm_incentive_created" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 
-DROP SEQUENCE IF EXISTS "event_farm_incentive_ended_id_seq";
-CREATE SEQUENCE IF NOT EXISTS "event_farm_incentive_ended_id_seq" START WITH 1;
-ALTER TABLE "public"."event_farm_incentive_ended" ALTER COLUMN id SET DEFAULT nextval('event_farm_incentive_ended_id_seq');
+-- ----------------------------
+-- Uniques structure for table event_farm_incentive_created
+-- ----------------------------
+ALTER TABLE "public"."event_farm_incentive_created" ADD CONSTRAINT "event_farm_incentive_created_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
 
-COMMENT ON TABLE "public"."event_farm_incentive_ended" IS '质押池结束事件表';
-COMMENT ON COLUMN "public"."event_farm_incentive_ended"."event_incentive_id" IS '质押池ID';
-COMMENT ON COLUMN "public"."event_farm_incentive_ended"."event_refund" IS '剩余奖励数量';
+-- ----------------------------
+-- Primary Key structure for table event_farm_incentive_created
+-- ----------------------------
+ALTER TABLE "public"."event_farm_incentive_created" ADD CONSTRAINT "event_farm_incentive_created_pkey" PRIMARY KEY ("id");
 
+-- ----------------------------
+-- Indexes structure for table event_farm_incentive_ended
+-- ----------------------------
+CREATE UNIQUE INDEX "event_farm_incentive_ended_index_chain_id_incentive_id" ON "public"."event_farm_incentive_ended" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "event_farm_incentive_ended_index_chain_id_tx_hash" ON "public"."event_farm_incentive_ended" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 
+-- ----------------------------
+-- Uniques structure for table event_farm_incentive_ended
+-- ----------------------------
+ALTER TABLE "public"."event_farm_incentive_ended" ADD CONSTRAINT "event_farm_incentive_ended_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
 
+-- ----------------------------
+-- Primary Key structure for table event_farm_incentive_ended
+-- ----------------------------
+ALTER TABLE "public"."event_farm_incentive_ended" ADD CONSTRAINT "event_farm_incentive_ended_pkey" PRIMARY KEY ("id");
 
+-- ----------------------------
+-- Indexes structure for table event_farm_paused
+-- ----------------------------
+CREATE UNIQUE INDEX "event_farm_paused_index_chain_id_tx_hash" ON "public"."event_farm_paused" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 
+-- ----------------------------
+-- Uniques structure for table event_farm_paused
+-- ----------------------------
+ALTER TABLE "public"."event_farm_paused" ADD CONSTRAINT "event_farm_token_staked_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_paused
+-- ----------------------------
+ALTER TABLE "public"."event_farm_paused" ADD CONSTRAINT "event_farm_token_staked_copy1_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_farm_reward_claimed
+-- ----------------------------
+CREATE INDEX "event_farm_reward_claimed_index_chain_id_incentive_id" ON "public"."event_farm_reward_claimed" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "event_farm_reward_claimed_index_chain_id_tx_hash" ON "public"."event_farm_reward_claimed" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "event_farm_reward_claimed_index_chain_id_user" ON "public"."event_farm_reward_claimed" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_user" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_farm_reward_claimed
+-- ----------------------------
+ALTER TABLE "public"."event_farm_reward_claimed" ADD CONSTRAINT "event_farm_reward_claimed_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_reward_claimed
+-- ----------------------------
+ALTER TABLE "public"."event_farm_reward_claimed" ADD CONSTRAINT "event_farm_reward_claimed_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_farm_reward_rate_updated
+-- ----------------------------
+CREATE UNIQUE INDEX "event_farm_reward_rate_updated_index_chain_id_tx_hash" ON "public"."event_farm_reward_rate_updated" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_farm_reward_rate_updated
+-- ----------------------------
+ALTER TABLE "public"."event_farm_reward_rate_updated" ADD CONSTRAINT "event_farm_reward_claimed_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_reward_rate_updated
+-- ----------------------------
+ALTER TABLE "public"."event_farm_reward_rate_updated" ADD CONSTRAINT "event_farm_reward_claimed_copy1_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_farm_token_deposited
+-- ----------------------------
+CREATE INDEX "event_farm_token_deposited_index_chain_id_owner" ON "public"."event_farm_token_deposited" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_owner" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "event_farm_token_deposited_index_chain_id_token_id" ON "public"."event_farm_token_deposited" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "event_farm_token_deposited_index_chain_id_tx_hash" ON "public"."event_farm_token_deposited" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_farm_token_deposited
+-- ----------------------------
+ALTER TABLE "public"."event_farm_token_deposited" ADD CONSTRAINT "event_farm_deposit_transferred_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_token_deposited
+-- ----------------------------
+ALTER TABLE "public"."event_farm_token_deposited" ADD CONSTRAINT "event_farm_deposit_transferred_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_farm_token_staked
+-- ----------------------------
+CREATE INDEX "event_farm_token_staked_index_chain_id_incentive_id" ON "public"."event_farm_token_staked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE INDEX "event_farm_token_staked_index_chain_id_token_id" ON "public"."event_farm_token_staked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "event_farm_token_staked_index_chain_id_tx_hash" ON "public"."event_farm_token_staked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_farm_token_staked
+-- ----------------------------
+ALTER TABLE "public"."event_farm_token_staked" ADD CONSTRAINT "event_farm_token_staked_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_token_staked
+-- ----------------------------
+ALTER TABLE "public"."event_farm_token_staked" ADD CONSTRAINT "event_farm_token_staked_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_farm_token_unstaked
+-- ----------------------------
+CREATE INDEX "event_farm_token_unstaked_index_chain_id_incentive_id" ON "public"."event_farm_token_unstaked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE INDEX "event_farm_token_unstaked_index_chain_id_token_id" ON "public"."event_farm_token_unstaked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "event_farm_token_unstaked_index_chain_id_tx_hash" ON "public"."event_farm_token_unstaked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_farm_token_unstaked
+-- ----------------------------
+ALTER TABLE "public"."event_farm_token_unstaked" ADD CONSTRAINT "event_farm_token_unstaked_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_token_unstaked
+-- ----------------------------
+ALTER TABLE "public"."event_farm_token_unstaked" ADD CONSTRAINT "event_farm_token_unstaked_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table event_farm_unpaused
+-- ----------------------------
+CREATE UNIQUE INDEX "event_farm_unpaused_index_chain_id_tx_hash" ON "public"."event_farm_unpaused" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Uniques structure for table event_farm_unpaused
+-- ----------------------------
+ALTER TABLE "public"."event_farm_unpaused" ADD CONSTRAINT "event_farm_paused_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_unpaused
+-- ----------------------------
+ALTER TABLE "public"."event_farm_unpaused" ADD CONSTRAINT "event_farm_paused_copy1_pkey" PRIMARY KEY ("id");

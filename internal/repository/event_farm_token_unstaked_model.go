@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -15,6 +16,7 @@ type (
 	EventFarmTokenUnstakedModel interface {
 		eventFarmTokenUnstakedModel
 		withSession(session sqlx.Session) EventFarmTokenUnstakedModel
+		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenUnstaked, error)
 	}
 
@@ -32,6 +34,12 @@ func NewEventFarmTokenUnstakedModel(conn sqlx.SqlConn) EventFarmTokenUnstakedMod
 
 func (m *customEventFarmTokenUnstakedModel) withSession(session sqlx.Session) EventFarmTokenUnstakedModel {
 	return NewEventFarmTokenUnstakedModel(sqlx.NewSqlConnFromSession(session))
+}
+
+func (m *customEventFarmTokenUnstakedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventFarmTokenUnstakedRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, tokenId, incentiveId)
+	return err
 }
 
 func (m *customEventFarmTokenUnstakedModel) FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenUnstaked, error) {

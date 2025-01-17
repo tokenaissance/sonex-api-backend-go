@@ -1,15 +1,9 @@
 package sonex
 
 import (
-	"context"
-	"fmt"
 	"math"
 	"math/big"
-	"sonex_api_backend_go/internal/config"
-	"sonex_api_backend_go/internal/repository"
-	"sonex_api_backend_go/internal/types"
 
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -349,23 +343,9 @@ func Pow(z *big.Float, w *big.Float) *big.Float {
 
 }
 
-func FilterPoolsByWriteList(ctx context.Context, conf config.Config, chainId int64) ([]common.Address, error) {
-	sonexConf := conf.GetSonexConfig(chainId)
-	if sonexConf == nil {
-		return nil, fmt.Errorf("%s", "Miss sonex configure")
-	}
-
-	conn := repository.NewConn(conf.PostgreSQL.DateSource())
-	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	sonexTokenModel := repository.NewSonexTokenModel(conn)
-	tokens, _, err := sonexTokenModel.GetTokens(ctx, &types.TokenListRequest{Take: 99999999, Page: 1, ChainId: chainId}, sonexConf.PositionManager)
-	if err != nil {
-		return nil, err
-	}
-	var tokenAddresses []string
-	linq.From(tokens).SelectT(func(item *types.Token_TokenDetail) string { return item.Address }).ToSlice(&tokenAddresses)
-	_ = eventSonexFactoryPoolCreatedModel
-	_ = tokens
-
-	return nil, nil
+func CalculatePriceImpact(oldSqrtPriceX96 *big.Int, newSqrtPriceX96 *big.Int) *big.Float {
+	Q192 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 192))
+	oldPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(oldSqrtPriceX96), new(big.Float).SetInt(oldSqrtPriceX96)), Q192)
+	newPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(newSqrtPriceX96), new(big.Float).SetInt(newSqrtPriceX96)), Q192)
+	return new(big.Float).Quo(new(big.Float).Sub(newPrice, oldPrice), oldPrice)
 }

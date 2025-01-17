@@ -29,9 +29,7 @@ Chains:
     Multicall: 0x18546Af844DFA77c5268FF8A51941E11692FED25
     Tokens:
       - Address: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
-        IsStableCoin: true
       - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
-        IsStableCoin: true
     ETH:
       Name: Ethereum
       Symbol: ETH
@@ -44,10 +42,10 @@ Sonexes:
     PositionManager: 0xf40E978fFae0068C11EaC966cD5DBFA6d13622DD
     Quoter: 0xe16D716b6F2AeB757FacDd0DC68a8A43A1bA88d9
     SwapRouter: 0xfC53A3f62B4EfaC7b64CEE3Ae1dD944262b27Ff1
-Xpools:
-  - ChainId: 1946
-    Factory: 0x8faF01E5Ef1b2B5E239672a83847AD8dc5BF80de
-    BlockTime: 2000
-Farms:
-  - ChainId: 1946
-    Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322
+# Xpools:
+#   - ChainId: 1946
+#     Factory: 0x8faF01E5Ef1b2B5E239672a83847AD8dc5BF80de
+#     BlockTime: 2000
+# Farms:
+#   - ChainId: 1946
+#     Staker: 0x2df9845414Dc2c1fD5cC9baFc21Fd90bD3454322

@@ -19,7 +19,7 @@ import (
 var (
 	eventFarmRewardClaimedFieldNames          = builder.RawFieldNames(&EventFarmRewardClaimed{}, true)
 	eventFarmRewardClaimedRows                = strings.Join(eventFarmRewardClaimedFieldNames, ",")
-	eventFarmRewardClaimedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventFarmRewardClaimedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
+	eventFarmRewardClaimedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventFarmRewardClaimedFieldNames, "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
 	eventFarmRewardClaimedRowsWithPlaceHolder = builder.PostgreSqlJoin(stringx.Remove(eventFarmRewardClaimedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"))
 )
 
@@ -27,6 +27,7 @@ type (
 	eventFarmRewardClaimedModel interface {
 		Insert(ctx context.Context, data *EventFarmRewardClaimed) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventFarmRewardClaimed, error)
+		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventFarmRewardClaimed, error)
 		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmRewardClaimed, error)
 		Update(ctx context.Context, data *EventFarmRewardClaimed) error
 		Delete(ctx context.Context, id int64) error
@@ -38,19 +39,20 @@ type (
 	}
 
 	EventFarmRewardClaimed struct {
-		Id          int64     `db:"id"`
-		CreatedAt   time.Time `db:"created_at"`
-		UpdatedAt   time.Time `db:"updated_at"`
-		ChainId     int64     `db:"chain_id"`
-		BlockNumber int64     `db:"block_number"`
-		TxIndex     int64     `db:"tx_index"`
-		TxHash      string    `db:"tx_hash"`
-		TxAt        time.Time `db:"tx_at"`
-		From        string    `db:"from_"`
-		To          string    `db:"to_"`
-		Value       string    `db:"value"`
-		EventTo     string    `db:"event_to"`     // 接收奖励的地址
-		EventReward string    `db:"event_reward"` // 提取的奖励数量
+		Id               int64     `db:"id"`
+		CreatedAt        time.Time `db:"created_at"`
+		UpdatedAt        time.Time `db:"updated_at"`
+		ChainId          int64     `db:"chain_id"`
+		BlockNumber      int64     `db:"block_number"`
+		TxIndex          int64     `db:"tx_index"`
+		TxHash           string    `db:"tx_hash"`
+		TxAt             time.Time `db:"tx_at"`
+		From             string    `db:"from_"`
+		To               string    `db:"to_"`
+		Value            string    `db:"value"`
+		EventUser        string    `db:"event_user"`
+		EventIncentiveId int64     `db:"event_incentive_id"`
+		EventAmount      string    `db:"event_amount"`
 	}
 )
 
@@ -81,6 +83,20 @@ func (m *defaultEventFarmRewardClaimedModel) FindOne(ctx context.Context, id int
 	}
 }
 
+func (m *defaultEventFarmRewardClaimedModel) FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventFarmRewardClaimed, error) {
+	var resp EventFarmRewardClaimed
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 and tx_index = $3 limit 1", eventFarmRewardClaimedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash, txIndex)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
 func (m *defaultEventFarmRewardClaimedModel) FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmRewardClaimed, error) {
 	var resp EventFarmRewardClaimed
 	query := fmt.Sprintf("select %s from %s where tx_hash = $1 and chain_id = $2 limit 1", eventFarmRewardClaimedRows, m.table)
@@ -96,14 +112,14 @@ func (m *defaultEventFarmRewardClaimedModel) FindOneByTxHashChainId(ctx context.
 }
 
 func (m *defaultEventFarmRewardClaimedModel) Insert(ctx context.Context, data *EventFarmRewardClaimed) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)", m.table, eventFarmRewardClaimedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventTo, data.EventReward)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, eventFarmRewardClaimedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventIncentiveId, data.EventAmount)
 	return ret, err
 }
 
 func (m *defaultEventFarmRewardClaimedModel) Update(ctx context.Context, newData *EventFarmRewardClaimed) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventFarmRewardClaimedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventTo, newData.EventReward)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventUser, newData.EventIncentiveId, newData.EventAmount)
 	return err
 }
 

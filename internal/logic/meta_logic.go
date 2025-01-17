@@ -39,6 +39,7 @@ func (l *MetaLogic) Meta(req *types.MetaRequest) (resp *types.MetaResponse, err 
 			UpdatedAt: chainScannerPrograss.UpdatedAt.String(),
 		})
 	}
+
 	return &types.MetaResponse{
 		ChainSyncPrograsses: chainScannerPrograsses,
 	}, nil

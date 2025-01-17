@@ -1,13 +1,14 @@
 syntax = "v1"
 
+import "./common.api"
+
 /*
 Sonex Module
 */
 type TokenPriceRequest {
-	ChainId        int64   `form:"chainId"`
-	Token          string  `form:"token"`
-	IsCache        bool    `form:"isCache,optional,default=true"`
-	WantStablecoin *string `form:"wantStablecoin,optional"`
+	ChainRequest
+	Token   string `form:"token"`
+	IsCache bool   `form:"isCache,optional,default=true"`
 }
 
 type TokenPriceResponse_Price_Pool {
@@ -29,12 +30,11 @@ type TokenPriceResponse {
 }
 
 type TokenQuoteRequest {
-	ChainId    int64  `form:"chainId"`
-	From       string `form:"from"`
-	To         string `form:"to"`
-	Type       string `form:"type,options=INPUT|OUTPUT"`
-	Amount     string `form:"amount"`
-	Stablecoin string `form:"stablecoin"`
+	ChainRequest
+	From   string `form:"from"`
+	To     string `form:"to"`
+	Type   string `form:"type,options=INPUT|OUTPUT"`
+	Amount string `form:"amount"`
 }
 
 type TokenQuoteResponse_Router_Pool {
@@ -58,6 +58,7 @@ type TokenQuoteResponse_Router {
 	InitializedTicksCrossedList []int64                          `json:"initializedTicksCrossedList"`
 	GasEstimate                 string                           `json:"gasEstimate"`
 	PriceImpact                 string                           `json:"priceImpact"`
+	FeeRate                     string                           `json:"feeRate"`
 }
 
 type TokenQuoteResponse {
@@ -66,11 +67,40 @@ type TokenQuoteResponse {
 	Routers    []TokenQuoteResponse_Router `json:"routers"`
 }
 
-type TokenListRequest {
-	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946,optional"`
+type TransactionsRequest {
+	ChainRequest
+	Wallet  string `form:"walletAddress,optional"`
+	Pool    string `form:"poolAddress,optional"`
+	Token0  string `form:"token0Address,optional"`
+	Token1  string `form:"token1Address,optional"`
+	OrderBy string `form:"orderBy,optional,options=ASC|DESC,default=DESC"`
+	PageRequest
+}
+
+type TransactionsResponse_Transaction {
+	Wallet     string `json:"wallet"`
+	Pools      []Pool `json:"pools"`
+	TxHash     string `json:"txHash"`
+	TxAt       int64  `json:"txAt"`
+	From       string `json:"from"`
+	To         string `json:"to"`
+	FromAmount string `json:"fromAmount"`
+	ToAmount   string `json:"toAmount"`
+	ValueUSD   string `json:"valueUSD"`
+}
+
+type TokensRequest {
+	ChainRequest
+	OrderBy string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC"`
+	PageRequest
+	NoCache bool `form:"noCache,optional,default=false"`
+}
+
+type TokensResponse_Token {
+	TokenWithExtra
+	Logo   string `json:"logo"`
+	Sort   int64  `json:"sort"`
+	Hidden bool   `json:"hidden"`
 }
 
 type PaginationMeta {
@@ -82,28 +112,8 @@ type PaginationMeta {
 	HasNextPage     bool `json:"hasNextPage"`
 }
 
-type TokenListResponse {
-	Code    int                  `json:"code"`
-	Data    []*Token_TokenDetail `json:"data"`
-	Meta    *PaginationMeta      `json:"meta"`
-	Message string               `json:"message"`
-}
-
-type TokensRequest {
-	Order   string `form:"order,default=ASC"` // Sorting order, default is "ASC"
-	Page    int64  `form:"page,default=1"`    // Current page number, default is 1
-	Take    int64  `form:"take,default=10"`   // Number of items per page, default is 10
-	ChainId int64  `form:"chainId,default=1946,optional"`
-}
-
-type TokensResponse {
-	Code    int                  `json:"code"`
-	Data    []*Token_TokenDetail `json:"data"`
-	Meta    *PaginationMeta      `json:"meta"`
-	Message string               `json:"message"`
-}
-
 type SonexTokenPricesRequest {
+	ChainRequest
 	Name string `path:"name,options=you|me"`
 }
 
@@ -112,13 +122,12 @@ type SonexTokenPricesResponse {
 }
 
 type PoolsRequest {
+	ChainRequest
 	Order         string `form:"order,default=ASC"`
-	Page          int64  `form:"page,default=1"`
-	Take          int64  `form:"take,default=10"`
-	ChainId       int64  `form:"chainId,default=1946,optional"`
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
+	PageRequest
 }
 
 type Token_Social {
@@ -171,8 +180,8 @@ type PoolsResponse_Pool {
 	Liquidity          string              `json:"liquidity"`
 	Token0             PoolsResponse_Token `json:"token0"`
 	Token1             PoolsResponse_Token `json:"token1"`
-	Token0Price        string              `json:"token0Price"`
-	Token1Price        string              `json:"token1Price"`
+	Token0Price        *Token_TokenPrice   `json:"token0Price"`
+	Token1Price        *Token_TokenPrice   `json:"token1Price"`
 	Tick               string              `json:"tick"`
 	Volume             string              `json:"volume"`
 	TvlUSD             string              `json:"tvlUSD"`
@@ -185,13 +194,6 @@ type PoolsResponse_Pool {
 	StablecoinDecimals int64               `json:"decimals"`
 }
 
-type PoolsResponse {
-	Code    int                   `json:"code"`
-	Data    []*PoolsResponse_Pool `json:"data"`
-	Meta    *PaginationMeta       `json:"meta"`
-	Message string                `json:"message"`
-}
-
 type TokenTopResponse {
 	Code    int                  `json:"code"`
 	Data    []*Token_TokenDetail `json:"data"`
@@ -199,6 +201,7 @@ type TokenTopResponse {
 }
 
 type PriceComparisonResult {
+	ChainRequest
 	Comparison string  `json:"comparison"`
 	Percentage float64 `json:"percentage"`
 }
@@ -243,6 +246,31 @@ type Token_TokenInfo {
 	Decimals   int         `json:"decimals"`
 	Logo       string      `json:"logo"`
 	Additional interface{} `json:"additional"`
+}
+
+// TokenValue represents a token amount with its price information
+// - Amount: Token amount as a string with full precision integer
+// - Decimals: Token decimal places
+// - Price: Optional token price as a string with full precision
+// - PriceDecimals: Optional decimal places for the price
+//
+// When Price is present, the actual token value can be calculated as:
+// tokenValue = (Amount / 10^Decimals) * (Price / 10^PriceDecimals)
+//
+// Note: If Token_TokenPrice is not initialized, the corresponding JSON tags
+// (price and priceDecimals) will not be included in the output
+type Token_TokenValue {
+	Amount            string `json:"amount"`
+	Decimals          int    `json:"decimals"`
+	*Token_TokenPrice        // Embedded field for flat JSON output
+}
+
+// TokenPrice represents price information for a token
+// - Price: Token price as a string with full precision
+// - Decimals: Decimal places for the price
+type Token_TokenPrice {
+	Price    string `json:"price"`
+	Decimals int    `json:"priceDecimals"`
 }
 
 type NftDataResponse_Data {
@@ -303,8 +331,8 @@ type AggregatedAmounts {
 }
 
 type PositionRequest {
+	ChainRequest
 	TokenId int64 `path:"tokenId"`
-	ChainId int64 `form:"chainId,default=1946,optional"`
 }
 
 type PositionResponse {
@@ -312,6 +340,7 @@ type PositionResponse {
 }
 
 type SwapEventRequest {
+	ChainRequest
 	Order       string `form:"order,default=ASC"` // Sorting order, default is "ASC"
 	Page        int64  `form:"page,default=1"`    // Current page number, default is 1
 	Take        int64  `form:"take,default=10"`   // Number of items per page, default is 10
@@ -320,7 +349,6 @@ type SwapEventRequest {
 	Token       string `form:"token,optional"`
 	Token0      string `form:"token0,optional"`
 	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
 }
 
 type SwapEvent {
@@ -344,15 +372,14 @@ type SwapEventResponse {
 }
 
 type SwapVolumeRequest {
+	ChainRequest
 	PoolAddress string `form:"poolAddress"` // Pool address
 	Interval    string `form:"interval,optional,default=1d,options=1d|1w|1m"`
 	Address     string `form:"address,optional"`
 	Token       string `form:"token,optional"`
 	Token0      string `form:"token0,optional"`
 	Token1      string `form:"token1,optional"`
-	ChainId     int64  `form:"chainId,default=1946,optional"`
 }
-
 type SwapVolume {
 	Timestamp int64   `json:"timestamp"`
 	Value     float64 `json:"value"`
@@ -360,7 +387,6 @@ type SwapVolume {
 	Amount0   float64 `json:"amount0"`
 	Amount1   float64 `json:"amount1"`
 }
-
 type SwapVolumeResponse {
 	Volumes []SwapVolume `json:"volumes"`
 }
@@ -377,45 +403,51 @@ type PoolVolume {
 }
 
 type PositionValuesRequest {
+	ChainRequest
 	Address  string `form:"address"`
 	Interval string `form:"interval,optional,default=1d"`
-	ChainId  int64  `form:"chainId,default=1946,optional"`
 }
 
 type Position {
-	TokenID       int64            `json:"tokenId"`
-	Position      float64          `json:"position"`
-	ClaimableFees float64          `json:"claimableFees"`
-	IsClosed      bool             `json:"isClosed"`
-	TickUpper     string           `json:"tickUpper"`
-	TickLower     string           `json:"tickLower"`
-	PNL           float64          `json:"pnl"`
-	Origin        string           `json:"origin"`
-	Pool          Token_PoolDetail `json:"pool"`
-	PositionAge   int              `json:"positionAge"`
-	Amount0       float64          `json:"amount0"`
-	Amount1       float64          `json:"amount1"`
-	Price0        float64          `json:"price0"`
-	Price1        float64          `json:"price1"`
-	UnclaimedFee0 float64          `json:"unclaimedFee0"`
-	UnclaimedFee1 float64          `json:"unclaimedFee1"`
+	TokenID        int64            `json:"tokenId"`
+	Position       float64          `json:"position"`
+	ClaimableFees  float64          `json:"claimableFees"`
+	IsBurnt        bool             `json:"isBurnt"`
+	TickUpper      string           `json:"tickUpper"`
+	TickLower      string           `json:"tickLower"`
+	PNL            float64          `json:"pnl"`
+	Origin         string           `json:"origin"`
+	Pool           Token_PoolDetail `json:"pool"`
+	PositionAge    int              `json:"positionAge"`
+	UnclaimedFee0  float64          `json:"unclaimedFee0"`
+	UnclaimedFee1  float64          `json:"unclaimedFee1"`
+	TokenValue0    Token_TokenValue `json:"tokenValue0"`
+	TokenValue1    Token_TokenValue `json:"tokenValue1"`
+	IsHolding      bool             `json:"isHolding"`
+	TotalInvested  TokenValuePair   `json:"totalInvested,omitempty"`
+	TotalWithdrawn TokenValuePair   `json:"totalWithdrawn,omitempty"`
+	TotalCollected TokenValuePair   `json:"totalCollected,omitempty"`
+}
+
+type TokenValuePair {
+	Token0 Token_TokenValue `json:"token0"`
+	Token1 Token_TokenValue `json:"token1"`
 }
 
 type PositionValueRecord {
-	TimeStamp int64 `json:"timeStamp"`
+	TimeStamp     int64   `json:"timeStamp"`
 	PositionValue float64 `json:"positionValue"`
 }
 
 type PositionValuesResponse {
-	Pnl           	float64 `json:"pnl"`
-	PositionValues  []*PositionValueRecord `json:"positionValues"`
-	TotalPosition 	float64 `json:"totalPosition"`
+	Pnl            float64                `json:"pnl"`
+	PositionValues []*PositionValueRecord `json:"positionValues"`
+	TotalPosition  float64                `json:"totalPosition"`
 }
 
 type PositionsRequest {
-	Address    string `form:"address"`
-	FilterType string `form:"filterType,optional,default=none"`
-	ChainId    int64  `form:"chainId,default=1946,optional"`
+	ChainRequest
+	Address string `form:"address"`
 }
 
 type PositionsResponse {
@@ -423,17 +455,19 @@ type PositionsResponse {
 }
 
 type SonexTokenKlineRequest {
+	ChainRequest
 	Address  string `form:"address"`
 	Interval string `form:"interval,options=1h|1d|1w|1m|1y"`
 }
 
 type SonexTokenPriceRecord {
-	Id           int64  `json:"id"`
-	TokenSymbol  string `json:"tokenSymbol"`
-	TokenAddress string `json:"tokenAddress"`
-	Price        string `json:"price"`
-	CreatedAt    string `json:"createdAt"`
-	TimeStamp    int64  `json:"timeStamp"`
+	Id           int64   `json:"id"`
+	TokenSymbol  string  `json:"tokenSymbol"`
+	TokenAddress string  `json:"tokenAddress"`
+	Price        string  `json:"price"`
+	PriceUSD     float64 `json:"priceUSD"`
+	CreatedAt    string  `json:"createdAt"`
+	TimeStamp    int64   `json:"timeStamp"`
 }
 
 type SonexTokenKlineResponse {
@@ -441,13 +475,86 @@ type SonexTokenKlineResponse {
 }
 
 type PortfolioRequest {
+	ChainRequest
 	Address string `form:"address"`
-	ChainId int64  `form:"chainId,default=1946,optional"`
 }
 
 type PortfolioResponse {
-	TotalPosition 	float64 `json:"totalPosition"`
-	ClaimableFees 	float64 `json:"claimableFees"`
+	TotalPosition float64 `json:"totalPosition"`
+	ClaimableFees float64 `json:"claimableFees"`
+}
+
+type TokensInfoRequest {
+	ChainRequest
+	Address string `path:"address"`
+}
+
+type TokenInfoResponse {
+	StatusCode int64               `json:"statusCode"`
+	Token      PoolsResponse_Token `json:"token"`
+}
+
+type PoolInfoRequest {
+	ChainRequest
+	Address string `path:"address"`
+}
+
+type PoolInfoResponse {
+	StatusCode       int                 `json:"statusCode"`
+	Address          string              `json:"address"`
+	Token0           PoolsResponse_Token `json:"token0"`
+	Token1           PoolsResponse_Token `json:"token1"`
+	Token0Price      string              `json:"token0Price"`
+	Token1Price      string              `json:"token1Price"`
+	FeeTier          int64               `json:"feeTier"`
+	Liquidity        string              `json:"liquidity"`
+	VolumeToken0     float64             `json:"volumeToken0"`
+	VolumeToken1     float64             `json:"volumeToken1"`
+	TvlUSD           string              `json:"tvlUSD"`
+	AmountPrice0     float64             `json:"amountPrice0"`
+	AmountPrice1     float64             `json:"amountPrice1"`
+	TvlRatio         string              `json:"tvlRatio"`
+	IsTvlNegative    bool                `json:"isTvlNegative"`
+	Vol24h           float64             `json:"vol24h"`
+	Vol24hRatio      string              `json:"vol24hRatio"`
+	IsVol24hNegative bool                `json:"isVol24hNegative"`
+	Fee24h           float64             `json:"fee24h"`
+}
+
+type GalxeSwapRequest {
+	Address string `form:"address"`
+}
+
+type GalxeSwapResponse {
+	isSwapOrNot    bool                `json:"isSwapOrNot"`
+}
+
+
+type GalxeTgIdRequest {
+	Tgid int64 `form:"tgid"`	
+}
+
+type GalxeTgIdResponse {
+	IsPlayedOrNot    bool                `json:"isPlayedOrNot"`
+}
+
+// pool info address
+type SonexPoolInfoKlineRequest {
+	ChainRequest
+	Address  string `path:"address"`
+}
+
+
+// pool info address
+type SonexPoolInfoKlineResponse {
+	Records []VolumeDetailsRecord `json:"records"`
+}
+
+// 前端拿到这个值,加 % 后显示
+type VolumeDetailsRecord {
+	VolumeRatio     float64  `json:"volumeratio"` // 跟过去一天的volume最后一组24H的相比，相比的,是增加还是减弱 ,保留两位精度
+	VolumeUsd     	float64 `json:"volumeusd"` 
+	CreatedAt       int64   `json:"createdat"`
 }
 
 @server (
@@ -461,29 +568,35 @@ service sonex_api_backend_go {
 	@handler SonexTokenQuoteHandler
 	get /token/quote (TokenQuoteRequest) returns (TokenQuoteResponse)
 
-	@handler SonexTokenListHandler
-	get /tokens/list (TokenListRequest) returns (TokenListResponse)
+	@handler TransactionsHandler
+	get /transactions (TransactionsRequest) returns ([]TransactionsResponse_Transaction)
 
-	@handler SonexTokensHandler
-	get /tokens (TokenListRequest) returns (TokensResponse)
+	@handler TokensHandler
+	get /tokens (TokensRequest) returns ([]TokensResponse_Token)
 
 	@handler SonexTokenTopHandler
 	get /tokens/top returns (TokenTopResponse)
 
 	@handler SonexPoolListHandler
-	get /pools (PoolsRequest) returns (PoolsResponse)
+	get /pools (PoolsRequest) returns ([]PoolsResponse_Pool)
 
 	@handler SonexPositionsHandler
 	get /pools/positions (PositionsRequest) returns (PositionsResponse)
-	
+
 	@handler SonexPositionHandler
 	get /pools/position/:tokenId (PositionRequest) returns (PositionResponse)
 
+	@handler SonexTokensInfoHandler
+	get /tokens/info/:address (TokensInfoRequest)  returns (TokenInfoResponse)
+
+	@handler SonexPoolInfoHandler
+	get /pools/info/:address (PoolInfoRequest) returns (PoolInfoResponse)
+
+	@handler SonexPoolInfoKlineRequest
+	get /pools/kline/:address (SonexPoolInfoKlineRequest) returns (SonexPoolInfoKlineResponse)
+
 	@handler SonexPositionValuesHandler
 	get /pools/position_values (PositionValuesRequest) returns (PositionValuesResponse)
-
-	@handler SonexSwapHandler
-	get /swaps (SwapEventRequest) returns (SwapEventResponse)
 
 	@handler SonexSwapVolumeHandler
 	get /swaps/volume (SwapVolumeRequest) returns (SwapVolumeResponse)
@@ -493,4 +606,11 @@ service sonex_api_backend_go {
 
 	@handler SonexPortfolioHandler
 	get /portfolio (PortfolioRequest) returns (PortfolioResponse)
+
+	@handler SonexGalxeswapHandler
+	get /galxeswap (GalxeSwapRequest) returns (GalxeSwapResponse)
+
+	@handler SonexGalxeTgidHandler
+	get /galxetgid (GalxeTgIdRequest) returns (GalxeTgIdResponse)
+
 }

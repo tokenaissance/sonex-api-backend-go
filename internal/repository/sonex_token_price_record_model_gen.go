@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -36,11 +37,12 @@ type (
 	}
 
 	SonexTokenPriceRecord struct {
-		Id           int64          `db:"id"`
-		TokenSymbol  sql.NullString `db:"token_symbol"`
-		TokenAddress sql.NullString `db:"token_address"`
-		Price        sql.NullString `db:"price"`
-		CreatedAt    sql.NullTime   `db:"created_at"`
+		Id           int64     `db:"id"`
+		TokenSymbol  string    `db:"token_symbol"`
+		TokenAddress string    `db:"token_address"`
+		Price        string    `db:"price"`
+		CreatedAt    time.Time `db:"created_at"`
+		UsdDecimals  int64     `db:"usd_decimals"`
 	}
 )
 
@@ -72,14 +74,14 @@ func (m *defaultSonexTokenPriceRecordModel) FindOne(ctx context.Context, id int6
 }
 
 func (m *defaultSonexTokenPriceRecordModel) Insert(ctx context.Context, data *SonexTokenPriceRecord) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4)", m.table, sonexTokenPriceRecordRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.TokenSymbol, data.TokenAddress, data.Price)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5)", m.table, sonexTokenPriceRecordRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.TokenSymbol, data.TokenAddress, data.Price, data.UsdDecimals)
 	return ret, err
 }
 
 func (m *defaultSonexTokenPriceRecordModel) Update(ctx context.Context, data *SonexTokenPriceRecord) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, sonexTokenPriceRecordRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.TokenSymbol, data.TokenAddress, data.Price)
+	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.TokenSymbol, data.TokenAddress, data.Price, data.UsdDecimals)
 	return err
 }
 

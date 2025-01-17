@@ -28,6 +28,7 @@ func NewNodeCaller(chain config.ChainConfig) (*NodeCaller, error) {
 	}, nil
 }
 
+// Assembles a block number argument for calling node RPC
 func toBlockNumArg(number *big.Int) string {
 	if number == nil {
 		return "latest"
@@ -43,6 +44,7 @@ func toBlockNumArg(number *big.Int) string {
 	return fmt.Sprintf("<invalid %d>", number)
 }
 
+// Batch query block headers of specified block numbers
 func (nodeCaller *NodeCaller) BatchHeaderByNumber(ctx context.Context, numbers []int64) (map[int64]*types.Header, error) {
 	if len(numbers) == 0 {
 		return map[int64]*types.Header{}, nil
@@ -74,6 +76,7 @@ func (nodeCaller *NodeCaller) BatchHeaderByNumber(ctx context.Context, numbers [
 	return result, nil
 }
 
+// Batch query blocks of specified block numbers
 func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers []int64) (map[int64]*types.Block, error) {
 	if len(numbers) == 0 {
 		return map[int64]*types.Block{}, nil
@@ -173,6 +176,7 @@ func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers
 	return result, nil
 }
 
+// Batch query transactions of specified block numbers
 func (nodeCaller *NodeCaller) BatchGetTranscationsByNumber(ctx context.Context, blockNumbers []int64) (map[string]*Transaction, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -205,6 +209,7 @@ func (nodeCaller *NodeCaller) BatchGetTranscationsByNumber(ctx context.Context, 
 	return transactions, nil
 }
 
+// Convenience function to call contract and parse result
 func (nodeCaller *NodeCaller) StaticCall(ctx context.Context, abi abi.ABI, contract common.Address, name string, data []byte, result any) error {
 	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
 	if err != nil {

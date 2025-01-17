@@ -133,6 +133,8 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 		conn := repository.NewConn(handler.dataSource)
 		err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
+			callablePoolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
+			// Pool created event
 			for _, event := range poolCreatedEvents {
 				eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
 
@@ -151,7 +153,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				pool := event.Pool.Hex()
 
 				// If handled, ignore
-				_, err := eventSonexFactoryPoolCreatedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+				_, err := eventSonexFactoryPoolCreatedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
@@ -193,6 +195,16 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					}
 					continue
 				}
+
+				callablePoolCreatedEvents = append(callablePoolCreatedEvents, event)
+			}
+
+			// Callback
+			for _, event := range callablePoolCreatedEvents {
+				for _, callback := range handler.onFactoryPoolCreated {
+					tx := transactions[event.Raw.TxHash.Hex()]
+					go callback(handler.chain.ChainId, tx, event)
+				}
 			}
 
 			return nil
@@ -200,14 +212,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		if err != nil {
 			handleErr = err
 			return
-		}
-
-		// Callback
-		for _, event := range poolCreatedEvents {
-			for _, callback := range handler.onFactoryPoolCreated {
-				tx := transactions[event.Raw.TxHash.Hex()]
-				go callback(handler.chain.ChainId, tx, event)
-			}
 		}
 
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
@@ -333,6 +337,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(sqlx.NewSqlConnFromSession(s))
 							eventSonexPoolBurnModel := repository.NewEventSonexPoolBurnModel(sqlx.NewSqlConnFromSession(s))
 
+							callableMintEvents := []*uniswap_v3.UniswapV3PoolMint{}
 							// Mint event
 							{
 								for _, event := range mintEvents {
@@ -352,7 +357,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									amount1 := event.Amount1.String()
 
 									// If handled, ignore
-									_, err := eventSonexPoolMintModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventSonexPoolMintModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -369,9 +374,13 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
+
+									callableMintEvents = append(callableMintEvents, event)
 								}
+
 							}
 
+							callableSwapEvents := []*uniswap_v3.UniswapV3PoolSwap{}
 							// Swap event
 							{
 								for _, event := range swapEvents {
@@ -391,7 +400,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									tick := event.Tick.String()
 
 									// If handled, ignore
-									_, err := eventSonexPoolSwapModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventSonexPoolSwapModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -408,9 +417,12 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
+
+									callableSwapEvents = append(callableSwapEvents, event)
 								}
 							}
 
+							callableBurnEvents := []*uniswap_v3.UniswapV3PoolBurn{}
 							// Burn event
 							{
 								for _, event := range burnEvents {
@@ -430,7 +442,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									amount1 := event.Amount1.String()
 
 									// If handled, ignore
-									_, err := eventSonexPoolBurnModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventSonexPoolBurnModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -447,6 +459,28 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
+
+									callableBurnEvents = append(callableBurnEvents, event)
+								}
+							}
+
+							// Callback
+							for _, event := range callableMintEvents {
+								for _, callback := range handler.onPoolMint {
+									tx := transactions[event.Raw.TxHash.Hex()]
+									go callback(handler.chain.ChainId, poolAddress, tx, event)
+								}
+							}
+							for _, event := range callableSwapEvents {
+								for _, callback := range handler.onPoolSwap {
+									tx := transactions[event.Raw.TxHash.Hex()]
+									go callback(handler.chain.ChainId, poolAddress, tx, event)
+								}
+							}
+							for _, event := range callableBurnEvents {
+								for _, callback := range handler.onPoolBurn {
+									tx := transactions[event.Raw.TxHash.Hex()]
+									go callback(handler.chain.ChainId, poolAddress, tx, event)
 								}
 							}
 
@@ -455,26 +489,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						if err != nil {
 							sendResult(err)
 							return
-						}
-
-						// Callback
-						for _, event := range mintEvents {
-							for _, callback := range handler.onPoolMint {
-								tx := transactions[event.Raw.TxHash.Hex()]
-								go callback(handler.chain.ChainId, poolAddress, tx, event)
-							}
-						}
-						for _, event := range swapEvents {
-							for _, callback := range handler.onPoolSwap {
-								tx := transactions[event.Raw.TxHash.Hex()]
-								go callback(handler.chain.ChainId, poolAddress, tx, event)
-							}
-						}
-						for _, event := range burnEvents {
-							for _, callback := range handler.onPoolBurn {
-								tx := transactions[event.Raw.TxHash.Hex()]
-								go callback(handler.chain.ChainId, poolAddress, tx, event)
-							}
 						}
 					}(poolAddress, client, results)
 				}
@@ -592,6 +606,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			eventSonexPositionManagerDecreaseLiquidityModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(sqlx.NewSqlConnFromSession(s))
 			eventSonexPositionManagerCollectModel := repository.NewEventSonexPositionManagerCollectModel(sqlx.NewSqlConnFromSession(s))
 
+			callableTransferEvents := []*uniswap_v3.NonfungiblePositionManagerTransfer{}
 			// Transfer Event
 			{
 				for _, event := range transferEvents {
@@ -608,7 +623,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					tokenId := event.TokenId.Int64()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerTransferModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerTransferModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
@@ -625,9 +640,12 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
+
+					callableTransferEvents = append(callableTransferEvents, event)
 				}
 			}
 
+			callableIncreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity{}
 			// IncreaseLiquidity Event
 			{
 				for _, event := range increaseLiquidityEvents {
@@ -645,7 +663,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					amount1 := event.Amount1.String()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerIncreaseLiquidityModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerIncreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
@@ -662,9 +680,12 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
+
+					callableIncreaseLiquidityEvents = append(callableIncreaseLiquidityEvents, event)
 				}
 			}
 
+			callableDecreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity{}
 			// DecreaseLiquidity Event
 			{
 				for _, event := range decreaseLiquidityEvents {
@@ -682,7 +703,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					amount1 := event.Amount1.String()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerDecreaseLiquidityModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerDecreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
@@ -699,9 +720,12 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
+
+					callableDecreaseLiquidityEvents = append(callableDecreaseLiquidityEvents, event)
 				}
 			}
 
+			callableCollectEvents := []*uniswap_v3.NonfungiblePositionManagerCollect{}
 			// Collect Event
 			{
 				for _, event := range collectEvents {
@@ -719,7 +743,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					amount1 := event.Amount1.String()
 
 					// If handled, ignore
-					_, err := eventSonexPositionManagerCollectModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+					_, err := eventSonexPositionManagerCollectModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 					switch err {
 					case repository.ErrNotFound:
 					case nil:
@@ -736,6 +760,34 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					if err != nil {
 						return err
 					}
+
+					callableCollectEvents = append(callableCollectEvents, event)
+				}
+			}
+
+			// Callback
+			for _, event := range callableTransferEvents {
+				for _, callback := range handler.onPositionManagerTransfer {
+					tx := transactions[event.Raw.TxHash.Hex()]
+					go callback(handler.chain.ChainId, tx, event)
+				}
+			}
+			for _, event := range callableIncreaseLiquidityEvents {
+				for _, callback := range handler.onPositionManagerIncreaseLiquidity {
+					tx := transactions[event.Raw.TxHash.Hex()]
+					go callback(handler.chain.ChainId, tx, event)
+				}
+			}
+			for _, event := range callableDecreaseLiquidityEvents {
+				for _, callback := range handler.onPositionManagerDecreaseLiquidity {
+					tx := transactions[event.Raw.TxHash.Hex()]
+					go callback(handler.chain.ChainId, tx, event)
+				}
+			}
+			for _, event := range callableCollectEvents {
+				for _, callback := range handler.onPositionManagerCollect {
+					tx := transactions[event.Raw.TxHash.Hex()]
+					go callback(handler.chain.ChainId, tx, event)
 				}
 			}
 
@@ -744,32 +796,6 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		if err != nil {
 			handleErr = err
 			return
-		}
-
-		// Callback
-		for _, event := range transferEvents {
-			for _, callback := range handler.onPositionManagerTransfer {
-				tx := transactions[event.Raw.TxHash.Hex()]
-				go callback(handler.chain.ChainId, tx, event)
-			}
-		}
-		for _, event := range increaseLiquidityEvents {
-			for _, callback := range handler.onPositionManagerIncreaseLiquidity {
-				tx := transactions[event.Raw.TxHash.Hex()]
-				go callback(handler.chain.ChainId, tx, event)
-			}
-		}
-		for _, event := range decreaseLiquidityEvents {
-			for _, callback := range handler.onPositionManagerDecreaseLiquidity {
-				tx := transactions[event.Raw.TxHash.Hex()]
-				go callback(handler.chain.ChainId, tx, event)
-			}
-		}
-		for _, event := range collectEvents {
-			for _, callback := range handler.onPositionManagerCollect {
-				tx := transactions[event.Raw.TxHash.Hex()]
-				go callback(handler.chain.ChainId, tx, event)
-			}
 		}
 	}()
 

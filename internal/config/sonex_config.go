@@ -1,5 +1,6 @@
 package config
 
+// Represents Sonex configuration of a blockchain.
 type SonexConfig struct {
 	ChainId         int64  `json:","`
 	Factory         string `json:","`

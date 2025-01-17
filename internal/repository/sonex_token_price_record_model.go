@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sonex_api_backend_go/internal/module/sonex"
+	"time"
 
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -18,12 +21,13 @@ type (
 		sonexTokenPriceRecordModel
 		withSession(session sqlx.Session) SonexTokenPriceRecordModel
 		Kline(address string, interval string) ([]*TokenPriceRecord, error)
-		GetAllLatestHistoryPrices() (map[string]*big.Int, error)
-		GetLatestHistoryPrices(tokenAddresses []string) (map[string]*big.Int, error)
+		QueryLatestHistoryPrices() (map[string]*big.Int, error)
+		QueryLatestHistoryPricesByAddresses(addresses []string) (map[string]*big.Int, error)
+		QueryLatestHistoryPricesByAddressesInterval(addresses []string, interval string) (map[string]*big.Int, error)
 		GetCurrentPrice(tokenAddress string) (float64, error)
 		GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error)
-		GetLastHourPrice(tokenAddress string) (float64, error)
-		GetYesterdayPrice(tokenAddress string) (float64, error)
+		GetLastHourPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
+		GetYesterdayPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
 	}
 
 	customSonexTokenPriceRecordModel struct {
@@ -48,6 +52,94 @@ type TokenPriceRecord struct {
 	TokenAddress string `db:"token_address"`
 	Price        string `db:"price"`
 	CreatedAt    string `db:"created_at"`
+	UsdDecimals  int    `db:"usd_decimals"`
+}
+
+type MiniTokenPriceRecord struct {
+	TokenAddress string `db:"token_address"`
+	Price        string `db:"price"`
+	CreatedAt    string `db:"created_at"`
+}
+
+// downsampleRecords performs time-based downsampling of price records
+func (m *customSonexTokenPriceRecordModel) downsampleRecords(records []*TokenPriceRecord, interval string) []*TokenPriceRecord {
+	if len(records) == 0 {
+		return records
+	}
+
+	// Define desired number of K-lines
+	var targetKLines int
+	switch interval {
+	case "1h":
+		targetKLines = 60 // 60 K-lines per hour
+	case "1d":
+		targetKLines = 144 // 144 K-lines per day
+	case "1w":
+		targetKLines = 168 // 168 K-lines per week
+	case "1m":
+		targetKLines = 780 // 780 K-lines per month
+	case "1y":
+		targetKLines = 365 // 365 K-lines per year
+	default:
+		return records
+	}
+
+	// If we have fewer records than target K-lines, return all records
+	if len(records) <= targetKLines {
+		return records
+	}
+
+	// Calculate time range
+	firstTime, _ := gtime.StrToTime(records[0].CreatedAt)
+	lastTime, _ := gtime.StrToTime(records[len(records)-1].CreatedAt)
+	totalDuration := lastTime.Sub(firstTime)
+
+	// Calculate ideal time interval between samples
+	timeInterval := totalDuration / time.Duration(targetKLines-1)
+
+	var result []*TokenPriceRecord
+	result = append(result, records[0]) // Always include first record
+
+	nextTargetTime := firstTime.Add(timeInterval)
+	lastAddedTime := firstTime
+
+	// Find closest records to each target time
+	for i := 1; i < len(records)-1; i++ {
+		currentTime, err := gtime.StrToTime(records[i].CreatedAt)
+		if err != nil {
+			logx.Errorf("[downsampleRecords]: time convert err: %v", err)
+			continue
+		}
+
+		if currentTime.After(nextTargetTime) || currentTime.Equal(nextTargetTime) {
+			// Find closest record to target time
+			prev := gtime.New(records[i-1].CreatedAt)
+			curr := currentTime
+			if curr.Sub(nextTargetTime) > nextTargetTime.Sub(prev) {
+				result = append(result, records[i-1])
+				lastAddedTime = prev
+			} else {
+				result = append(result, records[i])
+				lastAddedTime = curr
+			}
+			nextTargetTime = firstTime.Add(timeInterval * time.Duration(len(result)))
+		}
+	}
+
+	// Always include last record if it's not too close to the last added record
+	lastRecord := records[len(records)-1]
+	lastRecordTime, _ := gtime.StrToTime(lastRecord.CreatedAt)
+	if lastRecordTime.Sub(lastAddedTime) > timeInterval/2 {
+		result = append(result, lastRecord)
+	}
+
+	return result
+}
+
+// minutesDifference calculates the difference in minutes between two times
+func minutesDifference(t1, t2 *gtime.Time) int {
+	minutes := t2.Sub(t1) / time.Minute
+	return int(minutes)
 }
 
 func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string) ([]*TokenPriceRecord, error) {
@@ -63,7 +155,8 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 		for _, v := range resp {
 			v.CreatedAt = gtime.New(v.CreatedAt).Format("Y-m-d H:i:s")
 		}
-		return resp, nil
+		// downsample
+		return m.downsampleRecords(resp, interval), nil
 	case sqlx.ErrNotFound:
 		return nil, ErrNotFound
 	default:
@@ -71,21 +164,16 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 	}
 }
 
-func (m *customSonexTokenPriceRecordModel) GetAllLatestHistoryPrices() (map[string]*big.Int, error) {
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices() (map[string]*big.Int, error) {
 	ctx := context.Background()
 
-	type PriceRecord struct {
-		TokenAddress string `db:"token_address"`
-		Price        string `db:"price"`
-	}
-
-	var records []PriceRecord
-	query := `
-		SELECT DISTINCT ON (token_address) token_address, price
-		FROM sonex_token_price_record
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (token_address) token_address, price, created_at
+		FROM %s
 		ORDER BY token_address, created_at DESC;
-	`
+	`, m.table)
 
+	var records []MiniTokenPriceRecord
 	err := m.conn.QueryRowsCtx(ctx, &records, query)
 	if err != nil {
 		return nil, err
@@ -100,22 +188,43 @@ func (m *customSonexTokenPriceRecordModel) GetAllLatestHistoryPrices() (map[stri
 	return result, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetLatestHistoryPrices(tokenAddresses []string) (map[string]*big.Int, error) {
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(tokenAddresses []string) (map[string]*big.Int, error) {
 	ctx := context.Background()
 
-	type PriceRecord struct {
-		TokenAddress string `db:"token_address"`
-		Price        string `db:"price"`
-	}
-
-	var records []PriceRecord
-	query := `
-		SELECT DISTINCT ON (token_address) token_address, price
-		FROM sonex_token_price_record
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (token_address) token_address, price, created_at
+		FROM %s
 		WHERE token_address = ANY($1)
 		ORDER BY token_address, created_at DESC;
-	`
+	`, m.table)
 
+	var records []MiniTokenPriceRecord
+	err := m.conn.QueryRowsCtx(ctx, &records, query, tokenAddresses)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*big.Int, len(records))
+	for _, record := range records {
+		value, _ := new(big.Int).SetString(record.Price, 10)
+		result[record.TokenAddress] = value
+	}
+
+	return result, nil
+}
+
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesInterval(tokenAddresses []string, interval string) (map[string]*big.Int, error) {
+	ctx := context.Background()
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (token_address) token_address, price, created_at
+		FROM %s
+		WHERE 
+			token_address = ANY($1)
+			AND created_at <= NOW() - INTERVAL '%s'
+	`, m.table, getIntervalDuration(interval))
+
+	var records []MiniTokenPriceRecord
 	err := m.conn.QueryRowsCtx(ctx, &records, query, tokenAddresses)
 	if err != nil {
 		return nil, err
@@ -141,7 +250,10 @@ func (m *customSonexTokenPriceRecordModel) GetCurrentPrice(tokenAddress string) 
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
-	return price, err
+	if err != nil {
+		return 0, err
+	}
+	return price, nil
 }
 
 func (m *customSonexTokenPriceRecordModel) GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error) {
@@ -163,9 +275,8 @@ func (m *customSonexTokenPriceRecordModel) GetCurrentPrices(tokenAddresses []str
 	return result, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(tokenAddress string) (float64, error) {
-	ctx := context.Background()
-	var price float64
+func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error) {
+	var price string
 	query := `
 		SELECT price
 		FROM sonex_token_price_record
@@ -175,12 +286,18 @@ func (m *customSonexTokenPriceRecordModel) GetLastHourPrice(tokenAddress string)
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
-	return price, err
+	if err != nil {
+		return nil, err
+	}
+	tp, err := sonex.NewTokenPrice(price, 18)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]*sonex.TokenPrice{tokenAddress: tp}, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(tokenAddress string) (float64, error) {
-	ctx := context.Background()
-	var price float64
+func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error) {
+	var price string
 	query := `
 		SELECT price
 		FROM sonex_token_price_record
@@ -190,7 +307,14 @@ func (m *customSonexTokenPriceRecordModel) GetYesterdayPrice(tokenAddress string
 		LIMIT 1;
 	`
 	err := m.conn.QueryRowCtx(ctx, &price, query, tokenAddress)
-	return price, err
+	if err != nil {
+		return nil, err
+	}
+	tp, err := sonex.NewTokenPrice(price, 18)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]*sonex.TokenPrice{tokenAddress: tp}, nil
 }
 
 // 根据 interval 获取查询条件的时间范围

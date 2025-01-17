@@ -16,6 +16,7 @@ const (
 	machineIDShift = sequenceBits
 )
 
+// Unique ID generater
 type IdGenerater struct {
 	mu        sync.Mutex
 	lastTime  int64

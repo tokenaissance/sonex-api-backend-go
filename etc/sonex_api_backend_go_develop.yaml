@@ -17,38 +17,49 @@ Redis:
   Port: REDIS_PORT
   Password:
   Db: 0
+PointsService:
+  Host: https://sonex-devnet-cloudrun-points-service-dev-356426870748.asia-southeast1.run.app/
+  Source: 00000000-0000-0000-0000-00000000000
+  PrivateKey: POINTPRIVATEKEY
+Galxe:
+  Url: https://sonex-devnet-cloudrun-sonex-mini-app-backend-acti-i4lu42aqsq-as.a.run.app
 Chains:
   - ChainId: 1946
     Name: Minato
     Nodes:
       # URL:Weight
       http://10.1.30.103:8545: 90
-      http://10.1.30.104:8545: 10
-    MinConfirmations: 5
-    MinDelayWaitMillisecond: 2000
+      http://10.1.30.102:8545: 10
+    MinConfirmations: 0
+    MinDelayWaitMillisecond: 1000
     MaxLogsNumber: 5000
     Multicall: 0x18546Af844DFA77c5268FF8A51941E11692FED25
     Tokens:
-      - Address: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
-        IsStableCoin: true
       - Address: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
-        IsStableCoin: true
     ETH:
       Name: Ethereum
       Symbol: ETH
       Decimals: 18
     WETH: 0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C
-    USD: 0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062
+    USD: 0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391
 Sonexes:
   - ChainId: 1946
-    Factory: 0x69196462dD5105B85dD2941B3e0e0Df083A69152
-    PositionManager: 0xeC816FCdc262601C0E23902c679FDd87CFb24077
-    Quoter: 0x6A029a06EA1c40EdBd4d44dfd057b03262FF7db2
-    SwapRouter: 0x8281c39cDb041bef7F37DCa1841e1aD10B1c8e35
-Xpools:
+    Factory: 0x3c6B2f49be8C7cA69D4f99717eA56c5e5EEd7a3b
+    PositionManager: 0x3231734Cb30f7B5dc42D6354Ea42b4BAE54618Ab
+    Quoter: 0x331c6643D472648C220686169Ec1D15BeE9a63a2
+    SwapRouter: 0x6321199D6E1ed41771ff89eb757479600E4427d9
+PreDeposits:
   - ChainId: 1946
-    Factory: 0xF6b6a6A7Bd2326Da05b5e980276776E051f0d531
-    BlockTime: 2000
-Farms:
-  - ChainId: 1946
-    Staker: 0x340DDa144116366300254409b25934Ff88b111b8
+    WASTR: 0x3c1F7c5f4C560afFCFe2b5ebF1271c3310867ff4
+    VASTR: "0x000000000000000000000000000000000000000F"
+    ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
+    BridgeStaker: 0xAb9F0d4379782CCc3fc09984e93c6559d389C7e2
+    RewardClaimer: 0x580E1361943F0fFC8076D358d02F5bB055A2E272
+    SignerPrivateKey: SIGNERPRIVATEKEY
+    PointsRate: 10
+    PointsUserCap: 6000
+    PointsTotalCap: 60000000
+    SubTitle: PreDeposit
+    RewardToken: 0xe3336b3E0d36aacCddEcCC1B4c5d75D5216e932d
+    RewardDaily: 10000
+    RewardPrice: 1 # USD

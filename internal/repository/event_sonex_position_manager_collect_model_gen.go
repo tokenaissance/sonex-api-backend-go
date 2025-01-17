@@ -27,7 +27,7 @@ type (
 	eventSonexPositionManagerCollectModel interface {
 		Insert(ctx context.Context, data *EventSonexPositionManagerCollect) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventSonexPositionManagerCollect, error)
-		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventSonexPositionManagerCollect, error)
+		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventSonexPositionManagerCollect, error)
 		Update(ctx context.Context, data *EventSonexPositionManagerCollect) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -83,10 +83,10 @@ func (m *defaultEventSonexPositionManagerCollectModel) FindOne(ctx context.Conte
 	}
 }
 
-func (m *defaultEventSonexPositionManagerCollectModel) FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventSonexPositionManagerCollect, error) {
+func (m *defaultEventSonexPositionManagerCollectModel) FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventSonexPositionManagerCollect, error) {
 	var resp EventSonexPositionManagerCollect
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 limit 1", eventSonexPositionManagerCollectRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 and tx_index = $3 limit 1", eventSonexPositionManagerCollectRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash, txIndex)
 	switch err {
 	case nil:
 		return &resp, nil

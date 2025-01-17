@@ -1,0 +1,69 @@
+Name: sonex_api_backend_go
+Host: 0.0.0.0
+Port: 8888
+Log:
+  Level: debug
+Domains:
+  - app.sonex.so
+  - api-swap.sonex.so
+  - api-point.sonex.so
+  - sonex-9ybwjtvxi3hr38z3p13d8e.vercel.app
+PostgreSQL:
+  Host: PG_HOST
+  Port: PG_PORT
+  User: PG_USER
+  Password: PG_PWD
+  DbName: PG_DBNAME
+Redis:
+  Host: REDIS_HOST
+  Port: REDIS_PORT
+  Password:
+  Db: 0
+PointsService:
+  Host: https://api-point.sonex.so/
+  Source: 00000000-0000-0000-0000-00000000000
+  PrivateKey: POINTPRIVATEKEY
+Galxe:
+  Url: https://api-miniapp.sonex.so
+Chains:
+  - ChainId: 1868
+    Name: Soneium
+    Nodes:
+      # URL:Weight
+      http://10.1.30.111:8545: 50
+      http://10.1.30.112:8545: 50
+    MinConfirmations: 5
+    MinDelayWaitMillisecond: 2000
+    MaxLogsNumber: 5000
+    Multicall: 0xB981161Be7D05d7a291Ffa5CE32c2771422De385
+    Tokens:
+      - Address: 0x4200000000000000000000000000000000000006
+      - Address: 0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369
+    ETH:
+      Name: Ethereum
+      Symbol: ETH
+      Decimals: 18
+    WETH: 0x4200000000000000000000000000000000000006
+    USD: 0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369
+Sonexes:
+  - ChainId: 1868
+    Factory: 0x3E4ff8662820E3dec3DACDb66ef1FFad5Dc5Ab83
+    PositionManager: 0x6f5F9d55f727928b644B04d987B1c0Cf50AF8C0B
+    Quoter: 0x715BE426a0c8E0A14aBc0130f08F06aa41B1f218
+    SwapRouter: 0xDEf357D505690F1b0032a74C3b581163c23d1535
+PreDeposits:
+  - ChainId: 1868
+    WASTR: 0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441
+    VASTR: "0x000000000000000000000000000000000000000F"
+    ASTR: 0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441
+    BridgeStaker: 0x053C1DF2e0c99b2E7f11C11F952e87C3197A6373
+    RewardClaimer: 0x3e1327299b6e2860E285382C1401E8864017C3dD
+    SignerPrivateKey: SIGNERPRIVATEKEY
+    PointsRate: 10
+    PointsUserCap: 6000
+    PointsTotalCap: 60000000
+    SubTitle: PreDeposit
+    RewardToken: 0x27a131ab51dDD12c31A7C28213A7A4584758bdE7
+    RewardDaily: 10000
+    RewardPrice: 1 # USD
+

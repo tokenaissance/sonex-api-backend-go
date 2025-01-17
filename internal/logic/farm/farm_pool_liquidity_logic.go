@@ -111,7 +111,12 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 		}
 		var tIds []*big.Int
 		linq.From(tokenIds).SelectT(func(item int64) *big.Int { return big.NewInt(item) }).ToSlice(&tIds)
-		positions, err := staticCaller.BatchGetPositions(context.Background(), req.ChainId, common.HexToAddress(l.svcCtx.Config.GetSonexConfig(req.ChainId).PositionManager), tIds)
+		chainConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+		if chainConf == nil {
+			logx.Errorf("[FarmPoolLiquidity]:Miss chain configure")
+			return nil, fmt.Errorf("%s", "Miss chain configure")
+		}
+		positions, err := staticCaller.BatchGetPositions(context.Background(), req.ChainId, common.HexToAddress(chainConf.PositionManager), tIds)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +141,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 
 	// 计算质押的流动性价值
 	token0PriceValue := big.NewInt(0)
-	_, token0Price, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token0Address, true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
+	_, token0Price, _, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token0Address, true, 2)
 	if err != nil {
 		logx.Errorf("failed to get token0 price: %v", err)
 	} else if len(token0Price) > 0 && token0Price[0].Value != nil {
@@ -144,7 +149,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	}
 
 	token1PriceValue := big.NewInt(0)
-	_, token1Price, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token1Address, true, 2, &l.svcCtx.Config.GetChainConfig(req.ChainId).USD)
+	_, token1Price, _, err := global.GetPrices(context.Background(), nil, l.chainId, pool.Token1Address, true, 2)
 	if err != nil {
 		logx.Errorf("failed to get token1 price: %v", err)
 	} else if len(token1Price) > 0 && token1Price[0].Value != nil {
@@ -163,26 +168,14 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	}
 
 	// 获取token信息
-	tokenOSymbol := ""
-	token1Symbol := ""
-	token0Decimals := int64(defaultDecimals)
-	token1Decimals := int64(defaultDecimals)
 	token0Info, err := global.GetToken(l.chainId, pool.Token0Address)
 	if err != nil {
 		logx.Errorf("failed to get token0 info: %v", err)
-	}
-	if token0Info != nil {
-		tokenOSymbol = token0Info.Symbol
-		token0Decimals = token0Info.Decimals
 	}
 
 	token1Info, err := global.GetToken(l.chainId, pool.Token1Address)
 	if err != nil {
 		logx.Errorf("failed to get token1 info: %v", err)
-	}
-	if token1Info != nil {
-		token1Symbol = token1Info.Symbol
-		token1Decimals = token1Info.Decimals
 	}
 
 	resp = &types.FarmPoolLiquidityResponse{
@@ -193,10 +186,10 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 		TotalToken1Amount:      totalToken1Amount.String(),
 		Token0Price:            token0PriceValue.String(),
 		Token1Price:            token1PriceValue.String(),
-		Token0Decimals:         token0Decimals,
-		Token1Decimals:         token1Decimals,
-		Token0Symbol:           tokenOSymbol,
-		Token1Symbol:           token1Symbol,
+		Token0Decimals:         token0Info.Decimals,
+		Token1Decimals:         token1Info.Decimals,
+		Token0Symbol:           token0Info.Symbol,
+		Token1Symbol:           token1Info.Symbol,
 	}
 
 	return
