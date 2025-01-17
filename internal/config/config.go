@@ -10,7 +10,7 @@ type Config struct {
 	PostgreSQL    PgConfig             `json:","`
 	Redis         RedisConfig          `json:","`
 	PointsService *PointsServiceConfig `json:",optional"`
-	Falxe         *GalxeConfig         `json:",optional"`
+	Galxe         *GalxeConfig         `json:",optional"`
 	Chains        []ChainConfig        `json:","`
 	Sonexes       []SonexConfig        `json:",optional"`
 	PreDeposits   []PreDepositConfig   `json:",optional"`

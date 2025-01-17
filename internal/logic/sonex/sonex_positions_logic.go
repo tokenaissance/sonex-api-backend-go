@@ -45,10 +45,6 @@ func NewSonexPositionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *So
 	}
 }
 
-type PositionsResponseWrapper struct {
-	*types.PositionsResponse
-}
-
 type psTaskResult struct {
 	collectedPairs     map[int64]*sonex.TokenPair
 	tokenPricesRecords map[string]*repository.TokenPriceRecord
@@ -71,28 +67,11 @@ func (l *SonexPositionsLogic) DelCache(address string) error {
 	return nil
 }
 
-func (l *SonexPositionsLogic) SonexPositions(req *types.PositionsRequest) (resp *PositionsResponseWrapper, err error) {
-	cacheKey := fmt.Sprintf(CacheKey, req.Address)
-
-	// Check cache
-	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-	// cachedResponse, err := redisCache.Get(cacheKey)
-	// if err == nil && len(cachedResponse) > 0 {
-	// 	var cachedResp PositionsResponseWrapper
-	// 	if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
-	// 		ctx := context.Background()
-	// 		go l.refreshCache(ctx, req, redisCache, cacheKey, &cachedResp)
-	// 		return &cachedResp, nil
-	// 	}
-	// }
-
-	return l.refreshCache(l.ctx, req, redisCache, cacheKey)
-}
-
-func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.PositionsRequest, cacher cache.ICache, cacheKey string) (resp *PositionsResponseWrapper, err error) {
-	items, err := l.transferModel.GetTransferEvents(ctx, req.ChainId, req.Address, true)
+// SonexPositions get live position list
+func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64, address string) (positions []*types.Position, err error) {
+	items, err := l.transferModel.GetTransferEvents(ctx, chainId, address, true)
 	if err != nil {
-		logx.Errorf("[SonexPositions]:refreshCache GetTransferEvents error: %s", err.Error())
+		logx.Errorf("[SonexPositions]: GetTransferEvents error: %s", err.Error())
 		return nil, err
 	}
 
@@ -109,9 +88,9 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	}
 
 	pv := NewSonexPositionLogic(l.ctx, l.svcCtx)
-	tokenIds, err := pv.GetAddressTokenIds(ctx, req.Address)
+	tokenIds, err := pv.GetAddressTokenIds(ctx, address)
 	if err != nil {
-		logx.Errorf("[SonexPositions]:refreshCache GetAddressTokenIds error: %s", err.Error())
+		logx.Errorf("[SonexPositions]: GetAddressTokenIds error: %s", err.Error())
 	}
 
 	// merge positionTokenIds and tokenIds, and remove duplicate
@@ -131,14 +110,15 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	}(append(positionTokenIds, tokenIds...))
 
 	caller, _ := sonex.NewStaticCaller(l.svcCtx.Config)
-	chainConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	chainConf := l.svcCtx.Config.GetSonexConfig(chainId)
 	if chainConf == nil {
-		logx.Errorf("[SonexPositions]:refreshCache Miss chain configure")
+		logx.Errorf("[SonexPositions]: Miss chain configure")
 		return nil, fmt.Errorf("%s", "Miss chain configure")
 	}
-	positions, err := caller.BatchGetPositions(
+
+	positionM, err := caller.BatchGetPositionMap(
 		ctx,
-		req.ChainId,
+		chainId,
 		common.HexToAddress(chainConf.PositionManager),
 		func(tokenIds []int64) []*big.Int {
 			// Convert unique ids to bitInt slice
@@ -150,19 +130,25 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 		}(positionTokenIds),
 	)
 	if err != nil {
-		logx.Errorf("[SonexPositions]:refreshCache BatchGetPositions error: %s", err.Error())
+		logx.Errorf("[SonexPositions]: BatchGetPositionMap error: %s", err.Error())
 		return nil, err
 	}
 
-	for _, p := range positions {
-		token0, err := global.GetToken(req.ChainId, p.Token0.Hex())
+	// positionTokenIds 中部分 tokenId 可能被销毁，但是 event 监听未及时处理
+	// 所以 BatchGetPositions 返回的有效 position 数量可能小于 positionTokenIds 数量
+	validTokenIds := make([]int64, 0)
+
+	for tokenId, p := range positionM {
+		validTokenIds = append(validTokenIds, tokenId)
+
+		token0, err := global.GetToken(chainId, p.Token0.Hex())
 		if err != nil {
-			logx.Errorf("[SonexPositions]:refreshCache GetToken error: %s", err.Error())
+			logx.Errorf("[SonexPositions]: GetToken error: %s", err.Error())
 			return nil, err
 		}
-		token1, err := global.GetToken(req.ChainId, p.Token1.Hex())
+		token1, err := global.GetToken(chainId, p.Token1.Hex())
 		if err != nil {
-			logx.Errorf("[SonexPositions]:refreshCache GetToken error: %s", err.Error())
+			logx.Errorf("[SonexPositions]: GetToken error: %s", err.Error())
 			return nil, err
 		}
 
@@ -171,9 +157,10 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 		token0Addresses = append(token0Addresses, token0.Address)
 		token1Addresses = append(token1Addresses, token1.Address)
 
-		if _, ok := positionTransferItemMap[p.TokenId.Int64()]; !ok {
-			positionTransferItemMap[p.TokenId.Int64()] = &types.Position{
-				TokenID: p.TokenId.Int64(),
+		// merge cached position and position from db
+		if _, ok := positionTransferItemMap[tokenId]; !ok {
+			positionTransferItemMap[tokenId] = &types.Position{
+				TokenID: tokenId,
 				Origin:  p.Owner.Hex(),
 				Pool: types.Token_PoolDetail{
 					Address: p.Pool.Address.Hex(),
@@ -206,7 +193,7 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		pairs, err := l.getCollectedPairs(ctx, req.ChainId, positionTokenIds, token0Decimals, token1Decimals)
+		pairs, err := l.getCollectedPairs(ctx, chainId, validTokenIds, token0Decimals, token1Decimals)
 		results <- psTaskResult{collectedPairs: pairs, err: err}
 	}()
 
@@ -229,7 +216,7 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 
 	for result := range results {
 		if result.err != nil {
-			logx.Errorf("[SonexPositions]:refreshCache waitgroup error: %s", result.err.Error())
+			logx.Errorf("[SonexPositions]: waitgroup error: %s", result.err.Error())
 			return nil, result.err
 		}
 		if result.collectedPairs != nil {
@@ -245,30 +232,26 @@ func (l *SonexPositionsLogic) refreshCache(ctx context.Context, req *types.Posit
 		}
 	}
 
-	response := &PositionsResponseWrapper{
-		PositionsResponse: &types.PositionsResponse{
-			Positions: make([]*types.Position, 0),
-		},
-	}
+	positions = make([]*types.Position, 0)
 
 	// Collect results
-	for _, position := range positions {
-		if positionTransferItem, exists := positionTransferItemMap[position.TokenId.Int64()]; exists {
-			convertedPosition, err := l.fillPosition(ctx, req, positionTransferItem, position, tokenPricesRecords)
+	for tokenId, position := range positionM {
+		if positionTransferItem, exists := positionTransferItemMap[tokenId]; exists {
+			convertedPosition, err := l.fillPosition(ctx, chainId, positionTransferItem, position, tokenPricesRecords)
 			if err != nil {
 				logx.Errorf("[SonexPositions]:refreshCache fillPosition error: %s", err.Error())
 				continue
 			}
-			response.Positions = append(response.Positions, convertedPosition)
+			positions = append(positions, convertedPosition)
 		}
 	}
 
 	// sort by position in DESC
-	sort.Slice(response.Positions, func(i, j int) bool {
-		return response.Positions[i].Position > response.Positions[j].Position
+	sort.SliceStable(positions, func(i, j int) bool {
+		return positions[i].Position > positions[j].Position
 	})
 
-	return response, nil
+	return positions, nil
 }
 
 // 获取 collectedPairs，过滤掉 deceaseLiquidity events
@@ -330,18 +313,18 @@ func (l *SonexPositionsLogic) getCollectedPairs(ctx context.Context, chainId int
 }
 
 func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
-	req *types.PositionsRequest,
+	chainId int64,
 	position *types.Position,
 	innnerPosition *sonex.Position,
 	pricesRecords map[string]*repository.TokenPriceRecord) (*types.Position, error) {
 	price0 := new(big.Float).SetFloat64(0)
 	price1 := new(big.Float).SetFloat64(0)
 
-	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("Miss chain configure")
 	}
-	usdToken, err := global.GetToken(req.ChainId, common.HexToAddress(chainConf.USD).Hex())
+	usdToken, err := global.GetToken(chainId, common.HexToAddress(chainConf.USD).Hex())
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +341,7 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	} else {
 		logx.Errorf("[SonexPositions]:fillPosition Token0 price not found from db for address: %s", innnerPosition.Token0.Hex())
 
-		bestPrice0, _, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token0.Hex(), true, 2)
+		bestPrice0, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token0.Hex(), true, 2)
 		if err == nil && bestPrice0 != nil {
 			price0.SetInt(bestPrice0.Value)
 			price0String = bestPrice0.Value.String()
@@ -374,7 +357,7 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	} else {
 		logx.Errorf("[SonexPositions]:fillPosition Token1 price not found from db for address: %s", innnerPosition.Token1.Hex())
 
-		bestPrice1, _, _, err := global.GetPrices(ctx, nil, req.ChainId, innnerPosition.Token1.Hex(), true, 2)
+		bestPrice1, _, _, err := global.GetPrices(ctx, nil, chainId, innnerPosition.Token1.Hex(), true, 2)
 		if err == nil && bestPrice1 != nil {
 			price1.SetInt(bestPrice1.Value)
 			price1String = bestPrice1.Value.String()

@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"math/rand"
 	"strings"
 	"sync"
-	"time"
 
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
@@ -130,13 +128,13 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	balance0QuoDecimal := new(big.Float).Quo(new(big.Float).SetInt(balance0), new(big.Float).SetFloat64(math.Pow10(int(pool.Token0.Decimals))))
 	balance1QuoDecimal := new(big.Float).Quo(new(big.Float).SetInt(balance1), new(big.Float).SetFloat64(math.Pow10(int(pool.Token1.Decimals))))
 	_token0Volume := new(big.Float).Mul(price0Quoprice0Decimal, balance0QuoDecimal)
+	_token1Volume := new(big.Float).Mul(price1Quoprice1Decimal, balance1QuoDecimal)
 
-	_tvlUSD := new(big.Float).Mul(_token0Volume, big.NewFloat(2))
+	_tvlUSD := new(big.Float).Add(_token0Volume, _token1Volume)
 
 	_amountPrice0, _ := balance0QuoDecimal.Float64()
 	_amountPrice1, _ := balance1QuoDecimal.Float64()
 
-	rand.Seed(time.Now().UnixNano())
 	// _oldtvlUsdString, err8 := global.GetVolume24HTvlValue(cacher, global.Tvl24HKey, poolFromDB.Address)
 
 	// get volume24H
@@ -183,13 +181,13 @@ func multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) err
 	erc20ABI, _ := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
 
 	call3 := make([]contract_common.Multicall3Call3, len(calls))
-	for _, c := range calls {
+	for i, c := range calls {
 		data, _ := erc20ABI.Pack(c.method, c.args...)
-		call3 = append(call3, contract_common.Multicall3Call3{
+		call3[i] = contract_common.Multicall3Call3{
 			Target:       c.contract,
 			AllowFailure: true,
 			CallData:     data,
-		})
+		}
 	}
 
 	multicallABI, _ := abi.JSON(strings.NewReader(contract_common.MulticallABI))

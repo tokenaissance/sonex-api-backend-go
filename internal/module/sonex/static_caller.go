@@ -513,7 +513,7 @@ func (staticCaller *StaticCaller) BatchGetPositionMap(ctx context.Context, chain
 		return nil, err
 	}
 
-	positions := map[int64]*Position{}
+	positions := make([]*Position, 0)
 	fieldNumber := 2
 	for i, tokenId := range tokenIds {
 		multicallResult := multicallResults[i*fieldNumber+1]
@@ -539,7 +539,7 @@ func (staticCaller *StaticCaller) BatchGetPositionMap(ctx context.Context, chain
 		position.Factory = factory
 		position.Owner = owner
 		position.TokenId = tokenId
-		positions[tokenId.Int64()] = &position
+		positions = append(positions, &position)
 	}
 
 	// Get pool
@@ -589,8 +589,7 @@ func (staticCaller *StaticCaller) BatchGetPositionMap(ctx context.Context, chain
 	for i, pool := range pools {
 		poolMap[pool.Address.Hex()] = pools[i]
 	}
-	i := 0
-	for _, position := range positions {
+	for i, position := range positions {
 		poolAddress := ComputePoolAddress(position.Factory, position.Token0, position.Token1, position.Fee)
 		position.Pool = poolMap[poolAddress.Hex()]
 
@@ -617,9 +616,12 @@ func (staticCaller *StaticCaller) BatchGetPositionMap(ctx context.Context, chain
 			return nil, err
 		}
 		position.UpperTick = &upperTick
-
-		i++
 	}
 
-	return positions, nil
+	positionMap := map[int64]*Position{}
+	for _, position := range positions {
+		tokenId := position.TokenId.Int64()
+		positionMap[tokenId] = position
+	}
+	return positionMap, nil
 }

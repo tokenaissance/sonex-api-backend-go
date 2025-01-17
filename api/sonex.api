@@ -529,6 +529,34 @@ type GalxeSwapResponse {
 	isSwapOrNot    bool                `json:"isSwapOrNot"`
 }
 
+
+type GalxeTgIdRequest {
+	Tgid int64 `form:"tgid"`	
+}
+
+type GalxeTgIdResponse {
+	IsPlayedOrNot    bool                `json:"isPlayedOrNot"`
+}
+
+// pool info address
+type SonexPoolInfoKlineRequest {
+	ChainRequest
+	Address  string `path:"address"`
+}
+
+
+// pool info address
+type SonexPoolInfoKlineResponse {
+	Records []VolumeDetailsRecord `json:"records"`
+}
+
+// 前端拿到这个值,加 % 后显示
+type VolumeDetailsRecord {
+	VolumeRatio     float64  `json:"volumeratio"` // 跟过去一天的volume最后一组24H的相比，相比的,是增加还是减弱 ,保留两位精度
+	VolumeUsd     	float64 `json:"volumeusd"` 
+	CreatedAt       int64   `json:"createdat"`
+}
+
 @server (
 	prefix: /sonex
 	group:  sonex
@@ -564,6 +592,9 @@ service sonex_api_backend_go {
 	@handler SonexPoolInfoHandler
 	get /pools/info/:address (PoolInfoRequest) returns (PoolInfoResponse)
 
+	@handler SonexPoolInfoKlineRequest
+	get /pools/kline/:address (SonexPoolInfoKlineRequest) returns (SonexPoolInfoKlineResponse)
+
 	@handler SonexPositionValuesHandler
 	get /pools/position_values (PositionValuesRequest) returns (PositionValuesResponse)
 
@@ -578,4 +609,8 @@ service sonex_api_backend_go {
 
 	@handler SonexGalxeswapHandler
 	get /galxeswap (GalxeSwapRequest) returns (GalxeSwapResponse)
+
+	@handler SonexGalxeTgidHandler
+	get /galxetgid (GalxeTgIdRequest) returns (GalxeTgIdResponse)
+
 }
