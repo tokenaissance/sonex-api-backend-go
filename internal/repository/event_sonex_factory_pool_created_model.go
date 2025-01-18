@@ -316,13 +316,13 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	case PoolsOrderIdAsc:
 		dataQuery += " ORDER BY pool.id ASC"
 	case PoolsOrderIdDesc:
-		dataQuery += " ORDER BY pool.id ASC"
+		dataQuery += " ORDER BY pool.id DESC"
 	case PoolsOrderTvlAsc:
-		dataQuery += " ORDER BY t4.tvl ASC"
+		dataQuery += " ORDER BY t4.tvl ::FLOAT  ASC "
 	case PoolsOrderTvlDesc:
-		dataQuery += " ORDER BY t4.tvl DESC"
+		dataQuery += " ORDER BY t4.tvl ::FLOAT DESC"
 	default:
-		dataQuery += " ORDER BY t4.tvl ASC"
+		dataQuery += " ORDER BY t4.tvl ::FLOAT ASC"
 	}
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
