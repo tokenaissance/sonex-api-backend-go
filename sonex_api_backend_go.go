@@ -30,8 +30,8 @@ var configFile = flag.String("f", "etc/sonex_api_backend_go.yaml", "the config f
 
 func main() {
 	flag.Parse()
-
 	var c config.Config
+
 	if *runLocally {
 		conf.MustLoad("etc/sonex_api_backend_go_local.yaml", &c)
 	} else {
@@ -121,6 +121,13 @@ func main() {
 	// every 6 hours,calcuate the vol and Tvl for pool
 	global.AddCronJob("@every 6h", func() {
 		task.HandleRecordVol24hTvl24h(&c)
+	})
+
+	// 一开始就要计算一次
+	// 计算tvl的值,每分钟
+  task.HandleRecordTvlForeEachPool(&c)
+	global.AddCronJob("@every 1m", func() {
+		task.HandleRecordTvlForeEachPool(&c)
 	})
 
 	// Register chain handler

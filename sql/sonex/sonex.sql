@@ -533,3 +533,63 @@ CREATE UNIQUE INDEX "token_index_chain_id_address" ON "public"."token" USING btr
 -- Primary Key structure for table token
 -- ----------------------------
 ALTER TABLE "public"."token" ADD CONSTRAINT "token_pkey" PRIMARY KEY ("id");
+/*
+ Navicat Premium Data Transfer
+
+ Source Server         : test009
+ Source Server Type    : PostgreSQL
+ Source Server Version : 160004 (160004)
+ Source Host           : 10.1.84.8:5432
+ Source Catalog        : sonex-api-backend-go
+ Source Schema         : public
+
+ Target Server Type    : PostgreSQL
+ Target Server Version : 160004 (160004)
+ File Encoding         : 65001
+
+ Date: 18/01/2025 13:09:51
+*/
+
+
+-- ----------------------------
+-- Table structure for sonex_pool_tvl_record
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."sonex_pool_tvl_record";
+CREATE TABLE "public"."sonex_pool_tvl_record" (
+  "id" int8 NOT NULL DEFAULT nextval('sonex_pool_tvl_record_id_seq'::regclass),
+  "pool_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tvl" varchar COLLATE "pg_catalog"."default" NOT NULL,
+  "created" timestamp(6) NOT NULL,
+  "usd_decimals" int8 NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "updated" timestamp(6) NOT NULL
+)
+;
+ALTER TABLE "public"."sonex_pool_tvl_record" OWNER TO "apibackendgo";
+
+-- ----------------------------
+-- Indexes structure for table sonex_pool_tvl_record
+-- ----------------------------
+CREATE INDEX "pool_address_idx_copy1" ON "public"."sonex_pool_tvl_record" USING btree (
+  "pool_address" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table sonex_pool_tvl_record
+-- ----------------------------
+ALTER TABLE "public"."sonex_pool_tvl_record" ADD CONSTRAINT "sonex_token_price_record_copy1_pkey" PRIMARY KEY ("id");
+
+
+-- ----------------------------
+-- Primary Key structure for table sonex_pool_tvl_record
+-- ----------------------------
+ALTER TABLE "public"."sonex_pool_tvl_record" ADD CONSTRAINT "sonex_token_price_record_copy1_pkey" PRIMARY KEY ("id");
+SELECT setval('"sonex_pool_tvl_record_id_seq"', 1, true);
+
+DROP SEQUENCE IF EXISTS "sonex_pool_tvl_record_id_seq";
+CREATE SEQUENCE "sonex_pool_tvl_record_id_seq" 
+INCREMENT 1
+MINVALUE  1
+MAXVALUE 9223372036854775807
+START 1
+CACHE 1;
