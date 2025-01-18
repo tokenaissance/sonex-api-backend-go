@@ -157,9 +157,31 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		OrderByT(func(item cache.Price) float64 {
 			return item.PriceImpact
 		}).First()
-	var bestRouter cache.Price
+	var bestRouter *cache.Price
 	if bestRouterA != nil {
-		bestRouter = bestRouterA.(cache.Price)
+		if val, ok := bestRouterA.(cache.Price); ok {
+			bestRouter = &val
+		} else {
+			bestRouter = &cache.Price{
+				From:        fromAddress.Hex(),
+				To:          toAddress.Hex(),
+				Path:        []byte{},
+				Value:       common.Big0,
+				GasEstimate: common.Big0,
+				PriceImpact: 0,
+				FeeRate:     0,
+			}
+		}
+	} else {
+		bestRouter = &cache.Price{
+			From:        fromAddress.Hex(),
+			To:          toAddress.Hex(),
+			Path:        []byte{},
+			Value:       common.Big0,
+			GasEstimate: common.Big0,
+			PriceImpact: 0,
+			FeeRate:     0,
+		}
 	}
 	var router []types.TokenQuoteResponse_Router_Pool
 	linq.From(bestRouter.Pools).
