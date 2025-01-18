@@ -240,6 +240,7 @@ type VolumeDetailsRecord struct {
 
 // / // 每天24条, -1 作为偏移量, 每条数据间隔 3600 秒 间隔  ，这是曲线的K线
 // 每天 1 条，-1 作为偏移量，每条数据 间隔 86400 秒 ，柱状图，
+// hours to days 
 func (m *customEventSonexPoolSwapModel) SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error) {
 	// items := 1 - offsetDay*24
 
@@ -259,7 +260,7 @@ FROM (
         t2.amount0,
         LAG(t2.amount0) OVER () AS last_amount0,
         COALESCE(t2.amount0 / 1000000000000000000 * t4.price / 1000000, '0')  AS volumeusd, 
-        EXTRACT (EPOCH FROM now() + concat(t1.day,'hours')::interval ) ::INT  AS createdat
+        EXTRACT (EPOCH FROM now() + concat(t1.day,'days')::interval ) ::INT  AS createdat
     FROM (
         SELECT generate_series(0,%v,-1) AS day
     ) AS t1
