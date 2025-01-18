@@ -93,6 +93,7 @@ type PoolData struct {
 	ID               int64          `db:"id"`
 	EventFee         int64          `db:"event_fee"`
 	EventPool        string         `db:"event_pool"`
+	Tvl              string         `db:"tvl"` // tvl from sonex_pool_tvl_record
 	Token0Name       sql.NullString `db:"token0_name"`
 	Token0Symbol     sql.NullString `db:"token0_symbol"`
 	Token0Address    sql.NullString `db:"token0_address"`
@@ -233,15 +234,30 @@ func (m *customEventSonexFactoryPoolCreatedModel) FindByPoolAddress(ctx context.
 	}
 }
 
+/*
+/sonex/pools?order=DESC&pageIndex=1&pageSize=10
+order 字段,有以下赋值含义
+ASC，指的是按照TVL进行升序
+DESC，代表按照 TVL 进行降序排列
+IdASC, 按照池子创建时间进行升序
+IdDesc，按照池子创建时间进行降序
+*/
+
+var PoolsOrderTvlAsc = "ASC"   // 按照TVL进行排序
+var PoolsOrderTvlDesc = "DESC" // 按照TVL进行降序
+var PoolsOrderIdAsc = "IdASC"
+var PoolsOrderIdDesc = "IdDesc"
+
 // GetPoolList returns a map of pool data and pagination meta
 func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error) {
 	var poolData []PoolData
 	var totalCount int
-
+	// sonex_pool_tvl_record ,一开始就调用一次
 	baseQuery := fmt.Sprintf(`
 		FROM %s AS pool
 		INNER JOIN sonex_token AS token0 ON pool.event_token0 = token0.address AND token0."isHidden" = false
 		INNER JOIN sonex_token AS token1 ON pool.event_token1 = token1.address AND token1."isHidden" = false
+		INNER JOIN sonex_pool_tvl_record AS t4 ON pool.event_pool = t4.pool_address
 		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
 	args := []interface{}{params.ChainId, params.PositionManager}
 
@@ -277,13 +293,36 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	if err != nil {
 		return nil, nil, err
 	}
-
-	dataQuery := fmt.Sprintf("SELECT pool.id, pool.event_fee, pool.event_pool, token0.name AS token0_name, token0.symbol AS token0_symbol, token0.address AS token0_address, token0.logo AS token0_logo, token0.additional AS token0_additional, token0.decimals AS token0_decimals, token1.name AS token1_name, token1.symbol AS token1_symbol, token1.address AS token1_address, token1.logo AS token1_logo, token1.additional AS token1_additional, token1.decimals AS token1_decimals %s", baseQuery)
+	/*t4.tvl 只参与排序，不参与准确的数据展示,数据展示直接获取最新的额度*/
+	dataQuery := fmt.Sprintf(
+		`SELECT
+		pool.ID,
+		pool.event_fee,
+		pool.event_pool,
+		t4.tvl,
+		token0.NAME AS token0_name,
+		token0.symbol AS token0_symbol,
+		token0.address AS token0_address,
+		token0.logo AS token0_logo,
+		token0.additional AS token0_additional,
+		token0.decimals AS token0_decimals,
+		token1.NAME AS token1_name,
+		token1.symbol AS token1_symbol,
+		token1.address AS token1_address,
+		token1.logo AS token1_logo,
+		token1.additional AS token1_additional,
+		token1.decimals AS token1_decimals %s `, baseQuery)
 	switch params.Order {
-	case "ASC":
+	case PoolsOrderIdAsc:
 		dataQuery += " ORDER BY pool.id ASC"
-	default:
+	case PoolsOrderIdDesc:
 		dataQuery += " ORDER BY pool.id DESC"
+	case PoolsOrderTvlAsc:
+		dataQuery += " ORDER BY t4.tvl ::FLOAT  ASC "
+	case PoolsOrderTvlDesc:
+		dataQuery += " ORDER BY t4.tvl ::FLOAT DESC"
+	default:
+		dataQuery += " ORDER BY t4.tvl ::FLOAT ASC"
 	}
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 

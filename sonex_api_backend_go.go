@@ -15,7 +15,9 @@ import (
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/task"
+	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -28,8 +30,8 @@ var configFile = flag.String("f", "etc/sonex_api_backend_go.yaml", "the config f
 
 func main() {
 	flag.Parse()
-
 	var c config.Config
+
 	if *runLocally {
 		conf.MustLoad("etc/sonex_api_backend_go_local.yaml", &c)
 	} else {
@@ -41,7 +43,21 @@ func main() {
 	sqlx.DisableStmtLog()
 	c.Timeout = 0
 
-	err := global.Initialize(c)
+	// Sentry https://arc.net/l/quote/wtdjxdgf
+	// Set TracesSampleRate to 1.0 to capture 100%
+	// of transactions for tracing.
+	// We recommend adjusting this value in production.
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn:              c.Sentry.Dsn,
+		TracesSampleRate: c.Sentry.TracesSampleRate,
+		Environment:      c.Sentry.Environment,
+	})
+	defer sentry.Flush(2 * time.Second)
+	if err != nil {
+		logx.Errorf("sentry.Init: %s", err)
+	}
+
+	err = global.Initialize(c)
 	if err != nil {
 		panic(err)
 	}
@@ -105,6 +121,13 @@ func main() {
 	// every 6 hours,calcuate the vol and Tvl for pool
 	global.AddCronJob("@every 6h", func() {
 		task.HandleRecordVol24hTvl24h(&c)
+	})
+
+	// 一开始就要计算一次
+	// 计算tvl的值,每分钟
+  task.HandleRecordTvlForeEachPool(&c)
+	global.AddCronJob("@every 1m", func() {
+		task.HandleRecordTvlForeEachPool(&c)
 	})
 
 	// Register chain handler

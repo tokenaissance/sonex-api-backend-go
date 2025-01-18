@@ -8,6 +8,10 @@ Domains:
   - api-swap.sonex.so
   - api-point.sonex.so
   - sonex-9ybwjtvxi3hr38z3p13d8e.vercel.app
+Sentry:
+    Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
+    TracesSampleRate: 1.0
+    Environment: mainnet
 PostgreSQL:
   Host: PG_HOST
   Port: PG_PORT
