@@ -2913,7 +2913,7 @@
           "type": "integer",
           "format": "int64"
         },
-        "Rate": {
+        "rate": {
           "type": "number",
           "format": "double"
         }
@@ -2927,7 +2927,7 @@
         "priceUSD",
         "createdAt",
         "timeStamp",
-        "Rate"
+        "rate"
       ]
     },
     "SonexTokenPricesRequest": {
