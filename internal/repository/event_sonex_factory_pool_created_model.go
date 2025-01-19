@@ -245,8 +245,9 @@ IdDesc，按照池子创建时间进行降序
 
 var PoolsOrderTvlAsc = "ASC"   // 按照TVL进行排序
 var PoolsOrderTvlDesc = "DESC" // 按照TVL进行降序
-var PoolsOrderIdAsc = "IdASC"
-var PoolsOrderIdDesc = "IdDesc"
+// todo
+var PoolsOrderIdAsc = "IdASC"   // 按照时间先后顺序
+var PoolsOrderIdDesc = "IdDesc" // // 按照时间先后顺序
 
 // GetPoolList returns a map of pool data and pagination meta
 func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error) {

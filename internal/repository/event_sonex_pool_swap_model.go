@@ -238,9 +238,13 @@ type VolumeDetailsRecord struct {
 }
 */
 
+// / // 每天24条, -1 作为偏移量, 每条数据间隔 3600 秒 间隔  ，这是曲线的K线
+// hours to days
+// 每天 1 条，-1 作为偏移量，柱状图，每条数据 间隔 86400 秒
 func (m *customEventSonexPoolSwapModel) SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error) {
-	items := 1 - offsetDay*24 // 每天24条, -1 作为偏移量
+	// items := 1 - offsetDay*24
 
+	items := 1 - offsetDay*1
 	query := fmt.Sprintf(`
 SELECT
 concat(
@@ -256,13 +260,13 @@ FROM (
         t2.amount0,
         LAG(t2.amount0) OVER () AS last_amount0,
         COALESCE(t2.amount0 / 1000000000000000000 * t4.price / 1000000, '0')  AS volumeusd, 
-        EXTRACT (EPOCH FROM now() + concat(t1.day,'hours')::interval ) ::INT  AS createdat
+        EXTRACT (EPOCH FROM now() + concat(t1.day,'days')::interval ) ::INT  AS createdat
     FROM (
         SELECT generate_series(0,%v,-1) AS day
     ) AS t1
     LEFT JOIN (
         SELECT
-            EXTRACT(EPOCH FROM tx_at-now())::INTEGER / 3600 AS day,
+            EXTRACT(EPOCH FROM tx_at-now())::INTEGER / 86400 AS day,
             SUM(ABS(event_amount0::NUMERIC)) AS amount0
         FROM event_sonex_pool_swap
         WHERE extra_pool = $1 AND  tx_at < NOW()  and tx_at >= CURRENT_DATE -  %v  AND chain_id = %v
@@ -321,6 +325,11 @@ func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context,
 				WHEN T1.event_amount1_0::NUMERIC < 0 THEN T1.event_amount1_0::NUMERIC = T2.event_amount1_1::NUMERIC* -1 
 				ELSE FALSE
 				END)
+		),
+		tx_hash_with_tx_index_1 AS (
+    		SELECT DISTINCT tx_hash
+    		FROM MergeSelect
+    		WHERE tx_index_1 IS NOT NULL
 		)
 	`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	orderBy := "DESC"
@@ -367,8 +376,8 @@ func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context,
 		%s
 		SELECT * FROM MergeSelect 
 		WHERE 
-			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL))
-			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL)))
+			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM tx_hash_with_tx_index_1))
+			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM tx_hash_with_tx_index_1)))
 			%s
 		ORDER BY tx_at %s
 	`, with, options, orderBy)
@@ -382,8 +391,8 @@ func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context,
 		%s
 		SELECT COUNT(*) FROM MergeSelect 
 		WHERE 
-			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL))
-			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL)))
+			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM tx_hash_with_tx_index_1))
+			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM tx_hash_with_tx_index_1)))
 			%s
 	`, with, options)
 	err = m.conn.QueryRowCtx(ctx, &total, query)

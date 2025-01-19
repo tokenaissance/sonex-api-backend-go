@@ -2912,6 +2912,10 @@
         "timeStamp": {
           "type": "integer",
           "format": "int64"
+        },
+        "Rate": {
+          "type": "number",
+          "format": "double"
         }
       },
       "title": "SonexTokenPriceRecord",
@@ -2922,7 +2926,8 @@
         "price",
         "priceUSD",
         "createdAt",
-        "timeStamp"
+        "timeStamp",
+        "Rate"
       ]
     },
     "SonexTokenPricesRequest": {

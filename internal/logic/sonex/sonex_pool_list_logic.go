@@ -331,6 +331,32 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		pools = append(pools, pool)
 	}
 
+	// TODO 后期的优化处理
+
+	// 该处代码后期需要再打开
+	/*
+		switch req.Order {
+		case repository.PoolsOrderTvlDesc:
+			sort.SliceStable(pools, func(i, j int) bool {
+				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvlUsd_i.Cmp(tvlUsd_j) > 0
+			})
+		case repository.PoolsOrderTvlAsc:
+			sort.SliceStable(pools, func(i, j int) bool {
+				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvlUsd_i.Cmp(tvlUsd_j) < 0
+			})
+		default:
+			sort.SliceStable(pools, func(i, j int) bool {
+				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvlUsd_i.Cmp(tvlUsd_j) > 0
+			})
+		}
+	*/
+
 	// sort pool tvl
 	sort.SliceStable(pools, func(i, j int) bool {
 		tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)

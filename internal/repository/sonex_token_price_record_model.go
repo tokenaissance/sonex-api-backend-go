@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/module/sonex"
+	"sonex_api_backend_go/internal/types"
 	"time"
 
 	"github.com/gogf/gf/v2/os/gtime"
@@ -21,6 +22,7 @@ type (
 		sonexTokenPriceRecordModel
 		withSession(session sqlx.Session) SonexTokenPriceRecordModel
 		Kline(address string, interval string) ([]*TokenPriceRecord, error)
+		TokenKlineRate(adddress string, interval string) ([]types.SonexTokenPriceRecord, error)
 		QueryLatestHistoryPrices() (map[string]*big.Int, error)
 		QueryLatestHistoryPricesByAddresses(addresses []string) (map[string]*big.Int, error)
 		QueryLatestHistoryPricesByAddressesInterval(addresses []string, interval string) (map[string]*big.Int, error)
@@ -60,6 +62,103 @@ type MiniTokenPriceRecord struct {
 	TokenAddress string `db:"token_address"`
 	Price        string `db:"price"`
 	CreatedAt    string `db:"created_at"`
+}
+
+type TokenPriceRateRecord struct {
+	TokenAddress string `db:"token_address"`
+	Price        string `db:"price"`
+	CreatedAt    string `db:"created_at"`
+}
+
+/*
+-- 此查询假设表中的数据没有时间中断（例如某个小时没有数据）
+-- c1 参数：假设需要 5 天数据时，要传 5*2 天，换句话说要拿到 2 倍的时间点数量
+-- c2 每个数据点的时间间隔（秒）
+-- limit 要指定最后需要的时间点数量
+*/
+func generateThePeriodAndTimeOffset(interval string) (c1 string, c2 int64, c3 int64) {
+
+	switch interval {
+	case "1h":
+		c1 = `'2 hours'::interval`
+		c2 = 60
+		c3 = 60
+		//  targetKLines = 60 // 60 K-lines per hour
+	case "1d":
+		c1 = `'2 days'::interval`
+		c2 = 600 // 86400/144 targetKLines = 144 // 144 K-lines per day
+		c3 = 144
+	case "1w":
+		c1 = `'14 days'::interval`
+		c2 = 3600 // 7*86400/168= targetKLines = 168 // 168 K-lines per week
+		c3 = 168
+	case "1m": // 一个月30天
+		c1 = `'60 days'::interval`
+		c2 = 3323 // ines per week
+		c3 = 780  // 30*86400/780=3323 , 780 K-lines per month
+		// targetKLines = 780 //
+	case "1y": // 每年365天
+		c1 = `'730 days'::interval`
+		c2 = 172800
+		c3 = 365 // targetKLines = 365 // 365 K-lines per year
+	default:
+		c1 = `'2 days'::interval`
+		c2 = 600 // 86400/144 targetKLines = 144 // 144 K-lines per day
+		c3 = 144
+	}
+	return
+}
+
+func (m *customSonexTokenPriceRecordModel) TokenKlineRate(address string, interval string) ([]types.SonexTokenPriceRecord, error) {
+
+	c1, c2, c3 := generateThePeriodAndTimeOffset(interval)
+	query := fmt.Sprintf(`
+		WITH c (c1, c2) AS (
+    VALUES (%v, %v)
+)
+SELECT
+    t1.id,
+    t1.token_symbol AS tokenSymbol,
+    t1.token_address AS tokenAddress,
+     t1.price :: VARCHAR,
+     t1.price / power(10,t1.usd_decimals)  ::  FLOAT AS priceUSD,
+     t1.created_at AS createdAt,
+      (date_part('epoch', t1.created_at))::bigint AS timeStamp,
+    coalesce((LAG(t1.price,%v) OVER () - t1.price) / t1.price  ,0) AS rate
+   
+FROM (
+    SELECT
+        DISTINCT ON (point)
+        EXTRACT(epoch FROM (created_at - NOW()))::INTEGER / c2 AS point,
+        price::NUMERIC,
+        created_at,id,token_symbol,token_address,usd_decimals
+				
+    FROM sonex_token_price_record, c
+    WHERE
+        token_address= $1
+        AND
+        created_at <= NOW()
+        AND
+        created_at > NOW() - c1
+    ORDER BY point, created_at DESC
+) AS t1
+LIMIT %v
+`, c1, c2, c3, c3)
+
+	var resp []types.SonexTokenPriceRecord
+	err := m.conn.QueryRows(&resp, query, address)
+	switch err {
+	case nil:
+		for _, v := range resp {
+			v.CreatedAt = gtime.New(v.CreatedAt).Format("Y-m-d H:i:s")
+		}
+		// downsample
+		return resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
 
 // downsampleRecords performs time-based downsampling of price records
