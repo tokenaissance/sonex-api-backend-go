@@ -453,7 +453,7 @@ type SonexTokenPriceRecord struct {
 	PriceUSD     float64 `json:"priceUSD"`
 	CreatedAt    string  `json:"createdAt"`
 	TimeStamp    int64   `json:"timeStamp"`
-	Rate         float64 `json:"Rate"`
+	Rate         float64 `json:"rate"`
 }
 
 type SonexTokenPricesRequest struct {
