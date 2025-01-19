@@ -325,6 +325,11 @@ func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context,
 				WHEN T1.event_amount1_0::NUMERIC < 0 THEN T1.event_amount1_0::NUMERIC = T2.event_amount1_1::NUMERIC* -1 
 				ELSE FALSE
 				END)
+		),
+		tx_hash_with_tx_index_1 AS (
+    		SELECT DISTINCT tx_hash
+    		FROM MergeSelect
+    		WHERE tx_index_1 IS NOT NULL
 		)
 	`, m.table, eventSonexFactoryPoolCreatedModel.tableName(), m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	orderBy := "DESC"
@@ -371,8 +376,8 @@ func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context,
 		%s
 		SELECT * FROM MergeSelect 
 		WHERE 
-			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL))
-			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL)))
+			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM tx_hash_with_tx_index_1))
+			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM tx_hash_with_tx_index_1)))
 			%s
 		ORDER BY tx_at %s
 	`, with, options, orderBy)
@@ -386,8 +391,8 @@ func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context,
 		%s
 		SELECT COUNT(*) FROM MergeSelect 
 		WHERE 
-			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL))
-			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM MergeSelect WHERE tx_index_1 IS NOT NULL)))
+			((tx_index_1 IS NOT NULL AND tx_hash IN (SELECT tx_hash FROM tx_hash_with_tx_index_1))
+			OR (tx_index_1 IS NULL AND tx_hash NOT IN (SELECT tx_hash FROM tx_hash_with_tx_index_1)))
 			%s
 	`, with, options)
 	err = m.conn.QueryRowCtx(ctx, &total, query)

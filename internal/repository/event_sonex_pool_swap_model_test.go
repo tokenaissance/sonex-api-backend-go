@@ -26,15 +26,15 @@ func TestEventSonexPoolSwapModelQueryMergeWithExtra(t *testing.T) {
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
-	wallet := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
+	// wallet := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
 	// pool := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
-	tokens := []string{"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"}
+	// tokens := []string{"0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369"}
 	orderBy := "DESC"
 	var pageSize int64 = 20
 	var pageIndex int64 = 1
 	records, total, err := model.QueryMergeWithExtra(context.Background(), &QueryMergePoolSwapWithExtraOptions{
-		Wallet:    &wallet,
-		Tokens:    tokens,
+		// Wallet:    &wallet,
+		// Tokens:    tokens,
 		OrderBy:   &orderBy,
 		PageSize:  &pageSize,
 		PageIndex: &pageIndex,
