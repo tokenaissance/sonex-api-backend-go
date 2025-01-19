@@ -249,7 +249,7 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolInfoKineData(ctx context.Co
 SELECT
 concat(
         CASE WHEN amount0 is null or last_amount0 is null THEN 0
-            ELSE ((amount0 - last_amount0) / last_amount0 )::FLOAT
+            ELSE ((amount0 - last_amount0) / last_amount0 * 100 )::FLOAT
         END
     ) AS volumeratio,
 	  t.volumeusd,
