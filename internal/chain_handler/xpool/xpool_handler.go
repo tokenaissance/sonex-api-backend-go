@@ -26,28 +26,46 @@ type XpoolHandler struct {
 	chain      *config.ChainConfig
 	config     *config.XpoolConfig
 
-	onFactoryPoolCreated   []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated)
-	onFactoryPoolDestroied []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied)
-	onPoolDeposited        []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolDeposited)
-	onPoolClaimed          []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolClaimed)
-	onPoolWithdrawed       []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolWithdrawed)
+	onFactoryOperatorAdded     []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryOperatorAdded)
+	onFactoryOperatorRemoved   []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryOperatorRemoved)
+	onFactoryPoolCreated       []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated)
+	onFactoryRewardPerBlockSet []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryRewardPerBlockSet)
+	onFactoryPoolDestroied     []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied)
+	onPoolDeposited            []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolDeposited)
+	onPoolClaimed              []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolClaimed)
+	onPoolWithdrawed           []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolWithdrawed)
 }
 
 func NewXpoolHandler(dataSource string, chain config.ChainConfig, config config.XpoolConfig) (*XpoolHandler, error) {
 	return &XpoolHandler{
-		dataSource:             dataSource,
-		chain:                  &chain,
-		config:                 &config,
-		onFactoryPoolCreated:   []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated){},
-		onFactoryPoolDestroied: []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied){},
-		onPoolDeposited:        []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolDeposited){},
-		onPoolClaimed:          []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolClaimed){},
-		onPoolWithdrawed:       []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolWithdrawed){},
+		dataSource:                 dataSource,
+		chain:                      &chain,
+		config:                     &config,
+		onFactoryOperatorAdded:     []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryOperatorAdded){},
+		onFactoryOperatorRemoved:   []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryOperatorRemoved){},
+		onFactoryPoolCreated:       []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated){},
+		onFactoryRewardPerBlockSet: []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryRewardPerBlockSet){},
+		onFactoryPoolDestroied:     []func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied){},
+		onPoolDeposited:            []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolDeposited){},
+		onPoolClaimed:              []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolClaimed){},
+		onPoolWithdrawed:           []func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *xpool.StakingPoolWithdrawed){},
 	}, nil
+}
+
+func (handler *XpoolHandler) OnFactoryOperatorAdded(callback func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryOperatorAdded)) {
+	handler.onFactoryOperatorAdded = append(handler.onFactoryOperatorAdded, callback)
+}
+
+func (handler *XpoolHandler) OnFactoryOperatorRemoved(callback func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryOperatorRemoved)) {
+	handler.onFactoryOperatorRemoved = append(handler.onFactoryOperatorRemoved, callback)
 }
 
 func (handler *XpoolHandler) OnFactoryPoolCreated(callback func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolCreated)) {
 	handler.onFactoryPoolCreated = append(handler.onFactoryPoolCreated, callback)
+}
+
+func (handler *XpoolHandler) OnFactoryRewardPerBlockSet(callback func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryRewardPerBlockSet)) {
+	handler.onFactoryRewardPerBlockSet = append(handler.onFactoryRewardPerBlockSet, callback)
 }
 
 func (handler *XpoolHandler) OnFactoryPoolDestroied(callback func(chainId int64, tx *node_caller.Transaction, event *xpool.StakingFactoryPoolDestroied)) {
@@ -78,6 +96,32 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 	numberSet := map[int64]struct{}{}
 
+	operatorAddedLogs, err := factory.FilterOperatorAdded(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	operatorAddedEvents := []*xpool.StakingFactoryOperatorAdded{}
+	for operatorAddedLogs.Next() {
+		if err = operatorAddedLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(operatorAddedLogs.Event.Raw.BlockNumber)] = struct{}{}
+		operatorAddedEvents = append(operatorAddedEvents, operatorAddedLogs.Event)
+	}
+
+	operatorRemovedLogs, err := factory.FilterOperatorRemoved(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	operatorRemovedEvents := []*xpool.StakingFactoryOperatorRemoved{}
+	for operatorRemovedLogs.Next() {
+		if err = operatorRemovedLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(operatorRemovedLogs.Event.Raw.BlockNumber)] = struct{}{}
+		operatorRemovedEvents = append(operatorRemovedEvents, operatorRemovedLogs.Event)
+	}
+
 	poolCreatedLogs, err := factory.FilterPoolCreated(opt, nil, nil, nil)
 	if err != nil {
 		return err, false
@@ -89,6 +133,19 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		}
 		numberSet[int64(poolCreatedLogs.Event.Raw.BlockNumber)] = struct{}{}
 		poolCreatedEvents = append(poolCreatedEvents, poolCreatedLogs.Event)
+	}
+
+	rewardPerBlockSetLogs, err := factory.FilterRewardPerBlockSet(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	rewardPerBlockSetEvents := []*xpool.StakingFactoryRewardPerBlockSet{}
+	for rewardPerBlockSetLogs.Next() {
+		if err = rewardPerBlockSetLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(rewardPerBlockSetLogs.Event.Raw.BlockNumber)] = struct{}{}
+		rewardPerBlockSetEvents = append(rewardPerBlockSetEvents, rewardPerBlockSetLogs.Event)
 	}
 
 	poolDestroiedLogs, err := factory.FilterPoolDestroied(opt, nil, nil)
@@ -113,9 +170,87 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 	conn := repository.NewConn(handler.dataSource)
 	err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
+		eventXpoolFactoryOperatorAddedModel := repository.NewEventXpoolFactoryOperatorAddedModel(sqlx.NewSqlConnFromSession(s))
+		eventXpoolFactoryOperatorRemovedModel := repository.NewEventXpoolFactoryOperatorRemovedModel(sqlx.NewSqlConnFromSession(s))
 		eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
+		eventXpoolFactoryRewardPerBlockSetModel := repository.NewEventXpoolFactoryRewardPerBlockSetModel(sqlx.NewSqlConnFromSession(s))
 		eventXpoolFactoryPoolDestroiedModel := repository.NewEventXpoolFactoryPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
 
+		callableOperatorAddedEvents := []*xpool.StakingFactoryOperatorAdded{}
+		// OperatorAdded Event
+		{
+			for _, event := range operatorAddedEvents {
+				blockNumber := int64(event.Raw.BlockNumber)
+				tx := transactions[event.Raw.TxHash.Hex()]
+				txIndex := int64(event.Raw.Index)
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
+				from := tx.From.Hex()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
+				operator := event.Operator.Hex()
+
+				// If handled, ignore
+				_, err := eventXpoolFactoryOperatorAddedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+					continue
+				default:
+					return err
+				}
+
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventXpoolFactoryOperatorAddedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, operator)
+				if err != nil {
+					return err
+				}
+
+				callableOperatorAddedEvents = append(callableOperatorAddedEvents, event)
+			}
+		}
+
+		callableOperatorRemovedEvents := []*xpool.StakingFactoryOperatorRemoved{}
+		// OperatorRemoved Event
+		{
+			for _, event := range operatorRemovedEvents {
+				blockNumber := int64(event.Raw.BlockNumber)
+				tx := transactions[event.Raw.TxHash.Hex()]
+				txIndex := int64(event.Raw.Index)
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
+				from := tx.From.Hex()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
+				operator := event.Operator.Hex()
+
+				// If handled, ignore
+				_, err := eventXpoolFactoryOperatorRemovedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+					continue
+				default:
+					return err
+				}
+
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventXpoolFactoryOperatorRemovedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, operator)
+				if err != nil {
+					return err
+				}
+
+				callableOperatorRemovedEvents = append(callableOperatorRemovedEvents, event)
+			}
+		}
+
+		callablePoolCreatedEvents := []*xpool.StakingFactoryPoolCreated{}
 		// FactoryPoolCreated Event
 		{
 			for _, event := range poolCreatedEvents {
@@ -150,9 +285,51 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				if err != nil {
 					return err
 				}
+
+				callablePoolCreatedEvents = append(callablePoolCreatedEvents, event)
 			}
 		}
 
+		callableRewardPerBlockSetEvents := []*xpool.StakingFactoryRewardPerBlockSet{}
+		// RewardPerBlockSet Event
+		{
+			for _, event := range rewardPerBlockSetEvents {
+				blockNumber := int64(event.Raw.BlockNumber)
+				tx := transactions[event.Raw.TxHash.Hex()]
+				txIndex := int64(event.Raw.Index)
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
+				from := tx.From.Hex()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
+				pool := event.Pool.Hex()
+				old := event.Old.String()
+				new := event.New.String()
+
+				// If handled, ignore
+				_, err := eventXpoolFactoryRewardPerBlockSetModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+					continue
+				default:
+					return err
+				}
+
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventXpoolFactoryRewardPerBlockSetModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, old, new)
+				if err != nil {
+					return err
+				}
+
+				callableRewardPerBlockSetEvents = append(callableRewardPerBlockSetEvents, event)
+			}
+		}
+
+		callablePoolDestroiedEvents := []*xpool.StakingFactoryPoolDestroied{}
 		// FactoryPoolDestroied Event
 		{
 			for _, event := range poolDestroiedEvents {
@@ -188,17 +365,37 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				if err != nil {
 					return err
 				}
+
+				callablePoolDestroiedEvents = append(callablePoolDestroiedEvents, event)
 			}
 		}
 
 		// Callback
-		for _, event := range poolCreatedEvents {
+		for _, event := range callableOperatorAddedEvents {
+			for _, callback := range handler.onFactoryOperatorAdded {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range callableOperatorRemovedEvents {
+			for _, callback := range handler.onFactoryOperatorRemoved {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range callablePoolCreatedEvents {
 			for _, callback := range handler.onFactoryPoolCreated {
 				tx := transactions[event.Raw.TxHash.Hex()]
 				go callback(handler.chain.ChainId, tx, event)
 			}
 		}
-		for _, event := range poolDestroiedEvents {
+		for _, event := range callableRewardPerBlockSetEvents {
+			for _, callback := range handler.onFactoryRewardPerBlockSet {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range callablePoolDestroiedEvents {
 			for _, callback := range handler.onFactoryPoolDestroied {
 				tx := transactions[event.Raw.TxHash.Hex()]
 				go callback(handler.chain.ChainId, tx, event)
@@ -321,8 +518,8 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							eventXpoolPoolDepositedModel := repository.NewEventXpoolPoolDepositedModel(sqlx.NewSqlConnFromSession(s))
 							eventXpoolPoolWithdrawedModel := repository.NewEventXpoolPoolWithdrawedModel(sqlx.NewSqlConnFromSession(s))
 							eventXpoolPoolClaimedModel := repository.NewEventXpoolPoolClaimedModel(sqlx.NewSqlConnFromSession(s))
-							// eventXpoolPoolDestroiedModel := repository.NewEventXpoolPoolDestroiedModel(sqlx.NewSqlConnFromSession(s))
 
+							callableDepositedEvents := []*xpool.StakingPoolDeposited{}
 							// PoolDeposited event
 							{
 								for _, event := range depositedEvents {
@@ -356,9 +553,12 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
+
+									callableDepositedEvents = append(callableDepositedEvents, event)
 								}
 							}
 
+							callableClaimedEvents := []*xpool.StakingPoolClaimed{}
 							// PoolClaimed event
 							{
 								for _, event := range claimedEvents {
@@ -392,9 +592,12 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
+
+									callableClaimedEvents = append(callableClaimedEvents, event)
 								}
 							}
 
+							callableWithdrawedEvents := []*xpool.StakingPoolWithdrawed{}
 							// PoolWithdrawed event
 							{
 								for _, event := range withdrawedEvents {
@@ -428,6 +631,28 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
+
+									callableWithdrawedEvents = append(callableWithdrawedEvents, event)
+								}
+							}
+
+							// Callback
+							for _, event := range callableDepositedEvents {
+								for _, callback := range handler.onPoolDeposited {
+									tx := transactions[event.Raw.TxHash.Hex()]
+									go callback(handler.chain.ChainId, poolAddress, tx, event)
+								}
+							}
+							for _, event := range callableClaimedEvents {
+								for _, callback := range handler.onPoolClaimed {
+									tx := transactions[event.Raw.TxHash.Hex()]
+									go callback(handler.chain.ChainId, poolAddress, tx, event)
+								}
+							}
+							for _, event := range callableWithdrawedEvents {
+								for _, callback := range handler.onPoolWithdrawed {
+									tx := transactions[event.Raw.TxHash.Hex()]
+									go callback(handler.chain.ChainId, poolAddress, tx, event)
 								}
 							}
 
@@ -436,26 +661,6 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 						if err != nil {
 							sendResult(err)
 							return
-						}
-
-						// Callback
-						for _, event := range depositedEvents {
-							for _, callback := range handler.onPoolDeposited {
-								tx := transactions[event.Raw.TxHash.Hex()]
-								go callback(handler.chain.ChainId, poolAddress, tx, event)
-							}
-						}
-						for _, event := range claimedEvents {
-							for _, callback := range handler.onPoolClaimed {
-								tx := transactions[event.Raw.TxHash.Hex()]
-								go callback(handler.chain.ChainId, poolAddress, tx, event)
-							}
-						}
-						for _, event := range withdrawedEvents {
-							for _, callback := range handler.onPoolWithdrawed {
-								tx := transactions[event.Raw.TxHash.Hex()]
-								go callback(handler.chain.ChainId, poolAddress, tx, event)
-							}
 						}
 					}(poolAddress, client, results)
 				}

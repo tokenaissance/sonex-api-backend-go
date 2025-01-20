@@ -19,7 +19,7 @@ import (
 var (
 	eventXpoolPoolDepositedFieldNames          = builder.RawFieldNames(&EventXpoolPoolDeposited{}, true)
 	eventXpoolPoolDepositedRows                = strings.Join(eventXpoolPoolDepositedFieldNames, ",")
-	eventXpoolPoolDepositedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventXpoolPoolDepositedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
+	eventXpoolPoolDepositedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventXpoolPoolDepositedFieldNames, "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
 	eventXpoolPoolDepositedRowsWithPlaceHolder = builder.PostgreSqlJoin(stringx.Remove(eventXpoolPoolDepositedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"))
 )
 
@@ -97,8 +97,8 @@ func (m *defaultEventXpoolPoolDepositedModel) FindOneByChainIdTxHashTxIndex(ctx 
 }
 
 func (m *defaultEventXpoolPoolDepositedModel) Insert(ctx context.Context, data *EventXpoolPoolDeposited) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", m.table, eventXpoolPoolDepositedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventAmount, data.EventHeight)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, eventXpoolPoolDepositedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventAmount, data.EventHeight)
 	return ret, err
 }
 

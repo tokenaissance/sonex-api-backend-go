@@ -74,48 +74,66 @@ type TokenPriceRateRecord struct {
 -- 此查询假设表中的数据没有时间中断（例如某个小时没有数据）
 -- c1 参数：假设需要 5 天数据时，要传 5*2 天，换句话说要拿到 2 倍的时间点数量
 -- c2 每个数据点的时间间隔（秒）
+-- c3 需要采样的条数
+-- c4 每个采样点之间的数据间隔
 -- limit 要指定最后需要的时间点数量
 */
-func generateThePeriodAndTimeOffset(interval string) (c1 string, c2 int64, c3 int64) {
+func generateThePeriodAndTimeOffset(interval string) (c1 string, c2 int64, c3 int64, c4 int64) {
 
 	switch interval {
 	case "1h":
 		c1 = `'2 hours'::interval`
 		c2 = 60
 		c3 = 60
+		c4 = 60 // 每个采样点之间 隔了 60 条数据条数据间隔
 		//  targetKLines = 60 // 60 K-lines per hour
 	case "1d":
 		c1 = `'2 days'::interval`
 		c2 = 600 // 86400/144 targetKLines = 144 // 144 K-lines per day
 		c3 = 144
+		c4 = 144 // 每个采样点之间 144 条数据条数据间隔
 	case "1w":
 		c1 = `'14 days'::interval`
 		c2 = 3600 // 7*86400/168= targetKLines = 168 // 168 K-lines per week
-		c3 = 168
+		c3 = 168  //
+		c4 = 168  // 采样的每条数据，每个是隔了 168 条数据  // 每天1440 条数据,每个数据间隔 1440 * 7 = 10080  条数据间隔
 	case "1m": // 一个月30天
 		c1 = `'60 days'::interval`
 		c2 = 3323 // ines per week
 		c3 = 780  // 30*86400/780=3323 , 780 K-lines per month
+		c4 = 780  //每个采样点之间 30*1440 条数据间隔
 		// targetKLines = 780 //
 	case "1y": // 每年365天
 		c1 = `'730 days'::interval`
 		c2 = 172800
 		c3 = 365 // targetKLines = 365 // 365 K-lines per year
+		c4 = 365 // 每个采样点之间 365*1440 条数据间隔
 	default:
 		c1 = `'2 days'::interval`
 		c2 = 600 // 86400/144 targetKLines = 144 // 144 K-lines per day
 		c3 = 144
+		c4 = 144 // 每个采样点之间 1440 条数据条数据间隔
 	}
 	return
 }
 
 func (m *customSonexTokenPriceRecordModel) TokenKlineRate(address string, interval string) ([]types.SonexTokenPriceRecord, error) {
 
-	c1, c2, c3 := generateThePeriodAndTimeOffset(interval)
+	c1, c2, c3, c4 := generateThePeriodAndTimeOffset(interval)
 	query := fmt.Sprintf(`
-		WITH c (c1, c2) AS (
-    VALUES (%v, %v)
+		WITH c (c1, c2,c4) AS (
+    VALUES (%v, %v, %v)
 )
+
+SELECT id,
+tokenSymbol,
+tokenAddress,
+price,
+priceUSD,
+createdAt,
+timeStamp,
+rate 
+ FROM (
 SELECT
     t1.id,
     t1.token_symbol AS tokenSymbol,
@@ -124,7 +142,7 @@ SELECT
      t1.price / power(10,t1.usd_decimals)  ::  FLOAT AS priceUSD,
      t1.created_at AS createdAt,
       (date_part('epoch', t1.created_at))::bigint AS timeStamp,
-    coalesce((LAG(t1.price,%v) OVER () - t1.price) / t1.price  ,0) AS rate
+    coalesce((LAG(t1.price,%v) OVER () - t1.price) / t1.price * 100  ,0) AS rate
    
 FROM (
     SELECT
@@ -142,8 +160,9 @@ FROM (
         created_at > NOW() - c1
     ORDER BY point, created_at DESC
 ) AS t1
-LIMIT %v
-`, c1, c2, c3, c3)
+ORDER BY id  DESC LIMIT %v
+)  ORDER BY id  ASC 
+`, c1, c2, c4, c4, c3)
 
 	var resp []types.SonexTokenPriceRecord
 	err := m.conn.QueryRows(&resp, query, address)

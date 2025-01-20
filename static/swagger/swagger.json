@@ -1411,6 +1411,9 @@
     "FarmIncentivesResponse": {
       "type": "object",
       "properties": {
+        "usd": {
+          "$ref": "#/definitions/FarmIncentivesResponse_Token"
+        },
         "list": {
           "type": "array",
           "items": {
@@ -1424,6 +1427,7 @@
       },
       "title": "FarmIncentivesResponse",
       "required": [
+        "usd",
         "list",
         "total"
       ]
@@ -1561,6 +1565,31 @@
         "balance",
         "staked",
         "earned"
+      ]
+    },
+    "FarmIncentivesResponse_Token": {
+      "type": "object",
+      "properties": {
+        "sddress": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "price": {
+          "type": "string"
+        }
+      },
+      "title": "FarmIncentivesResponse_Token",
+      "required": [
+        "sddress",
+        "symbol",
+        "decimals",
+        "price"
       ]
     },
     "FarmPoolLiquidityRequest": {
@@ -2913,7 +2942,7 @@
           "type": "integer",
           "format": "int64"
         },
-        "Rate": {
+        "rate": {
           "type": "number",
           "format": "double"
         }
@@ -2927,7 +2956,7 @@
         "priceUSD",
         "createdAt",
         "timeStamp",
-        "Rate"
+        "rate"
       ]
     },
     "SonexTokenPricesRequest": {

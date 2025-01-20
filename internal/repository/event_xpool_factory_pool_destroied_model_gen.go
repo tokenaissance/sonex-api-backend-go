@@ -19,7 +19,7 @@ import (
 var (
 	eventXpoolFactoryPoolDestroiedFieldNames          = builder.RawFieldNames(&EventXpoolFactoryPoolDestroied{}, true)
 	eventXpoolFactoryPoolDestroiedRows                = strings.Join(eventXpoolFactoryPoolDestroiedFieldNames, ",")
-	eventXpoolFactoryPoolDestroiedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventXpoolFactoryPoolDestroiedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
+	eventXpoolFactoryPoolDestroiedRowsExpectAutoSet   = strings.Join(stringx.Remove(eventXpoolFactoryPoolDestroiedFieldNames, "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"), ",")
 	eventXpoolFactoryPoolDestroiedRowsWithPlaceHolder = builder.PostgreSqlJoin(stringx.Remove(eventXpoolFactoryPoolDestroiedFieldNames, "id", "create_at", "create_time", "created_at", "update_at", "update_time", "updated_at"))
 )
 
@@ -114,8 +114,8 @@ func (m *defaultEventXpoolFactoryPoolDestroiedModel) FindOneByChainIdTxHashTxInd
 }
 
 func (m *defaultEventXpoolFactoryPoolDestroiedModel) Insert(ctx context.Context, data *EventXpoolFactoryPoolDestroied) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", m.table, eventXpoolFactoryPoolDestroiedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventPool, data.EventEthBalance, data.EventStakingBalance, data.EventRewardBalance, data.EventRecipient)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventXpoolFactoryPoolDestroiedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventPool, data.EventEthBalance, data.EventStakingBalance, data.EventRewardBalance, data.EventRecipient)
 	return ret, err
 }
 

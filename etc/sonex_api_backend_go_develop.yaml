@@ -7,9 +7,9 @@ Domains:
   - sonex-devnet-v2.vercel.app
   - devnet.sonex.so
 Sentry:
-    Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
-    TracesSampleRate: 1.0
-    Environment: devnet
+  Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
+  TracesSampleRate: 1.0
+  Environment: devnet
 PostgreSQL:
   Host: PG_HOST
   Port: PG_PORT
@@ -67,3 +67,10 @@ PreDeposits:
     RewardToken: 0xe3336b3E0d36aacCddEcCC1B4c5d75D5216e932d
     RewardDaily: 10000
     RewardPrice: 1 # USD
+Farms:
+  - ChainId: 1946
+    Staker: 0xd68b59E80209260CAc5174EaA2d49b0C84D54C16
+Xpools:
+  - ChainId: 1946
+    Factory: 0x5cEb616f710A4d1135C0239d5BAb12Bae133bDF5
+    BlockTime: 2000

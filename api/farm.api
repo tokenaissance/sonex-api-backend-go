@@ -14,6 +14,13 @@ type FarmIncentivesRequest {
 	PageIndex   int64  `form:"pageIndex,default=1"`
 }
 
+type FarmIncentivesResponse_Token {
+	Address  string `json:"sddress"`
+	Symbol   string `json:"symbol"`
+	Decimals int64  `json:"decimals"`
+	Price    string `json:"price"`
+}
+
 type FarmIncentivesResponse_Data {
 	PageRequest
 	IncentiveId         int64  `json:"incentiveId"`
@@ -43,6 +50,7 @@ type FarmIncentivesResponse_Data {
 }
 
 type FarmIncentivesResponse {
+	USD   FarmIncentivesResponse_Token  `json:"usd"`
 	List  []FarmIncentivesResponse_Data `json:"list"`
 	Total int64                         `json:"total"`
 }

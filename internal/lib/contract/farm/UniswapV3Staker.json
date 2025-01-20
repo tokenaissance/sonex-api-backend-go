@@ -575,9 +575,9 @@
         "type": "address"
       },
       {
-        "internalType": "uint48",
-        "name": "numberOfStakes",
-        "type": "uint48"
+        "internalType": "bool",
+        "name": "isStaked",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -616,11 +616,6 @@
       {
         "internalType": "uint256",
         "name": "totalReward",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "remainingReward",
         "type": "uint256"
       },
       {

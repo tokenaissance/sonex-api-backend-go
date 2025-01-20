@@ -29,7 +29,6 @@ type (
 		FindOne(ctx context.Context, id int64) (*EventFarmIncentiveEnded, error)
 		FindOneByChainIdEventIncentiveId(ctx context.Context, chainId int64, eventIncentiveId int64) (*EventFarmIncentiveEnded, error)
 		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventFarmIncentiveEnded, error)
-		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmIncentiveEnded, error)
 		Update(ctx context.Context, data *EventFarmIncentiveEnded) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -52,8 +51,7 @@ type (
 		To               string    `db:"to_"`
 		Value            string    `db:"value"`
 		EventIncentiveId int64     `db:"event_incentive_id"`
-		EventWeight      int64     `db:"event_weight"`
-		EventTimestamp   int64     `db:"event_timestamp"`
+		EventRefund      string    `db:"event_refund"`
 	}
 )
 
@@ -112,29 +110,15 @@ func (m *defaultEventFarmIncentiveEndedModel) FindOneByChainIdTxHashTxIndex(ctx 
 	}
 }
 
-func (m *defaultEventFarmIncentiveEndedModel) FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmIncentiveEnded, error) {
-	var resp EventFarmIncentiveEnded
-	query := fmt.Sprintf("select %s from %s where tx_hash = $1 and chain_id = $2 limit 1", eventFarmIncentiveEndedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, txHash, chainId)
-	switch err {
-	case nil:
-		return &resp, nil
-	case sqlx.ErrNotFound:
-		return nil, ErrNotFound
-	default:
-		return nil, err
-	}
-}
-
 func (m *defaultEventFarmIncentiveEndedModel) Insert(ctx context.Context, data *EventFarmIncentiveEnded) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, eventFarmIncentiveEndedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventIncentiveId, data.EventWeight, data.EventTimestamp)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", m.table, eventFarmIncentiveEndedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventIncentiveId, data.EventRefund)
 	return ret, err
 }
 
 func (m *defaultEventFarmIncentiveEndedModel) Update(ctx context.Context, newData *EventFarmIncentiveEnded) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventFarmIncentiveEndedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventIncentiveId, newData.EventWeight, newData.EventTimestamp)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventIncentiveId, newData.EventRefund)
 	return err
 }
 
