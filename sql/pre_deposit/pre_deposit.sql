@@ -149,11 +149,6 @@ CREATE UNIQUE INDEX "event_claimer_reward_claimed_index_chain_id_tx_hash_tx_inde
 );
 
 -- ----------------------------
--- Uniques structure for table event_pre_deposit_claimer_reward_claimed
--- ----------------------------
-ALTER TABLE "public"."event_pre_deposit_claimer_reward_claimed" ADD CONSTRAINT "event_pre_deposit_staked_copy1_tx_hash_chain_id_key1" UNIQUE ("tx_hash", "chain_id");
-
--- ----------------------------
 -- Primary Key structure for table event_pre_deposit_claimer_reward_claimed
 -- ----------------------------
 ALTER TABLE "public"."event_pre_deposit_claimer_reward_claimed" ADD CONSTRAINT "event_pre_deposit_staked_copy1_pkey1" PRIMARY KEY ("id");
@@ -168,11 +163,6 @@ CREATE UNIQUE INDEX "event_pre_deposit_staked_index_chain_id_tx_hash_tx_index" O
 );
 
 -- ----------------------------
--- Uniques structure for table event_pre_deposit_staked
--- ----------------------------
-ALTER TABLE "public"."event_pre_deposit_staked" ADD CONSTRAINT "event_farm_token_staked_copy1_tx_hash_chain_id_key1" UNIQUE ("tx_hash", "chain_id");
-
--- ----------------------------
 -- Primary Key structure for table event_pre_deposit_staked
 -- ----------------------------
 ALTER TABLE "public"."event_pre_deposit_staked" ADD CONSTRAINT "event_farm_token_staked_copy1_pkey1" PRIMARY KEY ("id");
@@ -185,11 +175,6 @@ CREATE UNIQUE INDEX "event_pre_deposit_withdrawn_index_chain_id_tx_hash_tx_index
   "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-
--- ----------------------------
--- Uniques structure for table event_pre_deposit_withdrawn
--- ----------------------------
-ALTER TABLE "public"."event_pre_deposit_withdrawn" ADD CONSTRAINT "event_pre_deposit_staked_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
 
 -- ----------------------------
 -- Primary Key structure for table event_pre_deposit_withdrawn
