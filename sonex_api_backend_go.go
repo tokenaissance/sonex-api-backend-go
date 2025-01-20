@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"sonex_api_backend_go/internal/chain_handler/farm"
 	"sonex_api_backend_go/internal/chain_handler/pre_deposit"
 	"sonex_api_backend_go/internal/chain_handler/sonex"
 	"sonex_api_backend_go/internal/config"
@@ -125,7 +126,7 @@ func main() {
 
 	// 一开始就要计算一次
 	// 计算tvl的值,每分钟
-  task.HandleRecordTvlForeEachPool(&c)
+	task.HandleRecordTvlForeEachPool(&c)
 	global.AddCronJob("@every 1m", func() {
 		task.HandleRecordTvlForeEachPool(&c)
 	})
@@ -162,23 +163,23 @@ func main() {
 			}
 		}
 
+		// Farm handler
+		{
+			config := c.GetFarmConfig(chain.ChainId)
+			if config != nil {
+				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, *config)
+				if err != nil {
+					panic(err)
+				}
+				global.AddChainHandler(chain.ChainId, handler)
+			}
+		}
+
 		// X Pool handler
 		// {
 		// 	config := c.GetXpoolConfig(chain.ChainId)
 		// 	if config != nil {
 		// 		handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, *config)
-		// 		if err != nil {
-		// 			panic(err)
-		// 		}
-		// 		global.AddChainHandler(chain.ChainId, handler)
-		// 	}
-		// }
-
-		// Farm handler
-		// {
-		// 	config := c.GetFarmConfig(chain.ChainId)
-		// 	if config != nil {
-		// 		handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, *config)
 		// 		if err != nil {
 		// 			panic(err)
 		// 		}
