@@ -8,6 +8,7 @@ import (
 	"sonex_api_backend_go/internal/chain_handler/farm"
 	"sonex_api_backend_go/internal/chain_handler/pre_deposit"
 	"sonex_api_backend_go/internal/chain_handler/sonex"
+	"sonex_api_backend_go/internal/chain_handler/xpool"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
@@ -176,16 +177,16 @@ func main() {
 		}
 
 		// X Pool handler
-		// {
-		// 	config := c.GetXpoolConfig(chain.ChainId)
-		// 	if config != nil {
-		// 		handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, *config)
-		// 		if err != nil {
-		// 			panic(err)
-		// 		}
-		// 		global.AddChainHandler(chain.ChainId, handler)
-		// 	}
-		// }
+		{
+			config := c.GetXpoolConfig(chain.ChainId)
+			if config != nil {
+				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, *config)
+				if err != nil {
+					panic(err)
+				}
+				global.AddChainHandler(chain.ChainId, handler)
+			}
+		}
 	}
 
 	// Start chain listen/cron ...
