@@ -28,7 +28,6 @@ type (
 		Insert(ctx context.Context, data *EventPreDepositStaked) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventPreDepositStaked, error)
 		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventPreDepositStaked, error)
-		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventPreDepositStaked, error)
 		Update(ctx context.Context, data *EventPreDepositStaked) error
 		Delete(ctx context.Context, id int64) error
 	}

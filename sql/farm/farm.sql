@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 20/01/2025 13:03:01
+ Date: 20/01/2025 13:39:19
 */
 
 
@@ -225,11 +225,6 @@ CREATE UNIQUE INDEX "farm_incentive_created_index_chain_id_tx_hash_tx_index" ON 
 );
 
 -- ----------------------------
--- Uniques structure for table event_farm_incentive_created
--- ----------------------------
-ALTER TABLE "public"."event_farm_incentive_created" ADD CONSTRAINT "event_farm_incentive_created_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
-
--- ----------------------------
 -- Primary Key structure for table event_farm_incentive_created
 -- ----------------------------
 ALTER TABLE "public"."event_farm_incentive_created" ADD CONSTRAINT "event_farm_incentive_created_pkey" PRIMARY KEY ("id");
@@ -248,11 +243,6 @@ CREATE UNIQUE INDEX "farm_incentive_ended_index_chain_id_tx_hash_tx_index" ON "p
 );
 
 -- ----------------------------
--- Uniques structure for table event_farm_incentive_ended
--- ----------------------------
-ALTER TABLE "public"."event_farm_incentive_ended" ADD CONSTRAINT "event_farm_incentive_ended_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
-
--- ----------------------------
 -- Primary Key structure for table event_farm_incentive_ended
 -- ----------------------------
 ALTER TABLE "public"."event_farm_incentive_ended" ADD CONSTRAINT "event_farm_incentive_ended_pkey" PRIMARY KEY ("id");
@@ -265,11 +255,6 @@ CREATE UNIQUE INDEX "event_farm_paused_index_chain_id_tx_hash_tx_index" ON "publ
   "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-
--- ----------------------------
--- Uniques structure for table event_farm_paused
--- ----------------------------
-ALTER TABLE "public"."event_farm_paused" ADD CONSTRAINT "event_farm_token_staked_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
 
 -- ----------------------------
 -- Primary Key structure for table event_farm_paused
@@ -294,11 +279,6 @@ CREATE UNIQUE INDEX "farm_reward_claimed_index_chain_id_tx_hash_tx_index" ON "pu
 );
 
 -- ----------------------------
--- Uniques structure for table event_farm_reward_claimed
--- ----------------------------
-ALTER TABLE "public"."event_farm_reward_claimed" ADD CONSTRAINT "event_farm_reward_claimed_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
-
--- ----------------------------
 -- Primary Key structure for table event_farm_reward_claimed
 -- ----------------------------
 ALTER TABLE "public"."event_farm_reward_claimed" ADD CONSTRAINT "event_farm_reward_claimed_pkey" PRIMARY KEY ("id");
@@ -311,11 +291,6 @@ CREATE UNIQUE INDEX "farm_reward_rate_updated_index_chain_id_tx_hash_tx_index" O
   "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-
--- ----------------------------
--- Uniques structure for table event_farm_reward_rate_updated
--- ----------------------------
-ALTER TABLE "public"."event_farm_reward_rate_updated" ADD CONSTRAINT "event_farm_reward_claimed_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
 
 -- ----------------------------
 -- Primary Key structure for table event_farm_reward_rate_updated
@@ -340,11 +315,6 @@ CREATE UNIQUE INDEX "farm_token_deposited_index_chain_id_tx_hash_tx_index" ON "p
 );
 
 -- ----------------------------
--- Uniques structure for table event_farm_token_deposited
--- ----------------------------
-ALTER TABLE "public"."event_farm_token_deposited" ADD CONSTRAINT "event_farm_deposit_transferred_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
-
--- ----------------------------
 -- Primary Key structure for table event_farm_token_deposited
 -- ----------------------------
 ALTER TABLE "public"."event_farm_token_deposited" ADD CONSTRAINT "event_farm_deposit_transferred_pkey" PRIMARY KEY ("id");
@@ -365,11 +335,6 @@ CREATE UNIQUE INDEX "farm_token_staked_index_chain_id_tx_hash_tx_index" ON "publ
   "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-
--- ----------------------------
--- Uniques structure for table event_farm_token_staked
--- ----------------------------
-ALTER TABLE "public"."event_farm_token_staked" ADD CONSTRAINT "event_farm_token_staked_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
 
 -- ----------------------------
 -- Primary Key structure for table event_farm_token_staked
@@ -394,11 +359,6 @@ CREATE UNIQUE INDEX "farm_token_unstaked_index_chain_id_tx_hash_tx_index" ON "pu
 );
 
 -- ----------------------------
--- Uniques structure for table event_farm_token_unstaked
--- ----------------------------
-ALTER TABLE "public"."event_farm_token_unstaked" ADD CONSTRAINT "event_farm_token_unstaked_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
-
--- ----------------------------
 -- Primary Key structure for table event_farm_token_unstaked
 -- ----------------------------
 ALTER TABLE "public"."event_farm_token_unstaked" ADD CONSTRAINT "event_farm_token_unstaked_pkey" PRIMARY KEY ("id");
@@ -411,11 +371,6 @@ CREATE UNIQUE INDEX "farm_unpaused_index_chain_id_tx_hash_tx_index" ON "public".
   "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
-
--- ----------------------------
--- Uniques structure for table event_farm_unpaused
--- ----------------------------
-ALTER TABLE "public"."event_farm_unpaused" ADD CONSTRAINT "event_farm_paused_copy1_tx_hash_chain_id_key" UNIQUE ("tx_hash", "chain_id");
 
 -- ----------------------------
 -- Primary Key structure for table event_farm_unpaused

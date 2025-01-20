@@ -28,7 +28,6 @@ type (
 		Insert(ctx context.Context, data *EventFarmTokenStaked) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventFarmTokenStaked, error)
 		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventFarmTokenStaked, error)
-		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmTokenStaked, error)
 		Update(ctx context.Context, data *EventFarmTokenStaked) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -87,20 +86,6 @@ func (m *defaultEventFarmTokenStakedModel) FindOneByChainIdTxHashTxIndex(ctx con
 	var resp EventFarmTokenStaked
 	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 and tx_index = $3 limit 1", eventFarmTokenStakedRows, m.table)
 	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash, txIndex)
-	switch err {
-	case nil:
-		return &resp, nil
-	case sqlx.ErrNotFound:
-		return nil, ErrNotFound
-	default:
-		return nil, err
-	}
-}
-
-func (m *defaultEventFarmTokenStakedModel) FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmTokenStaked, error) {
-	var resp EventFarmTokenStaked
-	query := fmt.Sprintf("select %s from %s where tx_hash = $1 and chain_id = $2 limit 1", eventFarmTokenStakedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, txHash, chainId)
 	switch err {
 	case nil:
 		return &resp, nil
