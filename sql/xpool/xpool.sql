@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 20/01/2025 15:44:59
+ Date: 20/01/2025 17:06:10
 */
 
 
@@ -102,6 +102,29 @@ CREATE TABLE "public"."event_xpool_factory_pool_destroied" (
   "event_recipient" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
+ALTER TABLE "public"."event_xpool_factory_pool_destroied" OWNER TO "postgres";
+
+-- ----------------------------
+-- Table structure for event_xpool_factory_reward_per_block_set
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_xpool_factory_reward_per_block_set";
+CREATE TABLE "public"."event_xpool_factory_reward_per_block_set" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_old" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_new" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+)
+;
 
 -- ----------------------------
 -- Table structure for event_xpool_pool_claimed
@@ -130,28 +153,6 @@ CREATE TABLE "public"."event_xpool_pool_claimed" (
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_xpool_pool_deposited";
 CREATE TABLE "public"."event_xpool_pool_deposited" (
-  "id" int8 NOT NULL,
-  "created_at" timestamptz(6) NOT NULL,
-  "updated_at" timestamptz(6) NOT NULL,
-  "chain_id" int8 NOT NULL,
-  "block_number" int8 NOT NULL,
-  "tx_index" int8 NOT NULL,
-  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "tx_at" timestamptz(6) NOT NULL,
-  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_height" int8 NOT NULL
-)
-;
-
--- ----------------------------
--- Table structure for event_xpool_pool_reward_per_block_set
--- ----------------------------
-DROP TABLE IF EXISTS "public"."event_xpool_pool_reward_per_block_set";
-CREATE TABLE "public"."event_xpool_pool_reward_per_block_set" (
   "id" int8 NOT NULL,
   "created_at" timestamptz(6) NOT NULL,
   "updated_at" timestamptz(6) NOT NULL,
@@ -276,6 +277,20 @@ CREATE UNIQUE INDEX "xpool_factory_pool_destroied_index_chain_id_tx_hash_tx_inde
 ALTER TABLE "public"."event_xpool_factory_pool_destroied" ADD CONSTRAINT "event_xpool_factory_pool_destroied_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
+-- Indexes structure for table event_xpool_factory_reward_per_block_set
+-- ----------------------------
+CREATE UNIQUE INDEX "factory_reward_per_block_set_index_chain_id_tx_hash_tx_index" ON "public"."event_xpool_factory_reward_per_block_set" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table event_xpool_factory_reward_per_block_set
+-- ----------------------------
+ALTER TABLE "public"."event_xpool_factory_reward_per_block_set" ADD CONSTRAINT "event_xpool_pool_reward_per_block_set_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
 -- Indexes structure for table event_xpool_pool_claimed
 -- ----------------------------
 CREATE INDEX "xpool_pool_claimed_index_chain_id_block_number" ON "public"."event_xpool_pool_claimed" USING btree (
@@ -318,20 +333,6 @@ CREATE INDEX "xpool_pool_deposited_index_chain_id_user" ON "public"."event_xpool
 -- Primary Key structure for table event_xpool_pool_deposited
 -- ----------------------------
 ALTER TABLE "public"."event_xpool_pool_deposited" ADD CONSTRAINT "event_xpool_pool_deposited_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
--- Indexes structure for table event_xpool_pool_reward_per_block_set
--- ----------------------------
-CREATE UNIQUE INDEX "pool_reward_per_block_set_index_chain_id_tx_hash_tx_index" ON "public"."event_xpool_pool_reward_per_block_set" USING btree (
-  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
-  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
-  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
-);
-
--- ----------------------------
--- Primary Key structure for table event_xpool_pool_reward_per_block_set
--- ----------------------------
-ALTER TABLE "public"."event_xpool_pool_reward_per_block_set" ADD CONSTRAINT "event_xpool_pool_reward_per_block_set_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table event_xpool_pool_withdrawed

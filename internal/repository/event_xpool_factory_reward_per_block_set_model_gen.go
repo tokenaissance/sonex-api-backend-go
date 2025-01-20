@@ -49,9 +49,9 @@ type (
 		From        string    `db:"from_"`
 		To          string    `db:"to_"`
 		Value       string    `db:"value"`
-		EventUser   string    `db:"event_user"`
-		EventAmount string    `db:"event_amount"`
-		EventHeight int64     `db:"event_height"`
+		EventPool   string    `db:"event_pool"`
+		EventOld    string    `db:"event_old"`
+		EventNew    string    `db:"event_new"`
 	}
 )
 
@@ -98,13 +98,13 @@ func (m *defaultEventXpoolFactoryRewardPerBlockSetModel) FindOneByChainIdTxHashT
 
 func (m *defaultEventXpoolFactoryRewardPerBlockSetModel) Insert(ctx context.Context, data *EventXpoolFactoryRewardPerBlockSet) (sql.Result, error) {
 	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, eventXpoolFactoryRewardPerBlockSetRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventAmount, data.EventHeight)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventPool, data.EventOld, data.EventNew)
 	return ret, err
 }
 
 func (m *defaultEventXpoolFactoryRewardPerBlockSetModel) Update(ctx context.Context, newData *EventXpoolFactoryRewardPerBlockSet) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventXpoolFactoryRewardPerBlockSetRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventUser, newData.EventAmount, newData.EventHeight)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventPool, newData.EventOld, newData.EventNew)
 	return err
 }
 
