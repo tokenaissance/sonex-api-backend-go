@@ -1448,36 +1448,80 @@
           "format": "int64"
         },
         "poolAddress": {
-          "type": "string"
+          "type": "string",
+          "description": " 池子合约地址"
         },
         "feeRatio": {
+          "type": "string",
+          "description": " 池子手续费率"
+        },
+        "rewardTokenAddress": {
           "type": "string"
         },
-        "rewardToken": {
-          "$ref": "#/definitions/FarmIncentivesResponse_Token"
-        },
-        "token0": {
-          "$ref": "#/definitions/FarmIncentivesResponse_Token"
-        },
-        "token1": {
-          "$ref": "#/definitions/FarmIncentivesResponse_Token"
-        },
-        "liquidity": {
+        "rewardTokensymbol": {
           "type": "string"
         },
-        "liquidityUsd": {
-          "type": "number",
-          "format": "double"
-        },
-        "APR": {
-          "type": "string"
-        },
-        "joinNum": {
+        "rewardTokenDecimals": {
           "type": "integer",
           "format": "int64"
         },
-        "status": {
+        "rewardTokenPrice": {
           "type": "string"
+        },
+        "token0Address": {
+          "type": "string",
+          "description": " token0合约地址"
+        },
+        "token0symbol": {
+          "type": "string",
+          "description": " token0代币符号"
+        },
+        "token0Decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " token0精度"
+        },
+        "token0Price": {
+          "type": "string",
+          "description": " token0价格"
+        },
+        "token1Address": {
+          "type": "string",
+          "description": " token1合约地址"
+        },
+        "token1Symbol": {
+          "type": "string",
+          "description": " token1代币符号"
+        },
+        "token1Decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " token1精度"
+        },
+        "token1Price": {
+          "type": "string",
+          "description": " token1价格"
+        },
+        "liquidity": {
+          "type": "string",
+          "description": " 池子的流动性"
+        },
+        "liquidityUsd": {
+          "type": "string",
+          "description": " 池子的流动性价值（USD）"
+        },
+        "APR": {
+          "type": "string",
+          "description": " 年化收益率"
+        },
+        "joinNum": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 参与人数"
+        },
+        "status": {
+          "type": "string",
+          "description": " 运行状态（active or closed）"
         },
         "startAt": {
           "type": "integer",
@@ -1492,8 +1536,7 @@
           "format": "int64"
         },
         "earned": {
-          "type": "number",
-          "format": "double"
+          "type": "string"
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -1501,9 +1544,18 @@
         "incentiveId",
         "poolAddress",
         "feeRatio",
-        "rewardToken",
-        "token0",
-        "token1",
+        "rewardTokenAddress",
+        "rewardTokensymbol",
+        "rewardTokenDecimals",
+        "rewardTokenPrice",
+        "token0Address",
+        "token0symbol",
+        "token0Decimals",
+        "token0Price",
+        "token1Address",
+        "token1Symbol",
+        "token1Decimals",
+        "token1Price",
         "liquidity",
         "liquidityUsd",
         "APR",
@@ -1513,6 +1565,31 @@
         "balance",
         "staked",
         "earned"
+      ]
+    },
+    "FarmIncentivesResponse_Token": {
+      "type": "object",
+      "properties": {
+        "sddress": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "price": {
+          "type": "string"
+        }
+      },
+      "title": "FarmIncentivesResponse_Token",
+      "required": [
+        "sddress",
+        "symbol",
+        "decimals",
+        "price"
       ]
     },
     "FarmPoolLiquidityRequest": {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
 	"sync"
 	"time"
 
@@ -178,6 +177,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 	// Filter
 	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
 		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
+		_ = usdAccuracy
 
 		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
@@ -230,12 +230,13 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 				resp.List[i].Staked = val
 				resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
 			}
-			if val, ok := unclaimeds[item.IncentiveId]; ok {
-				rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
-				rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(item.RewardToken.Decimals), nil))
-				unclaimedUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(val), rewardTokenPrice), rewardTokenAccuracy), usdAccuracy)
-				resp.List[i].EarnedUSD, _ = unclaimedUSD.Float64()
-			}
+			_ = unclaimeds
+			// if val, ok := unclaimeds[item.IncentiveId]; ok {
+			// rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
+			// rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(item.RewardToken.Decimals), nil))
+			// unclaimedUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(val), rewardTokenPrice), rewardTokenAccuracy), usdAccuracy)
+			// resp.List[i].EarnedUSD, _ = unclaimedUSD.Float64()
+			// }
 		}
 	}
 	if req.StakedOnly {
@@ -244,9 +245,9 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 		}).ToSlice(&resp.List)
 	}
 	if req.KeyWord != "" {
-		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
-			return strings.Contains(item.Token0.Symbol, req.KeyWord) || strings.Contains(item.Token1.Symbol, req.KeyWord)
-		}).ToSlice(&resp.List)
+		// linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
+		// 	return strings.Contains(item.Token0.Symbol, req.KeyWord) || strings.Contains(item.Token1.Symbol, req.KeyWord)
+		// }).ToSlice(&resp.List)
 	}
 	if req.Status != "" && (req.Status == "active" || req.Status == "closed") {
 		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
@@ -416,6 +417,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 
 				totalLiquidityUSDValue, _ := totalLiquidityUSD.Float64()
+				_ = totalLiquidityUSDValue
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
 					PoolAddress:         record.EventPool,

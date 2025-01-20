@@ -16,7 +16,7 @@ type (
 	EventFarmTokenStakedModel interface {
 		eventFarmTokenStakedModel
 		withSession(session sqlx.Session) EventFarmTokenStakedModel
-		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64, liquidity string) error
+		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenStaked, error)
 		QueryValidByChainId(ctx context.Context, chainId int64) ([]EventFarmTokenStaked, error)
 		QueryValidByChainIdUser(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStaked, error)
@@ -45,9 +45,9 @@ func (m *customEventFarmTokenStakedModel) withSession(session sqlx.Session) Even
 	return NewEventFarmTokenStakedModel(sqlx.NewSqlConnFromSession(session))
 }
 
-func (m *customEventFarmTokenStakedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64, liquidity string) error {
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", m.table, eventFarmTokenStakedRows)
-	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, tokenId, incentiveId, liquidity)
+func (m *customEventFarmTokenStakedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventFarmTokenStakedRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, tokenId, incentiveId)
 	return err
 }
 

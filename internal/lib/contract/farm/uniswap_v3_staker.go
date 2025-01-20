@@ -29,21 +29,9 @@ var (
 	_ = abi.ConvertType
 )
 
-// UniswapV3StakerRewardRate is an auto generated low-level Go binding around an user-defined struct.
-type UniswapV3StakerRewardRate struct {
-	RatePerSecond *big.Int
-	StartTime     *big.Int
-}
-
-// UniswapV3StakerWeightCheckpoint is an auto generated low-level Go binding around an user-defined struct.
-type UniswapV3StakerWeightCheckpoint struct {
-	Timestamp   *big.Int
-	TotalWeight *big.Int
-}
-
 // UniswapV3StakerMetaData contains all meta data concerning the UniswapV3Staker contract.
 var UniswapV3StakerMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractIUniswapV3Factory\",\"name\":\"_factory\",\"type\":\"address\"},{\"internalType\":\"contractINonfungiblePositionManager\",\"name\":\"_nonfungiblePositionManager\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"IncentiveCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"IncentiveEnded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalLiquidity\",\"type\":\"uint256\"}],\"name\":\"IncentiveUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"RewardClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalWeight\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"RewardPoolUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldRatePerSecond\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newRatePerSecond\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"RewardRateUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"TokenDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"}],\"name\":\"TokenStaked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"}],\"name\":\"TokenUnstaked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"claim\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"}],\"name\":\"createIncentive\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"endIncentive\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"factory\",\"outputs\":[{\"internalType\":\"contractIUniswapV3Factory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"getIncentiveInfo\",\"outputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"endTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"uint96\",\"name\":\"numberOfStakes\",\"type\":\"uint96\"},{\"internalType\":\"uint256[]\",\"name\":\"tokenIds\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"getPendingRewards\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"totalReward\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"}],\"name\":\"getRewardPool\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"totalReward\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdateTime\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"ratePerSecond\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"}],\"internalType\":\"structUniswapV3Staker.RewardRate[]\",\"name\":\"rates\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256[]\",\"name\":\"incentiveIds\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"totalWeight\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalWeight\",\"type\":\"uint256\"}],\"internalType\":\"structUniswapV3Staker.WeightCheckpoint[]\",\"name\":\"weightHistory\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"getUserStakes\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"incentives\",\"outputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"endTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalLiquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint96\",\"name\":\"numberOfStakes\",\"type\":\"uint96\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonfungiblePositionManager\",\"outputs\":[{\"internalType\":\"contractINonfungiblePositionManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"onERC721Received\",\"outputs\":[{\"internalType\":\"bytes4\",\"name\":\"\",\"type\":\"bytes4\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"positions\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isStaked\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"stakeTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastClaimTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"}],\"name\":\"removeRewardRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"rewardPools\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"totalReward\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdateTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalWeight\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"ratePerSecond\",\"type\":\"uint256\"}],\"name\":\"setRewardRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"stake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"stakedTokens\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"unstake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractIUniswapV3Factory\",\"name\":\"_factory\",\"type\":\"address\"},{\"internalType\":\"contractINonfungiblePositionManager\",\"name\":\"_nonfungiblePositionManager\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"IncentiveCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"refund\",\"type\":\"uint256\"}],\"name\":\"IncentiveEnded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"RewardClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldRate\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newRate\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"RewardRateUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"TokenDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"TokenStaked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"TokenUnstaked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"claim\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"}],\"name\":\"createIncentive\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"endIncentive\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"refund\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"factory\",\"outputs\":[{\"internalType\":\"contractIUniswapV3Factory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"getIncentiveInfo\",\"outputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalClaimed\",\"type\":\"uint256\"},{\"internalType\":\"uint96\",\"name\":\"numberOfStakes\",\"type\":\"uint96\"},{\"internalType\":\"uint256[]\",\"name\":\"tokenIds\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"getPendingRewards\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"totalReward\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"}],\"name\":\"getUserStakes\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"incentives\",\"outputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"contractIUniswapV3Pool\",\"name\":\"pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"endTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalClaimed\",\"type\":\"uint256\"},{\"internalType\":\"uint96\",\"name\":\"numberOfStakes\",\"type\":\"uint96\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nonfungiblePositionManager\",\"outputs\":[{\"internalType\":\"contractINonfungiblePositionManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"onERC721Received\",\"outputs\":[{\"internalType\":\"bytes4\",\"name\":\"\",\"type\":\"bytes4\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"positions\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isStaked\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"}],\"name\":\"removeRewardRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"rewardPools\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"totalReward\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdateTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalWeight\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20Minimal\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"newRatePerSecond\",\"type\":\"uint256\"}],\"name\":\"setRewardRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"stake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"incentiveId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"unstake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // UniswapV3StakerABI is the input ABI used to generate the binding from.
@@ -225,13 +213,13 @@ func (_UniswapV3Staker *UniswapV3StakerCallerSession) Factory() (common.Address,
 
 // GetIncentiveInfo is a free data retrieval call binding the contract method 0xd4e9f658.
 //
-// Solidity: function getIncentiveInfo(uint256 incentiveId) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint96 numberOfStakes, uint256[] tokenIds)
+// Solidity: function getIncentiveInfo(uint256 incentiveId) view returns(address rewardToken, address pool, uint256 startTime, uint256 weight, uint256 totalClaimed, uint96 numberOfStakes, uint256[] tokenIds)
 func (_UniswapV3Staker *UniswapV3StakerCaller) GetIncentiveInfo(opts *bind.CallOpts, incentiveId *big.Int) (struct {
 	RewardToken    common.Address
 	Pool           common.Address
 	StartTime      *big.Int
-	EndTime        *big.Int
 	Weight         *big.Int
+	TotalClaimed   *big.Int
 	NumberOfStakes *big.Int
 	TokenIds       []*big.Int
 }, error) {
@@ -242,8 +230,8 @@ func (_UniswapV3Staker *UniswapV3StakerCaller) GetIncentiveInfo(opts *bind.CallO
 		RewardToken    common.Address
 		Pool           common.Address
 		StartTime      *big.Int
-		EndTime        *big.Int
 		Weight         *big.Int
+		TotalClaimed   *big.Int
 		NumberOfStakes *big.Int
 		TokenIds       []*big.Int
 	})
@@ -254,8 +242,8 @@ func (_UniswapV3Staker *UniswapV3StakerCaller) GetIncentiveInfo(opts *bind.CallO
 	outstruct.RewardToken = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.Pool = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
 	outstruct.StartTime = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
-	outstruct.EndTime = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
-	outstruct.Weight = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
+	outstruct.Weight = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+	outstruct.TotalClaimed = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
 	outstruct.NumberOfStakes = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
 	outstruct.TokenIds = *abi.ConvertType(out[6], new([]*big.Int)).(*[]*big.Int)
 
@@ -265,13 +253,13 @@ func (_UniswapV3Staker *UniswapV3StakerCaller) GetIncentiveInfo(opts *bind.CallO
 
 // GetIncentiveInfo is a free data retrieval call binding the contract method 0xd4e9f658.
 //
-// Solidity: function getIncentiveInfo(uint256 incentiveId) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint96 numberOfStakes, uint256[] tokenIds)
+// Solidity: function getIncentiveInfo(uint256 incentiveId) view returns(address rewardToken, address pool, uint256 startTime, uint256 weight, uint256 totalClaimed, uint96 numberOfStakes, uint256[] tokenIds)
 func (_UniswapV3Staker *UniswapV3StakerSession) GetIncentiveInfo(incentiveId *big.Int) (struct {
 	RewardToken    common.Address
 	Pool           common.Address
 	StartTime      *big.Int
-	EndTime        *big.Int
 	Weight         *big.Int
+	TotalClaimed   *big.Int
 	NumberOfStakes *big.Int
 	TokenIds       []*big.Int
 }, error) {
@@ -280,13 +268,13 @@ func (_UniswapV3Staker *UniswapV3StakerSession) GetIncentiveInfo(incentiveId *bi
 
 // GetIncentiveInfo is a free data retrieval call binding the contract method 0xd4e9f658.
 //
-// Solidity: function getIncentiveInfo(uint256 incentiveId) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint96 numberOfStakes, uint256[] tokenIds)
+// Solidity: function getIncentiveInfo(uint256 incentiveId) view returns(address rewardToken, address pool, uint256 startTime, uint256 weight, uint256 totalClaimed, uint96 numberOfStakes, uint256[] tokenIds)
 func (_UniswapV3Staker *UniswapV3StakerCallerSession) GetIncentiveInfo(incentiveId *big.Int) (struct {
 	RewardToken    common.Address
 	Pool           common.Address
 	StartTime      *big.Int
-	EndTime        *big.Int
 	Weight         *big.Int
+	TotalClaimed   *big.Int
 	NumberOfStakes *big.Int
 	TokenIds       []*big.Int
 }, error) {
@@ -324,71 +312,6 @@ func (_UniswapV3Staker *UniswapV3StakerCallerSession) GetPendingRewards(user com
 	return _UniswapV3Staker.Contract.GetPendingRewards(&_UniswapV3Staker.CallOpts, user, incentiveId)
 }
 
-// GetRewardPool is a free data retrieval call binding the contract method 0x514a9009.
-//
-// Solidity: function getRewardPool(address rewardToken) view returns(uint256 totalReward, uint256 lastUpdateTime, (uint256,uint256)[] rates, uint256[] incentiveIds, uint256 totalWeight, (uint256,uint256)[] weightHistory)
-func (_UniswapV3Staker *UniswapV3StakerCaller) GetRewardPool(opts *bind.CallOpts, rewardToken common.Address) (struct {
-	TotalReward    *big.Int
-	LastUpdateTime *big.Int
-	Rates          []UniswapV3StakerRewardRate
-	IncentiveIds   []*big.Int
-	TotalWeight    *big.Int
-	WeightHistory  []UniswapV3StakerWeightCheckpoint
-}, error) {
-	var out []interface{}
-	err := _UniswapV3Staker.contract.Call(opts, &out, "getRewardPool", rewardToken)
-
-	outstruct := new(struct {
-		TotalReward    *big.Int
-		LastUpdateTime *big.Int
-		Rates          []UniswapV3StakerRewardRate
-		IncentiveIds   []*big.Int
-		TotalWeight    *big.Int
-		WeightHistory  []UniswapV3StakerWeightCheckpoint
-	})
-	if err != nil {
-		return *outstruct, err
-	}
-
-	outstruct.TotalReward = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.LastUpdateTime = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.Rates = *abi.ConvertType(out[2], new([]UniswapV3StakerRewardRate)).(*[]UniswapV3StakerRewardRate)
-	outstruct.IncentiveIds = *abi.ConvertType(out[3], new([]*big.Int)).(*[]*big.Int)
-	outstruct.TotalWeight = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
-	outstruct.WeightHistory = *abi.ConvertType(out[5], new([]UniswapV3StakerWeightCheckpoint)).(*[]UniswapV3StakerWeightCheckpoint)
-
-	return *outstruct, err
-
-}
-
-// GetRewardPool is a free data retrieval call binding the contract method 0x514a9009.
-//
-// Solidity: function getRewardPool(address rewardToken) view returns(uint256 totalReward, uint256 lastUpdateTime, (uint256,uint256)[] rates, uint256[] incentiveIds, uint256 totalWeight, (uint256,uint256)[] weightHistory)
-func (_UniswapV3Staker *UniswapV3StakerSession) GetRewardPool(rewardToken common.Address) (struct {
-	TotalReward    *big.Int
-	LastUpdateTime *big.Int
-	Rates          []UniswapV3StakerRewardRate
-	IncentiveIds   []*big.Int
-	TotalWeight    *big.Int
-	WeightHistory  []UniswapV3StakerWeightCheckpoint
-}, error) {
-	return _UniswapV3Staker.Contract.GetRewardPool(&_UniswapV3Staker.CallOpts, rewardToken)
-}
-
-// GetRewardPool is a free data retrieval call binding the contract method 0x514a9009.
-//
-// Solidity: function getRewardPool(address rewardToken) view returns(uint256 totalReward, uint256 lastUpdateTime, (uint256,uint256)[] rates, uint256[] incentiveIds, uint256 totalWeight, (uint256,uint256)[] weightHistory)
-func (_UniswapV3Staker *UniswapV3StakerCallerSession) GetRewardPool(rewardToken common.Address) (struct {
-	TotalReward    *big.Int
-	LastUpdateTime *big.Int
-	Rates          []UniswapV3StakerRewardRate
-	IncentiveIds   []*big.Int
-	TotalWeight    *big.Int
-	WeightHistory  []UniswapV3StakerWeightCheckpoint
-}, error) {
-	return _UniswapV3Staker.Contract.GetRewardPool(&_UniswapV3Staker.CallOpts, rewardToken)
-}
-
 // GetUserStakes is a free data retrieval call binding the contract method 0x419bc8ad.
 //
 // Solidity: function getUserStakes(address user, uint256 incentiveId) view returns(uint256[])
@@ -422,14 +345,14 @@ func (_UniswapV3Staker *UniswapV3StakerCallerSession) GetUserStakes(user common.
 
 // Incentives is a free data retrieval call binding the contract method 0xe121c102.
 //
-// Solidity: function incentives(uint256 ) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint256 totalLiquidity, uint96 numberOfStakes)
+// Solidity: function incentives(uint256 ) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint256 totalClaimed, uint96 numberOfStakes)
 func (_UniswapV3Staker *UniswapV3StakerCaller) Incentives(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	RewardToken    common.Address
 	Pool           common.Address
 	StartTime      *big.Int
 	EndTime        *big.Int
 	Weight         *big.Int
-	TotalLiquidity *big.Int
+	TotalClaimed   *big.Int
 	NumberOfStakes *big.Int
 }, error) {
 	var out []interface{}
@@ -441,7 +364,7 @@ func (_UniswapV3Staker *UniswapV3StakerCaller) Incentives(opts *bind.CallOpts, a
 		StartTime      *big.Int
 		EndTime        *big.Int
 		Weight         *big.Int
-		TotalLiquidity *big.Int
+		TotalClaimed   *big.Int
 		NumberOfStakes *big.Int
 	})
 	if err != nil {
@@ -453,7 +376,7 @@ func (_UniswapV3Staker *UniswapV3StakerCaller) Incentives(opts *bind.CallOpts, a
 	outstruct.StartTime = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 	outstruct.EndTime = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
 	outstruct.Weight = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
-	outstruct.TotalLiquidity = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
+	outstruct.TotalClaimed = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
 	outstruct.NumberOfStakes = *abi.ConvertType(out[6], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
@@ -462,14 +385,14 @@ func (_UniswapV3Staker *UniswapV3StakerCaller) Incentives(opts *bind.CallOpts, a
 
 // Incentives is a free data retrieval call binding the contract method 0xe121c102.
 //
-// Solidity: function incentives(uint256 ) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint256 totalLiquidity, uint96 numberOfStakes)
+// Solidity: function incentives(uint256 ) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint256 totalClaimed, uint96 numberOfStakes)
 func (_UniswapV3Staker *UniswapV3StakerSession) Incentives(arg0 *big.Int) (struct {
 	RewardToken    common.Address
 	Pool           common.Address
 	StartTime      *big.Int
 	EndTime        *big.Int
 	Weight         *big.Int
-	TotalLiquidity *big.Int
+	TotalClaimed   *big.Int
 	NumberOfStakes *big.Int
 }, error) {
 	return _UniswapV3Staker.Contract.Incentives(&_UniswapV3Staker.CallOpts, arg0)
@@ -477,14 +400,14 @@ func (_UniswapV3Staker *UniswapV3StakerSession) Incentives(arg0 *big.Int) (struc
 
 // Incentives is a free data retrieval call binding the contract method 0xe121c102.
 //
-// Solidity: function incentives(uint256 ) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint256 totalLiquidity, uint96 numberOfStakes)
+// Solidity: function incentives(uint256 ) view returns(address rewardToken, address pool, uint256 startTime, uint256 endTime, uint256 weight, uint256 totalClaimed, uint96 numberOfStakes)
 func (_UniswapV3Staker *UniswapV3StakerCallerSession) Incentives(arg0 *big.Int) (struct {
 	RewardToken    common.Address
 	Pool           common.Address
 	StartTime      *big.Int
 	EndTime        *big.Int
 	Weight         *big.Int
-	TotalLiquidity *big.Int
+	TotalClaimed   *big.Int
 	NumberOfStakes *big.Int
 }, error) {
 	return _UniswapV3Staker.Contract.Incentives(&_UniswapV3Staker.CallOpts, arg0)
@@ -585,45 +508,24 @@ func (_UniswapV3Staker *UniswapV3StakerCallerSession) Paused() (bool, error) {
 
 // Positions is a free data retrieval call binding the contract method 0x99fbab88.
 //
-// Solidity: function positions(uint256 ) view returns(address owner, uint256 tokenId, bool isStaked, uint256 incentiveId, uint256 liquidity, uint256 stakeTime, uint256 unstakeTime, uint256 lastClaimTime, uint256 reward)
+// Solidity: function positions(uint256 ) view returns(address owner, bool isStaked)
 func (_UniswapV3Staker *UniswapV3StakerCaller) Positions(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	Owner         common.Address
-	TokenId       *big.Int
-	IsStaked      bool
-	IncentiveId   *big.Int
-	Liquidity     *big.Int
-	StakeTime     *big.Int
-	UnstakeTime   *big.Int
-	LastClaimTime *big.Int
-	Reward        *big.Int
+	Owner    common.Address
+	IsStaked bool
 }, error) {
 	var out []interface{}
 	err := _UniswapV3Staker.contract.Call(opts, &out, "positions", arg0)
 
 	outstruct := new(struct {
-		Owner         common.Address
-		TokenId       *big.Int
-		IsStaked      bool
-		IncentiveId   *big.Int
-		Liquidity     *big.Int
-		StakeTime     *big.Int
-		UnstakeTime   *big.Int
-		LastClaimTime *big.Int
-		Reward        *big.Int
+		Owner    common.Address
+		IsStaked bool
 	})
 	if err != nil {
 		return *outstruct, err
 	}
 
 	outstruct.Owner = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	outstruct.TokenId = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.IsStaked = *abi.ConvertType(out[2], new(bool)).(*bool)
-	outstruct.IncentiveId = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
-	outstruct.Liquidity = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
-	outstruct.StakeTime = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
-	outstruct.UnstakeTime = *abi.ConvertType(out[6], new(*big.Int)).(**big.Int)
-	outstruct.LastClaimTime = *abi.ConvertType(out[7], new(*big.Int)).(**big.Int)
-	outstruct.Reward = *abi.ConvertType(out[8], new(*big.Int)).(**big.Int)
+	outstruct.IsStaked = *abi.ConvertType(out[1], new(bool)).(*bool)
 
 	return *outstruct, err
 
@@ -631,34 +533,20 @@ func (_UniswapV3Staker *UniswapV3StakerCaller) Positions(opts *bind.CallOpts, ar
 
 // Positions is a free data retrieval call binding the contract method 0x99fbab88.
 //
-// Solidity: function positions(uint256 ) view returns(address owner, uint256 tokenId, bool isStaked, uint256 incentiveId, uint256 liquidity, uint256 stakeTime, uint256 unstakeTime, uint256 lastClaimTime, uint256 reward)
+// Solidity: function positions(uint256 ) view returns(address owner, bool isStaked)
 func (_UniswapV3Staker *UniswapV3StakerSession) Positions(arg0 *big.Int) (struct {
-	Owner         common.Address
-	TokenId       *big.Int
-	IsStaked      bool
-	IncentiveId   *big.Int
-	Liquidity     *big.Int
-	StakeTime     *big.Int
-	UnstakeTime   *big.Int
-	LastClaimTime *big.Int
-	Reward        *big.Int
+	Owner    common.Address
+	IsStaked bool
 }, error) {
 	return _UniswapV3Staker.Contract.Positions(&_UniswapV3Staker.CallOpts, arg0)
 }
 
 // Positions is a free data retrieval call binding the contract method 0x99fbab88.
 //
-// Solidity: function positions(uint256 ) view returns(address owner, uint256 tokenId, bool isStaked, uint256 incentiveId, uint256 liquidity, uint256 stakeTime, uint256 unstakeTime, uint256 lastClaimTime, uint256 reward)
+// Solidity: function positions(uint256 ) view returns(address owner, bool isStaked)
 func (_UniswapV3Staker *UniswapV3StakerCallerSession) Positions(arg0 *big.Int) (struct {
-	Owner         common.Address
-	TokenId       *big.Int
-	IsStaked      bool
-	IncentiveId   *big.Int
-	Liquidity     *big.Int
-	StakeTime     *big.Int
-	UnstakeTime   *big.Int
-	LastClaimTime *big.Int
-	Reward        *big.Int
+	Owner    common.Address
+	IsStaked bool
 }, error) {
 	return _UniswapV3Staker.Contract.Positions(&_UniswapV3Staker.CallOpts, arg0)
 }
@@ -713,37 +601,6 @@ func (_UniswapV3Staker *UniswapV3StakerCallerSession) RewardPools(arg0 common.Ad
 	return _UniswapV3Staker.Contract.RewardPools(&_UniswapV3Staker.CallOpts, arg0)
 }
 
-// StakedTokens is a free data retrieval call binding the contract method 0x0f5f714e.
-//
-// Solidity: function stakedTokens(address , uint256 , uint256 ) view returns(uint256)
-func (_UniswapV3Staker *UniswapV3StakerCaller) StakedTokens(opts *bind.CallOpts, arg0 common.Address, arg1 *big.Int, arg2 *big.Int) (*big.Int, error) {
-	var out []interface{}
-	err := _UniswapV3Staker.contract.Call(opts, &out, "stakedTokens", arg0, arg1, arg2)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// StakedTokens is a free data retrieval call binding the contract method 0x0f5f714e.
-//
-// Solidity: function stakedTokens(address , uint256 , uint256 ) view returns(uint256)
-func (_UniswapV3Staker *UniswapV3StakerSession) StakedTokens(arg0 common.Address, arg1 *big.Int, arg2 *big.Int) (*big.Int, error) {
-	return _UniswapV3Staker.Contract.StakedTokens(&_UniswapV3Staker.CallOpts, arg0, arg1, arg2)
-}
-
-// StakedTokens is a free data retrieval call binding the contract method 0x0f5f714e.
-//
-// Solidity: function stakedTokens(address , uint256 , uint256 ) view returns(uint256)
-func (_UniswapV3Staker *UniswapV3StakerCallerSession) StakedTokens(arg0 common.Address, arg1 *big.Int, arg2 *big.Int) (*big.Int, error) {
-	return _UniswapV3Staker.Contract.StakedTokens(&_UniswapV3Staker.CallOpts, arg0, arg1, arg2)
-}
-
 // Claim is a paid mutator transaction binding the contract method 0x379607f5.
 //
 // Solidity: function claim(uint256 incentiveId) returns()
@@ -788,21 +645,21 @@ func (_UniswapV3Staker *UniswapV3StakerTransactorSession) CreateIncentive(reward
 
 // EndIncentive is a paid mutator transaction binding the contract method 0x38ee2e30.
 //
-// Solidity: function endIncentive(uint256 incentiveId) returns()
+// Solidity: function endIncentive(uint256 incentiveId) returns(uint256 refund)
 func (_UniswapV3Staker *UniswapV3StakerTransactor) EndIncentive(opts *bind.TransactOpts, incentiveId *big.Int) (*types.Transaction, error) {
 	return _UniswapV3Staker.contract.Transact(opts, "endIncentive", incentiveId)
 }
 
 // EndIncentive is a paid mutator transaction binding the contract method 0x38ee2e30.
 //
-// Solidity: function endIncentive(uint256 incentiveId) returns()
+// Solidity: function endIncentive(uint256 incentiveId) returns(uint256 refund)
 func (_UniswapV3Staker *UniswapV3StakerSession) EndIncentive(incentiveId *big.Int) (*types.Transaction, error) {
 	return _UniswapV3Staker.Contract.EndIncentive(&_UniswapV3Staker.TransactOpts, incentiveId)
 }
 
 // EndIncentive is a paid mutator transaction binding the contract method 0x38ee2e30.
 //
-// Solidity: function endIncentive(uint256 incentiveId) returns()
+// Solidity: function endIncentive(uint256 incentiveId) returns(uint256 refund)
 func (_UniswapV3Staker *UniswapV3StakerTransactorSession) EndIncentive(incentiveId *big.Int) (*types.Transaction, error) {
 	return _UniswapV3Staker.Contract.EndIncentive(&_UniswapV3Staker.TransactOpts, incentiveId)
 }
@@ -914,23 +771,23 @@ func (_UniswapV3Staker *UniswapV3StakerTransactorSession) RenounceOwnership() (*
 
 // SetRewardRate is a paid mutator transaction binding the contract method 0x812a71d5.
 //
-// Solidity: function setRewardRate(address rewardToken, uint256 ratePerSecond) returns()
-func (_UniswapV3Staker *UniswapV3StakerTransactor) SetRewardRate(opts *bind.TransactOpts, rewardToken common.Address, ratePerSecond *big.Int) (*types.Transaction, error) {
-	return _UniswapV3Staker.contract.Transact(opts, "setRewardRate", rewardToken, ratePerSecond)
+// Solidity: function setRewardRate(address rewardToken, uint256 newRatePerSecond) returns()
+func (_UniswapV3Staker *UniswapV3StakerTransactor) SetRewardRate(opts *bind.TransactOpts, rewardToken common.Address, newRatePerSecond *big.Int) (*types.Transaction, error) {
+	return _UniswapV3Staker.contract.Transact(opts, "setRewardRate", rewardToken, newRatePerSecond)
 }
 
 // SetRewardRate is a paid mutator transaction binding the contract method 0x812a71d5.
 //
-// Solidity: function setRewardRate(address rewardToken, uint256 ratePerSecond) returns()
-func (_UniswapV3Staker *UniswapV3StakerSession) SetRewardRate(rewardToken common.Address, ratePerSecond *big.Int) (*types.Transaction, error) {
-	return _UniswapV3Staker.Contract.SetRewardRate(&_UniswapV3Staker.TransactOpts, rewardToken, ratePerSecond)
+// Solidity: function setRewardRate(address rewardToken, uint256 newRatePerSecond) returns()
+func (_UniswapV3Staker *UniswapV3StakerSession) SetRewardRate(rewardToken common.Address, newRatePerSecond *big.Int) (*types.Transaction, error) {
+	return _UniswapV3Staker.Contract.SetRewardRate(&_UniswapV3Staker.TransactOpts, rewardToken, newRatePerSecond)
 }
 
 // SetRewardRate is a paid mutator transaction binding the contract method 0x812a71d5.
 //
-// Solidity: function setRewardRate(address rewardToken, uint256 ratePerSecond) returns()
-func (_UniswapV3Staker *UniswapV3StakerTransactorSession) SetRewardRate(rewardToken common.Address, ratePerSecond *big.Int) (*types.Transaction, error) {
-	return _UniswapV3Staker.Contract.SetRewardRate(&_UniswapV3Staker.TransactOpts, rewardToken, ratePerSecond)
+// Solidity: function setRewardRate(address rewardToken, uint256 newRatePerSecond) returns()
+func (_UniswapV3Staker *UniswapV3StakerTransactorSession) SetRewardRate(rewardToken common.Address, newRatePerSecond *big.Int) (*types.Transaction, error) {
+	return _UniswapV3Staker.Contract.SetRewardRate(&_UniswapV3Staker.TransactOpts, rewardToken, newRatePerSecond)
 }
 
 // Stake is a paid mutator transaction binding the contract method 0x7b0472f0.
@@ -1088,16 +945,15 @@ func (it *UniswapV3StakerIncentiveCreatedIterator) Close() error {
 type UniswapV3StakerIncentiveCreated struct {
 	RewardToken common.Address
 	Pool        common.Address
-	IncentiveId *big.Int
 	StartTime   *big.Int
 	Weight      *big.Int
-	Timestamp   *big.Int
+	IncentiveId *big.Int
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterIncentiveCreated is a free log retrieval operation binding the contract event 0xaabc3a24fd7c5cd6f93070066d082bcaf74c568afdfa71c787c790c076bc782b.
+// FilterIncentiveCreated is a free log retrieval operation binding the contract event 0x03e6bb5c16a3101a95920236f2aa7ccf5f60826ad84f910037336d78745e6859.
 //
-// Solidity: event IncentiveCreated(address indexed rewardToken, address indexed pool, uint256 indexed incentiveId, uint256 startTime, uint256 weight, uint256 timestamp)
+// Solidity: event IncentiveCreated(address indexed rewardToken, address indexed pool, uint256 startTime, uint256 weight, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterIncentiveCreated(opts *bind.FilterOpts, rewardToken []common.Address, pool []common.Address, incentiveId []*big.Int) (*UniswapV3StakerIncentiveCreatedIterator, error) {
 
 	var rewardTokenRule []interface{}
@@ -1108,6 +964,7 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterIncentiveCreated(opts *bi
 	for _, poolItem := range pool {
 		poolRule = append(poolRule, poolItem)
 	}
+
 	var incentiveIdRule []interface{}
 	for _, incentiveIdItem := range incentiveId {
 		incentiveIdRule = append(incentiveIdRule, incentiveIdItem)
@@ -1120,9 +977,9 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterIncentiveCreated(opts *bi
 	return &UniswapV3StakerIncentiveCreatedIterator{contract: _UniswapV3Staker.contract, event: "IncentiveCreated", logs: logs, sub: sub}, nil
 }
 
-// WatchIncentiveCreated is a free log subscription operation binding the contract event 0xaabc3a24fd7c5cd6f93070066d082bcaf74c568afdfa71c787c790c076bc782b.
+// WatchIncentiveCreated is a free log subscription operation binding the contract event 0x03e6bb5c16a3101a95920236f2aa7ccf5f60826ad84f910037336d78745e6859.
 //
-// Solidity: event IncentiveCreated(address indexed rewardToken, address indexed pool, uint256 indexed incentiveId, uint256 startTime, uint256 weight, uint256 timestamp)
+// Solidity: event IncentiveCreated(address indexed rewardToken, address indexed pool, uint256 startTime, uint256 weight, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchIncentiveCreated(opts *bind.WatchOpts, sink chan<- *UniswapV3StakerIncentiveCreated, rewardToken []common.Address, pool []common.Address, incentiveId []*big.Int) (event.Subscription, error) {
 
 	var rewardTokenRule []interface{}
@@ -1133,6 +990,7 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchIncentiveCreated(opts *bin
 	for _, poolItem := range pool {
 		poolRule = append(poolRule, poolItem)
 	}
+
 	var incentiveIdRule []interface{}
 	for _, incentiveIdItem := range incentiveId {
 		incentiveIdRule = append(incentiveIdRule, incentiveIdItem)
@@ -1170,9 +1028,9 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchIncentiveCreated(opts *bin
 	}), nil
 }
 
-// ParseIncentiveCreated is a log parse operation binding the contract event 0xaabc3a24fd7c5cd6f93070066d082bcaf74c568afdfa71c787c790c076bc782b.
+// ParseIncentiveCreated is a log parse operation binding the contract event 0x03e6bb5c16a3101a95920236f2aa7ccf5f60826ad84f910037336d78745e6859.
 //
-// Solidity: event IncentiveCreated(address indexed rewardToken, address indexed pool, uint256 indexed incentiveId, uint256 startTime, uint256 weight, uint256 timestamp)
+// Solidity: event IncentiveCreated(address indexed rewardToken, address indexed pool, uint256 startTime, uint256 weight, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseIncentiveCreated(log types.Log) (*UniswapV3StakerIncentiveCreated, error) {
 	event := new(UniswapV3StakerIncentiveCreated)
 	if err := _UniswapV3Staker.contract.UnpackLog(event, "IncentiveCreated", log); err != nil {
@@ -1252,14 +1110,13 @@ func (it *UniswapV3StakerIncentiveEndedIterator) Close() error {
 // UniswapV3StakerIncentiveEnded represents a IncentiveEnded event raised by the UniswapV3Staker contract.
 type UniswapV3StakerIncentiveEnded struct {
 	IncentiveId *big.Int
-	Weight      *big.Int
-	Timestamp   *big.Int
+	Refund      *big.Int
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterIncentiveEnded is a free log retrieval operation binding the contract event 0x23252954bcc03a4762c2efd4e2caaf3ef9324183817bec2f3c39c85df82bec5f.
+// FilterIncentiveEnded is a free log retrieval operation binding the contract event 0x13f1242f870865ae5fbac1ae3bf7fd3f447fd503ce7444dd46eb6daf0dfcb33e.
 //
-// Solidity: event IncentiveEnded(uint256 indexed incentiveId, uint256 weight, uint256 timestamp)
+// Solidity: event IncentiveEnded(uint256 indexed incentiveId, uint256 refund)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterIncentiveEnded(opts *bind.FilterOpts, incentiveId []*big.Int) (*UniswapV3StakerIncentiveEndedIterator, error) {
 
 	var incentiveIdRule []interface{}
@@ -1274,9 +1131,9 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterIncentiveEnded(opts *bind
 	return &UniswapV3StakerIncentiveEndedIterator{contract: _UniswapV3Staker.contract, event: "IncentiveEnded", logs: logs, sub: sub}, nil
 }
 
-// WatchIncentiveEnded is a free log subscription operation binding the contract event 0x23252954bcc03a4762c2efd4e2caaf3ef9324183817bec2f3c39c85df82bec5f.
+// WatchIncentiveEnded is a free log subscription operation binding the contract event 0x13f1242f870865ae5fbac1ae3bf7fd3f447fd503ce7444dd46eb6daf0dfcb33e.
 //
-// Solidity: event IncentiveEnded(uint256 indexed incentiveId, uint256 weight, uint256 timestamp)
+// Solidity: event IncentiveEnded(uint256 indexed incentiveId, uint256 refund)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchIncentiveEnded(opts *bind.WatchOpts, sink chan<- *UniswapV3StakerIncentiveEnded, incentiveId []*big.Int) (event.Subscription, error) {
 
 	var incentiveIdRule []interface{}
@@ -1316,159 +1173,12 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchIncentiveEnded(opts *bind.
 	}), nil
 }
 
-// ParseIncentiveEnded is a log parse operation binding the contract event 0x23252954bcc03a4762c2efd4e2caaf3ef9324183817bec2f3c39c85df82bec5f.
+// ParseIncentiveEnded is a log parse operation binding the contract event 0x13f1242f870865ae5fbac1ae3bf7fd3f447fd503ce7444dd46eb6daf0dfcb33e.
 //
-// Solidity: event IncentiveEnded(uint256 indexed incentiveId, uint256 weight, uint256 timestamp)
+// Solidity: event IncentiveEnded(uint256 indexed incentiveId, uint256 refund)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseIncentiveEnded(log types.Log) (*UniswapV3StakerIncentiveEnded, error) {
 	event := new(UniswapV3StakerIncentiveEnded)
 	if err := _UniswapV3Staker.contract.UnpackLog(event, "IncentiveEnded", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// UniswapV3StakerIncentiveUpdatedIterator is returned from FilterIncentiveUpdated and is used to iterate over the raw logs and unpacked data for IncentiveUpdated events raised by the UniswapV3Staker contract.
-type UniswapV3StakerIncentiveUpdatedIterator struct {
-	Event *UniswapV3StakerIncentiveUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *UniswapV3StakerIncentiveUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(UniswapV3StakerIncentiveUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(UniswapV3StakerIncentiveUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *UniswapV3StakerIncentiveUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *UniswapV3StakerIncentiveUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// UniswapV3StakerIncentiveUpdated represents a IncentiveUpdated event raised by the UniswapV3Staker contract.
-type UniswapV3StakerIncentiveUpdated struct {
-	IncentiveId    *big.Int
-	StartTime      *big.Int
-	Weight         *big.Int
-	TotalLiquidity *big.Int
-	Raw            types.Log // Blockchain specific contextual infos
-}
-
-// FilterIncentiveUpdated is a free log retrieval operation binding the contract event 0xa1df4489fee538cf1839800d12440b42664fa80fcd9e5fc5fee8da47b6bf80ce.
-//
-// Solidity: event IncentiveUpdated(uint256 indexed incentiveId, uint256 startTime, uint256 weight, uint256 totalLiquidity)
-func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterIncentiveUpdated(opts *bind.FilterOpts, incentiveId []*big.Int) (*UniswapV3StakerIncentiveUpdatedIterator, error) {
-
-	var incentiveIdRule []interface{}
-	for _, incentiveIdItem := range incentiveId {
-		incentiveIdRule = append(incentiveIdRule, incentiveIdItem)
-	}
-
-	logs, sub, err := _UniswapV3Staker.contract.FilterLogs(opts, "IncentiveUpdated", incentiveIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &UniswapV3StakerIncentiveUpdatedIterator{contract: _UniswapV3Staker.contract, event: "IncentiveUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchIncentiveUpdated is a free log subscription operation binding the contract event 0xa1df4489fee538cf1839800d12440b42664fa80fcd9e5fc5fee8da47b6bf80ce.
-//
-// Solidity: event IncentiveUpdated(uint256 indexed incentiveId, uint256 startTime, uint256 weight, uint256 totalLiquidity)
-func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchIncentiveUpdated(opts *bind.WatchOpts, sink chan<- *UniswapV3StakerIncentiveUpdated, incentiveId []*big.Int) (event.Subscription, error) {
-
-	var incentiveIdRule []interface{}
-	for _, incentiveIdItem := range incentiveId {
-		incentiveIdRule = append(incentiveIdRule, incentiveIdItem)
-	}
-
-	logs, sub, err := _UniswapV3Staker.contract.WatchLogs(opts, "IncentiveUpdated", incentiveIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(UniswapV3StakerIncentiveUpdated)
-				if err := _UniswapV3Staker.contract.UnpackLog(event, "IncentiveUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseIncentiveUpdated is a log parse operation binding the contract event 0xa1df4489fee538cf1839800d12440b42664fa80fcd9e5fc5fee8da47b6bf80ce.
-//
-// Solidity: event IncentiveUpdated(uint256 indexed incentiveId, uint256 startTime, uint256 weight, uint256 totalLiquidity)
-func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseIncentiveUpdated(log types.Log) (*UniswapV3StakerIncentiveUpdated, error) {
-	event := new(UniswapV3StakerIncentiveUpdated)
-	if err := _UniswapV3Staker.contract.UnpackLog(event, "IncentiveUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1926,152 +1636,6 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseRewardClaimed(log types.Lo
 	return event, nil
 }
 
-// UniswapV3StakerRewardPoolUpdatedIterator is returned from FilterRewardPoolUpdated and is used to iterate over the raw logs and unpacked data for RewardPoolUpdated events raised by the UniswapV3Staker contract.
-type UniswapV3StakerRewardPoolUpdatedIterator struct {
-	Event *UniswapV3StakerRewardPoolUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *UniswapV3StakerRewardPoolUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(UniswapV3StakerRewardPoolUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(UniswapV3StakerRewardPoolUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *UniswapV3StakerRewardPoolUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *UniswapV3StakerRewardPoolUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// UniswapV3StakerRewardPoolUpdated represents a RewardPoolUpdated event raised by the UniswapV3Staker contract.
-type UniswapV3StakerRewardPoolUpdated struct {
-	RewardToken common.Address
-	TotalWeight *big.Int
-	Timestamp   *big.Int
-	Raw         types.Log // Blockchain specific contextual infos
-}
-
-// FilterRewardPoolUpdated is a free log retrieval operation binding the contract event 0xfc0afb688c18eadebe1801ee622296169ac880dd560fdd0755dbbc3729a9b545.
-//
-// Solidity: event RewardPoolUpdated(address indexed rewardToken, uint256 totalWeight, uint256 timestamp)
-func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterRewardPoolUpdated(opts *bind.FilterOpts, rewardToken []common.Address) (*UniswapV3StakerRewardPoolUpdatedIterator, error) {
-
-	var rewardTokenRule []interface{}
-	for _, rewardTokenItem := range rewardToken {
-		rewardTokenRule = append(rewardTokenRule, rewardTokenItem)
-	}
-
-	logs, sub, err := _UniswapV3Staker.contract.FilterLogs(opts, "RewardPoolUpdated", rewardTokenRule)
-	if err != nil {
-		return nil, err
-	}
-	return &UniswapV3StakerRewardPoolUpdatedIterator{contract: _UniswapV3Staker.contract, event: "RewardPoolUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchRewardPoolUpdated is a free log subscription operation binding the contract event 0xfc0afb688c18eadebe1801ee622296169ac880dd560fdd0755dbbc3729a9b545.
-//
-// Solidity: event RewardPoolUpdated(address indexed rewardToken, uint256 totalWeight, uint256 timestamp)
-func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchRewardPoolUpdated(opts *bind.WatchOpts, sink chan<- *UniswapV3StakerRewardPoolUpdated, rewardToken []common.Address) (event.Subscription, error) {
-
-	var rewardTokenRule []interface{}
-	for _, rewardTokenItem := range rewardToken {
-		rewardTokenRule = append(rewardTokenRule, rewardTokenItem)
-	}
-
-	logs, sub, err := _UniswapV3Staker.contract.WatchLogs(opts, "RewardPoolUpdated", rewardTokenRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(UniswapV3StakerRewardPoolUpdated)
-				if err := _UniswapV3Staker.contract.UnpackLog(event, "RewardPoolUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseRewardPoolUpdated is a log parse operation binding the contract event 0xfc0afb688c18eadebe1801ee622296169ac880dd560fdd0755dbbc3729a9b545.
-//
-// Solidity: event RewardPoolUpdated(address indexed rewardToken, uint256 totalWeight, uint256 timestamp)
-func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseRewardPoolUpdated(log types.Log) (*UniswapV3StakerRewardPoolUpdated, error) {
-	event := new(UniswapV3StakerRewardPoolUpdated)
-	if err := _UniswapV3Staker.contract.UnpackLog(event, "RewardPoolUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // UniswapV3StakerRewardRateUpdatedIterator is returned from FilterRewardRateUpdated and is used to iterate over the raw logs and unpacked data for RewardRateUpdated events raised by the UniswapV3Staker contract.
 type UniswapV3StakerRewardRateUpdatedIterator struct {
 	Event *UniswapV3StakerRewardRateUpdated // Event containing the contract specifics and raw log
@@ -2141,16 +1705,16 @@ func (it *UniswapV3StakerRewardRateUpdatedIterator) Close() error {
 
 // UniswapV3StakerRewardRateUpdated represents a RewardRateUpdated event raised by the UniswapV3Staker contract.
 type UniswapV3StakerRewardRateUpdated struct {
-	RewardToken      common.Address
-	OldRatePerSecond *big.Int
-	NewRatePerSecond *big.Int
-	Timestamp        *big.Int
-	Raw              types.Log // Blockchain specific contextual infos
+	RewardToken common.Address
+	OldRate     *big.Int
+	NewRate     *big.Int
+	Timestamp   *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
 }
 
 // FilterRewardRateUpdated is a free log retrieval operation binding the contract event 0xf986b07af98aeade9c7b51c1a6db30c137edfe3691250c21cc2417eea814dc70.
 //
-// Solidity: event RewardRateUpdated(address indexed rewardToken, uint256 oldRatePerSecond, uint256 newRatePerSecond, uint256 timestamp)
+// Solidity: event RewardRateUpdated(address indexed rewardToken, uint256 oldRate, uint256 newRate, uint256 timestamp)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterRewardRateUpdated(opts *bind.FilterOpts, rewardToken []common.Address) (*UniswapV3StakerRewardRateUpdatedIterator, error) {
 
 	var rewardTokenRule []interface{}
@@ -2167,7 +1731,7 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterRewardRateUpdated(opts *b
 
 // WatchRewardRateUpdated is a free log subscription operation binding the contract event 0xf986b07af98aeade9c7b51c1a6db30c137edfe3691250c21cc2417eea814dc70.
 //
-// Solidity: event RewardRateUpdated(address indexed rewardToken, uint256 oldRatePerSecond, uint256 newRatePerSecond, uint256 timestamp)
+// Solidity: event RewardRateUpdated(address indexed rewardToken, uint256 oldRate, uint256 newRate, uint256 timestamp)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchRewardRateUpdated(opts *bind.WatchOpts, sink chan<- *UniswapV3StakerRewardRateUpdated, rewardToken []common.Address) (event.Subscription, error) {
 
 	var rewardTokenRule []interface{}
@@ -2209,7 +1773,7 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchRewardRateUpdated(opts *bi
 
 // ParseRewardRateUpdated is a log parse operation binding the contract event 0xf986b07af98aeade9c7b51c1a6db30c137edfe3691250c21cc2417eea814dc70.
 //
-// Solidity: event RewardRateUpdated(address indexed rewardToken, uint256 oldRatePerSecond, uint256 newRatePerSecond, uint256 timestamp)
+// Solidity: event RewardRateUpdated(address indexed rewardToken, uint256 oldRate, uint256 newRate, uint256 timestamp)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseRewardRateUpdated(log types.Log) (*UniswapV3StakerRewardRateUpdated, error) {
 	event := new(UniswapV3StakerRewardRateUpdated)
 	if err := _UniswapV3Staker.contract.UnpackLog(event, "RewardRateUpdated", log); err != nil {
@@ -2444,13 +2008,12 @@ type UniswapV3StakerTokenStaked struct {
 	User        common.Address
 	TokenId     *big.Int
 	IncentiveId *big.Int
-	Liquidity   *big.Int
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterTokenStaked is a free log retrieval operation binding the contract event 0x2a313e4098ce76ffcc9934f8807e091b11069a1974e3da9f6f43700247e85e0f.
+// FilterTokenStaked is a free log retrieval operation binding the contract event 0x6173e4d2d9dd52aae0ed37afed3adcf924a490639b759ca93d32dc43366c17d2.
 //
-// Solidity: event TokenStaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId, uint256 liquidity)
+// Solidity: event TokenStaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterTokenStaked(opts *bind.FilterOpts, user []common.Address, tokenId []*big.Int, incentiveId []*big.Int) (*UniswapV3StakerTokenStakedIterator, error) {
 
 	var userRule []interface{}
@@ -2473,9 +2036,9 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterTokenStaked(opts *bind.Fi
 	return &UniswapV3StakerTokenStakedIterator{contract: _UniswapV3Staker.contract, event: "TokenStaked", logs: logs, sub: sub}, nil
 }
 
-// WatchTokenStaked is a free log subscription operation binding the contract event 0x2a313e4098ce76ffcc9934f8807e091b11069a1974e3da9f6f43700247e85e0f.
+// WatchTokenStaked is a free log subscription operation binding the contract event 0x6173e4d2d9dd52aae0ed37afed3adcf924a490639b759ca93d32dc43366c17d2.
 //
-// Solidity: event TokenStaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId, uint256 liquidity)
+// Solidity: event TokenStaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchTokenStaked(opts *bind.WatchOpts, sink chan<- *UniswapV3StakerTokenStaked, user []common.Address, tokenId []*big.Int, incentiveId []*big.Int) (event.Subscription, error) {
 
 	var userRule []interface{}
@@ -2523,9 +2086,9 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchTokenStaked(opts *bind.Wat
 	}), nil
 }
 
-// ParseTokenStaked is a log parse operation binding the contract event 0x2a313e4098ce76ffcc9934f8807e091b11069a1974e3da9f6f43700247e85e0f.
+// ParseTokenStaked is a log parse operation binding the contract event 0x6173e4d2d9dd52aae0ed37afed3adcf924a490639b759ca93d32dc43366c17d2.
 //
-// Solidity: event TokenStaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId, uint256 liquidity)
+// Solidity: event TokenStaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseTokenStaked(log types.Log) (*UniswapV3StakerTokenStaked, error) {
 	event := new(UniswapV3StakerTokenStaked)
 	if err := _UniswapV3Staker.contract.UnpackLog(event, "TokenStaked", log); err != nil {
@@ -2607,13 +2170,12 @@ type UniswapV3StakerTokenUnstaked struct {
 	User        common.Address
 	TokenId     *big.Int
 	IncentiveId *big.Int
-	Liquidity   *big.Int
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterTokenUnstaked is a free log retrieval operation binding the contract event 0x3eb6d453aa29e92949e29c67089d3b4cd70bae81955590f81641b3b389417002.
+// FilterTokenUnstaked is a free log retrieval operation binding the contract event 0x563fc70fca9d440d883299c76a721644d5aca7c45df98aeb5292c4cb823579bf.
 //
-// Solidity: event TokenUnstaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId, uint256 liquidity)
+// Solidity: event TokenUnstaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterTokenUnstaked(opts *bind.FilterOpts, user []common.Address, tokenId []*big.Int, incentiveId []*big.Int) (*UniswapV3StakerTokenUnstakedIterator, error) {
 
 	var userRule []interface{}
@@ -2636,9 +2198,9 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) FilterTokenUnstaked(opts *bind.
 	return &UniswapV3StakerTokenUnstakedIterator{contract: _UniswapV3Staker.contract, event: "TokenUnstaked", logs: logs, sub: sub}, nil
 }
 
-// WatchTokenUnstaked is a free log subscription operation binding the contract event 0x3eb6d453aa29e92949e29c67089d3b4cd70bae81955590f81641b3b389417002.
+// WatchTokenUnstaked is a free log subscription operation binding the contract event 0x563fc70fca9d440d883299c76a721644d5aca7c45df98aeb5292c4cb823579bf.
 //
-// Solidity: event TokenUnstaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId, uint256 liquidity)
+// Solidity: event TokenUnstaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchTokenUnstaked(opts *bind.WatchOpts, sink chan<- *UniswapV3StakerTokenUnstaked, user []common.Address, tokenId []*big.Int, incentiveId []*big.Int) (event.Subscription, error) {
 
 	var userRule []interface{}
@@ -2686,9 +2248,9 @@ func (_UniswapV3Staker *UniswapV3StakerFilterer) WatchTokenUnstaked(opts *bind.W
 	}), nil
 }
 
-// ParseTokenUnstaked is a log parse operation binding the contract event 0x3eb6d453aa29e92949e29c67089d3b4cd70bae81955590f81641b3b389417002.
+// ParseTokenUnstaked is a log parse operation binding the contract event 0x563fc70fca9d440d883299c76a721644d5aca7c45df98aeb5292c4cb823579bf.
 //
-// Solidity: event TokenUnstaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId, uint256 liquidity)
+// Solidity: event TokenUnstaked(address indexed user, uint256 indexed tokenId, uint256 indexed incentiveId)
 func (_UniswapV3Staker *UniswapV3StakerFilterer) ParseTokenUnstaked(log types.Log) (*UniswapV3StakerTokenUnstaked, error) {
 	event := new(UniswapV3StakerTokenUnstaked)
 	if err := _UniswapV3Staker.contract.UnpackLog(event, "TokenUnstaked", log); err != nil {
