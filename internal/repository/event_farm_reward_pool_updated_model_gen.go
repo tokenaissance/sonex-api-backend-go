@@ -27,7 +27,7 @@ type (
 	eventFarmRewardPoolUpdatedModel interface {
 		Insert(ctx context.Context, data *EventFarmRewardPoolUpdated) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventFarmRewardPoolUpdated, error)
-		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventFarmRewardPoolUpdated, error)
+		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventFarmRewardPoolUpdated, error)
 		FindOneByTxHashChainId(ctx context.Context, txHash string, chainId int64) (*EventFarmRewardPoolUpdated, error)
 		Update(ctx context.Context, data *EventFarmRewardPoolUpdated) error
 		Delete(ctx context.Context, id int64) error
@@ -83,10 +83,10 @@ func (m *defaultEventFarmRewardPoolUpdatedModel) FindOne(ctx context.Context, id
 	}
 }
 
-func (m *defaultEventFarmRewardPoolUpdatedModel) FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventFarmRewardPoolUpdated, error) {
+func (m *defaultEventFarmRewardPoolUpdatedModel) FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventFarmRewardPoolUpdated, error) {
 	var resp EventFarmRewardPoolUpdated
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 limit 1", eventFarmRewardPoolUpdatedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 and tx_index = $3 limit 1", eventFarmRewardPoolUpdatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash, txIndex)
 	switch err {
 	case nil:
 		return &resp, nil

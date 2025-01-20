@@ -1,0 +1,68 @@
+syntax = "v1"
+
+import "./common.api"
+
+type SummaryRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`
+}
+
+type SummaryResponse {
+	TotalWastr            string  `json:"totalWastr"`
+	TotalVastr            string  `json:"totalVastr"`
+	ASTRPriceUSD          float64 `json:"astrPriceUSD"`
+	Points                int64   `json:"points"`
+	RewardToken           string  `json:"rewardToken"`
+	RewardPriceUSD        float64 `json:"rewardPriceUSD"`
+	ClaimedRewardAmount   string  `json:"claimedRewardAmount"`
+	UnclaimedRewardAmount string  `json:"unclaimedRewardAmount"`
+	APR                   string  `json:"apr"`
+}
+
+type RewardDetailsRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`
+	PageRequest
+}
+
+type RewardDetailsResponse_Record {
+	WastrAmount  string `json:"wastrAmount"`
+	VastrAmount  string `json:"vastrAmount"`
+	RewardToken  string `json:"rewardToken"`
+	RewardAmount string `json:"rewardAmount"`
+	Timestamp    int64  `json:"timestamp"`
+}
+
+type ClaimRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`
+}
+
+type ClaimResponse {
+	Token     string `json:"token"`
+	Amount    string `json:"amount"`
+	Nonce     int64  `json:"nonce"`
+	Signature string `json:"signature"`
+}
+
+@server (
+	prefix: /pre_deposit
+	group:  pre_deposit
+)
+service sonex_api_backend_go {
+	@doc (
+		summary: "Query data about pre deposit"
+	)
+	@handler SummaryHandler
+	get /summary (SummaryRequest) returns (SummaryResponse)
+	@doc (
+		summary: "Query reward details"
+	)
+	@handler RewardDetailsHandler
+	get /reward_details (RewardDetailsRequest) returns ([]RewardDetailsResponse_Record)
+	@doc (
+		summary: "Get claim signature"
+	)
+	@handler ClaimHandler
+	get /claim (ClaimRequest) returns (ClaimResponse)
+}

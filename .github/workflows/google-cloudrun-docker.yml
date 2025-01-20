@@ -4,14 +4,16 @@ on:
   push:
     branches:
       - main
+      - prenet
       - testnet
       - develop
+      
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.ref_name == 'main' && 'main' || github.ref_name == 'testnet' && 'testnet' || github.ref_name == 'develop' && 'develop' }}
+      name: ${{ github.ref_name == 'main' && 'main' || github.ref_name == 'prenet' && 'prenet' || github.ref_name == 'testnet' && 'testnet' || github.ref_name == 'develop' && 'develop' }}
     env:
       REPO_NAME: 'sonex-api-backend-go'
       APP_NAME: 'sonex-api-backend-go'
@@ -37,8 +39,10 @@ jobs:
           sed -i "s/PG_PORT/${{vars.PG_PORT}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/REDIS_HOST/${{vars.REDIS_HOST}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/REDIS_PORT/${{vars.REDIS_PORT}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
-          cat etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/POINTPRIVATEKEY/${{secrets.POINTPRIVATEKEY}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/SIGNERPRIVATEKEY/${{secrets.SIGNERPRIVATEKEY}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           cp etc/sonex_api_backend_go_${BRANCH}.yaml etc/sonex_api_backend_go.yaml
+          cat etc/sonex_api_backend_go.yaml
 
       - name: Authenticate with GCP
         env:
@@ -54,6 +58,9 @@ jobs:
           case "${{ github.ref_name }}" in
             main)
               IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-main:latest"
+            ;;
+            prenet)
+              IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-prenet:latest"
             ;;
             testnet)
               IMAGE_NAME="${REPO_LOCATION}-docker.pkg.dev/arched-logic-440921-h3/${REPO_NAME}/${APP_NAME}-testnet:latest"
@@ -73,6 +80,9 @@ jobs:
           case "${{ github.ref_name }}" in
             main)
               echo "打包上传成功，但请使用sonex-deploy来部署main到mainnet环境"
+              ;;
+            prenet)
+              echo "打包上传成功，但请使用sonex-deploy来部署prenet到prenet环境"
               ;;
             testnet)
               echo "Executing commands for the testnet branch"

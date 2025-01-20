@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func SwapCallback(conf config.Config, chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap) {
+func PoolSwapCallback(conf config.Config, chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	_ = conn
 }

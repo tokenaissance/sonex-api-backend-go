@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Implements adapter of the Farm dApp
 type StaticCaller struct {
 	c config.Config
 }
@@ -24,6 +25,7 @@ func NewStaticCaller(config config.Config) (*StaticCaller, error) {
 	}, nil
 }
 
+// Batch query unclaimed rewards for `user`
 func (staticCaller *StaticCaller) BatchGetUnclaimeds(ctx context.Context, chainId int64, user common.Address, incentiveIds []int64) (map[int64]*big.Int, error) {
 	chainConf := staticCaller.c.GetChainConfig(chainId)
 	if chainConf == nil {

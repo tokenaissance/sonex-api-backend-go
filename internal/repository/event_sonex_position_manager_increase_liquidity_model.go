@@ -20,6 +20,7 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error
 		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error)
 		BatchAggregateAmounts(ctx context.Context, chainId int64, tokenDecimalPairs []*TokenDecimalPair) (map[int64]*sonex.TokenPair, error)
+		TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error)
 	}
 
 	customEventSonexPositionManagerIncreaseLiquidityModel struct {
@@ -40,7 +41,7 @@ func (m *customEventSonexPositionManagerIncreaseLiquidityModel) withSession(sess
 
 func (m *customEventSonexPositionManagerIncreaseLiquidityModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error {
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", m.table, eventSonexPositionManagerIncreaseLiquidityRows)
-	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount0)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
 	return err
 }
 
@@ -61,6 +62,10 @@ func (m *customEventSonexPositionManagerIncreaseLiquidityModel) AggregateAmounts
 
 func (m *customEventSonexPositionManagerIncreaseLiquidityModel) BatchAggregateAmounts(ctx context.Context, chainId int64, tokenDecimalPairs []*TokenDecimalPair) (map[int64]*sonex.TokenPair, error) {
 	return batchAggregateAmounts(ctx, m.conn, m.table, chainId, tokenDecimalPairs)
+}
+
+func (m *customEventSonexPositionManagerIncreaseLiquidityModel) TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error) {
+	return totalAmounts(ctx, m.conn, m.table, chainId, eventTokenId, decimal0, decimal1)
 }
 
 func aggregateAmounts(ctx context.Context, conn sqlx.SqlConn, tableName string, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error) {
@@ -151,4 +156,26 @@ func batchAggregateAmounts(ctx context.Context, conn sqlx.SqlConn, tableName str
 	}
 
 	return results, nil
+}
+
+func totalAmounts(ctx context.Context, conn sqlx.SqlConn, tableName string, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error) {
+	var data PositionManagerEventData
+
+	query := fmt.Sprintf(`
+		SELECT
+			COALESCE(SUM(event_amount0::NUMERIC)::TEXT, '') AS event_amount0,
+			COALESCE(SUM(event_amount1::NUMERIC)::TEXT, '') AS event_amount1
+		FROM %s
+		WHERE chain_id = $1 AND event_token_id = $2
+	`, tableName)
+
+	err := conn.QueryRowCtx(ctx, &data, query, chainId, eventTokenId)
+	if err != nil {
+		return nil, err
+	}
+
+	token0, _ := sonex.NewTokenValue(data.Amount0, decimal0)
+	token1, _ := sonex.NewTokenValue(data.Amount1, decimal1)
+
+	return sonex.NewTokenPair(token0, token1), nil
 }

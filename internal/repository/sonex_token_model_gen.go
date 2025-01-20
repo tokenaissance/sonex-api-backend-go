@@ -42,8 +42,8 @@ type (
 		UpdatedAt      time.Time      `db:"updated_at"`
 		DeletedAt      sql.NullTime   `db:"deleted_at"`
 		Name           string         `db:"name"`
-		Symbol         sql.NullString `db:"symbol"`
-		Address        sql.NullString `db:"address"`
+		Symbol         string         `db:"symbol"`
+		Address        string         `db:"address"`
 		Decimals       int64          `db:"decimals"`
 		Logo           sql.NullString `db:"logo"`
 		Sort           int64          `db:"sort"`

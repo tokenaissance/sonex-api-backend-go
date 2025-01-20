@@ -7,6 +7,7 @@ import (
 	"github.com/ahmetb/go-linq/v3"
 )
 
+// Represents configuration of a blockchain.
 type ChainConfig struct {
 	ChainId                 int64            `json:","`
 	Name                    string           `json:","`
@@ -15,7 +16,6 @@ type ChainConfig struct {
 	MinDelayWaitMillisecond int64            `json:",default=2000"`
 	MaxLogsNumber           int64            `json:",default=10000"`
 	Multicall               string           `json:",optional"`
-	Tokens                  []TokenConfig    `json:",optional"`
 	ETH                     *ETHConfig       `json:",optional"`
 	WETH                    string           `json:",optional"`
 	USD                     string           `json:",optional"`
@@ -27,11 +27,7 @@ type ETHConfig struct {
 	Decimals int64
 }
 
-type TokenConfig struct {
-	Address      string `json:","`
-	IsStablecoin bool   `json:",default=false"`
-}
-
+// Randomly select a node from a lot of weighted nodes.
 func (config *ChainConfig) GetNode() string {
 	if len(config.Nodes) == 0 {
 		return ""

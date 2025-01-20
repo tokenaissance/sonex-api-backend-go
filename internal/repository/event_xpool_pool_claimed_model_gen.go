@@ -27,7 +27,7 @@ type (
 	eventXpoolPoolClaimedModel interface {
 		Insert(ctx context.Context, data *EventXpoolPoolClaimed) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventXpoolPoolClaimed, error)
-		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventXpoolPoolClaimed, error)
+		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventXpoolPoolClaimed, error)
 		Update(ctx context.Context, data *EventXpoolPoolClaimed) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -82,10 +82,10 @@ func (m *defaultEventXpoolPoolClaimedModel) FindOne(ctx context.Context, id int6
 	}
 }
 
-func (m *defaultEventXpoolPoolClaimedModel) FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventXpoolPoolClaimed, error) {
+func (m *defaultEventXpoolPoolClaimedModel) FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventXpoolPoolClaimed, error) {
 	var resp EventXpoolPoolClaimed
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 limit 1", eventXpoolPoolClaimedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 and tx_index = $3 limit 1", eventXpoolPoolClaimedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash, txIndex)
 	switch err {
 	case nil:
 		return &resp, nil

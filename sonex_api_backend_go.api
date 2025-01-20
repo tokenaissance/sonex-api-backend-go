@@ -1,6 +1,7 @@
 syntax = "v1"
 
 import "./api/sonex.api"
+import "./api/pre_deposit.api"
 import "./api/xpool.api"
 import "./api/farm.api"
 

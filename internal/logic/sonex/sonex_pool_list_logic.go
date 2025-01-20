@@ -4,45 +4,29 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
-	"strings"
-	"sync"
-	"time"
-
+	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/cache"
-	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/lib/node_caller"
 	module_sonex "sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"sort"
+	"strings"
+	"sync"
+	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type SonexPoolListLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
-}
-
-type PoolsResponseWrapper struct {
-	*types.PoolsResponse
-}
-
-func (p *PoolsResponseWrapper) GetData() interface{} {
-	return p.Data
-}
-
-func (p *PoolsResponseWrapper) GetMeta() interface{} {
-	return p.Meta
-}
-
-func (p *PoolsResponseWrapper) GetCode() interface{} {
-	return p.Code
 }
 
 func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPoolListLogic {
@@ -53,8 +37,31 @@ func NewSonexPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 	}
 }
 
-func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *PoolsResponseWrapper, err error) {
+func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *response.ApiResponse, err error) {
+	if req.ChainId <= 0 {
+		return nil, fmt.Errorf("invalid parameter")
+	}
+	if req.PageSize == nil || *req.PageSize < 1 {
+		var defaultSize int64 = 20
+		req.PageSize = &defaultSize
+	}
+	if req.PageIndex == nil || *req.PageIndex < 1 {
+		var defaultIndex int64 = 1
+		req.PageIndex = &defaultIndex
+	}
+
 	cacheKey := "sonex_dex:uniswap:pool_list"
+	if req.PageIndex != nil {
+		cacheKey = fmt.Sprintf("%s:%d", cacheKey, *req.PageIndex)
+	}
+
+	if req.PageSize != nil {
+		cacheKey = fmt.Sprintf("%s:%d", cacheKey, *req.PageSize)
+	}
+
+	if req.Order != "" {
+		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Order)
+	}
 	if req.Token0Address != "" {
 		cacheKey = fmt.Sprintf("%s:%s", cacheKey, req.Token0Address)
 	}
@@ -71,7 +78,7 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	cachedResponse, err := redisCache.Get(cacheKey)
 	if err == nil && len(cachedResponse) > 0 {
-		var cachedResp PoolsResponseWrapper
+		var cachedResp response.ApiResponse
 		if err := json.Unmarshal([]byte(cachedResponse), &cachedResp); err == nil {
 			// Launch a goroutine to refresh the cache in the background
 			go l.refreshCache(req, redisCache, cacheKey, &cachedResp)
@@ -84,7 +91,7 @@ func (l *SonexPoolListLogic) SonexPoolList(req *types.PoolsRequest) (resp *Pools
 	return l.refreshCache(req, redisCache, cacheKey, nil)
 }
 
-func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.ICache, cacheKey string, cachedResp *PoolsResponseWrapper) (*PoolsResponseWrapper, error) {
+func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.ICache, cacheKey string, cachedResp *response.ApiResponse) (*response.ApiResponse, error) {
 	lockKey := fmt.Sprintf("lock:%s", cacheKey)
 	ctx := context.Background()
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
@@ -116,18 +123,25 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	}()
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+	tokenModel := repository.NewTokenModel(conn)
+
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(ctx, req, sonex.PositionManager)
+	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(ctx, &module_sonex.GetPoolListParams{
+		ChainId:         req.ChainId,
+		PositionManager: sonex.PositionManager,
+		Order:           req.Order,
+		Page:            *req.PageIndex,
+		Take:            *req.PageSize,
+		Keywords:        req.Keywords,
+		Token0Address:   req.Token0Address,
+		Token1Address:   req.Token1Address,
+	})
 	if err != nil {
-		return &PoolsResponseWrapper{
-			PoolsResponse: &types.PoolsResponse{
-				Code:    400,
-				Data:    []*types.PoolsResponse_Pool{},
-				Meta:    &types.PaginationMeta{},
-				Message: err.Error(),
-			},
-		}, nil
+		return &response.ApiResponse{
+			Data: []*types.PoolsResponse_Pool{},
+			Meta: &types.PageResponse{},
+		}, err
 	}
 
 	// 这里生成每个pool对应的所有positions数据,可能后面用不到
@@ -169,126 +183,209 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	var wg sync.WaitGroup
 	mu := &sync.Mutex{}
 
+	poolChan := make(chan *types.PoolsResponse_Pool, len(data))
+	pools := make([]*types.PoolsResponse_Pool, 0, len(data))
+
+	mockYields := []float64{0.00000347, 0.00000412, 0.00000289, 0.00000378, 0.00000456, 0.00000234, 0.00000467, 0.00000312, 0.00000398, 0.00000289, 0.00000312, 0.00000398, 0.00000289}
+
 	for i := range data {
+		poolFromDB := data[i]
+		pool := &types.PoolsResponse_Pool{
+			Id:      poolFromDB.Id,
+			Address: poolFromDB.Address,
+			FeeTier: poolFromDB.FeeTier,
+			Token0:  *poolFromDB.Token0,
+			Token1:  *poolFromDB.Token1,
+		}
 		wg.Add(1)
 		go func(pool *types.PoolsResponse_Pool) {
 			defer wg.Done()
 
-			nodeCaller, err := node_caller.NewNodeCaller(*chain)
+			balance0, balance1 := big.NewInt(0), big.NewInt(0)
+			Multicall(
+				ctx,
+				*chain,
+				Call{
+					Contract: common.HexToAddress(pool.Token0.Address),
+					Method:   "balanceOf",
+					Args:     []interface{}{common.HexToAddress(pool.Address)},
+					Result:   &balance0,
+				},
+				Call{
+					Contract: common.HexToAddress(pool.Token1.Address),
+					Method:   "balanceOf",
+					Args:     []interface{}{common.HexToAddress(pool.Address)},
+					Result:   &balance1,
+				},
+			)
+			prices, err := tokenPriceModel.GetCurrentPrices([]string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
 			if err != nil {
-				return
-			}
-			multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
-			if err != nil {
-				return
-			}
-			erc20ABI, err := abi.JSON(strings.NewReader(contract_common.Erc20ABI))
-			if err != nil {
-				return
-			}
-
-			callDatas := []contract_common.Multicall3Call3{}
-			data, err := erc20ABI.Pack("balanceOf", common.HexToAddress(pool.Address))
-			if err != nil {
-				return
-			}
-			callDatas = append(callDatas, contract_common.Multicall3Call3{
-				Target:       common.HexToAddress(pool.Token0.Address),
-				AllowFailure: true,
-				CallData:     data,
-			})
-			callDatas = append(callDatas, contract_common.Multicall3Call3{
-				Target:       common.HexToAddress(pool.Token1.Address),
-				AllowFailure: true,
-				CallData:     data,
-			})
-			data, err = multicallABI.Pack("aggregate3", callDatas)
-			if err != nil {
-				return
-			}
-			var multicallResults []contract_common.Multicall3Result
-			err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &multicallResults)
-			if err != nil {
-				return
-			}
-			if !multicallResults[0].Success {
-				logx.Errorf("%s", fmt.Errorf("%s", fmt.Sprintf("Multicall failed: %s", multicallResults[0].ReturnData[4:])))
-				return
-			}
-			balance0 := big.NewInt(0)
-			balance1 := big.NewInt(0)
-
-			err = erc20ABI.UnpackIntoInterface(&balance0, "balanceOf", multicallResults[0].ReturnData)
-			if err != nil {
-				return
-			}
-			err = erc20ABI.UnpackIntoInterface(&balance1, "balanceOf", multicallResults[1].ReturnData)
-			if err != nil {
+				logx.Errorf("GetCurrentPrices:%v ", err)
 				return
 			}
 
 			price0 := big.NewInt(0)
+			price0Decimal := int64(0)
 			price1 := big.NewInt(0)
+			price1Decimal := int64(0)
 
-			bestPrice0, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token0.Address).Hex(), true, 2, &chain.USD)
-			if err == nil && bestPrice0 != nil {
-				price0 = bestPrice0.Value
+			for _, v := range prices {
+				if strings.EqualFold(v.TokenAddress, common.HexToAddress(pool.Token0.Address).Hex()) {
+					price0, _ = new(big.Int).SetString(v.Price, 10)
+					price0Decimal = int64(v.UsdDecimals)
+				}
+
+				if strings.EqualFold(v.TokenAddress, common.HexToAddress(pool.Token1.Address).Hex()) {
+					price1, _ = new(big.Int).SetString(v.Price, 10)
+					price1Decimal = int64(v.UsdDecimals)
+				}
+			}
+
+			_tokenInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chain.ChainId, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
+			if err != nil {
+				logx.Errorf("QueryByChainIdAddress:%v ", err)
+				return
+			}
+
+			_decimals0 := int64(0)
+
+			_decimals1 := int64(0)
+
+			for _, v := range _tokenInfo {
+				if strings.EqualFold(v.Address, common.HexToAddress(pool.Token0.Address).Hex()) {
+					_decimals0 = v.Decimals
+
+				}
+
+				if strings.EqualFold(v.Address, common.HexToAddress(pool.Token1.Address).Hex()) {
+					_decimals1 = v.Decimals
+				}
 			}
 			pool.Price0 = price0.String()
 
-			bestPrice1, _, err := global.GetPrices(ctx, nil, req.ChainId, common.HexToAddress(pool.Token1.Address).Hex(), true, 2, &chain.USD)
-			if err == nil && bestPrice1 != nil {
-				price1 = bestPrice1.Value
-			}
 			pool.Price1 = price1.String()
-			daiDecimals := 18
-			token0, _ := module_sonex.NewTokenValue(balance0.String(), pool.Token0.Decimals)
-			token1, _ := module_sonex.NewTokenValue(balance1.String(), pool.Token1.Decimals)
-			token0.SetTokenPrice(price0.String(), daiDecimals)
-			token1.SetTokenPrice(price1.String(), daiDecimals)
-			tokenPair := module_sonex.NewTokenPair(token0, token1)
-
 			mu.Lock()
-			pool.Token0Balance = token0.Value()
-			pool.Token1Balance = token1.Value()
-			pool.TvlUSD = tokenPair.Value()
+			pool.Token0Balance = balance0.String()
+			pool.Token1Balance = balance1.String()
+
+			if balance0.Cmp(big.NewInt(0)) < 0 {
+				balance0 = big.NewInt(1)
+			}
+
+			if balance1.Cmp(big.NewInt(0)) < 0 {
+				balance1 = big.NewInt(1)
+			}
+
+			// for tvl calucate
+			balance0Float, _ := new(big.Float).SetString(balance0.String())
+			_balance0divdeimals0 := new(big.Float).Quo(balance0Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals0))))
+
+			balance1Float, _ := new(big.Float).SetString(balance1.String())
+			_balance1divdeimals1 := new(big.Float).Quo(balance1Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals1))))
+
+			_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(price0Decimal))))
+			_price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(price1Decimal))))
+
+			_token0Volume := new(big.Float).Mul(_balance0divdeimals0, _price0divUsdDecimals)
+			_token1Volume := new(big.Float).Mul(_balance1divdeimals1, _price1divUsdDecimals)
+
+			_tvlUSD := new(big.Float).Add(_token0Volume, _token1Volume)
+
+			pool.Liquidity = _tvlUSD.String()
+			pool.TvlUSD = _tvlUSD.String()
 			pool.Token0Price = &types.Token_TokenPrice{
-				Price:    token0.Price(),
-				Decimals: token0.PriceDecimals(),
+				Price:    price0.String(),
+				Decimals: int(_decimals0),
 			}
 			pool.Token1Price = &types.Token_TokenPrice{
-				Price:    token1.Price(),
-				Decimals: token1.PriceDecimals(),
+				Price:    price1.String(),
+				Decimals: int(_decimals1),
 			}
 
 			pool.Stablecoin = stablecoinToken.Address
 			pool.StablecoinDecimals = stablecoinToken.Decimals
+
+			num := new(big.Int)
+			num.SetString(pool.Address, 16)
+			result := new(big.Int).Mod(num, big.NewInt(10))
+			digit2 := int(result.Int64())
+			yield24h, _ := big.NewFloat(0).SetString(pool.TvlUSD)
+			yield24h.Mul(yield24h, big.NewFloat(mockYields[digit2]))
+			yield24hFloat, _ := yield24h.Float64()
+			pool.Yield24h = fmt.Sprintf("%f", yield24hFloat)
+
 			mu.Unlock()
-		}(data[i])
+
+			poolChan <- pool
+		}(pool)
 	}
 
-	wg.Wait()
+	// Create a goroutine to close the channel after all workers are done
+	go func() {
+		wg.Wait()
+		close(poolChan)
+	}()
 
-	poolVolumes, err := eventSonexPoolSwapModel.SummarizePoolVolumes(ctx, sonex.ChainId, true)
-	if err == nil {
-		for _, pool := range data {
-			for _, volume := range poolVolumes {
-				if pool.Address == volume.Address {
-					amount0, _ := new(big.Int).SetString(volume.Amount0, 10)
-					amount1, _ := new(big.Int).SetString(volume.Amount1, 10)
-					pool.Volume = new(big.Int).Add(amount0, amount1).String()
-					break
-				}
+	// Collect all processed pools from the channel
+	for pool := range poolChan {
+		pools = append(pools, pool)
+	}
+
+	// TODO 后期的优化处理
+
+	// 该处代码后期需要再打开
+	/*
+		switch req.Order {
+		case repository.PoolsOrderTvlDesc:
+			sort.SliceStable(pools, func(i, j int) bool {
+				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvlUsd_i.Cmp(tvlUsd_j) > 0
+			})
+		case repository.PoolsOrderTvlAsc:
+			sort.SliceStable(pools, func(i, j int) bool {
+				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvlUsd_i.Cmp(tvlUsd_j) < 0
+			})
+		default:
+			sort.SliceStable(pools, func(i, j int) bool {
+				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvlUsd_i.Cmp(tvlUsd_j) > 0
+			})
+		}
+	*/
+
+	// sort pool tvl
+	sort.SliceStable(pools, func(i, j int) bool {
+		tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+		tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+		return tvlUsd_i.Cmp(tvlUsd_j) > 0
+	})
+
+	// calculate volume
+	_swapAmoutEthAndUsdMap, _, err := CalucatedVolume24H(conn, req.ChainId)
+	if err != nil {
+		return &response.ApiResponse{
+			Data: []*types.PoolsResponse_Pool{},
+			Meta: &types.PageResponse{},
+		}, err
+	}
+	// get Price from value
+	for _, pool := range pools {
+		for _, v := range _swapAmoutEthAndUsdMap {
+			if strings.EqualFold(pool.Address, v.ExtraPool) {
+				pool.Volume = v.Value
 			}
 		}
 	}
-
-	response := &PoolsResponseWrapper{
-		PoolsResponse: &types.PoolsResponse{
-			Code:    200,
-			Data:    data,
-			Meta:    meta,
-			Message: "success",
+	response := &response.ApiResponse{
+		Data: pools,
+		Meta: &types.PageResponse{
+			PageSize:  int64(meta.Take),
+			PageIndex: int64(meta.Page),
+			Total:     int64(meta.ItemCount),
 		},
 	}
 
@@ -301,4 +398,29 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	}
 
 	return response, nil
+}
+
+// 如果 _specialPoolAddress 不为空，就把 _specialPoolAddress对应的volume24H 返回
+func CalucatedVolume24H(conn sqlx.SqlConn, _chainId int64, _specialPoolAddress ...string) ([]*repository.PoolVolumeUsd, string, error) {
+
+	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	ctx := context.Background()
+	// 获取 event_sonex_pool_swap 里面的交易详情
+	poolVolumesMap, err := eventSonexPoolSwapModel.SummarizePoolVolumesUsd(ctx, _chainId, true)
+	if err != nil {
+		logx.Errorf("[refreshCache]: SummarizePoolVolumesUsd error: %s", err)
+		return nil, "", err
+	}
+	//  poolVolumesMapAfterProcessedItems 条目
+
+	_specialPoolAddressVolume24H := "0"
+	for _, v := range poolVolumesMap {
+		if len(_specialPoolAddress) == 1 {
+			if strings.EqualFold(v.ExtraPool, _specialPoolAddress[0]) {
+				_specialPoolAddressVolume24H = v.Value
+			}
+		}
+	}
+
+	return poolVolumesMap, _specialPoolAddressVolume24H, nil
 }

@@ -27,7 +27,7 @@ type (
 	eventSonexPoolBurnModel interface {
 		Insert(ctx context.Context, data *EventSonexPoolBurn) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventSonexPoolBurn, error)
-		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventSonexPoolBurn, error)
+		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventSonexPoolBurn, error)
 		Update(ctx context.Context, data *EventSonexPoolBurn) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -86,10 +86,10 @@ func (m *defaultEventSonexPoolBurnModel) FindOne(ctx context.Context, id int64) 
 	}
 }
 
-func (m *defaultEventSonexPoolBurnModel) FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventSonexPoolBurn, error) {
+func (m *defaultEventSonexPoolBurnModel) FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventSonexPoolBurn, error) {
 	var resp EventSonexPoolBurn
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 limit 1", eventSonexPoolBurnRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 and tx_index = $3 limit 1", eventSonexPoolBurnRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash, txIndex)
 	switch err {
 	case nil:
 		return &resp, nil

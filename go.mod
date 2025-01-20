@@ -5,6 +5,7 @@ go 1.22.10
 require (
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/ethereum/go-ethereum v1.14.12
+	github.com/getsentry/sentry-go v0.31.1
 	github.com/gogf/gf/v2 v2.8.3
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/redis/go-redis/v9 v9.7.0

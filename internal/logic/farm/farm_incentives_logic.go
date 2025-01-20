@@ -253,6 +253,8 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 			return item.Status == req.Status
 		}).ToSlice(&resp.List)
 	}
+
+	// Sorts
 	if req.OrderBy != "" {
 		switch req.OrderBy {
 		case "hot":
@@ -315,7 +317,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 			},
 		)
 
-	prices, err := tokenPriceModel.GetAllLatestHistoryPrices()
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -415,70 +417,56 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 
 				totalLiquidityUSDValue, _ := totalLiquidityUSD.Float64()
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId: incincentiveCreatedRecord.EventIncentiveId,
-					ChainId:     incincentiveCreatedRecord.ChainId,
-					PoolAddress: record.EventPool,
-					FeeRatio:    record.ExtraFee,
-					RewardToken: types.FarmIncentivesResponse_Token{
-						Address:  rewardToken.Address,
-						Decimals: rewardToken.Decimals,
-						Symbol:   rewardToken.Symbol,
-						Price:    rewardPrice.String(),
-					},
-					Token0: types.FarmIncentivesResponse_Token{
-						Address:  token0.Address,
-						Decimals: token0.Decimals,
-						Symbol:   token0.Symbol,
-						Price:    price0.String(),
-					},
-					Token1: types.FarmIncentivesResponse_Token{
-						Address:  token1.Address,
-						Decimals: token1.Decimals,
-						Symbol:   token1.Symbol,
-						Price:    price1.String(),
-					},
-					Liquidity:    totalLiquidity.String(),
-					LiquidityUSD: totalLiquidityUSDValue,
-					APR:          apr.String(),
-					JoinNum:      int64(len(userAddressesMap)),
-					Status:       status,
-					StartAt:      record.EventStartTime,
-					EarnedUSD:    0,
+					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
+					PoolAddress:         record.EventPool,
+					FeeRatio:            record.ExtraFee,
+					RewardTokenAddress:  rewardToken.Address,
+					RewardTokenDecimals: rewardToken.Decimals,
+					RewardTokenSymbol:   rewardToken.Symbol,
+					RewardTokenPrice:    rewardPrice.String(),
+					Token0Address:       token0.Address,
+					Token0Decimals:      token0.Decimals,
+					Token0Symbol:        token0.Symbol,
+					Token0Price:         price0.String(),
+					Token1Address:       token1.Address,
+					Token1Decimals:      token1.Decimals,
+					Token1Symbol:        token1.Symbol,
+					Token1Price:         price1.String(),
+					Liquidity:           totalLiquidity.String(),
+					LiquidityUSD:        totalLiquidityUSD.String(),
+					APR:                 apr.String(),
+					JoinNum:             int64(len(userAddressesMap)),
+					Status:              status,
+					StartAt:             record.EventStartTime,
+					Earned:              big.NewInt(0).String(),
 				}
 				tokenIdsResult = tids
 			} else {
 				apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId: incincentiveCreatedRecord.EventIncentiveId,
-					ChainId:     incincentiveCreatedRecord.ChainId,
-					PoolAddress: record.EventPool,
-					FeeRatio:    record.ExtraFee,
-					RewardToken: types.FarmIncentivesResponse_Token{
-						Address:  rewardToken.Address,
-						Decimals: rewardToken.Decimals,
-						Symbol:   rewardToken.Symbol,
-						Price:    rewardPrice.String(),
-					},
-					Token0: types.FarmIncentivesResponse_Token{
-						Address:  token0.Address,
-						Decimals: token0.Decimals,
-						Symbol:   token0.Symbol,
-						Price:    price0.String(),
-					},
-					Token1: types.FarmIncentivesResponse_Token{
-						Address:  token1.Address,
-						Decimals: token1.Decimals,
-						Symbol:   token1.Symbol,
-						Price:    price1.String(),
-					},
-					Liquidity:    big.NewInt(0).String(),
-					LiquidityUSD: 0,
-					APR:          apr.String(),
-					JoinNum:      0,
-					Status:       status,
-					StartAt:      record.EventStartTime,
-					EarnedUSD:    0,
+					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
+					PoolAddress:         record.EventPool,
+					FeeRatio:            record.ExtraFee,
+					RewardTokenAddress:  rewardToken.Address,
+					RewardTokenDecimals: rewardToken.Decimals,
+					RewardTokenSymbol:   rewardToken.Symbol,
+					RewardTokenPrice:    rewardPrice.String(),
+					Token0Address:       token0.Address,
+					Token0Decimals:      token0.Decimals,
+					Token0Symbol:        token0.Symbol,
+					Token0Price:         price0.String(),
+					Token1Address:       token1.Address,
+					Token1Decimals:      token1.Decimals,
+					Token1Symbol:        token1.Symbol,
+					Token1Price:         price1.String(),
+					Liquidity:           big.NewInt(0).String(),
+					LiquidityUSD:        big.NewInt(0).String(),
+					APR:                 apr.String(),
+					JoinNum:             0,
+					Status:              status,
+					StartAt:             record.EventStartTime,
+					Earned:              big.NewInt(0).String(),
 				}
 			}
 

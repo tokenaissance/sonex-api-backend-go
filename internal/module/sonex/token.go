@@ -1,9 +1,34 @@
+// Memory Layout:
+//
+// TokenPair
+// ├── token0 *TokenValue
+// │   ├── TokenAmount
+// │   │   ├── amount string   // Raw amount with decimals
+// │   │   └── decimals int    // Number of decimal places
+// │   └── TokenPrice
+// │       ├── price string    // Raw price with decimals
+// │       └── decimals int    // Number of decimal places
+// │
+// └── token1 *TokenValue
+//     ├── TokenAmount
+//     │   ├── amount string   // Raw amount with decimals
+//     │   └── decimals int    // Number of decimal places
+//     └── TokenPrice
+//         ├── price string    // Raw price with decimals
+//         └── decimals int    // Number of decimal places
+//
+// Example:
+// For a token with 18 decimals:
+// - amount "1000000000000000000" represents 1.0 tokens
+// - price "2000000000" with 9 decimals represents $2.0
+
 package sonex
 
 import (
 	"fmt"
 	"math"
 	"math/big"
+	"sonex_api_backend_go/internal/types"
 )
 
 // TokenAmount 表示一个 token 的数量和精度
@@ -43,6 +68,10 @@ func (ta *TokenAmount) AmountWithoutDecimals() string {
 
 // SetAmount 设置数量
 func (ta *TokenAmount) SetAmount(amount string) error {
+	// fix empty amount
+	if amount == "" {
+		amount = "0"
+	}
 	if _, ok := new(big.Float).SetString(amount); !ok {
 		return fmt.Errorf("invalid amount format: %s", amount)
 	}
@@ -97,6 +126,10 @@ func (tp *TokenPrice) Decimals() int {
 
 // SetPrice 设置价格
 func (tp *TokenPrice) SetPrice(price string) error {
+	// TODO 临时处理
+	if price == "" {
+		price = "0"
+	}
 	if _, ok := new(big.Float).SetString(price); !ok {
 		return fmt.Errorf("invalid price format: %s", price)
 	}
@@ -194,9 +227,20 @@ func (tv *TokenValue) value() *big.Float {
 	return value
 }
 
-// Value 返回 token 的净值字符串
+// Value returns the token's net value as string.
+// Deprecated: Use ValueString instead.
 func (tv *TokenValue) Value() string {
 	return tv.value().String()
+}
+
+// ValueString 返回 token 的净值字符串
+func (tv *TokenValue) ValueString() string {
+	return tv.value().String()
+}
+
+// ValueFloat64 返回 token 的净值 float64
+func (tv *TokenValue) ValueFloat64() (float64, big.Accuracy) {
+	return tv.value().Float64()
 }
 
 // AmountAdd return a new TokenValue = tv + amount, keep the price
@@ -238,8 +282,18 @@ func NewTokenPair(tokens ...*TokenValue) *TokenPair {
 		pair.token0, _ = NewTokenValue("0", defaultDecimals)
 		pair.token1, _ = NewTokenValue("0", defaultDecimals)
 	case 2:
-		pair.token0 = tokens[0]
-		pair.token1 = tokens[1]
+		// 分别检查每个 token 是否为 nil
+		if tokens[0] == nil {
+			pair.token0, _ = NewTokenValue("0", defaultDecimals)
+		} else {
+			pair.token0 = tokens[0]
+		}
+
+		if tokens[1] == nil {
+			pair.token1, _ = NewTokenValue("0", defaultDecimals)
+		} else {
+			pair.token1 = tokens[1]
+		}
 	default:
 		// 如果参数数量不正确，返回默认初始化的 pair
 		pair.token0, _ = NewTokenValue("0", defaultDecimals)
@@ -256,9 +310,20 @@ func (tp *TokenPair) value() *big.Float {
 	return token0Value.Add(token0Value, token1Value)
 }
 
-// Value 返回 token 的净值字符串
+// Value returns the token pair's net value as string.
+// Deprecated: Use ValueString instead.
 func (tp *TokenPair) Value() string {
 	return tp.value().String()
+}
+
+// ValueString 返回 token 的净值字符串
+func (tp TokenPair) ValueString() string {
+	return tp.value().String()
+}
+
+// ValueFloat64 返回 token 的净值 float64
+func (tp *TokenPair) ValueFloat64() (float64, big.Accuracy) {
+	return tp.value().Float64()
 }
 
 // ValueAdd 返回两个 token pair 的净值之和
@@ -266,4 +331,17 @@ func (tp *TokenPair) ValueAdd(tp0 *TokenPair, tp1 *TokenPair) *big.Float {
 	tp0Value := tp0.value()
 	tp1Value := tp1.value()
 	return tp0Value.Add(tp0Value, tp1Value)
+}
+
+func (tp *TokenPair) ToTokenValuePair() *types.TokenValuePair {
+	return &types.TokenValuePair{
+		Token0: types.Token_TokenValue{
+			Amount:   tp.token0.amount,
+			Decimals: tp.token0.TokenAmount.decimals,
+		},
+		Token1: types.Token_TokenValue{
+			Amount:   tp.token1.amount,
+			Decimals: tp.token1.TokenAmount.decimals,
+		},
+	}
 }

@@ -3,6 +3,7 @@ package global
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sonex_api_backend_go/internal/chain_handler"
 	"sonex_api_backend_go/internal/config"
@@ -32,6 +33,22 @@ var idGenerater *id_generater.IdGenerater
 var tokenCachers map[int64]*cache.TokenCacher
 var tokenCachersLock sync.RWMutex
 
+// key : fmt.Sprintf("volume24H_%v", _keyPoolAddress)
+// value: volume24H ,string
+// expiration : 24H
+// volume24H
+var Volume24HKey = "Volume24H"
+var Tvl24HKey = "Tvl24HKey"
+
+func GetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string) (string, error) {
+	return cacher.Get(fmt.Sprintf("%v_%v", _key, _keyPoolAddress))
+}
+
+func SetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string, _valueVolume24H string) error {
+	return cacher.Set(fmt.Sprintf("%v_%v", _key, _keyPoolAddress), _valueVolume24H, 24*time.Hour)
+}
+
+// Initialize application's components
 func Initialize(config config.Config) error {
 	c = config
 
@@ -57,39 +74,39 @@ func Initialize(config config.Config) error {
 		tokenCachersLock.Lock()
 		tokenCachers[chain.ChainId] = tokenCacher
 		tokenCachersLock.Unlock()
-		for _, token := range chain.Tokens {
-			err := SetToken(chain.ChainId, token.Address, token.IsStablecoin)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
 }
 
+// Adds a scanning handler to specified blockchain scanner
 func AddChainHandler(chainId int64, handler chain_scanner.IHandler) {
 	chainHandlerManager.AddHandler(chainId, handler)
 }
 
+// Register a replay (rescan) task
 func Replay(chainId int64, request chain_scanner.Replay) {
 	chainHandlerManager.Replay(chainId, request)
 }
 
+// Add a scheduled job to Cron
 func AddCronJob(cron string, job func()) (cron.EntryID, error) {
 	return cronExecuter.AddFunc(cron, job)
 }
 
+// Starts application's components
 func Start() {
 	chainHandlerManager.Start()
 	cronExecuter.Start()
 }
 
+// Stop application's components
 func Stop() {
 	chainHandlerManager.Stop()
 	cronExecuter.Stop()
 }
 
+// Init Unique ID generater
 func InitIdGenerater(workerId int64) error {
 	generater, err := id_generater.NewIdGenerater(workerId)
 	if err != nil {
@@ -99,10 +116,15 @@ func InitIdGenerater(workerId int64) error {
 	return nil
 }
 
+// Returns a new unique ID
 func NewId() (int64, error) {
+	if idGenerater == nil {
+		return 0, fmt.Errorf("%s", "Id generater not initialized")
+	}
 	return idGenerater.Generate()
 }
 
+// Get token's metadata from cache
 func GetToken(chainId int64, address string) (*cache.Token, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
@@ -110,34 +132,155 @@ func GetToken(chainId int64, address string) (*cache.Token, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
-	return cacher.Get(address)
+	return cacher.Get(common.HexToAddress(address))
 }
 
-func SetToken(chainId int64, address string, isStablecoin bool) error {
+// Cache token's metadata
+func SetToken(chainId int64, address string) error {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
 		return fmt.Errorf("%s", "Miss token cacher")
 	}
-	err := cacher.Set(address, isStablecoin)
+	err := cacher.Set(common.HexToAddress(address))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetStablecoin(chainId int64) []cache.Token {
+// Calculates `amount / (10 ** decimals)`, assumes that it's USD token on `chainId`
+func PriceToUSD(chainId int64, price *big.Int) (float64, error) {
+	chainConf := c.GetChainConfig(chainId)
+	if chainConf == nil {
+		return 0, fmt.Errorf("%s", "Miss chain configure")
+	}
+	usdToken, err := GetToken(chainId, common.HexToAddress(chainConf.USD).Hex())
+	if err != nil {
+		return 0, err
+	}
+	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
+	val, _ := new(big.Float).Quo(new(big.Float).SetInt(price), usdAccuracy).SetPrec(math.MaxUint32).Float64()
+	return val, nil
+}
+
+// Get prices in USD of `token`,
+// and sort the prices by defined strategy.
+func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool, maxLength int64) (*cache.Price, []cache.Price, []cache.Price, error) {
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil
+		return nil, nil, nil, fmt.Errorf("%s", "Miss token cacher")
 	}
-	return cacher.GetStablecoins()
+
+	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	successedPrices := []cache.Price{}
+	failedPrices := []cache.Price{}
+	for _, price := range prices {
+		if price.Err != nil {
+			failedPrices = append(failedPrices, price)
+		} else {
+			successedPrices = append(successedPrices, price)
+		}
+	}
+
+	// Best price
+	var bestPrice *cache.Price
+	if len(successedPrices) > 0 {
+		// Sort by path length
+		linq.From(successedPrices).OrderByT(func(item cache.Price) int { return len(item.Pools) }).ToSlice(&prices)
+		pathLength := len(successedPrices[0].Pools)
+		linq.From(successedPrices).WhereT(func(item cache.Price) bool {
+			return len(item.Pools) == pathLength
+		}).ToSlice(&successedPrices)
+		poolMap := map[string]*big.Int{}
+		linq.From(successedPrices).ForEachT(func(price cache.Price) {
+			linq.From(price.Pools).ForEachT(func(pool quoter.Pool) {
+				poolMap[pool.Address.Hex()] = common.Big0
+			})
+		})
+		usedPools := []common.Address{}
+		for key := range poolMap {
+			usedPools = append(usedPools, common.HexToAddress(key))
+		}
+
+		chain := c.GetChainConfig(chainId)
+		if chain == nil {
+			return nil, nil, nil, fmt.Errorf("%s", "Miss chain configure")
+		}
+		if chain.Multicall == "" || !common.IsHexAddress(chain.Multicall) {
+			return nil, nil, nil, fmt.Errorf("%s", "Invalid multicall contract")
+		}
+
+		callDatas := []contract_common.Multicall3Call{}
+		poolABI, err := abi.JSON(strings.NewReader(uniswap_v3.UniswapV3PoolABI))
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		data, err := poolABI.Pack("liquidity")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		for _, pool := range usedPools {
+			callDatas = append(callDatas, contract_common.Multicall3Call{
+				Target:   pool,
+				CallData: data,
+			})
+		}
+		multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		data, err = multicallABI.Pack("aggregate", callDatas)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		nodeCaller, err := node_caller.NewNodeCaller(*chain)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		var result struct {
+			BlockNumber *big.Int `json:"blockNumber"`
+			ReturnData  [][]byte `json:"returnData"`
+		}
+		err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate", data, &result)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		for i, value := range result.ReturnData {
+			poolMap[usedPools[i].Hex()] = new(big.Int).SetBytes(value)
+		}
+		maxLiquidity := common.Big0
+		for _, price := range successedPrices {
+			liquidity := common.Big0
+			for _, pool := range price.Pools {
+				liquidity = new(big.Int).Add(liquidity, poolMap[pool.Address.Hex()])
+			}
+			if maxLiquidity.Cmp(liquidity) <= 0 {
+				maxLiquidity = liquidity
+				bestPrice = &price
+			}
+		}
+	}
+
+	return bestPrice, successedPrices, failedPrices, nil
 }
 
-func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token string, isCache bool, maxLength int64, wantStablecoin *string) (*cache.Price, []cache.Price, error) {
+// Wrap [*cache.TokenCacher.QuoteExactInput] and sort the result by defined strategy
+func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountIn *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
+	chainConf := c.GetChainConfig(chainId)
+	if chainConf == nil {
+		return nil, nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+
+	fromAddress := common.HexToAddress(from)
+	toAddress := common.HexToAddress(to)
+
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
@@ -164,36 +307,39 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 			ToSlice(&pools)
 	}
 
-	var wantStablecoinAddress *common.Address
-	if wantStablecoin != nil {
-		temp := common.HexToAddress(*wantStablecoin)
-		wantStablecoinAddress = &temp
-	}
-	prices, err := cacher.GetPrices(ctx, pools, common.HexToAddress(token), isCache, maxLength, 5, wantStablecoinAddress)
+	prices, err := cacher.QuoteExactInput(ctx, pools, fromAddress, toAddress, amountIn, maxLength, 200)
 	if err != nil {
 		return nil, nil, err
 	}
+	// ETH or USD
+	if len(prices) == 1 && len(prices[0].Pools) == 0 {
+		return prices, []cache.Price{}, nil
+	}
 
-	// Best price
-	var bestPrice *cache.Price
-	if len(prices) > 0 {
-		// Sort by path length
-		linq.From(prices).OrderByT(func(item cache.Price) int { return len(item.Pools) }).ToSlice(&prices)
-		pathLength := len(prices[0].Pools)
-		linq.From(prices).WhereT(func(item cache.Price) bool {
-			return len(item.Pools) == pathLength
-		}).ToSlice(&prices)
-		poolMap := map[string]*big.Int{}
-		linq.From(prices).ForEachT(func(price cache.Price) {
+	successedPrices := []cache.Price{}
+	failedPrices := []cache.Price{}
+	for _, price := range prices {
+		if price.Err != nil {
+			failedPrices = append(failedPrices, price)
+		} else {
+			successedPrices = append(successedPrices, price)
+		}
+	}
+
+	if len(successedPrices) > 0 {
+		poolMap := map[string]*struct {
+			Liquidity *big.Int
+			Slot0     *sonex.Slot0
+		}{}
+		linq.From(successedPrices).ForEachT(func(price cache.Price) {
 			linq.From(price.Pools).ForEachT(func(pool quoter.Pool) {
-				poolMap[pool.Address.Hex()] = common.Big0
+				poolMap[pool.Address.Hex()] = nil
 			})
 		})
 		usedPools := []common.Address{}
 		for key := range poolMap {
 			usedPools = append(usedPools, common.HexToAddress(key))
 		}
-
 		chain := c.GetChainConfig(chainId)
 		if chain == nil {
 			return nil, nil, fmt.Errorf("%s", "Miss chain configure")
@@ -207,21 +353,29 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		if err != nil {
 			return nil, nil, err
 		}
-		data, err := poolABI.Pack("liquidity")
+		liquidityData, err := poolABI.Pack("liquidity")
+		if err != nil {
+			return nil, nil, err
+		}
+		slot0Data, err := poolABI.Pack("slot0")
 		if err != nil {
 			return nil, nil, err
 		}
 		for _, pool := range usedPools {
 			callDatas = append(callDatas, contract_common.Multicall3Call{
 				Target:   pool,
-				CallData: data,
+				CallData: liquidityData,
+			})
+			callDatas = append(callDatas, contract_common.Multicall3Call{
+				Target:   pool,
+				CallData: slot0Data,
 			})
 		}
 		multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
 		if err != nil {
 			return nil, nil, err
 		}
-		data, err = multicallABI.Pack("aggregate", callDatas)
+		data, err := multicallABI.Pack("aggregate", callDatas)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -237,31 +391,74 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		if err != nil {
 			return nil, nil, err
 		}
-		for i, value := range result.ReturnData {
-			poolMap[usedPools[i].Hex()] = new(big.Int).SetBytes(value)
+		for i, poolAddr := range usedPools {
+			var liquidity *big.Int
+			err = poolABI.UnpackIntoInterface(&liquidity, "liquidity", result.ReturnData[i*2])
+			if err != nil {
+				return nil, nil, err
+			}
+			var slot0 sonex.Slot0
+			err = poolABI.UnpackIntoInterface(&slot0, "slot0", result.ReturnData[i*2+1])
+			if err != nil {
+				return nil, nil, err
+			}
+			poolMap[poolAddr.Hex()] = &struct {
+				Liquidity *big.Int
+				Slot0     *sonex.Slot0
+			}{
+				Liquidity: liquidity,
+				Slot0:     &slot0,
+			}
 		}
-		maxLiquidity := common.Big0
-		for _, price := range prices {
-			liquidity := common.Big0
-			for _, pool := range price.Pools {
-				liquidity = new(big.Int).Add(liquidity, poolMap[pool.Address.Hex()])
+
+		// Filter price if has zero liquidity pool
+		linq.From(successedPrices).WhereT(func(item cache.Price) bool {
+			for _, pool := range item.Pools {
+				info := poolMap[pool.Address.Hex()]
+				if info.Liquidity.Cmp(big.NewInt(0)) <= 0 {
+					return false
+				}
 			}
-			if maxLiquidity.Cmp(liquidity) <= 0 {
-				maxLiquidity = liquidity
-				bestPrice = &price
+			return true
+		}).ToSlice(&successedPrices)
+
+		// Calculate price impact and fee rate
+		for i, price := range successedPrices {
+			totalPriceImpact := big.NewFloat(0)
+			totalLiquidity := big.NewFloat(0)
+			var totalFeeRate float64 = 1
+			for j, pool := range price.Pools {
+				info := poolMap[pool.Address.Hex()]
+				liquidity := new(big.Float).SetInt(info.Liquidity)
+				priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
+				totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
+				totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
+				totalFeeRate = totalFeeRate * (1 - float64(pool.Fee)/1000000)
 			}
+			avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
+			successedPrices[i].PriceImpact = avgPriceImpact
+			successedPrices[i].FeeRate = 1 - totalFeeRate
 		}
 	}
 
-	return bestPrice, prices, nil
+	return successedPrices, failedPrices, nil
 }
 
-func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountIn *big.Int, maxLength int64) ([]cache.Price, error) {
+// Wrap [*cache.TokenCacher.QuoteExactOutput] and sort the result by defined strategy
+func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountOut *big.Int, maxLength int64) ([]cache.Price, []cache.Price, error) {
+	chainConf := c.GetChainConfig(chainId)
+	if chainConf == nil {
+		return nil, nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+
+	fromAddress := common.HexToAddress(from)
+	toAddress := common.HexToAddress(to)
+
 	tokenCachersLock.RLock()
 	cacher, ok := tokenCachers[chainId]
 	tokenCachersLock.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token cacher")
+		return nil, nil, fmt.Errorf("%s", "Miss token cacher")
 	}
 
 	if pools == nil {
@@ -269,7 +466,7 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		linq.From(records).
 			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
@@ -283,87 +480,141 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 			ToSlice(&pools)
 	}
 
-	prices, err := cacher.QuoteExactInput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountIn, maxLength, 100)
+	prices, err := cacher.QuoteExactOutput(ctx, pools, fromAddress, toAddress, amountOut, maxLength, 200)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	// ETH or USD
+	if len(prices) == 1 && len(prices[0].Pools) == 0 {
+		return prices, []cache.Price{}, nil
 	}
 
-	// if len(prices) > 0 {
-	// 	// Calculate price impact
-	// 	Q192 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 192))
-	// 	for i, price := range prices {
-	// 		totalPriceImpact := big.NewFloat(0)
-	// 		totalLiquidity := big.NewFloat(0)
-	// 		for j, pool := range price.Pools {
-	// 			info := poolMap[pool.Address.Hex()]
-	// 			currentPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(info.Slot0.SqrtPriceX96), new(big.Float).SetInt(info.Slot0.SqrtPriceX96)), Q192)
-	// 			newPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(price.SqrtPriceX96AfterList[j]), new(big.Float).SetInt(price.SqrtPriceX96AfterList[j])), Q192)
-	// 			liquidity := new(big.Float).SetInt(info.Liquidity)
-	// 			priceImpact := new(big.Float).Quo(new(big.Float).Sub(newPrice, currentPrice), currentPrice)
-	// 			totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
-	// 			totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
-	// 		}
-	// 		avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
-	// 		prices[i].PriceImpact = avgPriceImpact
-	// 	}
-	// }
-
-	return prices, nil
-}
-
-func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, from string, to string, amountOut *big.Int, maxLength int64) ([]cache.Price, error) {
-	tokenCachersLock.RLock()
-	cacher, ok := tokenCachers[chainId]
-	tokenCachersLock.RUnlock()
-	if !ok {
-		return nil, fmt.Errorf("%s", "Miss token cacher")
-	}
-
-	if pools == nil {
-		conn := repository.NewConn(c.PostgreSQL.DateSource())
-		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
-		if err != nil {
-			return nil, err
+	successedPrices := []cache.Price{}
+	failedPrices := []cache.Price{}
+	for _, price := range prices {
+		if price.Err != nil {
+			failedPrices = append(failedPrices, price)
+		} else {
+			successedPrices = append(successedPrices, price)
 		}
-		linq.From(records).
-			SelectT(func(item repository.EventSonexFactoryPoolCreated) quoter.Pool {
-				return quoter.Pool{
-					Address: common.HexToAddress(item.EventPool),
-					Token0:  common.HexToAddress(item.EventToken0),
-					Token1:  common.HexToAddress(item.EventToken1),
-					Fee:     item.EventFee,
+	}
+
+	if len(successedPrices) > 0 {
+		poolMap := map[string]*struct {
+			Liquidity *big.Int
+			Slot0     *sonex.Slot0
+		}{}
+		linq.From(successedPrices).ForEachT(func(price cache.Price) {
+			linq.From(price.Pools).ForEachT(func(pool quoter.Pool) {
+				poolMap[pool.Address.Hex()] = nil
+			})
+		})
+		usedPools := []common.Address{}
+		for key := range poolMap {
+			usedPools = append(usedPools, common.HexToAddress(key))
+		}
+		chain := c.GetChainConfig(chainId)
+		if chain == nil {
+			return nil, nil, fmt.Errorf("%s", "Miss chain configure")
+		}
+		if chain.Multicall == "" || !common.IsHexAddress(chain.Multicall) {
+			return nil, nil, fmt.Errorf("%s", "Invalid multicall contract")
+		}
+
+		callDatas := []contract_common.Multicall3Call{}
+		poolABI, err := abi.JSON(strings.NewReader(uniswap_v3.UniswapV3PoolABI))
+		if err != nil {
+			return nil, nil, err
+		}
+		liquidityData, err := poolABI.Pack("liquidity")
+		if err != nil {
+			return nil, nil, err
+		}
+		slot0Data, err := poolABI.Pack("slot0")
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, pool := range usedPools {
+			callDatas = append(callDatas, contract_common.Multicall3Call{
+				Target:   pool,
+				CallData: liquidityData,
+			})
+			callDatas = append(callDatas, contract_common.Multicall3Call{
+				Target:   pool,
+				CallData: slot0Data,
+			})
+		}
+		multicallABI, err := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+		if err != nil {
+			return nil, nil, err
+		}
+		data, err := multicallABI.Pack("aggregate", callDatas)
+		if err != nil {
+			return nil, nil, err
+		}
+		nodeCaller, err := node_caller.NewNodeCaller(*chain)
+		if err != nil {
+			return nil, nil, err
+		}
+		var result struct {
+			BlockNumber *big.Int `json:"blockNumber"`
+			ReturnData  [][]byte `json:"returnData"`
+		}
+		err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate", data, &result)
+		if err != nil {
+			return nil, nil, err
+		}
+		for i, poolAddr := range usedPools {
+			var liquidity *big.Int
+			err = poolABI.UnpackIntoInterface(&liquidity, "liquidity", result.ReturnData[i*2])
+			if err != nil {
+				return nil, nil, err
+			}
+			var slot0 sonex.Slot0
+			err = poolABI.UnpackIntoInterface(&slot0, "slot0", result.ReturnData[i*2+1])
+			if err != nil {
+				return nil, nil, err
+			}
+			poolMap[poolAddr.Hex()] = &struct {
+				Liquidity *big.Int
+				Slot0     *sonex.Slot0
+			}{
+				Liquidity: liquidity,
+				Slot0:     &slot0,
+			}
+		}
+
+		// Filter price if has zero liquidity pool
+		linq.From(successedPrices).WhereT(func(item cache.Price) bool {
+			for _, pool := range item.Pools {
+				info := poolMap[pool.Address.Hex()]
+				if info.Liquidity.Cmp(big.NewInt(0)) <= 0 {
+					return false
 				}
-			}).
-			ToSlice(&pools)
+			}
+			return true
+		}).ToSlice(&successedPrices)
+
+		// Calculate price impact and fee rate
+		for i, price := range successedPrices {
+			totalPriceImpact := big.NewFloat(0)
+			totalLiquidity := big.NewFloat(0)
+			var totalFeeRate float64 = 1
+			for j, pool := range price.Pools {
+				info := poolMap[pool.Address.Hex()]
+				liquidity := new(big.Float).SetInt(info.Liquidity)
+				priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
+				totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
+				totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
+				totalFeeRate = totalFeeRate * (1 - float64(pool.Fee)/1000000)
+			}
+			avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
+			successedPrices[i].PriceImpact = avgPriceImpact
+			successedPrices[i].FeeRate = 1 - totalFeeRate
+		}
 	}
 
-	prices, err := cacher.QuoteExactOutput(ctx, pools, common.HexToAddress(from), common.HexToAddress(to), amountOut, maxLength, 100)
-	if err != nil {
-		return nil, err
-	}
-
-	// if len(prices) > 0 {
-	// Calculate price impact
-	// Q192 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 192))
-	// for i, price := range prices {
-	// 	totalPriceImpact := big.NewFloat(0)
-	// 	totalLiquidity := big.NewFloat(0)
-	// 	for j, pool := range price.Pools {
-	// 		info := poolMap[pool.Address.Hex()]
-	// 		currentPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(info.Slot0.SqrtPriceX96), new(big.Float).SetInt(info.Slot0.SqrtPriceX96)), Q192)
-	// 		newPrice := new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(price.SqrtPriceX96AfterList[j]), new(big.Float).SetInt(price.SqrtPriceX96AfterList[j])), Q192)
-	// 		liquidity := new(big.Float).SetInt(info.Liquidity)
-	// 		priceImpact := new(big.Float).Quo(new(big.Float).Sub(newPrice, currentPrice), currentPrice)
-	// 		totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
-	// 		totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
-	// 	}
-	// 	avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
-	// 	prices[i].PriceImpact = avgPriceImpact
-	// }
-	// }
-
-	return prices, nil
+	return successedPrices, failedPrices, nil
 }
 
 type SummarizePositionsResult_Detail struct {
@@ -379,8 +630,8 @@ type SummarizePositionsResult struct {
 	Details         []SummarizePositionsResult_Detail
 }
 
-func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, positions []*sonex.Position, stablecoinAddress common.Address) (*big.Int, *big.Int, []SummarizePositionsResult_Detail, error) {
-	stablecoin := stablecoinAddress.Hex()
+// Returns summary of `positions`
+func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, positions []*sonex.Position) (*big.Int, *big.Int, []SummarizePositionsResult_Detail, error) {
 	totalBalanceUSD := big.NewInt(0)
 	totalEarnedUSD := big.NewInt(0)
 	details := []SummarizePositionsResult_Detail{}
@@ -418,7 +669,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			amount0, amount1 := position.Amounts()
 			fee0, fee1 := position.UnclaimedFees()
 
-			token0CachePrice, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2, &stablecoin)
+			token0CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2)
 			if err != nil {
 				ch <- struct {
 					BalanceUSD *big.Int
@@ -444,7 +695,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			balanceUSD = new(big.Int).Add(balanceUSD, new(big.Int).Div(new(big.Int).Mul(amount0, token0Price), tokne0Decimals))
 			earnedUSD = new(big.Int).Add(earnedUSD, new(big.Int).Div(new(big.Int).Mul(fee0, token0Price), tokne0Decimals))
 
-			token1CachePrice, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2, &stablecoin)
+			token1CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2)
 			if err != nil {
 				ch <- struct {
 					BalanceUSD *big.Int
@@ -498,10 +749,11 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 	return totalBalanceUSD, totalEarnedUSD, details, nil
 }
 
+// Query current positions of an LP of `userAddress`, returns summary.
 func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
-	items, err := model.GetTransferEvents(ctx, userAddress.Hex(), true)
+	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -534,7 +786,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 			return nil, err
 		}
 
-		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions, stablecoinAddress)
+		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions)
 		if err != nil {
 			return nil, err
 		}
@@ -550,10 +802,11 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 	}, nil
 }
 
+// Query closed positions of an LP of `userAddress`, returns summary.
 func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
-	items, err := model.GetTransferEvents(ctx, userAddress.Hex(), false)
+	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +839,7 @@ func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId i
 			return nil, err
 		}
 
-		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions, stablecoinAddress)
+		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions)
 		if err != nil {
 			return nil, err
 		}
@@ -600,4 +853,15 @@ func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId i
 		TotalEarnedUSD:  totalEarnedUSDResult,
 		Details:         detailsResult,
 	}, nil
+}
+
+// Batch query tokens' total supplies
+func BatchGetTotalSupplies(ctx context.Context, chainId int64, tokens []common.Address) (map[common.Address]*big.Int, error) {
+	tokenCachersLock.RLock()
+	cacher, ok := tokenCachers[chainId]
+	tokenCachersLock.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%s", "Miss token cacher")
+	}
+	return cacher.BatchGetTotalSupplies(ctx, tokens)
 }

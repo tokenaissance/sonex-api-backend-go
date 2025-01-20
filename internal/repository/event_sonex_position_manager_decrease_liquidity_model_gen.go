@@ -27,7 +27,7 @@ type (
 	eventSonexPositionManagerDecreaseLiquidityModel interface {
 		Insert(ctx context.Context, data *EventSonexPositionManagerDecreaseLiquidity) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventSonexPositionManagerDecreaseLiquidity, error)
-		FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventSonexPositionManagerDecreaseLiquidity, error)
+		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventSonexPositionManagerDecreaseLiquidity, error)
 		Update(ctx context.Context, data *EventSonexPositionManagerDecreaseLiquidity) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -83,10 +83,10 @@ func (m *defaultEventSonexPositionManagerDecreaseLiquidityModel) FindOne(ctx con
 	}
 }
 
-func (m *defaultEventSonexPositionManagerDecreaseLiquidityModel) FindOneByChainIdTxHash(ctx context.Context, chainId int64, txHash string) (*EventSonexPositionManagerDecreaseLiquidity, error) {
+func (m *defaultEventSonexPositionManagerDecreaseLiquidityModel) FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventSonexPositionManagerDecreaseLiquidity, error) {
 	var resp EventSonexPositionManagerDecreaseLiquidity
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 limit 1", eventSonexPositionManagerDecreaseLiquidityRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and tx_hash = $2 and tx_index = $3 limit 1", eventSonexPositionManagerDecreaseLiquidityRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, txHash, txIndex)
 	switch err {
 	case nil:
 		return &resp, nil

@@ -133,7 +133,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				rewardPreBlock := event.RewardPerBlock.String()
 
 				// If handled, ignore
-				_, err := eventXpoolFactoryPoolCreatedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+				_, err := eventXpoolFactoryPoolCreatedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
@@ -171,7 +171,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				recipient := event.Recipient.Hex()
 
 				// If handled, ignore
-				_, err := eventXpoolFactoryPoolDestroiedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+				_, err := eventXpoolFactoryPoolDestroiedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
@@ -339,7 +339,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									height := event.Height.Int64()
 
 									// If handled, ignore
-									_, err := eventXpoolPoolDepositedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventXpoolPoolDepositedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -375,7 +375,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									height := event.Height.Int64()
 
 									// If handled, ignore
-									_, err := eventXpoolPoolClaimedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventXpoolPoolClaimedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
@@ -411,7 +411,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									height := event.Height.Int64()
 
 									// If handled, ignore
-									_, err := eventXpoolPoolWithdrawedModel.FindOneByChainIdTxHash(ctx, handler.chain.ChainId, txHash)
+									_, err := eventXpoolPoolWithdrawedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 									switch err {
 									case repository.ErrNotFound:
 									case nil:
