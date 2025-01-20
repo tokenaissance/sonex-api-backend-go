@@ -102,7 +102,6 @@ CREATE TABLE "public"."event_xpool_factory_pool_destroied" (
   "event_recipient" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
-ALTER TABLE "public"."event_xpool_factory_pool_destroied" OWNER TO "postgres";
 
 -- ----------------------------
 -- Table structure for event_xpool_factory_reward_per_block_set
