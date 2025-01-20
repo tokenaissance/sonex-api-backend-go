@@ -44,7 +44,7 @@ type IStakingFactoryStakingPoolInfo struct {
 
 // StakingFactoryMetaData contains all meta data concerning the StakingFactory contract.
 var StakingFactoryMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"PoolCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_ethBalance\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_stakingBalance\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_rewardBalance\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"PoolDestroied\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"createPool\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"destroyPool\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"_ethBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_stakingBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_rewardBalance\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"name\":\"getPoolInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"stakingTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"stakingTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"stakingTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"rewardTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rewardTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"rewardTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"rewardPerBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIStakingFactory.StakingPoolInfo\",\"name\":\"_poolInfo\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"getPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"_nativeCoinDecimals\",\"type\":\"uint8\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"OperatorAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"OperatorRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"PoolCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_ethBalance\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_stakingBalance\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_rewardBalance\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"PoolDestroied\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_old\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_new\",\"type\":\"uint256\"}],\"name\":\"RewardPerBlockSet\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"addOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"createPool\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"destroyPool\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"_ethBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_stakingBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_rewardBalance\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"name\":\"getPoolInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"stakingTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"stakingTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"stakingTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"rewardTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rewardTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"rewardTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"rewardPerBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIStakingFactory.StakingPoolInfo\",\"name\":\"_poolInfo\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"getPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"_nativeCoinDecimals\",\"type\":\"uint8\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"operators\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"removeOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"setRewardPerBlock\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // StakingFactoryABI is the input ABI used to generate the binding from.
@@ -286,6 +286,37 @@ func (_StakingFactory *StakingFactoryCallerSession) GetPools(_user common.Addres
 	return _StakingFactory.Contract.GetPools(&_StakingFactory.CallOpts, _user)
 }
 
+// Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
+//
+// Solidity: function operators(address ) view returns(bool)
+func (_StakingFactory *StakingFactoryCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
+	var out []interface{}
+	err := _StakingFactory.contract.Call(opts, &out, "operators", arg0)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
+//
+// Solidity: function operators(address ) view returns(bool)
+func (_StakingFactory *StakingFactorySession) Operators(arg0 common.Address) (bool, error) {
+	return _StakingFactory.Contract.Operators(&_StakingFactory.CallOpts, arg0)
+}
+
+// Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
+//
+// Solidity: function operators(address ) view returns(bool)
+func (_StakingFactory *StakingFactoryCallerSession) Operators(arg0 common.Address) (bool, error) {
+	return _StakingFactory.Contract.Operators(&_StakingFactory.CallOpts, arg0)
+}
+
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
 // Solidity: function owner() view returns(address)
@@ -315,6 +346,27 @@ func (_StakingFactory *StakingFactorySession) Owner() (common.Address, error) {
 // Solidity: function owner() view returns(address)
 func (_StakingFactory *StakingFactoryCallerSession) Owner() (common.Address, error) {
 	return _StakingFactory.Contract.Owner(&_StakingFactory.CallOpts)
+}
+
+// AddOperator is a paid mutator transaction binding the contract method 0x9870d7fe.
+//
+// Solidity: function addOperator(address _operator) returns()
+func (_StakingFactory *StakingFactoryTransactor) AddOperator(opts *bind.TransactOpts, _operator common.Address) (*types.Transaction, error) {
+	return _StakingFactory.contract.Transact(opts, "addOperator", _operator)
+}
+
+// AddOperator is a paid mutator transaction binding the contract method 0x9870d7fe.
+//
+// Solidity: function addOperator(address _operator) returns()
+func (_StakingFactory *StakingFactorySession) AddOperator(_operator common.Address) (*types.Transaction, error) {
+	return _StakingFactory.Contract.AddOperator(&_StakingFactory.TransactOpts, _operator)
+}
+
+// AddOperator is a paid mutator transaction binding the contract method 0x9870d7fe.
+//
+// Solidity: function addOperator(address _operator) returns()
+func (_StakingFactory *StakingFactoryTransactorSession) AddOperator(_operator common.Address) (*types.Transaction, error) {
+	return _StakingFactory.Contract.AddOperator(&_StakingFactory.TransactOpts, _operator)
 }
 
 // CreatePool is a paid mutator transaction binding the contract method 0x51810fb5.
@@ -401,6 +453,27 @@ func (_StakingFactory *StakingFactoryTransactorSession) Multicall(data [][]byte)
 	return _StakingFactory.Contract.Multicall(&_StakingFactory.TransactOpts, data)
 }
 
+// RemoveOperator is a paid mutator transaction binding the contract method 0xac8a584a.
+//
+// Solidity: function removeOperator(address _operator) returns()
+func (_StakingFactory *StakingFactoryTransactor) RemoveOperator(opts *bind.TransactOpts, _operator common.Address) (*types.Transaction, error) {
+	return _StakingFactory.contract.Transact(opts, "removeOperator", _operator)
+}
+
+// RemoveOperator is a paid mutator transaction binding the contract method 0xac8a584a.
+//
+// Solidity: function removeOperator(address _operator) returns()
+func (_StakingFactory *StakingFactorySession) RemoveOperator(_operator common.Address) (*types.Transaction, error) {
+	return _StakingFactory.Contract.RemoveOperator(&_StakingFactory.TransactOpts, _operator)
+}
+
+// RemoveOperator is a paid mutator transaction binding the contract method 0xac8a584a.
+//
+// Solidity: function removeOperator(address _operator) returns()
+func (_StakingFactory *StakingFactoryTransactorSession) RemoveOperator(_operator common.Address) (*types.Transaction, error) {
+	return _StakingFactory.Contract.RemoveOperator(&_StakingFactory.TransactOpts, _operator)
+}
+
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
 // Solidity: function renounceOwnership() returns()
@@ -420,6 +493,27 @@ func (_StakingFactory *StakingFactorySession) RenounceOwnership() (*types.Transa
 // Solidity: function renounceOwnership() returns()
 func (_StakingFactory *StakingFactoryTransactorSession) RenounceOwnership() (*types.Transaction, error) {
 	return _StakingFactory.Contract.RenounceOwnership(&_StakingFactory.TransactOpts)
+}
+
+// SetRewardPerBlock is a paid mutator transaction binding the contract method 0x5059e016.
+//
+// Solidity: function setRewardPerBlock(address _pool, uint256 _rewardPerBlock) returns()
+func (_StakingFactory *StakingFactoryTransactor) SetRewardPerBlock(opts *bind.TransactOpts, _pool common.Address, _rewardPerBlock *big.Int) (*types.Transaction, error) {
+	return _StakingFactory.contract.Transact(opts, "setRewardPerBlock", _pool, _rewardPerBlock)
+}
+
+// SetRewardPerBlock is a paid mutator transaction binding the contract method 0x5059e016.
+//
+// Solidity: function setRewardPerBlock(address _pool, uint256 _rewardPerBlock) returns()
+func (_StakingFactory *StakingFactorySession) SetRewardPerBlock(_pool common.Address, _rewardPerBlock *big.Int) (*types.Transaction, error) {
+	return _StakingFactory.Contract.SetRewardPerBlock(&_StakingFactory.TransactOpts, _pool, _rewardPerBlock)
+}
+
+// SetRewardPerBlock is a paid mutator transaction binding the contract method 0x5059e016.
+//
+// Solidity: function setRewardPerBlock(address _pool, uint256 _rewardPerBlock) returns()
+func (_StakingFactory *StakingFactoryTransactorSession) SetRewardPerBlock(_pool common.Address, _rewardPerBlock *big.Int) (*types.Transaction, error) {
+	return _StakingFactory.Contract.SetRewardPerBlock(&_StakingFactory.TransactOpts, _pool, _rewardPerBlock)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
@@ -571,6 +665,294 @@ func (_StakingFactory *StakingFactoryFilterer) WatchInitialized(opts *bind.Watch
 func (_StakingFactory *StakingFactoryFilterer) ParseInitialized(log types.Log) (*StakingFactoryInitialized, error) {
 	event := new(StakingFactoryInitialized)
 	if err := _StakingFactory.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// StakingFactoryOperatorAddedIterator is returned from FilterOperatorAdded and is used to iterate over the raw logs and unpacked data for OperatorAdded events raised by the StakingFactory contract.
+type StakingFactoryOperatorAddedIterator struct {
+	Event *StakingFactoryOperatorAdded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *StakingFactoryOperatorAddedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(StakingFactoryOperatorAdded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(StakingFactoryOperatorAdded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *StakingFactoryOperatorAddedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *StakingFactoryOperatorAddedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// StakingFactoryOperatorAdded represents a OperatorAdded event raised by the StakingFactory contract.
+type StakingFactoryOperatorAdded struct {
+	Operator common.Address
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterOperatorAdded is a free log retrieval operation binding the contract event 0xac6fa858e9350a46cec16539926e0fde25b7629f84b5a72bffaae4df888ae86d.
+//
+// Solidity: event OperatorAdded(address indexed _operator)
+func (_StakingFactory *StakingFactoryFilterer) FilterOperatorAdded(opts *bind.FilterOpts, _operator []common.Address) (*StakingFactoryOperatorAddedIterator, error) {
+
+	var _operatorRule []interface{}
+	for _, _operatorItem := range _operator {
+		_operatorRule = append(_operatorRule, _operatorItem)
+	}
+
+	logs, sub, err := _StakingFactory.contract.FilterLogs(opts, "OperatorAdded", _operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return &StakingFactoryOperatorAddedIterator{contract: _StakingFactory.contract, event: "OperatorAdded", logs: logs, sub: sub}, nil
+}
+
+// WatchOperatorAdded is a free log subscription operation binding the contract event 0xac6fa858e9350a46cec16539926e0fde25b7629f84b5a72bffaae4df888ae86d.
+//
+// Solidity: event OperatorAdded(address indexed _operator)
+func (_StakingFactory *StakingFactoryFilterer) WatchOperatorAdded(opts *bind.WatchOpts, sink chan<- *StakingFactoryOperatorAdded, _operator []common.Address) (event.Subscription, error) {
+
+	var _operatorRule []interface{}
+	for _, _operatorItem := range _operator {
+		_operatorRule = append(_operatorRule, _operatorItem)
+	}
+
+	logs, sub, err := _StakingFactory.contract.WatchLogs(opts, "OperatorAdded", _operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(StakingFactoryOperatorAdded)
+				if err := _StakingFactory.contract.UnpackLog(event, "OperatorAdded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOperatorAdded is a log parse operation binding the contract event 0xac6fa858e9350a46cec16539926e0fde25b7629f84b5a72bffaae4df888ae86d.
+//
+// Solidity: event OperatorAdded(address indexed _operator)
+func (_StakingFactory *StakingFactoryFilterer) ParseOperatorAdded(log types.Log) (*StakingFactoryOperatorAdded, error) {
+	event := new(StakingFactoryOperatorAdded)
+	if err := _StakingFactory.contract.UnpackLog(event, "OperatorAdded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// StakingFactoryOperatorRemovedIterator is returned from FilterOperatorRemoved and is used to iterate over the raw logs and unpacked data for OperatorRemoved events raised by the StakingFactory contract.
+type StakingFactoryOperatorRemovedIterator struct {
+	Event *StakingFactoryOperatorRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *StakingFactoryOperatorRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(StakingFactoryOperatorRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(StakingFactoryOperatorRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *StakingFactoryOperatorRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *StakingFactoryOperatorRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// StakingFactoryOperatorRemoved represents a OperatorRemoved event raised by the StakingFactory contract.
+type StakingFactoryOperatorRemoved struct {
+	Operator common.Address
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterOperatorRemoved is a free log retrieval operation binding the contract event 0x80c0b871b97b595b16a7741c1b06fed0c6f6f558639f18ccbce50724325dc40d.
+//
+// Solidity: event OperatorRemoved(address indexed _operator)
+func (_StakingFactory *StakingFactoryFilterer) FilterOperatorRemoved(opts *bind.FilterOpts, _operator []common.Address) (*StakingFactoryOperatorRemovedIterator, error) {
+
+	var _operatorRule []interface{}
+	for _, _operatorItem := range _operator {
+		_operatorRule = append(_operatorRule, _operatorItem)
+	}
+
+	logs, sub, err := _StakingFactory.contract.FilterLogs(opts, "OperatorRemoved", _operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return &StakingFactoryOperatorRemovedIterator{contract: _StakingFactory.contract, event: "OperatorRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchOperatorRemoved is a free log subscription operation binding the contract event 0x80c0b871b97b595b16a7741c1b06fed0c6f6f558639f18ccbce50724325dc40d.
+//
+// Solidity: event OperatorRemoved(address indexed _operator)
+func (_StakingFactory *StakingFactoryFilterer) WatchOperatorRemoved(opts *bind.WatchOpts, sink chan<- *StakingFactoryOperatorRemoved, _operator []common.Address) (event.Subscription, error) {
+
+	var _operatorRule []interface{}
+	for _, _operatorItem := range _operator {
+		_operatorRule = append(_operatorRule, _operatorItem)
+	}
+
+	logs, sub, err := _StakingFactory.contract.WatchLogs(opts, "OperatorRemoved", _operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(StakingFactoryOperatorRemoved)
+				if err := _StakingFactory.contract.UnpackLog(event, "OperatorRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOperatorRemoved is a log parse operation binding the contract event 0x80c0b871b97b595b16a7741c1b06fed0c6f6f558639f18ccbce50724325dc40d.
+//
+// Solidity: event OperatorRemoved(address indexed _operator)
+func (_StakingFactory *StakingFactoryFilterer) ParseOperatorRemoved(log types.Log) (*StakingFactoryOperatorRemoved, error) {
+	event := new(StakingFactoryOperatorRemoved)
+	if err := _StakingFactory.contract.UnpackLog(event, "OperatorRemoved", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1045,6 +1427,152 @@ func (_StakingFactory *StakingFactoryFilterer) WatchPoolDestroied(opts *bind.Wat
 func (_StakingFactory *StakingFactoryFilterer) ParsePoolDestroied(log types.Log) (*StakingFactoryPoolDestroied, error) {
 	event := new(StakingFactoryPoolDestroied)
 	if err := _StakingFactory.contract.UnpackLog(event, "PoolDestroied", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// StakingFactoryRewardPerBlockSetIterator is returned from FilterRewardPerBlockSet and is used to iterate over the raw logs and unpacked data for RewardPerBlockSet events raised by the StakingFactory contract.
+type StakingFactoryRewardPerBlockSetIterator struct {
+	Event *StakingFactoryRewardPerBlockSet // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *StakingFactoryRewardPerBlockSetIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(StakingFactoryRewardPerBlockSet)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(StakingFactoryRewardPerBlockSet)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *StakingFactoryRewardPerBlockSetIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *StakingFactoryRewardPerBlockSetIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// StakingFactoryRewardPerBlockSet represents a RewardPerBlockSet event raised by the StakingFactory contract.
+type StakingFactoryRewardPerBlockSet struct {
+	Pool common.Address
+	Old  *big.Int
+	New  *big.Int
+	Raw  types.Log // Blockchain specific contextual infos
+}
+
+// FilterRewardPerBlockSet is a free log retrieval operation binding the contract event 0xfd3fcd47034370bad754e6710d41361299866b465f544bf8512273dce1fe0463.
+//
+// Solidity: event RewardPerBlockSet(address indexed _pool, uint256 _old, uint256 _new)
+func (_StakingFactory *StakingFactoryFilterer) FilterRewardPerBlockSet(opts *bind.FilterOpts, _pool []common.Address) (*StakingFactoryRewardPerBlockSetIterator, error) {
+
+	var _poolRule []interface{}
+	for _, _poolItem := range _pool {
+		_poolRule = append(_poolRule, _poolItem)
+	}
+
+	logs, sub, err := _StakingFactory.contract.FilterLogs(opts, "RewardPerBlockSet", _poolRule)
+	if err != nil {
+		return nil, err
+	}
+	return &StakingFactoryRewardPerBlockSetIterator{contract: _StakingFactory.contract, event: "RewardPerBlockSet", logs: logs, sub: sub}, nil
+}
+
+// WatchRewardPerBlockSet is a free log subscription operation binding the contract event 0xfd3fcd47034370bad754e6710d41361299866b465f544bf8512273dce1fe0463.
+//
+// Solidity: event RewardPerBlockSet(address indexed _pool, uint256 _old, uint256 _new)
+func (_StakingFactory *StakingFactoryFilterer) WatchRewardPerBlockSet(opts *bind.WatchOpts, sink chan<- *StakingFactoryRewardPerBlockSet, _pool []common.Address) (event.Subscription, error) {
+
+	var _poolRule []interface{}
+	for _, _poolItem := range _pool {
+		_poolRule = append(_poolRule, _poolItem)
+	}
+
+	logs, sub, err := _StakingFactory.contract.WatchLogs(opts, "RewardPerBlockSet", _poolRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(StakingFactoryRewardPerBlockSet)
+				if err := _StakingFactory.contract.UnpackLog(event, "RewardPerBlockSet", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRewardPerBlockSet is a log parse operation binding the contract event 0xfd3fcd47034370bad754e6710d41361299866b465f544bf8512273dce1fe0463.
+//
+// Solidity: event RewardPerBlockSet(address indexed _pool, uint256 _old, uint256 _new)
+func (_StakingFactory *StakingFactoryFilterer) ParseRewardPerBlockSet(log types.Log) (*StakingFactoryRewardPerBlockSet, error) {
+	event := new(StakingFactoryRewardPerBlockSet)
+	if err := _StakingFactory.contract.UnpackLog(event, "RewardPerBlockSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
