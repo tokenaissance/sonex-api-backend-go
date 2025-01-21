@@ -37,8 +37,10 @@ func (l *SonexGalxeswapLogic) SonexGalxeswap(req *types.GalxeSwapRequest) (resp 
 		return &types.GalxeSwapResponse{IsSwapOrNot: false}, errors.New("invalid param")
 	}
 
+	_user_addressWithCheckSum := common.HexToAddress(_user_address).Hex()
+
 	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
-	_txhashes, err := poolSwapModel.QueryByWalletWithExtra(context.Background(), _user_address)
+	_txhashes, err := poolSwapModel.QueryByWalletWithExtra(context.Background(), _user_addressWithCheckSum)
 
 	if err != nil {
 		logx.Errorf("  SonexGalxeSwap address:%v ", _user_address)
@@ -48,7 +50,5 @@ func (l *SonexGalxeswapLogic) SonexGalxeswap(req *types.GalxeSwapRequest) (resp 
 		return &types.GalxeSwapResponse{IsSwapOrNot: true}, nil
 	} else {
 		return &types.GalxeSwapResponse{IsSwapOrNot: false}, nil
-
 	}
-	return
 }
