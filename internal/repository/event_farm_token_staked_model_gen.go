@@ -38,20 +38,21 @@ type (
 	}
 
 	EventFarmTokenStaked struct {
-		Id               int64     `db:"id"`
-		CreatedAt        time.Time `db:"created_at"`
-		UpdatedAt        time.Time `db:"updated_at"`
-		ChainId          int64     `db:"chain_id"`
-		BlockNumber      int64     `db:"block_number"`
-		TxIndex          int64     `db:"tx_index"`
-		TxHash           string    `db:"tx_hash"`
-		TxAt             time.Time `db:"tx_at"`
-		From             string    `db:"from_"`
-		To               string    `db:"to_"`
-		Value            string    `db:"value"`
-		EventUser        string    `db:"event_user"`
-		EventTokenId     int64     `db:"event_token_id"`
-		EventIncentiveId int64     `db:"event_incentive_id"`
+		Id                  int64     `db:"id"`
+		CreatedAt           time.Time `db:"created_at"`
+		UpdatedAt           time.Time `db:"updated_at"`
+		ChainId             int64     `db:"chain_id"`
+		BlockNumber         int64     `db:"block_number"`
+		TxIndex             int64     `db:"tx_index"`
+		TxHash              string    `db:"tx_hash"`
+		TxAt                time.Time `db:"tx_at"`
+		From                string    `db:"from_"`
+		To                  string    `db:"to_"`
+		Value               string    `db:"value"`
+		EventUser           string    `db:"event_user"`
+		EventTokenId        int64     `db:"event_token_id"`
+		EventIncentiveId    int64     `db:"event_incentive_id"`
+		EventTotalLiquidity string    `db:"event_total_liquidity"`
 	}
 )
 
@@ -97,14 +98,14 @@ func (m *defaultEventFarmTokenStakedModel) FindOneByChainIdTxHashTxIndex(ctx con
 }
 
 func (m *defaultEventFarmTokenStakedModel) Insert(ctx context.Context, data *EventFarmTokenStaked) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, eventFarmTokenStakedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventTokenId, data.EventIncentiveId)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", m.table, eventFarmTokenStakedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventTokenId, data.EventIncentiveId, data.EventTotalLiquidity)
 	return ret, err
 }
 
 func (m *defaultEventFarmTokenStakedModel) Update(ctx context.Context, newData *EventFarmTokenStaked) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventFarmTokenStakedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventUser, newData.EventTokenId, newData.EventIncentiveId)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventUser, newData.EventTokenId, newData.EventIncentiveId, newData.EventTotalLiquidity)
 	return err
 }
 

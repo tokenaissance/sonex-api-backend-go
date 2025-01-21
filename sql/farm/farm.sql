@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 20/01/2025 13:39:19
+ Date: 21/01/2025 16:04:15
 */
 
 
@@ -34,9 +34,10 @@ CREATE TABLE "public"."event_farm_incentive_created" (
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_incentive_id" int8 NOT NULL,
   "event_start_time" int8 NOT NULL,
   "event_weight" int8 NOT NULL,
-  "event_incentive_id" int8 NOT NULL
+  "event_timestamp" int8 NOT NULL
 )
 ;
 
@@ -57,7 +58,31 @@ CREATE TABLE "public"."event_farm_incentive_ended" (
   "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_incentive_id" int8 NOT NULL,
-  "event_refund" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
+  "event_weight" int8 NOT NULL,
+  "event_timestamp" int8 NOT NULL
+)
+;
+
+-- ----------------------------
+-- Table structure for event_farm_incentive_updated
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_incentive_updated";
+CREATE TABLE "public"."event_farm_incentive_updated" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_incentive_id" int8 NOT NULL,
+  "event_start_time" int8 NOT NULL,
+  "event_weight" int8 NOT NULL,
+  "event_total_liquidity" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
 
@@ -104,6 +129,28 @@ CREATE TABLE "public"."event_farm_reward_claimed" (
 ;
 
 -- ----------------------------
+-- Table structure for event_farm_reward_pool_updated
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."event_farm_reward_pool_updated";
+CREATE TABLE "public"."event_farm_reward_pool_updated" (
+  "id" int8 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
+  "updated_at" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "block_number" int8 NOT NULL,
+  "tx_index" int8 NOT NULL,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "tx_at" timestamptz(6) NOT NULL,
+  "from_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_total_weight" int8 NOT NULL,
+  "event_timestamp" int8 NOT NULL
+)
+;
+
+-- ----------------------------
 -- Table structure for event_farm_reward_rate_updated
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."event_farm_reward_rate_updated";
@@ -120,8 +167,8 @@ CREATE TABLE "public"."event_farm_reward_rate_updated" (
   "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_reward_token" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_old_rate" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_new_rate" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_old_rate_per_second" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_new_rate_per_second" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_timestamp" int8 NOT NULL
 )
 ;
@@ -165,7 +212,8 @@ CREATE TABLE "public"."event_farm_token_staked" (
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_token_id" int8 NOT NULL,
-  "event_incentive_id" int8 NOT NULL
+  "event_incentive_id" int8 NOT NULL,
+  "event_total_liquidity" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
 
@@ -187,7 +235,8 @@ CREATE TABLE "public"."event_farm_token_unstaked" (
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_token_id" int8 NOT NULL,
-  "event_incentive_id" int8 NOT NULL
+  "event_incentive_id" int8 NOT NULL,
+  "event_liquidity" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
 
@@ -248,6 +297,24 @@ CREATE UNIQUE INDEX "farm_incentive_ended_index_chain_id_tx_hash_tx_index" ON "p
 ALTER TABLE "public"."event_farm_incentive_ended" ADD CONSTRAINT "event_farm_incentive_ended_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
+-- Indexes structure for table event_farm_incentive_updated
+-- ----------------------------
+CREATE INDEX "farm_incentive_updated_index_chain_id_incentive_id" ON "public"."event_farm_incentive_updated" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "farm_incentive_updated_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_incentive_updated" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_incentive_updated
+-- ----------------------------
+ALTER TABLE "public"."event_farm_incentive_updated" ADD CONSTRAINT "event_farm_incentive_updated_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
 -- Indexes structure for table event_farm_paused
 -- ----------------------------
 CREATE UNIQUE INDEX "event_farm_paused_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_paused" USING btree (
@@ -259,7 +326,7 @@ CREATE UNIQUE INDEX "event_farm_paused_index_chain_id_tx_hash_tx_index" ON "publ
 -- ----------------------------
 -- Primary Key structure for table event_farm_paused
 -- ----------------------------
-ALTER TABLE "public"."event_farm_paused" ADD CONSTRAINT "event_farm_token_staked_copy1_pkey" PRIMARY KEY ("id");
+ALTER TABLE "public"."event_farm_paused" ADD CONSTRAINT "event_farm_paused_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table event_farm_reward_claimed
@@ -284,6 +351,20 @@ CREATE UNIQUE INDEX "farm_reward_claimed_index_chain_id_tx_hash_tx_index" ON "pu
 ALTER TABLE "public"."event_farm_reward_claimed" ADD CONSTRAINT "event_farm_reward_claimed_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
+-- Indexes structure for table event_farm_reward_pool_updated
+-- ----------------------------
+CREATE UNIQUE INDEX "farm_reward_pool_updated_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_reward_pool_updated" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table event_farm_reward_pool_updated
+-- ----------------------------
+ALTER TABLE "public"."event_farm_reward_pool_updated" ADD CONSTRAINT "event_farm_reward_pool_updated_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
 -- Indexes structure for table event_farm_reward_rate_updated
 -- ----------------------------
 CREATE UNIQUE INDEX "farm_reward_rate_updated_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_reward_rate_updated" USING btree (
@@ -295,7 +376,7 @@ CREATE UNIQUE INDEX "farm_reward_rate_updated_index_chain_id_tx_hash_tx_index" O
 -- ----------------------------
 -- Primary Key structure for table event_farm_reward_rate_updated
 -- ----------------------------
-ALTER TABLE "public"."event_farm_reward_rate_updated" ADD CONSTRAINT "event_farm_reward_claimed_copy1_pkey" PRIMARY KEY ("id");
+ALTER TABLE "public"."event_farm_reward_rate_updated" ADD CONSTRAINT "event_farm_reward_rate_updated_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table event_farm_token_deposited
@@ -330,6 +411,10 @@ CREATE INDEX "event_farm_token_staked_index_chain_id_token_id" ON "public"."even
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
+CREATE INDEX "event_farm_token_staked_index_chain_id_user" ON "public"."event_farm_token_staked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_user" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 CREATE UNIQUE INDEX "farm_token_staked_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_token_staked" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
@@ -351,6 +436,10 @@ CREATE INDEX "event_farm_token_unstaked_index_chain_id_incentive_id" ON "public"
 CREATE INDEX "event_farm_token_unstaked_index_chain_id_token_id" ON "public"."event_farm_token_unstaked" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
   "event_token_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+CREATE INDEX "event_farm_token_unstaked_index_chain_id_user" ON "public"."event_farm_token_unstaked" USING btree (
+  "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "event_user" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 CREATE UNIQUE INDEX "farm_token_unstaked_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_token_unstaked" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
@@ -375,4 +464,4 @@ CREATE UNIQUE INDEX "farm_unpaused_index_chain_id_tx_hash_tx_index" ON "public".
 -- ----------------------------
 -- Primary Key structure for table event_farm_unpaused
 -- ----------------------------
-ALTER TABLE "public"."event_farm_unpaused" ADD CONSTRAINT "event_farm_paused_copy1_pkey" PRIMARY KEY ("id");
+ALTER TABLE "public"."event_farm_unpaused" ADD CONSTRAINT "event_farm_unpaused_pkey" PRIMARY KEY ("id");
