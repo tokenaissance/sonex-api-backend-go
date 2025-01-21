@@ -2,16 +2,14 @@ package xpool
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/big"
-	"time"
-
-	"sonex_api_backend_go/internal/lib/cache"
+	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/module/xpool"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,7 +23,7 @@ type XpoolPoolListLogic struct {
 }
 
 type CacheWarpper struct {
-	List       []types.XpoolPoolDate
+	List       []types.XpoolPoolListResponse_Pool
 	LastUpdate time.Time
 }
 
@@ -50,51 +48,51 @@ func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xpo
 	}
 }
 
-func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *types.XpoolPoolListResponse, err error) {
+func (l *XpoolPoolListLogic) XpoolPoolListBack(req *types.XpoolPoolListRequest) (list []types.XpoolPoolListResponse_Pool, err error) {
 	if req.ChainId == 0 {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
-	if req.PageSize < 1 {
-		req.PageSize = 20
-	}
-	if req.PageIndex < 1 {
-		req.PageIndex = 1
-	}
+	// if req.PageSize < 1 {
+	// 	req.PageSize = 20
+	// }
+	// if req.PageIndex < 1 {
+	// 	req.PageIndex = 1
+	// }
 
-	cacheKey := fmt.Sprintf("xpool:pools:%d", req.ChainId)
-	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	// cacheKey := fmt.Sprintf("xpool:pools:%d", req.ChainId)
+	// redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
 	// Check cache
-	lastUpdate, err := redisCache.Get(cacheKey)
-	if err == nil && lastUpdate != "" {
-		var cacheWarpper CacheWarpper
-		err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
-		if err == nil {
-			resp = &types.XpoolPoolListResponse{
-				List: cacheWarpper.List,
-			}
-		}
-	}
+	// lastUpdate, err := redisCache.Get(cacheKey)
+	// if err == nil && lastUpdate != "" {
+	// 	var cacheWarpper CacheWarpper
+	// 	err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+	// 	if err == nil {
+	// 		resp = &types.XpoolPoolListResponse{
+	// 			List: cacheWarpper.List,
+	// 		}
+	// 	}
+	// }
 
 	// No cache
-	if resp == nil {
-		resp, err = l.getResponse(req)
-		if err != nil {
-			return nil, err
-		}
+	// if resp == nil {
+	// 	resp, err = l.getResponse(req)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		// Set cache
-		// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
-		// if err != nil {
-		// 	logx.Errorf("Marshal response error: %v", err)
-		// }
-		// err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
-		// if err != nil {
-		// 	logx.Errorf("Set cache error: %v", err)
-		// }
-	}
+	// 	// Set cache
+	// 	// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
+	// 	// if err != nil {
+	// 	// 	logx.Errorf("Marshal response error: %v", err)
+	// 	// }
+	// 	// err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
+	// 	// if err != nil {
+	// 	// 	logx.Errorf("Set cache error: %v", err)
+	// 	// }
+	// }
 
-	resp.Total = int64(len(resp.List))
+	// resp.Total = int64(len(resp.List))
 
 	// Filter
 	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
@@ -127,12 +125,12 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	}
 
 	// Page
-	linq.From(resp.List).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&resp.List)
+	// linq.From(resp.List).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&resp.List)
 
-	return resp, nil
+	return list, nil
 }
 
-func (l *XpoolPoolListLogic) getResponse(req *types.XpoolPoolListRequest) (resp *types.XpoolPoolListResponse, err error) {
+func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *response.ApiResponse, err error) {
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
@@ -172,7 +170,7 @@ func (l *XpoolPoolListLogic) getResponse(req *types.XpoolPoolListRequest) (resp 
 	if err != nil {
 		return nil, err
 	}
-	list := []types.XpoolPoolDate{}
+	list := make([]types.XpoolPoolListResponse_Pool, 0)
 	for _, pool := range availablePools {
 		info, ok := poolInfos[common.HexToAddress(pool.EventPool).Hex()]
 		if !ok {
@@ -198,7 +196,7 @@ func (l *XpoolPoolListLogic) getResponse(req *types.XpoolPoolListRequest) (resp 
 			status = "active"
 		}
 
-		list = append(list, types.XpoolPoolDate{
+		list = append(list, types.XpoolPoolListResponse_Pool{
 			StakingToken:         info.StakingToken.Hex(),
 			StakingTokenName:     info.StakingTokenName,
 			StakingTokenSymbol:   info.StakingTokenSymbol,
@@ -216,7 +214,12 @@ func (l *XpoolPoolListLogic) getResponse(req *types.XpoolPoolListRequest) (resp 
 		})
 	}
 
-	return &types.XpoolPoolListResponse{
-		List: list,
+	return &response.ApiResponse{
+		Data: list,
+		Meta: types.PageResponse{
+			PageSize:  *req.PageSize,
+			PageIndex: *req.PageIndex,
+			Total:     int64(len(list)),
+		},
 	}, nil
 }
