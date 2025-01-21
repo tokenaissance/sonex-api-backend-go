@@ -36,8 +36,8 @@ Chains:
       # URL:Weight
       http://10.1.30.111:8545: 50
       http://10.1.30.112:8545: 50
-    MinConfirmations: 5
-    MinDelayWaitMillisecond: 2000
+    MinConfirmations: 0
+    MinDelayWaitMillisecond: 1000
     MaxLogsNumber: 5000
     Multicall: 0xB981161Be7D05d7a291Ffa5CE32c2771422De385
     Tokens:
