@@ -1148,26 +1148,31 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/XpoolPoolListResponse"
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/XpoolPoolListResponse_Pool"
+              }
             }
           }
         },
         "parameters": [
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
             "format": "int64"
           },
           {
             "name": "userAddress",
+            "description": " 用户地址",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "orderBy",
+            "description": " 排序方式",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1179,18 +1184,16 @@
           {
             "name": "pageSize",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "integer",
-            "format": "int64",
-            "default": "20"
+            "format": "int64"
           },
           {
             "name": "pageIndex",
             "in": "query",
-            "required": true,
+            "required": false,
             "type": "integer",
-            "format": "int64",
-            "default": "1"
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1215,9 +1218,9 @@
         },
         "parameters": [
           {
-            "name": "chainId",
+            "name": "x-chain-id",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
             "format": "int64"
           },
@@ -4112,7 +4115,33 @@
         "withdrawnAmount1"
       ]
     },
-    "XpoolPoolDate": {
+    "XpoolPoolListRequest": {
+      "type": "object",
+      "properties": {
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "orderBy": {
+          "type": "string",
+          "enum": [
+            "hot",
+            "apr"
+          ],
+          "description": " 排序方式"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "XpoolPoolListRequest"
+    },
+    "XpoolPoolListResponse_Pool": {
       "type": "object",
       "properties": {
         "stakingToken": {
@@ -4204,7 +4233,7 @@
           "type": "string"
         }
       },
-      "title": "XpoolPoolDate",
+      "title": "XpoolPoolListResponse_Pool",
       "required": [
         "stakingToken",
         "stakingTokenName",
@@ -4230,67 +4259,9 @@
         "updatedAt"
       ]
     },
-    "XpoolPoolListRequest": {
-      "type": "object",
-      "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "userAddress": {
-          "type": "string"
-        },
-        "orderBy": {
-          "type": "string",
-          "enum": [
-            "hot",
-            "apr"
-          ]
-        },
-        "pageSize": {
-          "type": "integer",
-          "format": "int64",
-          "default": "20"
-        },
-        "pageIndex": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1"
-        }
-      },
-      "title": "XpoolPoolListRequest",
-      "required": [
-        "pageSize",
-        "pageIndex"
-      ]
-    },
-    "XpoolPoolListResponse": {
-      "type": "object",
-      "properties": {
-        "list": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/XpoolPoolDate"
-          }
-        },
-        "total": {
-          "type": "integer",
-          "format": "int64"
-        }
-      },
-      "title": "XpoolPoolListResponse",
-      "required": [
-        "list",
-        "total"
-      ]
-    },
     "XpoolPoolStatsRequest": {
       "type": "object",
       "properties": {
-        "chainId": {
-          "type": "integer",
-          "format": "int64"
-        },
         "poolAddress": {
           "type": "string",
           "description": " 质押池地址"

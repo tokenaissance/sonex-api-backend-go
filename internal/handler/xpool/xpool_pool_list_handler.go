@@ -2,11 +2,11 @@ package xpool
 
 import (
 	"net/http"
-
-	"github.com/zeromicro/go-zero/rest/httpx"
 	"sonex_api_backend_go/internal/logic/xpool"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+
+	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 // Xpool list
