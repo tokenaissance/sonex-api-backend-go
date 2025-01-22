@@ -218,7 +218,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 					Result:   &balance1,
 				},
 			)
-			prices, err := tokenPriceModel.GetCurrentPrices(l.ctx, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
+			prices, err := tokenPriceModel.GetCurrentPrices(ctx, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
 			if err != nil {
 				logx.Errorf("GetCurrentPrices:%v ", err)
 				return
@@ -241,7 +241,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 				}
 			}
 
-			_tokenInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chain.ChainId, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
+			_tokenInfo, err := tokenModel.QueryByChainIdAddress(ctx, chain.ChainId, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
 			if err != nil {
 				logx.Errorf("QueryByChainIdAddress:%v ", err)
 				return
