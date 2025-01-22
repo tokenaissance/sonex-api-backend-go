@@ -21,14 +21,14 @@ type (
 	SonexTokenPriceRecordModel interface {
 		sonexTokenPriceRecordModel
 		withSession(session sqlx.Session) SonexTokenPriceRecordModel
-		Kline(address string, interval string) ([]*TokenPriceRecord, error)
-		TokenKlineRate(adddress string, interval string) ([]types.SonexTokenPriceRecord, error)
-		QueryLatestHistoryPrices() (map[string]*big.Int, error)
-		QueryLatestHistoryPricesByAddresses(addresses []string) (map[string]*big.Int, error)
-		QueryLatestHistoryPricesByAddressesInterval(addresses []string, interval string) (map[string]*big.Int, error)
-		GetCurrentPrice(tokenAddress string) (float64, error)
-		GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error)
-		GetCurrentPricesAndTokenDecimals(tokenAddresses []string) ([]*TokenPriceRecordWithTokenDecimals, error)
+		Kline(ctx context.Context, address string, interval string) ([]*TokenPriceRecord, error)
+		TokenKlineRate(ctx context.Context, address string, interval string) ([]types.SonexTokenPriceRecord, error)
+		QueryLatestHistoryPrices(ctx context.Context) (map[string]*big.Int, error)
+		QueryLatestHistoryPricesByAddresses(ctx context.Context, addresses []string) (map[string]*big.Int, error)
+		QueryLatestHistoryPricesByAddressesInterval(ctx context.Context, addresses []string, interval string) (map[string]*big.Int, error)
+		GetCurrentPrice(ctx context.Context, tokenAddress string) (float64, error)
+		GetCurrentPrices(ctx context.Context, tokenAddresses []string) (map[string]*TokenPriceRecord, error)
+		GetCurrentPricesAndTokenDecimals(ctx context.Context, tokenAddresses []string) ([]*TokenPriceRecordWithTokenDecimals, error)
 		GetLastHourPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
 		GetYesterdayPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
 	}
@@ -117,7 +117,7 @@ func generateThePeriodAndTimeOffset(interval string) (c1 string, c2 int64, c3 in
 	return
 }
 
-func (m *customSonexTokenPriceRecordModel) TokenKlineRate(address string, interval string) ([]types.SonexTokenPriceRecord, error) {
+func (m *customSonexTokenPriceRecordModel) TokenKlineRate(ctx context.Context, address string, interval string) ([]types.SonexTokenPriceRecord, error) {
 
 	c1, c2, c3, c4 := generateThePeriodAndTimeOffset(interval)
 	query := fmt.Sprintf(`
@@ -165,7 +165,7 @@ ORDER BY id  DESC LIMIT %v
 `, c1, c2, c4, c4, c3)
 
 	var resp []types.SonexTokenPriceRecord
-	err := m.conn.QueryRows(&resp, query, address)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, address)
 	switch err {
 	case nil:
 		for _, v := range resp {
@@ -261,14 +261,14 @@ func minutesDifference(t1, t2 *gtime.Time) int {
 	return int(minutes)
 }
 
-func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string) ([]*TokenPriceRecord, error) {
+func (m *customSonexTokenPriceRecordModel) Kline(ctx context.Context, address string, interval string) ([]*TokenPriceRecord, error) {
 	// 获取时间范围
 	//intervalDuration := getIntervalDuration(interval)
 
 	query := fmt.Sprintf("select %s from %s where token_address = $1 and  created_at >= NOW() - INTERVAL '%s' ORDER BY created_at ASC", sonexTokenPriceRecordRows, m.table, getIntervalDuration(interval))
 
 	var resp []*TokenPriceRecord
-	err := m.conn.QueryRows(&resp, query, address)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, address)
 	switch err {
 	case nil:
 		for _, v := range resp {
@@ -283,9 +283,7 @@ func (m *customSonexTokenPriceRecordModel) Kline(address string, interval string
 	}
 }
 
-func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices() (map[string]*big.Int, error) {
-	ctx := context.Background()
-
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices(ctx context.Context) (map[string]*big.Int, error) {
 	query := fmt.Sprintf(`
 		SELECT DISTINCT ON (token_address) token_address, price, created_at
 		FROM %s
@@ -307,9 +305,7 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices() (map[strin
 	return result, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(tokenAddresses []string) (map[string]*big.Int, error) {
-	ctx := context.Background()
-
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(ctx context.Context, tokenAddresses []string) (map[string]*big.Int, error) {
 	query := fmt.Sprintf(`
 		SELECT 
 			token_address, price, created_at 
@@ -337,9 +333,7 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(t
 	return result, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesInterval(tokenAddresses []string, interval string) (map[string]*big.Int, error) {
-	ctx := context.Background()
-
+func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesInterval(ctx context.Context, tokenAddresses []string, interval string) (map[string]*big.Int, error) {
 	query := fmt.Sprintf(`
 		SELECT
 			token_address, price, created_at
@@ -369,8 +363,7 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesIn
 	return result, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetCurrentPrice(tokenAddress string) (float64, error) {
-	ctx := context.Background()
+func (m *customSonexTokenPriceRecordModel) GetCurrentPrice(ctx context.Context, tokenAddress string) (float64, error) {
 	var price float64
 	query := `
 		SELECT price
@@ -386,9 +379,7 @@ func (m *customSonexTokenPriceRecordModel) GetCurrentPrice(tokenAddress string) 
 	return price, nil
 }
 
-func (m *customSonexTokenPriceRecordModel) GetCurrentPrices(tokenAddresses []string) (map[string]*TokenPriceRecord, error) {
-	ctx := context.Background()
-
+func (m *customSonexTokenPriceRecordModel) GetCurrentPrices(ctx context.Context, tokenAddresses []string) (map[string]*TokenPriceRecord, error) {
 	var records []*TokenPriceRecord
 	query := fmt.Sprintf("SELECT DISTINCT ON (token_address) %s FROM %s WHERE token_address = ANY($1) ORDER BY token_address, created_at DESC", sonexTokenPriceRecordRows, m.table)
 
@@ -417,9 +408,7 @@ type TokenPriceRecordWithTokenDecimals struct {
 
 // 获取指定地址对应的token的decimals
 // 方便后续计算
-func (m *customSonexTokenPriceRecordModel) GetCurrentPricesAndTokenDecimals(tokenAddresses []string) ([]*TokenPriceRecordWithTokenDecimals, error) {
-	ctx := context.Background()
-
+func (m *customSonexTokenPriceRecordModel) GetCurrentPricesAndTokenDecimals(ctx context.Context, tokenAddresses []string) ([]*TokenPriceRecordWithTokenDecimals, error) {
 	var records []*TokenPriceRecordWithTokenDecimals
 	query := `
 	SELECT DISTINCT ON

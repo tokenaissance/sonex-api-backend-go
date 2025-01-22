@@ -35,7 +35,7 @@ func (l *SonexSwapVolumeLogic) SonexSwapVolume(req *types.SwapVolumeRequest) (re
 		return nil, err
 	}
 	token0Address := common.HexToAddress(token0.Address)
-	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses([]string{token0Address.Hex()})
+	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, []string{token0Address.Hex()})
 	if err != nil {
 		return nil, err
 	}

@@ -82,7 +82,7 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 								Result:   &balance1,
 							},
 						)
-						prices, err := tokenPriceModel.GetCurrentPrices([]string{common.HexToAddress(pool.EventToken0).Hex(), common.HexToAddress(pool.EventToken1).Hex()})
+						prices, err := tokenPriceModel.GetCurrentPrices(ctx, []string{common.HexToAddress(pool.EventToken0).Hex(), common.HexToAddress(pool.EventToken1).Hex()})
 						if err != nil {
 							logx.Errorf("GetCurrentPrices:%v ", err)
 							return

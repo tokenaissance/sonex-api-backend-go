@@ -70,7 +70,7 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 
 							// 获取价格 和 token 对于的 decimals
 							tokenAddress := []string{pRecord.EventToken0, pRecord.EventToken1}
-							recordTokenDecimalsArray, err := tokenPrice.GetCurrentPricesAndTokenDecimals(tokenAddress)
+							recordTokenDecimalsArray, err := tokenPrice.GetCurrentPricesAndTokenDecimals(ctx, tokenAddress)
 							if err != nil {
 								logx.Errorf("GetCurrentPricesAndTokenDecimals,err:%v", err)
 							} else {

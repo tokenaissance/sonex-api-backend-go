@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"strings"
-
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -75,11 +74,11 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 			return nil, err
 		}
 
-		totalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainId(context.Background(), chainConf.ChainId)
+		totalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainId(l.ctx, chainConf.ChainId)
 		if err != nil {
 			return nil, err
 		}
-		totalWithdrawns, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainId(context.Background(), chainConf.ChainId)
+		totalWithdrawns, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainId(l.ctx, chainConf.ChainId)
 		if err != nil {
 			return nil, err
 		}
@@ -103,15 +102,15 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 		}
 		currentTotalStatedAmount := new(big.Int).Sub(totalStakedAmount, totalWithdrawnAmount)
 
-		userTotalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
+		userTotalStakeds, err := eventPreDepositStakedModel.SummarizeTotalByChainIdUser(l.ctx, chainConf.ChainId, userAddress.Hex())
 		if err != nil {
 			return nil, err
 		}
-		userTotalWastrWithdrawn, userTotalVastrWithdrawn, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainIdUser(context.Background(), chainConf.ChainId, userAddress.Hex())
+		userTotalWastrWithdrawn, userTotalVastrWithdrawn, err := eventPreDepositWithdrawnModel.SummarizeTotalByChainIdUser(l.ctx, chainConf.ChainId, userAddress.Hex())
 		if err != nil {
 			return nil, err
 		}
-		prices, err := tokenPriceModel.GetCurrentPrices([]string{astrToken.Address, rewardToken.Address})
+		prices, err := tokenPriceModel.GetCurrentPrices(l.ctx, []string{astrToken.Address, rewardToken.Address})
 		if err != nil {
 			return nil, err
 		}
