@@ -155,7 +155,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			return item.Value.Cmp(common.Big0) > 0
 		}).
 		OrderByT(func(item cache.Price) float64 {
-			return item.PriceImpact
+			return math.Abs(item.PriceImpact)
 		}).First()
 	var bestRouter *cache.Price
 	if bestRouterA != nil {
