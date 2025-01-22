@@ -784,20 +784,21 @@ func (m *customEventSonexPoolSwapModel) SummarizeVolumesByChainId(ctx context.Co
 	mventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	query := fmt.Sprintf(`
 		SELECT 
-			token, volume 
+			token, SUM(volume)::VARCHAR AS volume
 		FROM (
-			SELECT event_token0 AS token, SUM(ABS(COALESCE(S.event_amount0::NUMERIC,0)))::VARCHAR AS volume
+			SELECT event_token0 AS token, SUM(ABS(COALESCE(S.event_amount0::NUMERIC,0))) AS volume
 			FROM %s S
 			JOIN %s C ON S.extra_pool = C.event_pool 
 			WHERE S.chain_id = $1 
 			GROUP BY event_token0
 			UNION
-			SELECT event_token1 AS token, SUM(ABS(COALESCE(S.event_amount1::NUMERIC,0)))::VARCHAR  AS volume
+			SELECT event_token1 AS token, SUM(ABS(COALESCE(S.event_amount1::NUMERIC,0)))  AS volume
 			FROM %s S
 			JOIN %s C ON S.extra_pool = C.event_pool
 			WHERE S.chain_id = $2 
 			GROUP BY event_token1
 		)
+		GROUP BY token
 	`, m.table, mventSonexFactoryPoolCreatedModel.table, m.table, mventSonexFactoryPoolCreatedModel.table)
 	var resp []struct {
 		Token  string `db:"token"`

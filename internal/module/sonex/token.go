@@ -162,10 +162,22 @@ type TokenValue struct {
 // TokenValueOption 定义 TokenValue 的可选参数函数类型
 type TokenValueOption func(*TokenValue) error
 
-// WithPrice 设置价格的选项
+// WithPrice 设置价格的选项, 使用 price 和 decimals 创建 TokenPrice
 func WithPrice(price string, decimals int) TokenValueOption {
 	return func(tv *TokenValue) error {
 		tp, err := NewTokenPrice(price, decimals)
+		if err != nil {
+			return err
+		}
+		tv.TokenPrice = *tp
+		return nil
+	}
+}
+
+// WithTokenPrice 设置价格的选项, 使用 TokenPrice 创建 TokenValue
+func WithTokenPrice(tp *TokenPrice) TokenValueOption {
+	return func(tv *TokenValue) error {
+		tp, err := NewTokenPrice(tp.Price(), tp.Decimals())
 		if err != nil {
 			return err
 		}
@@ -227,10 +239,9 @@ func (tv *TokenValue) value() *big.Float {
 	return value
 }
 
-// Value returns the token's net value as string.
-// Deprecated: Use ValueString instead.
-func (tv *TokenValue) Value() string {
-	return tv.value().String()
+// Value returns the token's net value.
+func (tv *TokenValue) Value() *big.Float {
+	return tv.value()
 }
 
 // ValueString 返回 token 的净值字符串
@@ -310,10 +321,9 @@ func (tp *TokenPair) value() *big.Float {
 	return token0Value.Add(token0Value, token1Value)
 }
 
-// Value returns the token pair's net value as string.
-// Deprecated: Use ValueString instead.
-func (tp *TokenPair) Value() string {
-	return tp.value().String()
+// Value returns the token pair's net value.
+func (tp *TokenPair) Value() *big.Float {
+	return tp.value()
 }
 
 // ValueString 返回 token 的净值字符串

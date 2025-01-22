@@ -777,26 +777,24 @@ type XpoolPoolListRequest struct {
 }
 
 type XpoolPoolListResponse_Pool struct {
-	StakingToken         string `json:"stakingToken"`
 	StakingTokenName     string `json:"stakingTokenName"`     // 质押的代币名称
 	StakingTokenSymbol   string `json:"stakingTokenSymbol"`   // 质押的代币符号
 	StakingTokenAddress  string `json:"stakingTokenAddress"`  // 质押的代币合约地址
 	StakingTokenDecimals int64  `json:"stakingTokenDecimals"` // 质押的代币合约精度
 	StakingTokenPrice    string `json:"stakingTokenPrice"`    // 质押的代币价格
-	RewardToken          string `json:"rewardToken"`
-	RewardTokenName      string `json:"rewardTokenName"`     // 奖励的代币名称
-	RewardTokenSymbol    string `json:"rewardTokenSymbol"`   // 奖励的代币符号
-	RewardTokenAddress   string `json:"rewardTokenAddress"`  // 奖励的代币合约地址
-	RewardTokenDecimals  int64  `json:"rewardTokenDecimals"` // 奖励的代币合约精度
-	RewardTokenPrice     string `json:"rewardTokenPrice"`    // 奖励的代币价格
-	PoolAddress          string `json:"poolAddress"`         // 质押池合约地址
-	RewardPerBlock       string `json:"rewardPerBlock"`      // 出块奖励
-	TotalStaked          string `json:"totalStaked"`         // 质押池的质押币总数量
-	BlockTime            int64  `json:"blockTime"`           // 出块时长 单位ms
-	TVL                  string `json:"tvl"`                 // 质押池的质押总价值（USD）
-	APR                  string `json:"apr"`                 // 年化收益率
-	JoinNum              int64  `json:"joinNum"`             // 参与人数
-	Status               string `json:"status"`              // 运行状态
+	RewardTokenName      string `json:"rewardTokenName"`      // 奖励的代币名称
+	RewardTokenSymbol    string `json:"rewardTokenSymbol"`    // 奖励的代币符号
+	RewardTokenAddress   string `json:"rewardTokenAddress"`   // 奖励的代币合约地址
+	RewardTokenDecimals  int64  `json:"rewardTokenDecimals"`  // 奖励的代币合约精度
+	RewardTokenPrice     string `json:"rewardTokenPrice"`     // 奖励的代币价格
+	PoolAddress          string `json:"poolAddress"`          // 质押池合约地址
+	RewardPerBlock       string `json:"rewardPerBlock"`       // 出块奖励
+	TotalStaked          string `json:"totalStaked"`          // 质押池的质押币总数量
+	BlockTime            int64  `json:"blockTime"`            // 出块时长 单位ms
+	TVL                  string `json:"tvl"`                  // 质押池的质押总价值（USD）
+	APR                  string `json:"apr"`                  // 年化收益率
+	JoinNum              int64  `json:"joinNum"`              // 参与人数
+	Status               string `json:"status"`               // 运行状态
 	CreatedAt            string `json:"createdAt"`
 	UpdatedAt            string `json:"updatedAt"`
 }
