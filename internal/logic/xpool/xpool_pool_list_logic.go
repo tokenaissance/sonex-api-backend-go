@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/handler/response"
+	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/module/xpool"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -29,18 +30,6 @@ type CacheWarpper struct {
 	LastUpdate time.Time
 }
 
-type GetPoolInfoResult struct {
-	StakingToken         common.Address `json:"stakingToken"`
-	StakingTokenName     common.Hash    `json:"stakingTokenName"`
-	StakingTokenSymbol   common.Hash    `json:"stakingTokenSymbol"`
-	StakingTokenDecimals uint8          `json:"stakingTokenDecimals"`
-	RewardToken          common.Address `json:"rewardToken"`
-	RewardTokenName      common.Hash    `json:"rewardTokenName"`
-	RewardTokenSymbol    common.Hash    `json:"rewardTokenSymbol"`
-	RewardTokenDecimals  uint8          `json:"rewardTokenDecimals"`
-	RewardPerBlock       *big.Int       `json:"rewardPerBlock"`
-}
-
 // Xpool list
 func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolListLogic {
 	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
@@ -53,94 +42,12 @@ func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xpo
 	}
 }
 
-func (l *XpoolPoolListLogic) XpoolPoolListBack(req *types.XpoolPoolListRequest) (list []types.XpoolPoolListResponse_Pool, err error) {
-	if req.ChainId == 0 {
-		return nil, fmt.Errorf("%s", "Invalid parameter")
-	}
-	// if req.PageSize < 1 {
-	// 	req.PageSize = 20
-	// }
-	// if req.PageIndex < 1 {
-	// 	req.PageIndex = 1
-	// }
-
-	// cacheKey := fmt.Sprintf("xpool:pools:%d", req.ChainId)
-	// redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-
-	// Check cache
-	// lastUpdate, err := redisCache.Get(cacheKey)
-	// if err == nil && lastUpdate != "" {
-	// 	var cacheWarpper CacheWarpper
-	// 	err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
-	// 	if err == nil {
-	// 		resp = &types.XpoolPoolListResponse{
-	// 			List: cacheWarpper.List,
-	// 		}
-	// 	}
-	// }
-
-	// No cache
-	// if resp == nil {
-	// 	resp, err = l.getResponse(req)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	// Set cache
-	// 	// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
-	// 	// if err != nil {
-	// 	// 	logx.Errorf("Marshal response error: %v", err)
-	// 	// }
-	// 	// err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
-	// 	// if err != nil {
-	// 	// 	logx.Errorf("Set cache error: %v", err)
-	// 	// }
-	// }
-
-	// resp.Total = int64(len(resp.List))
-
-	// Filter
-	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
-		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
-		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUser(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
-		if err != nil {
-			return nil, err
-		}
-		_ = validStakeRecords
-		// userTokenIds := []int64{}
-		// linq.From(validStakeRecords).ForEachT(func(item repository.EventFarmTokenStaked) {
-		// 	userTokenIds = append(userTokenIds, item.EventTokenId)
-		// })
-		// linq.From(resp.List).WhereT(func(item types.FarmPoolData) bool {
-		// 	poolTokenIds, ok := tokenIds[item.PoolAddress]
-		// 	if !ok {
-		// 		return false
-		// 	}
-		// 	return linq.From(userTokenIds).AnyWithT(func(tokenId int64) bool {
-		// 		return linq.From(poolTokenIds).Contains(tokenId)
-		// 	})
-		// }).ToSlice(&resp.List)
-	}
-	if req.OrderBy != "" {
-		switch req.OrderBy {
-		case "hot":
-		case "apr":
-		}
-	}
-
-	// Page
-	// linq.From(resp.List).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&resp.List)
-
-	return list, nil
-}
-
 func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *response.ApiResponse, err error) {
 	chainId := req.ChainId
 	// userAddress := req.UserAddress
 	// orderBy := req.OrderBy
-	// pageIndex := req.PageIndex
-	// pageSize := req.PageSize
+	pageIndex := req.PageIndex
+	pageSize := req.PageSize
 
 	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
 	if chainConf == nil {
@@ -155,8 +62,10 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		return nil, fmt.Errorf("%s", "Miss xpool configure")
 	}
 
+	// get available xpools
 	availablePools, err := l.eventXpoolFactoryPoolCreatedModel.QueryAvailablePoolsByChainIdFactory(l.ctx, chainId, common.HexToAddress(xpoolConf.Factory).Hex())
 	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get available pools error: %s", err)
 		return nil, err
 	}
 	var poolAddresses []common.Address
@@ -166,15 +75,38 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 	staticCaller, err := xpool.NewStaticCaller(l.svcCtx.Config)
 	if err != nil {
+		logx.Errorf("[XpoolPoolList]: New static caller error: %s", err)
 		return nil, err
 	}
-	poolInfos, err := staticCaller.BatchGetPoolInfos(l.ctx, req.ChainId, poolAddresses)
+	poolInfos, err := staticCaller.BatchGetPoolInfos(l.ctx, chainId, poolAddresses)
 	if err != nil {
+		logx.Errorf("[XpoolPoolList]:BatchGetPoolInfos Batch get pool infos error: %s", err)
 		return nil, err
 	}
+	stakingTokenAddresses := make([]string, 0)
+	linq.From(poolInfos).SelectT(func(kv linq.KeyValue) string {
+		poolInfo, ok := kv.Value.(*xpool.PoolInfo)
+		if !ok {
+			logx.Errorf("[XpoolPoolList]: Invalid pool info: %s", kv.Value)
+			return ""
+		}
+		return poolInfo.StakingToken.Hex()
+	}).ToSlice(&stakingTokenAddresses)
 
-	prices, err := l.tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
+	rewardTokenAddresses := make([]string, 0)
+	linq.From(poolInfos).SelectT(func(kv linq.KeyValue) string {
+		poolInfo, ok := kv.Value.(*xpool.PoolInfo)
+		if !ok {
+			logx.Errorf("[XpoolPoolList]: Invalid pool info: %s", kv.Value)
+			return ""
+		}
+		return poolInfo.RewardToken.Hex()
+	}).ToSlice(&rewardTokenAddresses)
+
+	// 获取当前价格
+	prices, err := l.getCurrentPrices(l.ctx, append(stakingTokenAddresses, rewardTokenAddresses...))
 	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
 		return nil, err
 	}
 	list := make([]types.XpoolPoolListResponse_Pool, 0)
@@ -183,19 +115,60 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		if !ok {
 			continue
 		}
+		tvlValue := new(big.Float)
+		rewardPerYearValue := new(big.Float)
+		var stakingTokenPriceString string
+		var rewardTokenPriceString string
+		// staking token
+		{
+			stakingTokenPrice, exists := prices[info.StakingToken.Hex()]
+			if !exists {
+				logx.Errorf("[XpoolPoolList]: Staking token price not found: %s", info.StakingToken.Hex())
+				continue
+			}
+			stakingTokenPriceString = stakingTokenPrice.PriceWithoutDecimals()
+			stakingTokenValue, err := sonex.NewTokenValue(info.TotalStaked.String(), int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
+			if err != nil {
+				logx.Errorf("[XpoolPoolList]: Invalid staking token value: %s", err)
+				continue
+			}
+			tvlValue = stakingTokenValue.Value()
 
-		stakingTokenPrice := prices[info.StakingToken.Hex()]
-		stakingTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(info.StakingTokenDecimals), nil)
-		rewardTokenPrice := prices[info.RewardToken.Hex()]
-		rewardTokenAccuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(info.RewardTokenDecimals), nil)
-		tvl := new(big.Int).Div(new(big.Int).Mul(info.TotalStaked, stakingTokenPrice), stakingTokenAccuracy)
-		if xpoolConf.BlockTime <= 0 {
-			return nil, fmt.Errorf("%s", "Invalid block time configure")
+			logx.Infof("[XpoolPoolList]: Staking token value: %f", tvlValue)
 		}
-		blockNumberPerYear := new(big.Int).Div(new(big.Int).Mul(big.NewInt(365*24*60*60), big.NewInt(1000)), big.NewInt(xpoolConf.BlockTime))
-		totalReward := new(big.Int).Div(new(big.Int).Mul(new(big.Int).Mul(info.RewardPerBlock, blockNumberPerYear), rewardTokenPrice), rewardTokenAccuracy)
-		apr := new(big.Int).Div(totalReward, tvl)
 
+		// reward token
+		{
+			rewardTokenPrice, exists := prices[info.RewardToken.Hex()]
+			if !exists {
+				logx.Errorf("[XpoolPoolList]: Reward token price not found: %s", info.RewardToken.Hex())
+				continue
+			}
+			rewardTokenPriceString = rewardTokenPrice.PriceWithoutDecimals()
+			if xpoolConf.BlockTime <= 0 {
+				logx.Errorf("[XpoolPoolList]: Invalid block time configure")
+				continue
+			}
+			blockNumberPerYear := new(big.Int).Div(new(big.Int).Mul(big.NewInt(365*24*60*60), big.NewInt(1000)), big.NewInt(xpoolConf.BlockTime))
+			rewardAmountPerYear := new(big.Int).Mul(info.RewardPerBlock, blockNumberPerYear)
+			rewardTokenValue, err := sonex.NewTokenValue(rewardAmountPerYear.String(), int(info.RewardTokenDecimals), sonex.WithTokenPrice(rewardTokenPrice))
+			if err != nil {
+				logx.Errorf("[XpoolPoolList]: Invalid reward token value: %s", err)
+				continue
+			}
+			rewardPerYearValue = rewardTokenValue.Value()
+			logx.Infof("[XpoolPoolList]: Reward token value: %f", rewardPerYearValue)
+		}
+
+		// APR
+		apr := new(big.Float).Quo(rewardPerYearValue, tvlValue)
+		if tvlValue.Cmp(big.NewFloat(0)) == 0 {
+			apr = big.NewFloat(0)
+		}
+		aprPercentage, _ := new(big.Float).Mul(apr, big.NewFloat(100)).Float64()
+		aprPercentageString := fmt.Sprintf("%.2f%%", aprPercentage)
+
+		// status
 		var status string
 		if info.IsDestroied {
 			status = "closed"
@@ -204,29 +177,56 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		}
 
 		list = append(list, types.XpoolPoolListResponse_Pool{
-			StakingToken:         info.StakingToken.Hex(),
-			StakingTokenName:     info.StakingTokenName,
-			StakingTokenSymbol:   info.StakingTokenSymbol,
-			StakingTokenDecimals: info.StakingTokenDecimals,
-			RewardToken:          info.RewardToken.Hex(),
-			RewardTokenName:      info.RewardTokenName,
-			RewardTokenSymbol:    info.RewardTokenSymbol,
-			RewardTokenDecimals:  info.RewardTokenDecimals,
-			RewardPerBlock:       info.RewardPerBlock.String(),
-			TotalStaked:          info.TotalStaked.String(),
-			BlockTime:            xpoolConf.BlockTime,
-			TVL:                  tvl.String(),
-			APR:                  apr.String(),
-			Status:               status,
+			StakingTokenName:     info.StakingTokenName,                     // 质押的代币名称
+			StakingTokenSymbol:   info.StakingTokenSymbol,                   // 质押的代币符号
+			StakingTokenAddress:  info.StakingToken.Hex(),                   // 质押的代币合约地址
+			StakingTokenDecimals: info.StakingTokenDecimals,                 // 质押的代币合约精度
+			StakingTokenPrice:    stakingTokenPriceString,                   // 质押的代币价格
+			RewardTokenName:      info.RewardTokenName,                      // 奖励的代币名称
+			RewardTokenSymbol:    info.RewardTokenSymbol,                    // 奖励的代币符号
+			RewardTokenAddress:   info.RewardToken.Hex(),                    // 奖励的代币合约地址
+			RewardTokenDecimals:  info.RewardTokenDecimals,                  // 奖励的代币合约精度
+			RewardTokenPrice:     rewardTokenPriceString,                    // 奖励的代币价格
+			PoolAddress:          common.HexToAddress(pool.EventPool).Hex(), // 质押池合约地址
+			RewardPerBlock:       info.RewardPerBlock.String(),              // 出块奖励
+			TotalStaked:          info.TotalStaked.String(),                 // 质押池的质押币总数量
+			BlockTime:            xpoolConf.BlockTime,                       // 出块时长 单位ms
+			TVL:                  tvlValue.String(),                         // 质押池的质押总价值（USD）
+			APR:                  aprPercentageString,                       // 年化收益率 取 12.22% 格式
+			JoinNum:              info.StakedNumber.Int64(),                 // 参与人数
+			Status:               status,                                    // 运行状态
+			CreatedAt:            pool.CreatedAt.Format(time.RFC3339),       // 创建时间
+			UpdatedAt:            pool.UpdatedAt.Format(time.RFC3339),       // 更新时间
 		})
 	}
 
 	return &response.ApiResponse{
 		Data: list,
 		Meta: types.PageResponse{
-			PageSize:  *req.PageSize,
-			PageIndex: *req.PageIndex,
+			PageSize:  *pageSize,
+			PageIndex: *pageIndex,
 			Total:     int64(len(list)),
 		},
 	}, nil
+}
+
+// getCurrentPrices 获取当前价格
+func (l *XpoolPoolListLogic) getCurrentPrices(ctx context.Context, addressList []string) (prices map[string]*sonex.TokenPrice, err error) {
+	records, err := l.tokenPriceModel.GetCurrentPrices(ctx, addressList)
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
+		return nil, err
+	}
+	prices = make(map[string]*sonex.TokenPrice, 0)
+	for _, record := range records {
+		tp, err := sonex.NewTokenPrice(record.Price, record.UsdDecimals)
+		if err != nil {
+			logx.Errorf("[XpoolPoolList]: Invalid token price: %s", err)
+			return nil, err
+		}
+		prices[record.TokenAddress] = tp
+	}
+
+	// todo db 获取不到的话，从链上获取价格
+	return prices, nil
 }

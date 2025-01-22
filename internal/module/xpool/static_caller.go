@@ -88,6 +88,14 @@ func (staticCaller *StaticCaller) BatchGetPoolInfos(ctx context.Context, chainId
 			Target:   pool,
 			CallData: totalStakedData,
 		})
+		stakedNumberData, err := poolABI.Pack("stakedNumber")
+		if err != nil {
+			return nil, err
+		}
+		multicallData = append(multicallData, contract_common.Multicall3Call3{
+			Target:   pool,
+			CallData: stakedNumberData,
+		})
 		isDestroiedData, err := poolABI.Pack("isDestroied")
 		if err != nil {
 			return nil, err
@@ -101,14 +109,14 @@ func (staticCaller *StaticCaller) BatchGetPoolInfos(ctx context.Context, chainId
 		if err != nil {
 			return nil, err
 		}
-		err = nodeCaller.StaticCall(context.Background(), multicallABI, common.HexToAddress(chainConf.Multicall), "aggregate3", data, &multicallResults)
+		err = nodeCaller.StaticCall(ctx, multicallABI, common.HexToAddress(chainConf.Multicall), "aggregate3", data, &multicallResults)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	result := map[string]*PoolInfo{}
-	fieldNumber := 5
+	fieldNumber := 6
 	for i, pool := range pools {
 		var stakingToken common.Address
 		if !multicallResults[i*fieldNumber].Success {
@@ -142,11 +150,19 @@ func (staticCaller *StaticCaller) BatchGetPoolInfos(ctx context.Context, chainId
 		if err != nil {
 			return nil, err
 		}
-		var isDestroied bool
+		var stakedNumber *big.Int
 		if !multicallResults[i*fieldNumber+4].Success {
 			continue
 		}
-		err = poolABI.UnpackIntoInterface(&isDestroied, "isDestroied", multicallResults[i*fieldNumber+4].ReturnData)
+		err = poolABI.UnpackIntoInterface(&stakedNumber, "stakedNumber", multicallResults[i*fieldNumber+4].ReturnData)
+		if err != nil {
+			return nil, err
+		}
+		var isDestroied bool
+		if !multicallResults[i*fieldNumber+5].Success {
+			continue
+		}
+		err = poolABI.UnpackIntoInterface(&isDestroied, "isDestroied", multicallResults[i*fieldNumber+5].ReturnData)
 		if err != nil {
 			return nil, err
 		}
@@ -171,6 +187,7 @@ func (staticCaller *StaticCaller) BatchGetPoolInfos(ctx context.Context, chainId
 			RewardTokenDecimals:  rewardTokenT.Decimals,
 			RewardPerBlock:       rewardPerBlock,
 			TotalStaked:          totalStaked,
+			StakedNumber:         stakedNumber,
 			IsDestroied:          isDestroied,
 		}
 	}

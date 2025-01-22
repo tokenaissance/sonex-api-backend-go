@@ -15,13 +15,11 @@ type XpoolPoolListRequest {
 
 // 质押池数据 at CreatedAt and UpdatedAt
 type XpoolPoolListResponse_Pool {
-	StakingToken         string `json:"stakingToken"`
 	StakingTokenName     string `json:"stakingTokenName"`     // 质押的代币名称
 	StakingTokenSymbol   string `json:"stakingTokenSymbol"`   // 质押的代币符号
 	StakingTokenAddress  string `json:"stakingTokenAddress"`  // 质押的代币合约地址
 	StakingTokenDecimals int64  `json:"stakingTokenDecimals"` // 质押的代币合约精度
 	StakingTokenPrice    string `json:"stakingTokenPrice"`    // 质押的代币价格
-	RewardToken          string `json:"rewardToken"`
 	RewardTokenName      string `json:"rewardTokenName"`     // 奖励的代币名称
 	RewardTokenSymbol    string `json:"rewardTokenSymbol"`   // 奖励的代币符号
 	RewardTokenAddress   string `json:"rewardTokenAddress"`  // 奖励的代币合约地址
