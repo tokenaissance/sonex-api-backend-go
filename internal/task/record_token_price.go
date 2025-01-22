@@ -79,7 +79,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 						return math.Abs(item.PriceImpact) < 0.1
 					}).
 					OrderByT(func(item cache.Price) float64 {
-						return item.PriceImpact
+						return math.Abs(item.PriceImpact)
 					}).First()
 				if price, ok := priceA.(cache.Price); ok {
 					bestPrice = &price
@@ -100,7 +100,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 							return math.Abs(item.PriceImpact) < 0.1
 						}).
 						OrderByT(func(item cache.Price) float64 {
-							return item.PriceImpact
+							return math.Abs(item.PriceImpact)
 						}).First()
 					if price, ok := priceA.(cache.Price); ok {
 						price.Value = new(big.Int).Mul(price.Value, accuracy)
@@ -123,7 +123,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 							return math.Abs(item.PriceImpact) < 0.1
 						}).
 						OrderByT(func(item cache.Price) float64 {
-							return item.PriceImpact
+							return math.Abs(item.PriceImpact)
 						}).First()
 					if price, ok := priceA.(cache.Price); ok {
 						price.Value = new(big.Int).Mul(price.Value, accuracy)
