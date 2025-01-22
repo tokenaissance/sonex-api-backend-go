@@ -339,14 +339,14 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesIn
 		SELECT 
 			token_address, price, created_at 
 		FROM (
-			SELECT *
+			SELECT 
+				*, ROW_NUMBER() OVER (PARTITION BY token_address ORDER BY created_at DESC) AS rn
 			FROM %s
 			WHERE 
 				token_address = ANY($1)
 				AND created_at <= NOW() - INTERVAL '%s'
-			ORDER BY created_at DESC
 		)
-		LIMIT 1
+		WHERE rn = 1
 	`, m.table, getIntervalDuration(interval))
 
 	var records []MiniTokenPriceRecord

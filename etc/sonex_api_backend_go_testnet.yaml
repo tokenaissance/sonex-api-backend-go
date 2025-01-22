@@ -6,9 +6,9 @@ Log:
 Domains:
   - testnet.sonex.so
 Sentry:
-    Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
-    TracesSampleRate: 1.0
-    Environment: testnet
+  Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
+  TracesSampleRate: 1.0
+  Environment: testnet
 PostgreSQL:
   Host: PG_HOST
   Port: PG_PORT
@@ -25,9 +25,8 @@ Chains:
     Name: Minato
     Nodes:
       # URL:Weight
-      http://10.1.30.103:8545: 90
-      http://10.1.30.102:8545: 10
-    MinConfirmations: 5
+      http://10.1.30.102:8545: 100
+    MinConfirmations: 0
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
     Multicall: 0x18546Af844DFA77c5268FF8A51941E11692FED25
