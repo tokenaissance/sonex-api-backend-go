@@ -248,7 +248,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		prices, err := tokenPriceModel.GetCurrentPrices([]string{innerPosition.Token0.Hex(), innerPosition.Token1.Hex()})
+		prices, err := tokenPriceModel.GetCurrentPrices(l.ctx, []string{innerPosition.Token0.Hex(), innerPosition.Token1.Hex()})
 		if err != nil {
 			logx.Errorf("[SonexPosition]:refreshCache GetCurrentPrices error: %s", err.Error())
 			results <- sonexPositionResult{prices: nil, err: err}

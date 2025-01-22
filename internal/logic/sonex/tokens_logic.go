@@ -152,15 +152,15 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	if err != nil {
 		return nil, err
 	}
-	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(tokenAddressStrs)
+	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, tokenAddressStrs)
 	if err != nil {
 		return nil, err
 	}
-	last1DPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(tokenAddressStrs, "1d")
+	last1DPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1d")
 	if err != nil {
 		return nil, err
 	}
-	last1HPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(tokenAddressStrs, "1h")
+	last1HPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1h")
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			volume, _ := global.PriceToUSD(req.ChainId, volumeI)
 			item.VolumeUSD = fmt.Sprintf("%f", volume)
 
-			kline1D, err := tokenPriceModel.Kline(item.Address, "1d")
+			kline1D, err := tokenPriceModel.Kline(l.ctx, item.Address, "1d")
 			if err != nil {
 				ch <- struct {
 					Data types.TokensResponse_Token

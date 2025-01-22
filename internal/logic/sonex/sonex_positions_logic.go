@@ -201,7 +201,7 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		pricesRecords, err := l.tokenPriceModel.GetCurrentPrices(append(token0Addresses, token1Addresses...))
+		pricesRecords, err := l.tokenPriceModel.GetCurrentPrices(l.ctx, append(token0Addresses, token1Addresses...))
 		results <- psTaskResult{tokenPricesRecords: pricesRecords, err: err}
 	}()
 

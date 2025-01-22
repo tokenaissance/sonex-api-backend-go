@@ -318,7 +318,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 			},
 		)
 
-	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
 	if err != nil {
 		return nil, nil, err
 	}
