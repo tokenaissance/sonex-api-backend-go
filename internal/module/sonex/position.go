@@ -29,24 +29,52 @@ type Position struct {
 }
 
 func (position *Position) Amounts() (*big.Int, *big.Int) {
-	Q96 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 96))
+	Q96 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 96)) // Q96 float
+	liquidityInput := position.Liquidity
+	sqrtPriceX96Input := position.Pool.Slot0.SqrtPriceX96
+	tickLowerInput := position.TickLower
+	tickUpperInput := position.TickUpper
 
-	liquidity := new(big.Float).SetInt(position.Liquidity)
-	sqrtPriceA := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(position.TickLower)))
-	sqrtPriceB := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(position.TickUpper)))
-	currentTick := position.Pool.Slot0.Tick
-	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(position.Pool.Slot0.SqrtPriceX96), Q96)
+	liquidity := new(big.Float).SetInt(liquidityInput)
+	sqrtRatioA := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(tickLowerInput))) // sqrtRatioA
+	sqrtRatioB := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(tickUpperInput))) // sqrtRatioB
+	currentTick := GetTickAtSqrtPrice(sqrtPriceX96Input)                                 // currentTick
+	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(sqrtPriceX96Input), Q96)       // sqrtPrice
 
 	amount0 := big.NewInt(0)
 	amount1 := big.NewInt(0)
 
-	if currentTick.Cmp(position.TickLower) < 0 {
-		amount0, _ = new(big.Float).Mul(liquidity, new(big.Float).Quo(new(big.Float).Sub(sqrtPriceB, sqrtPriceA), new(big.Float).Mul(sqrtPriceA, sqrtPriceB))).Int(nil)
-	} else if currentTick.Cmp(position.TickUpper) >= 0 {
-		amount1, _ = new(big.Float).Mul(liquidity, new(big.Float).Sub(sqrtPriceB, sqrtPriceA)).Int(nil)
+	if currentTick.Cmp(tickLowerInput) < 0 {
+		amount0, _ = new(big.Float).Mul(liquidity, new(big.Float).Quo(new(big.Float).Sub(sqrtRatioB, sqrtRatioA), new(big.Float).Mul(sqrtRatioA, sqrtRatioB))).Int(nil)
+	} else if currentTick.Cmp(tickUpperInput) >= 0 {
+		amount1, _ = new(big.Float).Mul(liquidity, new(big.Float).Sub(sqrtRatioB, sqrtRatioA)).Int(nil)
 	} else {
-		amount0, _ = new(big.Float).Mul(liquidity, new(big.Float).Quo(new(big.Float).Sub(sqrtPriceB, sqrtPrice), new(big.Float).Mul(sqrtPrice, sqrtPriceB))).Int(nil)
-		amount1, _ = new(big.Float).Mul(liquidity, new(big.Float).Sub(sqrtPrice, sqrtPriceA)).Int(nil)
+		amount0, _ = new(big.Float).Mul(liquidity, new(big.Float).Quo(new(big.Float).Sub(sqrtRatioB, sqrtPrice), new(big.Float).Mul(sqrtPrice, sqrtRatioB))).Int(nil)
+		amount1, _ = new(big.Float).Mul(liquidity, new(big.Float).Sub(sqrtPrice, sqrtRatioA)).Int(nil)
+	}
+
+	return amount0, amount1
+}
+
+func Amounts(liquidityInput *big.Int, sqrtPriceX96Input *big.Int, tickLowerInput *big.Int, tickUpperInput *big.Int) (*big.Int, *big.Int) {
+	Q96 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 96)) // Q96 float
+
+	liquidity := new(big.Float).SetInt(liquidityInput)
+	sqrtRatioA := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(tickLowerInput))) // sqrtRatioA
+	sqrtRatioB := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(tickUpperInput))) // sqrtRatioB
+	currentTick := GetTickAtSqrtPrice(sqrtPriceX96Input)                                 // currentTick
+	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(sqrtPriceX96Input), Q96)       // sqrtPrice
+
+	amount0 := big.NewInt(0)
+	amount1 := big.NewInt(0)
+
+	if currentTick.Cmp(tickLowerInput) < 0 {
+		amount0, _ = new(big.Float).Mul(liquidity, new(big.Float).Quo(new(big.Float).Sub(sqrtRatioB, sqrtRatioA), new(big.Float).Mul(sqrtRatioA, sqrtRatioB))).Int(nil)
+	} else if currentTick.Cmp(tickUpperInput) >= 0 {
+		amount1, _ = new(big.Float).Mul(liquidity, new(big.Float).Sub(sqrtRatioB, sqrtRatioA)).Int(nil)
+	} else {
+		amount0, _ = new(big.Float).Mul(liquidity, new(big.Float).Quo(new(big.Float).Sub(sqrtRatioB, sqrtPrice), new(big.Float).Mul(sqrtPrice, sqrtRatioB))).Int(nil)
+		amount1, _ = new(big.Float).Mul(liquidity, new(big.Float).Sub(sqrtPrice, sqrtRatioA)).Int(nil)
 	}
 
 	return amount0, amount1

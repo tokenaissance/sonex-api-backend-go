@@ -181,14 +181,12 @@ func ComputePoolAddress(factory common.Address, token0 common.Address, token1 co
 }
 
 func GetTickAtSqrtPrice(sqrtPriceX96 *big.Int) *big.Int {
-	Q96 := float64(1 << 96)
+	Q96 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 96)) // Q96 float
 
-	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(sqrtPriceX96), big.NewFloat(Q96))
-	price := new(big.Float).Mul(sqrtPrice, sqrtPrice)
-	valueF := new(big.Float).Quo(price, big.NewFloat(math.Log(1.0001)))
-	value, _ := valueF.Float64()
-	value = math.Log(value)
-	return big.NewInt(int64(value))
+	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(sqrtPriceX96), Q96)
+	price := Pow(sqrtPrice, big.NewFloat(2))
+	value, _ := new(big.Float).Quo(Log(price), Log(big.NewFloat(1.0001))).Int(nil)
+	return value
 }
 
 func Sqrt(z *big.Float) *big.Float {
