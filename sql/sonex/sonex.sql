@@ -253,7 +253,7 @@ CREATE TABLE "public"."sonex_token_price_record" (
   "token_symbol" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "token_address" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "price" varchar COLLATE "pg_catalog"."default" NOT NULL,
-  "created_at" timestamp(6) NOT NULL,
+  "created_at" timestamptz(6) NOT NULL,
   "usd_decimals" int8 NOT NULL
 )
 ;

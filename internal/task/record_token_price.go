@@ -45,7 +45,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 		return fmt.Errorf("%s", fmt.Sprintf("Get USD token[%s] failed: %s", chainConf.USD, err))
 	}
 
-	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address,price, created_at, usd_decimals) values (?,?,?,?,?)")
+	blk, err := sqlx.NewBulkInserter(conn, "insert into sonex_token_price_record (token_symbol, token_address, price, created_at, usd_decimals) values (?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				return
 			}
 			// fmt.Printf("%s %s %s\n", item.Symbol, item.Address, bestPrice.Value.String())
-			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05"), usdToken.Decimals)
+			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05+00"), usdToken.Decimals)
 			if err != nil {
 				logx.Errorf("Insert %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
