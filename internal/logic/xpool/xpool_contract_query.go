@@ -76,9 +76,9 @@ func getPoolRealTimeData(ctx context.Context, pool *xpoolContract.StakingPool) (
 	}
 	info.TotalStaked = totalStaked
 
-	claimed, _ := pool.TotalClaimed(&bind.CallOpts{})
-	if claimed.TotalClaimed != nil {
-		info.TotalClaimed = claimed.TotalClaimed
+	totalClaimed, _ := pool.TotalClaimed(&bind.CallOpts{})
+	if totalClaimed != nil {
+		info.TotalClaimed = totalClaimed
 	} else {
 		info.TotalClaimed = big.NewInt(0)
 	}
