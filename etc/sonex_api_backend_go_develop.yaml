@@ -32,8 +32,7 @@ Chains:
     Name: Minato
     Nodes:
       # URL:Weight
-      http://10.1.30.103:8545: 90
-      http://10.1.30.102:8545: 10
+      http://10.1.30.102:8545: 100
     MinConfirmations: 0
     MinDelayWaitMillisecond: 1000
     MaxLogsNumber: 5000
