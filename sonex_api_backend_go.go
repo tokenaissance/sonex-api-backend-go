@@ -190,7 +190,7 @@ func main() {
 	}
 
 	// Start chain listen/cron ...
-	// global.Start()
+	global.Start()
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()
