@@ -121,7 +121,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		tokenAddresses = append(tokenAddresses, record.Tokens()...)
 	}
 	linq.From(tokenAddresses).Distinct().ToSlice(&tokenAddresses)
-	prices, err := tokenPriceModel.GetCurrentPrices(tokenAddresses)
+	prices, err := tokenPriceModel.GetCurrentPrices(l.ctx, tokenAddresses)
 	if err != nil {
 		return nil, err
 	}

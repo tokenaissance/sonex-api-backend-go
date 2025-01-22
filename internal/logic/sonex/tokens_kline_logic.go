@@ -31,7 +31,7 @@ func NewTokensKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Token
 func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp *types.SonexTokenKlineResponse, err error) {
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	model := repository.NewSonexTokenPriceRecordModel(conn)
-	result, err := model.TokenKlineRate(req.Address, req.Interval)
+	result, err := model.TokenKlineRate(l.ctx, req.Address, req.Interval)
 	if err != nil {
 		logx.Errorf("[TokensKline]: Kline err %s", err)
 		return nil, err

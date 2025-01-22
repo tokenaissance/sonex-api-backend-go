@@ -88,7 +88,7 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 		},
 	)
 
-	prices, err := tokenPriceModel.GetCurrentPrices([]string{token0.Hex(), token1.Hex(), common.HexToAddress(chain.WETH).Hex()})
+	prices, err := tokenPriceModel.GetCurrentPrices(l.ctx, []string{token0.Hex(), token1.Hex(), common.HexToAddress(chain.WETH).Hex()})
 	if err != nil {
 		logx.Errorf("GetCurrentPrices:%v ", err)
 		return &types.PoolInfoResponse{StatusCode: 500}, errors.New("internal  error")

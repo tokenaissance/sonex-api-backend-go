@@ -218,7 +218,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 					Result:   &balance1,
 				},
 			)
-			prices, err := tokenPriceModel.GetCurrentPrices([]string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
+			prices, err := tokenPriceModel.GetCurrentPrices(l.ctx, []string{common.HexToAddress(pool.Token0.Address).Hex(), common.HexToAddress(pool.Token1.Address).Hex()})
 			if err != nil {
 				logx.Errorf("GetCurrentPrices:%v ", err)
 				return

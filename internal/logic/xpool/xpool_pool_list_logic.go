@@ -18,8 +18,10 @@ import (
 
 type XpoolPoolListLogic struct {
 	logx.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx                               context.Context
+	svcCtx                            *svc.ServiceContext
+	eventXpoolFactoryPoolCreatedModel repository.EventXpoolFactoryPoolCreatedModel
+	tokenPriceModel                   repository.SonexTokenPriceRecordModel
 }
 
 type CacheWarpper struct {
@@ -41,10 +43,13 @@ type GetPoolInfoResult struct {
 
 // Xpool list
 func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolListLogic {
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
 	return &XpoolPoolListLogic{
-		Logger: logx.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
+		Logger:                            logx.WithContext(ctx),
+		ctx:                               ctx,
+		svcCtx:                            svcCtx,
+		eventXpoolFactoryPoolCreatedModel: repository.NewEventXpoolFactoryPoolCreatedModel(conn),
+		tokenPriceModel:                   repository.NewSonexTokenPriceRecordModel(conn),
 	}
 }
 
@@ -131,24 +136,26 @@ func (l *XpoolPoolListLogic) XpoolPoolListBack(req *types.XpoolPoolListRequest) 
 }
 
 func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *response.ApiResponse, err error) {
-	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	chainId := req.ChainId
+	// userAddress := req.UserAddress
+	// orderBy := req.OrderBy
+	// pageIndex := req.PageIndex
+	// pageSize := req.PageSize
+
+	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
 	}
-	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	sonexConf := l.svcCtx.Config.GetSonexConfig(chainId)
 	if sonexConf == nil {
 		return nil, fmt.Errorf("%s", "Miss sonex configure")
 	}
-	xpoolConf := l.svcCtx.Config.GetXpoolConfig(req.ChainId)
+	xpoolConf := l.svcCtx.Config.GetXpoolConfig(chainId)
 	if xpoolConf == nil {
 		return nil, fmt.Errorf("%s", "Miss xpool configure")
 	}
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(conn)
-	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
-
-	availablePools, err := eventXpoolFactoryPoolCreatedModel.QueryAvailablePoolsByChainIdFactory(l.ctx, req.ChainId, common.HexToAddress(xpoolConf.Factory).Hex())
+	availablePools, err := l.eventXpoolFactoryPoolCreatedModel.QueryAvailablePoolsByChainIdFactory(l.ctx, chainId, common.HexToAddress(xpoolConf.Factory).Hex())
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +173,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		return nil, err
 	}
 
-	prices, err := tokenPriceModel.QueryLatestHistoryPrices()
+	prices, err := l.tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
 	if err != nil {
 		return nil, err
 	}
