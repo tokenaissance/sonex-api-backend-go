@@ -4144,9 +4144,6 @@
     "XpoolPoolListResponse_Pool": {
       "type": "object",
       "properties": {
-        "stakingToken": {
-          "type": "string"
-        },
         "stakingTokenName": {
           "type": "string",
           "description": " 质押的代币名称"
@@ -4167,9 +4164,6 @@
         "stakingTokenPrice": {
           "type": "string",
           "description": " 质押的代币价格"
-        },
-        "rewardToken": {
-          "type": "string"
         },
         "rewardTokenName": {
           "type": "string",
@@ -4235,13 +4229,11 @@
       },
       "title": "XpoolPoolListResponse_Pool",
       "required": [
-        "stakingToken",
         "stakingTokenName",
         "stakingTokenSymbol",
         "stakingTokenAddress",
         "stakingTokenDecimals",
         "stakingTokenPrice",
-        "rewardToken",
         "rewardTokenName",
         "rewardTokenSymbol",
         "rewardTokenAddress",

@@ -17,5 +17,6 @@ type PoolInfo struct {
 	RewardTokenDecimals  int64
 	RewardPerBlock       *big.Int
 	TotalStaked          *big.Int
+	StakedNumber         *big.Int
 	IsDestroied          bool
 }
