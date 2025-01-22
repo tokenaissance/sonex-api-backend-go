@@ -32,8 +32,7 @@ Chains:
     Name: Minato
     Nodes:
       # URL:Weight
-      http://10.1.30.103:8545: 90
-      http://10.1.30.102:8545: 10
+      http://10.1.30.102:8545: 100
     MinConfirmations: 0
     MinDelayWaitMillisecond: 1000
     MaxLogsNumber: 5000
@@ -69,7 +68,7 @@ PreDeposits:
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1946
-    Staker: 0xd68b59E80209260CAc5174EaA2d49b0C84D54C16
+    Staker: 0xBf3F505B232c8e6E87F2C5aE8fd19D4c637b2768
 Xpools:
   - ChainId: 1946
     Factory: 0x5cEb616f710A4d1135C0239d5BAb12Bae133bDF5

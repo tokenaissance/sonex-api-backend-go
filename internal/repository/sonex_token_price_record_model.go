@@ -336,11 +336,17 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesIn
 	ctx := context.Background()
 
 	query := fmt.Sprintf(`
-		SELECT DISTINCT ON (token_address) token_address, price, created_at
-		FROM %s
-		WHERE 
-			token_address = ANY($1)
-			AND created_at <= NOW() - INTERVAL '%s'
+		SELECT 
+			token_address, price, created_at 
+		FROM (
+			SELECT *
+			FROM %s
+			WHERE 
+				token_address = ANY($1)
+				AND created_at <= NOW() - INTERVAL '%s'
+			ORDER BY created_at DESC
+		)
+		LIMIT 1
 	`, m.table, getIntervalDuration(interval))
 
 	var records []MiniTokenPriceRecord

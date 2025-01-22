@@ -2,8 +2,6 @@ package xpool
 
 import (
 	"net/http"
-
-	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/logic/xpool"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -11,6 +9,7 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
+// Xpool stats
 func XpoolPoolStatsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.XpoolPoolStatsRequest
@@ -22,13 +21,9 @@ func XpoolPoolStatsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := xpool.NewXpoolPoolStatsLogic(r.Context(), svcCtx)
 		resp, err := l.XpoolPoolStats(&req)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, response.BaseError{
-				Code: response.XpoolErrorCode,
-				Err:  err,
-			})
+			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
 			httpx.OkJsonCtx(r.Context(), w, resp)
 		}
-		httpx.OkJson(w, resp)
 	}
 }

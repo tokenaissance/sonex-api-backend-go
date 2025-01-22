@@ -769,7 +769,14 @@ type Withdrawn struct {
 	WithdrawnAmount1 string `json:"withdrawnAmount1"`
 }
 
-type XpoolPoolDate struct {
+type XpoolPoolListRequest struct {
+	ChainRequest
+	UserAddress string `form:"userAddress,optional"`             // 用户地址
+	OrderBy     string `form:"orderBy,optional,options=hot|apr"` // 排序方式
+	PageRequest
+}
+
+type XpoolPoolListResponse_Pool struct {
 	StakingToken         string `json:"stakingToken"`
 	StakingTokenName     string `json:"stakingTokenName"`     // 质押的代币名称
 	StakingTokenSymbol   string `json:"stakingTokenSymbol"`   // 质押的代币符号
@@ -794,21 +801,8 @@ type XpoolPoolDate struct {
 	UpdatedAt            string `json:"updatedAt"`
 }
 
-type XpoolPoolListRequest struct {
-	ChainId     int64  `form:"chainId,optional"`
-	UserAddress string `form:"userAddress,optional"`
-	OrderBy     string `form:"orderBy,optional,options=hot|apr"`
-	PageSize    int64  `form:"pageSize,default=20"`
-	PageIndex   int64  `form:"pageIndex,default=1"`
-}
-
-type XpoolPoolListResponse struct {
-	List  []XpoolPoolDate `json:"list"`
-	Total int64           `json:"total"`
-}
-
 type XpoolPoolStatsRequest struct {
-	ChainId     int64   `form:"chainId,optional"`
+	ChainRequest
 	PoolAddress string  `form:"poolAddress"`                               // 质押池地址
 	Amount      float64 `form:"amount,optional"`                           // 金额（USD）
 	Duration    int     `form:"duration,optional,options=1|7|30|365|1825"` // 质押时长（单位：天）
