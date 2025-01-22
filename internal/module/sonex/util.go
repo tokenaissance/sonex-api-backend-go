@@ -180,17 +180,6 @@ func ComputePoolAddress(factory common.Address, token0 common.Address, token1 co
 	return common.BytesToAddress(hash)
 }
 
-func GetTickAtSqrtPrice(sqrtPriceX96 *big.Int) *big.Int {
-	Q96 := float64(1 << 96)
-
-	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(sqrtPriceX96), big.NewFloat(Q96))
-	price := new(big.Float).Mul(sqrtPrice, sqrtPrice)
-	valueF := new(big.Float).Quo(price, big.NewFloat(math.Log(1.0001)))
-	value, _ := valueF.Float64()
-	value = math.Log(value)
-	return big.NewInt(int64(value))
-}
-
 func Sqrt(z *big.Float) *big.Float {
 	if z.Sign() == -1 {
 		panic("Sqrt: argument is negative")

@@ -8,12 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func TestGetTickAtSqrtPrice(t *testing.T) {
-	sqrtPrice, _ := new(big.Int).SetString("2025953380162437579067355541581128", 10)
-	tick := GetTickAtSqrtPrice(sqrtPrice)
-	fmt.Printf("%s\n", tick.String())
-}
-
 func TestComputePoolAddress(t *testing.T) {
 	factory := common.HexToAddress("0xF0e4d91E5DBaE579dD72DA2584a09e423d863aC1")
 	token0 := common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C")

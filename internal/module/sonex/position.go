@@ -28,13 +28,21 @@ type Position struct {
 	TokensOwed1              *big.Int       `json:"tokensOwed1"`
 }
 
-func (position *Position) Amounts() (*big.Int, *big.Int) {
+func (position *Position) CurrentTick() *big.Int {
 	Q96 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 96))
 
+	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(position.Pool.Slot0.SqrtPriceX96), Q96)
+	price := Pow(sqrtPrice, big.NewFloat(2))
+	value, _ := new(big.Float).Quo(Log(price), Log(big.NewFloat(1.0001))).Int(nil)
+	return value
+}
+
+func (position *Position) Amounts() (*big.Int, *big.Int) {
+	Q96 := new(big.Float).SetInt(new(big.Int).Lsh(big.NewInt(1), 96))
 	liquidity := new(big.Float).SetInt(position.Liquidity)
 	sqrtPriceA := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(position.TickLower)))
 	sqrtPriceB := Sqrt(Pow(big.NewFloat(1.0001), new(big.Float).SetInt(position.TickUpper)))
-	currentTick := position.Pool.Slot0.Tick
+	currentTick := position.CurrentTick()
 	sqrtPrice := new(big.Float).Quo(new(big.Float).SetInt(position.Pool.Slot0.SqrtPriceX96), Q96)
 
 	amount0 := big.NewInt(0)
