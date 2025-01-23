@@ -4211,6 +4211,11 @@
           "type": "string",
           "description": " 年化收益率"
         },
+        "aPRFloat": {
+          "type": "number",
+          "format": "double",
+          "description": " 年化收益率，辅助排序用"
+        },
         "staked": {
           "type": "string",
           "description": " 用户已质押代币数量"
@@ -4253,6 +4258,7 @@
         "blockTime",
         "tvl",
         "apr",
+        "-",
         "staked",
         "earned",
         "joinNum",

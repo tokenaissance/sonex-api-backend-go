@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/handler/response"
+	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/module/xpool"
 	"sonex_api_backend_go/internal/repository"
@@ -45,7 +46,7 @@ func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xpo
 func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *response.ApiResponse, err error) {
 	chainId := req.ChainId
 	userAddress := req.UserAddress
-	// orderBy := req.OrderBy
+	orderBy := req.OrderBy
 	pageIndex := req.PageIndex
 	pageSize := req.PageSize
 
@@ -123,6 +124,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	for _, pool := range availablePools {
 		info, ok := poolInfos[common.HexToAddress(pool.EventPool).Hex()]
 		if !ok {
+			logx.Errorf("[XpoolPoolList]: Pool info not found: %s, pools: %v", common.HexToAddress(pool.EventPool).Hex(), poolInfos)
 			continue
 		}
 
@@ -188,6 +190,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		if tvlValue.Cmp(big.NewFloat(0)) == 0 {
 			apr = big.NewFloat(0)
 		}
+		aprFloat, _ := apr.Float64()
 		aprPercentage, _ := new(big.Float).Mul(apr, big.NewFloat(100)).Float64()
 		aprPercentageString := fmt.Sprintf("%.2f%%", aprPercentage)
 
@@ -216,6 +219,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			BlockTime:            xpoolConf.BlockTime,                       // 出块时长 单位ms
 			TVL:                  tvlValue.String(),                         // 质押池的质押总价值（USD）
 			APR:                  aprPercentageString,                       // 年化收益率 取 12.22% 格式
+			APRFloat:             aprFloat,                                  // 年化收益率，辅助排序用
 			JoinNum:              info.StakedNumber.Int64(),                 // 参与人数
 			Staked:               staked.String(),                           // 用户已质押代币数量
 			Earned:               earned.String(),                           // 用户已获得奖励代币数量
@@ -223,6 +227,20 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			CreatedAt:            pool.CreatedAt.Format(time.RFC3339),       // 创建时间
 			UpdatedAt:            pool.UpdatedAt.Format(time.RFC3339),       // 更新时间
 		})
+	}
+
+	// Sorts
+	switch orderBy {
+	case "hot":
+		linq.From(list).OrderByDescendingT(func(item types.XpoolPoolListResponse_Pool) int64 {
+			return item.JoinNum
+		}).ToSlice(&list)
+	case "apr":
+		linq.From(list).OrderByDescendingT(func(item types.XpoolPoolListResponse_Pool) lib_common.CompareableFloat {
+			return lib_common.CompareableFloat{Value: new(big.Float).SetFloat64(item.APRFloat)}
+		}).ToSlice(&list)
+	case "tvl":
+		// do not sort
 	}
 
 	return &response.ApiResponse{
