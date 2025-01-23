@@ -243,14 +243,35 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		// do not sort
 	}
 
+	// Pagination
+	total := int64(len(list))
+	list = l.getPagination(l.ctx, list, pageIndex, pageSize)
+
 	return &response.ApiResponse{
 		Data: list,
 		Meta: types.PageResponse{
 			PageSize:  *pageSize,
 			PageIndex: *pageIndex,
-			Total:     int64(len(list)),
+			Total:     total, // 使用未分页前的总数
 		},
 	}, nil
+}
+
+func (l *XpoolPoolListLogic) getPagination(ctx context.Context, list []types.XpoolPoolListResponse_Pool, pageIndex *int64, pageSize *int64) []types.XpoolPoolListResponse_Pool {
+	start := (*pageIndex - 1) * (*pageSize)
+	if start < 0 {
+		start = 0
+	}
+	end := start + *pageSize
+	if start >= int64(len(list)) {
+		list = []types.XpoolPoolListResponse_Pool{}
+	} else {
+		if end > int64(len(list)) {
+			end = int64(len(list))
+		}
+		list = list[start:end]
+	}
+	return list
 }
 
 // getCurrentPrices 获取当前价格
