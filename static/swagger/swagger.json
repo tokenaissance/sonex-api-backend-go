@@ -4211,6 +4211,14 @@
           "type": "string",
           "description": " 年化收益率"
         },
+        "staked": {
+          "type": "string",
+          "description": " 用户已质押代币数量"
+        },
+        "earned": {
+          "type": "string",
+          "description": " 用户已获得奖励代币数量"
+        },
         "joinNum": {
           "type": "integer",
           "format": "int64",
@@ -4245,6 +4253,8 @@
         "blockTime",
         "tvl",
         "apr",
+        "staked",
+        "earned",
         "joinNum",
         "status",
         "createdAt",

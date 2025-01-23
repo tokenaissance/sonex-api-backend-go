@@ -44,7 +44,7 @@ func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xpo
 
 func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *response.ApiResponse, err error) {
 	chainId := req.ChainId
-	// userAddress := req.UserAddress
+	userAddress := req.UserAddress
 	// orderBy := req.OrderBy
 	pageIndex := req.PageIndex
 	pageSize := req.PageSize
@@ -103,6 +103,16 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		return poolInfo.RewardToken.Hex()
 	}).ToSlice(&rewardTokenAddresses)
 
+	// user wallet address pool stats
+	addressPoolInfos := make(map[string]*xpool.AddressPoolInfo, 0)
+	if len(userAddress) > 0 {
+		addressPoolInfos, err = staticCaller.BatchGetAddressPoolInfos(l.ctx, chainId, poolAddresses, common.HexToAddress(userAddress))
+		if err != nil {
+			logx.Errorf("[XpoolPoolList]: BatchGetAddressPoolInfos error: %s", err)
+			return nil, err
+		}
+	}
+
 	// 获取当前价格
 	prices, err := l.getCurrentPrices(l.ctx, append(stakingTokenAddresses, rewardTokenAddresses...))
 	if err != nil {
@@ -115,10 +125,23 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		if !ok {
 			continue
 		}
+
 		tvlValue := new(big.Float)
 		rewardPerYearValue := new(big.Float)
 		var stakingTokenPriceString string
 		var rewardTokenPriceString string
+		staked := new(big.Int)
+		earned := new(big.Int)
+
+		// 获取用户在池子中的质押状态信息
+		{
+			addressPoolInfo, ok := addressPoolInfos[common.HexToAddress(pool.EventPool).Hex()]
+			if ok {
+				staked = addressPoolInfo.Staked
+				earned = addressPoolInfo.EarnedReward
+			}
+		}
+
 		// staking token
 		{
 			stakingTokenPrice, exists := prices[info.StakingToken.Hex()]
@@ -194,6 +217,8 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			TVL:                  tvlValue.String(),                         // 质押池的质押总价值（USD）
 			APR:                  aprPercentageString,                       // 年化收益率 取 12.22% 格式
 			JoinNum:              info.StakedNumber.Int64(),                 // 参与人数
+			Staked:               staked.String(),                           // 用户已质押代币数量
+			Earned:               earned.String(),                           // 用户已获得奖励代币数量
 			Status:               status,                                    // 运行状态
 			CreatedAt:            pool.CreatedAt.Format(time.RFC3339),       // 创建时间
 			UpdatedAt:            pool.UpdatedAt.Format(time.RFC3339),       // 更新时间

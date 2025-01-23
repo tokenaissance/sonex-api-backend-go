@@ -31,6 +31,8 @@ type XpoolPoolListResponse_Pool {
 	BlockTime            int64  `json:"blockTime"`           // 出块时长 单位ms
 	TVL                  string `json:"tvl"`                 // 质押池的质押总价值（USD）
 	APR                  string `json:"apr"`                 // 年化收益率
+	Staked               string `json:"staked"`              // 用户已质押代币数量
+	Earned               string `json:"earned"`              // 用户已获得奖励代币数量
 	JoinNum              int64  `json:"joinNum"`             // 参与人数
 	Status               string `json:"status"`              // 运行状态
 	CreatedAt            string `json:"createdAt"`
