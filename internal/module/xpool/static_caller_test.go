@@ -37,3 +37,23 @@ func TestBatchGetPoolInfos(t *testing.T) {
 	}
 	_ = pools
 }
+
+func TestBatchGetPoolInfosWithUserAddress(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../../etc/sonex_api_backend_go.yaml", &c)
+	ctx := context.Background()
+	global.Initialize(c)
+	caller, _ := NewStaticCaller(c)
+	pools, err := caller.BatchGetPoolInfosWithUserAddress(
+		ctx, 1946,
+		[]common.Address{
+			common.HexToAddress("0xeD99809130909613F662Ae854D38DdDC75cDC35A"),
+		},
+		common.HexToAddress("0xD5a3eCC27f3E5469375fAfa3FfD5Fc21D71c29E6"),
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = pools
+}
