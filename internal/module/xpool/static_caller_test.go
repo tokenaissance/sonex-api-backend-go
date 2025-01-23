@@ -44,7 +44,7 @@ func TestBatchGetPoolInfosWithUserAddress(t *testing.T) {
 	ctx := context.Background()
 	global.Initialize(c)
 	caller, _ := NewStaticCaller(c)
-	pools, err := caller.BatchGetPoolInfosWithUserAddress(
+	pools, err := caller.BatchGetAddressPoolInfos(
 		ctx, 1946,
 		[]common.Address{
 			common.HexToAddress("0xeD99809130909613F662Ae854D38DdDC75cDC35A"),
