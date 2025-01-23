@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // Implements adapter of the X-Pool dApp
@@ -27,13 +26,8 @@ func NewStaticCaller(config config.Config) (*StaticCaller, error) {
 	}, nil
 }
 
-// BatchGetPoolInfosWithUserAddress 获取用户在多个池子中的信息
-func (staticCaller *StaticCaller) BatchGetPoolInfosWithUserAddress(ctx context.Context, chainId int64, pools []common.Address, userAddress common.Address) (map[string]*AddressPoolInfo, error) {
-	poolInfos, err := staticCaller.BatchGetPoolInfos(ctx, chainId, pools)
-	if err != nil {
-		logx.Errorf("[XpoolPoolList]:BatchGetPoolInfos Batch get pool infos error: %s", err)
-		return nil, err
-	}
+// BatchGetAddressPoolInfos 获取用户在多个池子中的质押状态信息
+func (staticCaller *StaticCaller) BatchGetAddressPoolInfos(ctx context.Context, chainId int64, pools []common.Address, userAddress common.Address) (map[string]*AddressPoolInfo, error) {
 	chainConf := staticCaller.c.GetChainConfig(chainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
@@ -110,7 +104,6 @@ func (staticCaller *StaticCaller) BatchGetPoolInfosWithUserAddress(ctx context.C
 		}
 		result[pool.Hex()] = &AddressPoolInfo{
 			Address:      userAddress,
-			PoolInfo:     poolInfos[pool.Hex()],
 			EarnedReward: earnedReward.Earned,
 			Height:       earnedReward.Height,
 			Staked:       staked,
