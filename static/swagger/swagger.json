@@ -1235,15 +1235,14 @@
             "name": "amount",
             "description": " 金额（USD）",
             "in": "query",
-            "required": false,
-            "type": "number",
-            "format": "double"
+            "required": true,
+            "type": "string"
           },
           {
             "name": "duration",
             "description": " 质押时长（单位：天）",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "integer",
             "format": "int32",
             "enum": [
@@ -4275,8 +4274,7 @@
           "description": " 质押池地址"
         },
         "amount": {
-          "type": "number",
-          "format": "double",
+          "type": "string",
           "description": " 金额（USD）"
         },
         "duration": {
@@ -4294,7 +4292,9 @@
       },
       "title": "XpoolPoolStatsRequest",
       "required": [
-        "poolAddress"
+        "poolAddress",
+        "amount",
+        "duration"
       ]
     },
     "XpoolPoolStatsResponse": {
@@ -4303,44 +4303,6 @@
         "poolAddress": {
           "type": "string",
           "description": " 质押池合约地址"
-        },
-        "totalStaked": {
-          "type": "string",
-          "description": " 质押池总质押代币数量"
-        },
-        "joinNum": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 参与质押人数"
-        },
-        "rewardPerBlock": {
-          "type": "string",
-          "description": " 每块奖励数量"
-        },
-        "blockTime": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 出块秒数"
-        },
-        "everyDayYield": {
-          "type": "string",
-          "description": " 每日产量"
-        },
-        "rewardTokenPrice": {
-          "type": "string",
-          "description": " 奖励币价（USD）"
-        },
-        "stakingTokenPrice": {
-          "type": "string",
-          "description": " 质押币价（USD）"
-        },
-        "TVL": {
-          "type": "string",
-          "description": " 质押池当前总质押价值（USD）"
-        },
-        "APR": {
-          "type": "string",
-          "description": " 年化收益率"
         },
         "ROI": {
           "type": "string",
@@ -4354,15 +4316,6 @@
       "title": "XpoolPoolStatsResponse",
       "required": [
         "poolAddress",
-        "totalStaked",
-        "joinNum",
-        "rewardPerBlock",
-        "blockTime",
-        "everyDayYield",
-        "rewardTokenPrice",
-        "stakingTokenPrice",
-        "TVL",
-        "APR",
         "ROI",
         "profit"
       ]
