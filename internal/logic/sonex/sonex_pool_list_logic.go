@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -143,50 +145,11 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			Meta: &types.PageResponse{},
 		}, err
 	}
-
-	// 这里生成每个pool对应的所有positions数据,可能后面用不到
-	// go func() {
-	// 	backgroundCtx := context.Background()
-	// 	poolPositions, err := model.SyncPoolPositions(backgroundCtx, l.svcCtx.Config.Chains[0].ChainId)
-	// 	if err == nil && len(poolPositions) > 0 {
-	// 		var wg sync.WaitGroup
-
-	// 		for _, poolPosition := range poolPositions {
-	// 			wg.Add(1)
-	// 			go func(poolPosition *types.PoolPositionData) {
-	// 				defer wg.Done()
-
-	// 				hashKey := fmt.Sprintf("event_pool:%s", poolPosition.EventPool)
-
-	// 				err := l.svcCtx.Cache.HSet(hashKey, "event_token0", poolPosition.EventToken0)
-	// 				if err != nil {
-	// 					fmt.Println("PoolPosition HSet error for event_token0:", err)
-	// 				}
-
-	// 				err = l.svcCtx.Cache.HSet(hashKey, "event_token1", poolPosition.EventToken1)
-	// 				if err != nil {
-	// 					fmt.Println("PoolPosition HSet error for event_token1:", err)
-	// 				}
-
-	// 				setKey := fmt.Sprintf("event_pool:%s:token_ids", poolPosition.EventPool)
-	// 				err = l.svcCtx.Cache.SAdd(ctx, setKey, poolPosition.EventTokenId).Err()
-	// 				if err != nil {
-	// 					fmt.Println("PoolPosition SAdd error", err)
-	// 				}
-	// 			}(poolPosition)
-	// 		}
-
-	// 		wg.Wait()
-	// 	}
-	// }()
-
 	var wg sync.WaitGroup
 	mu := &sync.Mutex{}
 
 	poolChan := make(chan *types.PoolsResponse_Pool, len(data))
 	pools := make([]*types.PoolsResponse_Pool, 0, len(data))
-
-	mockYields := []float64{0.00000347, 0.00000412, 0.00000289, 0.00000378, 0.00000456, 0.00000234, 0.00000467, 0.00000312, 0.00000398, 0.00000289, 0.00000312, 0.00000398, 0.00000289}
 
 	for i := range data {
 		poolFromDB := data[i]
@@ -302,17 +265,19 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 				Decimals: int(_decimals1),
 			}
 
+			_yield, err := global.GetVolume24HTvlValue(cacher, global.YiedlRateKey, pool.Address)
+			if errors.Is(err, redis.Nil) {
+				logx.Infof("Pool:%v NIL YIELD", pool.Address)
+				_yield = "0.0"
+			}
+			if err != nil && !errors.Is(err, redis.Nil) {
+				logx.Infof("Pool:%v ERR  YIELD:%v", pool.Address, err)
+				_yield = "0.0"
+			}
+
 			pool.Stablecoin = stablecoinToken.Address
 			pool.StablecoinDecimals = stablecoinToken.Decimals
-
-			num := new(big.Int)
-			num.SetString(pool.Address, 16)
-			result := new(big.Int).Mod(num, big.NewInt(10))
-			digit2 := int(result.Int64())
-			yield24h, _ := big.NewFloat(0).SetString(pool.TvlUSD)
-			yield24h.Mul(yield24h, big.NewFloat(mockYields[digit2]))
-			yield24hFloat, _ := yield24h.Float64()
-			pool.Yield24h = fmt.Sprintf("%f", yield24hFloat)
+			pool.Yield24h = _yield //
 
 			mu.Unlock()
 

@@ -39,6 +39,7 @@ var tokenCachersLock sync.RWMutex
 // volume24H
 var Volume24HKey = "Volume24H"
 var Tvl24HKey = "Tvl24HKey"
+var YiedlRateKey = "YiedlRateKey"
 
 func GetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string) (string, error) {
 	return cacher.Get(fmt.Sprintf("%v_%v", _key, _keyPoolAddress))

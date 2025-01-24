@@ -31,6 +31,7 @@ type (
 		SyncPoolPositions(ctx context.Context, chainId int64) ([]*types.PoolPositionData, error)
 		GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error)
 		GetPoolInfo(ctx context.Context, chainId int64, poolAddress string) (*sonex.PoolFromDB, error)
+		GetAllPoolInfo(ctx context.Context, chainId int64) (map[string]*sonex.PoolFromDB, error)
 	}
 
 	customEventSonexFactoryPoolCreatedModel struct {
@@ -411,4 +412,74 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolInfo(ctx context.Contex
 		return nil, err
 	}
 	return pool.ToPoolFromDB(chainId), nil
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) GetAllPoolInfo(ctx context.Context, chainId int64) (map[string]*sonex.PoolFromDB, error) {
+
+	stmt := fmt.Sprintf(`
+	SELECT 
+		t1.id,
+		t1.event_fee,
+		t1.event_pool,
+		t4.tvl,
+		t2.name       AS token0_name,
+		t2.symbol     AS token0_symbol,
+		t2.address    AS token0_address,
+		t2.logo       AS token0_logo,
+		t2.additional AS token0_additional,
+		t2.decimals   AS token0_decimals,
+		t3.name       AS token1_name,
+		t3.symbol     AS token1_symbol,
+		t3.address    AS token1_address,
+		t3.logo       AS token1_logo,
+		t3.additional AS token1_additional,
+		t3.decimals   AS token1_decimals
+	FROM %s AS t1
+
+	JOIN sonex_token AS t2 ON t2.address = t1.event_token0
+	JOIN sonex_token AS t3 ON t3.address = t1.event_token1
+	INNER JOIN sonex_pool_tvl_record AS t4 ON t1.event_pool = t4.pool_address
+
+	WHERE
+		t1.chain_id = $1
+`, m.table)
+
+	var poolData []PoolData
+	err := m.conn.QueryRowsCtx(ctx, &poolData, stmt, chainId)
+	if err != nil {
+		return nil, err
+	}
+
+	pools := make(map[string]*sonex.PoolFromDB)
+	for _, pd := range poolData {
+		var token0Additional types.PoolsResponse_TokenAdditional
+		var token1Additional types.PoolsResponse_TokenAdditional
+		_ = json.Unmarshal([]byte(pd.Token0Additional.String), &token0Additional)
+		_ = json.Unmarshal([]byte(pd.Token1Additional.String), &token1Additional)
+
+		pool := &sonex.PoolFromDB{
+			ChainId: chainId,
+			Id:      pd.EventPool,
+			Address: pd.EventPool,
+			FeeTier: pd.EventFee,
+			Token0: &types.PoolsResponse_Token{
+				Address:    pd.Token0Address.String,
+				Symbol:     pd.Token0Symbol.String,
+				Name:       pd.Token0Name.String,
+				Logo:       pd.Token0Logo.String,
+				Decimals:   int(pd.Token0Decimals.Int64),
+				Additional: token0Additional,
+			},
+			Token1: &types.PoolsResponse_Token{
+				Address:    pd.Token1Address.String,
+				Symbol:     pd.Token1Symbol.String,
+				Name:       pd.Token1Name.String,
+				Logo:       pd.Token1Logo.String,
+				Decimals:   int(pd.Token1Decimals.Int64),
+				Additional: token1Additional,
+			},
+		}
+		pools[pool.Id] = pool
+	}
+	return pools, nil
 }

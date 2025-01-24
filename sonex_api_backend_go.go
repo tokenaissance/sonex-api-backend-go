@@ -132,6 +132,13 @@ func main() {
 		task.HandleRecordTvlForeEachPool(&c)
 	})
 
+	// 计算 yiled 的值
+	// 每天 计算 一次
+	task.Hander_CalcuateYiledForPool(&c)
+	global.AddCronJob("@midnight", func() {
+		task.Hander_CalcuateYiledForPool(&c)
+	})
+
 	// Register chain handler
 	for _, chain := range c.Chains {
 		// Sonex handler

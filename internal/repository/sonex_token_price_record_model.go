@@ -92,7 +92,7 @@ func generateThePeriodAndTimeOffset(interval string) (c1 string, c2 int64, c3 in
 		c2 = 600 // 86400/144 targetKLines = 144 // 144 K-lines per day
 		c3 = 144
 		// c4 = 144 // 每个采样点之间 144 条数据条数据间隔
-		c4 = 6 // 每个采样点之间 6  条数据条数据间隔,应前端要求的，特意修改为  6 个采样点
+		c4 = 6 // 每个采样点之间 6  条数据条数据间隔,应产品经理要求的，特意修改为  6 个采样点
 
 	case "1w":
 		c1 = `'14 days'::interval`
