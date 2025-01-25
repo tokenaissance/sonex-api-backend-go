@@ -43,6 +43,7 @@ type (
 		SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error)
 
 		SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error)
+		SummarizePoolVolumesUsdForSevenDaysForYield(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
 	}
@@ -859,6 +860,28 @@ SELECT CAST
 	t1.extra_pool 
 FROM
 	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
+	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
+	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
+`
+
+	// Execute the query and scan results into poolVolumes slice
+	var poolVolumesUsd []*PoolVolumeUsd
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, chainId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
+
+	return poolVolumesUsd, nil
+}
+
+func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsdForSevenDaysForYield(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error) {
+
+	volumeQuery := `
+SELECT CAST
+	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+	t1.extra_pool 
+FROM
+	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '168 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
 	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
 `
