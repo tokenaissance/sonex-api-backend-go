@@ -88,8 +88,12 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 							return
 						}
 
-						price0 := big.NewInt(0)
-						price0Decimal := int64(0)
+						price0 := big.NewInt(1)
+						price0Decimal := int64(1)
+
+						price1 := big.NewInt(1)
+						price1Decimal := int64(1)
+
 						for _, v := range prices {
 							if strings.EqualFold(v.TokenAddress, common.HexToAddress(pool.EventToken0).Hex()) {
 								price0, _ = new(big.Int).SetString(v.Price, 10)
@@ -98,16 +102,30 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 
 						}
 
+						for _, v := range prices {
+							if strings.EqualFold(v.TokenAddress, pool.EventToken1) {
+								price1, _ = new(big.Int).SetString(v.Price, 10)
+								price1Decimal = int64(v.UsdDecimals)
+							}
+						}
+
 						_tokenInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chain.ChainId, []string{common.HexToAddress(pool.EventToken0).Hex(), common.HexToAddress(pool.EventToken1).Hex()})
 						if err != nil {
 							logx.Errorf("QueryByChainIdAddress:%v ", err)
 							return
 						}
 
-						_decimals0 := int64(0)
+						_decimals0Token0 := int64(18)
+						_decimals1Token1 := int64(18)
 						for _, v := range _tokenInfo {
 							if strings.EqualFold(v.Address, common.HexToAddress(pool.EventToken0).Hex()) {
-								_decimals0 = v.Decimals
+								_decimals0Token0 = v.Decimals
+							}
+						}
+
+						for _, v := range _tokenInfo {
+							if strings.EqualFold(v.Address, common.HexToAddress(pool.EventToken1).Hex()) {
+								_decimals1Token1 = v.Decimals
 							}
 						}
 
@@ -115,11 +133,19 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 							balance0 = big.NewInt(1)
 						}
 						balance0Float, _ := new(big.Float).SetString(balance0.String())
-						_balance0divdeimals0 := new(big.Float).Quo(balance0Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals0))))
-						_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(price0Decimal))))
+						balance1Float, _ := new(big.Float).SetString(balance1.String())
+						_balance0divdeimals0 := new(big.Float).Quo(balance0Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals0Token0))))
+						_balance1divdeimals0 := new(big.Float).Quo(balance1Float, new(big.Float).SetFloat64(math.Pow10(int(_decimals1Token1))))
 
+						_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(price0Decimal))))
+						_price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(price1Decimal))))
+
+						// TODO 后期优化
 						_token0Volume := new(big.Float).Mul(_balance0divdeimals0, _price0divUsdDecimals)
-						_token0VolumeString := _token0Volume.String()
+						_token1Volume := new(big.Float).Mul(_balance1divdeimals0, _price1divUsdDecimals)
+						_Volume_BigFloat := new(big.Float).Add(_token0Volume, _token1Volume)
+						_token0VolumeString := _Volume_BigFloat.String()
+
 						mu.Lock()
 						err = global.SetVolume24HTvlValue(cacher, global.Tvl24HKey, pool.EventPool, _token0VolumeString)
 						if err != nil {

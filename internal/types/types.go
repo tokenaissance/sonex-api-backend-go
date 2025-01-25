@@ -777,46 +777,40 @@ type XpoolPoolListRequest struct {
 }
 
 type XpoolPoolListResponse_Pool struct {
-	StakingTokenName     string `json:"stakingTokenName"`     // 质押的代币名称
-	StakingTokenSymbol   string `json:"stakingTokenSymbol"`   // 质押的代币符号
-	StakingTokenAddress  string `json:"stakingTokenAddress"`  // 质押的代币合约地址
-	StakingTokenDecimals int64  `json:"stakingTokenDecimals"` // 质押的代币合约精度
-	StakingTokenPrice    string `json:"stakingTokenPrice"`    // 质押的代币价格
-	RewardTokenName      string `json:"rewardTokenName"`      // 奖励的代币名称
-	RewardTokenSymbol    string `json:"rewardTokenSymbol"`    // 奖励的代币符号
-	RewardTokenAddress   string `json:"rewardTokenAddress"`   // 奖励的代币合约地址
-	RewardTokenDecimals  int64  `json:"rewardTokenDecimals"`  // 奖励的代币合约精度
-	RewardTokenPrice     string `json:"rewardTokenPrice"`     // 奖励的代币价格
-	PoolAddress          string `json:"poolAddress"`          // 质押池合约地址
-	RewardPerBlock       string `json:"rewardPerBlock"`       // 出块奖励
-	TotalStaked          string `json:"totalStaked"`          // 质押池的质押币总数量
-	BlockTime            int64  `json:"blockTime"`            // 出块时长 单位ms
-	TVL                  string `json:"tvl"`                  // 质押池的质押总价值（USD）
-	APR                  string `json:"apr"`                  // 年化收益率
-	JoinNum              int64  `json:"joinNum"`              // 参与人数
-	Status               string `json:"status"`               // 运行状态
-	CreatedAt            string `json:"createdAt"`
-	UpdatedAt            string `json:"updatedAt"`
+	StakingTokenName     string  `json:"stakingTokenName"`     // 质押的代币名称
+	StakingTokenSymbol   string  `json:"stakingTokenSymbol"`   // 质押的代币符号
+	StakingTokenAddress  string  `json:"stakingTokenAddress"`  // 质押的代币合约地址
+	StakingTokenDecimals int64   `json:"stakingTokenDecimals"` // 质押的代币合约精度
+	StakingTokenPrice    string  `json:"stakingTokenPrice"`    // 质押的代币价格
+	RewardTokenName      string  `json:"rewardTokenName"`      // 奖励的代币名称
+	RewardTokenSymbol    string  `json:"rewardTokenSymbol"`    // 奖励的代币符号
+	RewardTokenAddress   string  `json:"rewardTokenAddress"`   // 奖励的代币合约地址
+	RewardTokenDecimals  int64   `json:"rewardTokenDecimals"`  // 奖励的代币合约精度
+	RewardTokenPrice     string  `json:"rewardTokenPrice"`     // 奖励的代币价格
+	PoolAddress          string  `json:"poolAddress"`          // 质押池合约地址
+	RewardPerBlock       string  `json:"rewardPerBlock"`       // 出块奖励
+	TotalStaked          string  `json:"totalStaked"`          // 质押池的质押币总数量
+	BlockTime            int64   `json:"blockTime"`            // 出块时长 单位ms
+	TVL                  string  `json:"tvl"`                  // 质押池的质押总价值（USD）
+	APR                  string  `json:"apr"`                  // 年化收益率
+	APRFloat             float64 `json:"-"`                    // 年化收益率，辅助排序用
+	Staked               string  `json:"staked"`               // 用户已质押代币数量
+	Earned               string  `json:"earned"`               // 用户已获得奖励代币数量
+	JoinNum              int64   `json:"joinNum"`              // 参与人数
+	Status               string  `json:"status"`               // 运行状态
+	CreatedAt            string  `json:"createdAt"`
+	UpdatedAt            string  `json:"updatedAt"`
 }
 
 type XpoolPoolStatsRequest struct {
 	ChainRequest
-	PoolAddress string  `form:"poolAddress"`                               // 质押池地址
-	Amount      float64 `form:"amount,optional"`                           // 金额（USD）
-	Duration    int     `form:"duration,optional,options=1|7|30|365|1825"` // 质押时长（单位：天）
+	PoolAddress string `form:"poolAddress"`                      // 质押池地址
+	Amount      string `form:"amount"`                           // 金额（USD）
+	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
 }
 
 type XpoolPoolStatsResponse struct {
-	PoolAddress       string `json:"poolAddress"`       // 质押池合约地址
-	TotalStaked       string `json:"totalStaked"`       // 质押池总质押代币数量
-	JoinNum           int64  `json:"joinNum"`           // 参与质押人数
-	RewardPerBlock    string `json:"rewardPerBlock"`    // 每块奖励数量
-	BlockTime         int64  `json:"blockTime"`         // 出块秒数
-	EveryDayYield     string `json:"everyDayYield"`     // 每日产量
-	RewardTokenPrice  string `json:"rewardTokenPrice"`  // 奖励币价（USD）
-	StakingTokenPrice string `json:"stakingTokenPrice"` // 质押币价（USD）
-	TVL               string `json:"TVL"`               // 质押池当前总质押价值（USD）
-	APR               string `json:"APR"`               // 年化收益率
-	ROI               string `json:"ROI"`               // 投资回报率
-	Profit            string `json:"profit"`            // 投资回报金额（USD）
+	PoolAddress string `json:"poolAddress"` // 质押池合约地址
+	ROI         string `json:"ROI"`         // 投资回报率
+	Profit      string `json:"profit"`      // 投资回报金额（USD）
 }

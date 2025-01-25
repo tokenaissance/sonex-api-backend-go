@@ -55,17 +55,52 @@ func Test_GetCurrentPricesAndTokenDecimals(t *testing.T) {
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 	ctx := context.Background()
 	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DateSource()))
-	tokenAddresses := []string{"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"}
-	ret, err := model.GetCurrentPricesAndTokenDecimals(ctx, tokenAddresses)
+	// tokenAddresses := []string{"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"}
+	// ret, err := model.GetCurrentPricesAndTokenDecimals(ctx, tokenAddresses)
+	// if err != nil {
+	// 	t.Error(err)
+	// 	return
+	// }
+	// if len(ret) > 0 {
+	// 	for i, v := range ret {
+	// 		logx.Infof("i %v v %#v ", i, v)
+
+	// 	}
+
+	// }
+	addes := []string{
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+	}
+
+	currentPriceRecords, err := model.QueryLatestHistoryPricesByAddresses(ctx, addes)
 	if err != nil {
-		t.Error(err)
+		logx.Errorf("TAGFORALL %v", err)
 		return
 	}
-	if len(ret) > 0 {
-		for i, v := range ret {
-			logx.Infof("i %v v %#v ", i, v)
-
-		}
-
+	for i, v := range currentPriceRecords {
+		logx.Infof("i %v v :%v ", i, v)
 	}
 }

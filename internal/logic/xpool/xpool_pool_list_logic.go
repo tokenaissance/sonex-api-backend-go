@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/handler/response"
+	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/module/xpool"
 	"sonex_api_backend_go/internal/repository"
@@ -44,8 +45,8 @@ func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xpo
 
 func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *response.ApiResponse, err error) {
 	chainId := req.ChainId
-	// userAddress := req.UserAddress
-	// orderBy := req.OrderBy
+	userAddress := req.UserAddress
+	orderBy := req.OrderBy
 	pageIndex := req.PageIndex
 	pageSize := req.PageSize
 
@@ -103,6 +104,16 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		return poolInfo.RewardToken.Hex()
 	}).ToSlice(&rewardTokenAddresses)
 
+	// user wallet address pool stats
+	addressPoolInfos := make(map[string]*xpool.AddressPoolInfo, 0)
+	if len(userAddress) > 0 {
+		addressPoolInfos, err = staticCaller.BatchGetAddressPoolInfos(l.ctx, chainId, poolAddresses, common.HexToAddress(userAddress))
+		if err != nil {
+			logx.Errorf("[XpoolPoolList]: BatchGetAddressPoolInfos error: %s", err)
+			return nil, err
+		}
+	}
+
 	// 获取当前价格
 	prices, err := l.getCurrentPrices(l.ctx, append(stakingTokenAddresses, rewardTokenAddresses...))
 	if err != nil {
@@ -113,12 +124,26 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	for _, pool := range availablePools {
 		info, ok := poolInfos[common.HexToAddress(pool.EventPool).Hex()]
 		if !ok {
+			logx.Errorf("[XpoolPoolList]: Pool info not found: %s, pools: %v", common.HexToAddress(pool.EventPool).Hex(), poolInfos)
 			continue
 		}
+
 		tvlValue := new(big.Float)
 		rewardPerYearValue := new(big.Float)
 		var stakingTokenPriceString string
 		var rewardTokenPriceString string
+		staked := new(big.Int)
+		earned := new(big.Int)
+
+		// 获取用户在池子中的质押状态信息
+		{
+			addressPoolInfo, ok := addressPoolInfos[common.HexToAddress(pool.EventPool).Hex()]
+			if ok {
+				staked = addressPoolInfo.Staked
+				earned = addressPoolInfo.EarnedReward
+			}
+		}
+
 		// staking token
 		{
 			stakingTokenPrice, exists := prices[info.StakingToken.Hex()]
@@ -165,6 +190,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		if tvlValue.Cmp(big.NewFloat(0)) == 0 {
 			apr = big.NewFloat(0)
 		}
+		aprFloat, _ := apr.Float64()
 		aprPercentage, _ := new(big.Float).Mul(apr, big.NewFloat(100)).Float64()
 		aprPercentageString := fmt.Sprintf("%.2f%%", aprPercentage)
 
@@ -193,21 +219,59 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			BlockTime:            xpoolConf.BlockTime,                       // 出块时长 单位ms
 			TVL:                  tvlValue.String(),                         // 质押池的质押总价值（USD）
 			APR:                  aprPercentageString,                       // 年化收益率 取 12.22% 格式
+			APRFloat:             aprFloat,                                  // 年化收益率，辅助排序用
 			JoinNum:              info.StakedNumber.Int64(),                 // 参与人数
+			Staked:               staked.String(),                           // 用户已质押代币数量
+			Earned:               earned.String(),                           // 用户已获得奖励代币数量
 			Status:               status,                                    // 运行状态
 			CreatedAt:            pool.CreatedAt.Format(time.RFC3339),       // 创建时间
 			UpdatedAt:            pool.UpdatedAt.Format(time.RFC3339),       // 更新时间
 		})
 	}
 
+	// Sorts
+	switch orderBy {
+	case "hot":
+		linq.From(list).OrderByDescendingT(func(item types.XpoolPoolListResponse_Pool) int64 {
+			return item.JoinNum
+		}).ToSlice(&list)
+	case "apr":
+		linq.From(list).OrderByDescendingT(func(item types.XpoolPoolListResponse_Pool) lib_common.CompareableFloat {
+			return lib_common.CompareableFloat{Value: new(big.Float).SetFloat64(item.APRFloat)}
+		}).ToSlice(&list)
+	case "tvl":
+		// do not sort
+	}
+
+	// Pagination
+	total := int64(len(list))
+	list = l.getPagination(l.ctx, list, pageIndex, pageSize)
+
 	return &response.ApiResponse{
 		Data: list,
 		Meta: types.PageResponse{
 			PageSize:  *pageSize,
 			PageIndex: *pageIndex,
-			Total:     int64(len(list)),
+			Total:     total, // 使用未分页前的总数
 		},
 	}, nil
+}
+
+func (l *XpoolPoolListLogic) getPagination(ctx context.Context, list []types.XpoolPoolListResponse_Pool, pageIndex *int64, pageSize *int64) []types.XpoolPoolListResponse_Pool {
+	start := (*pageIndex - 1) * (*pageSize)
+	if start < 0 {
+		start = 0
+	}
+	end := start + *pageSize
+	if start >= int64(len(list)) {
+		list = []types.XpoolPoolListResponse_Pool{}
+	} else {
+		if end > int64(len(list)) {
+			end = int64(len(list))
+		}
+		list = list[start:end]
+	}
+	return list
 }
 
 // getCurrentPrices 获取当前价格

@@ -69,7 +69,8 @@ func (m *customSonexPoolTvlRecordModel) UpdateOrInsertTvlByPoolAddress(tvlUsd st
 	} else if err == nil {
 		query = fmt.Sprintf(`
 UPDATE % s 
-SET tvl =  $1,
+SET 
+tvl =  $1,
 updated = $2 
 WHERE
 	ID = $3
