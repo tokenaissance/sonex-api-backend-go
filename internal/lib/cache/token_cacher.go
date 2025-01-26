@@ -46,7 +46,7 @@ type Price struct {
 	From                        string
 	To                          string
 	Pools                       []quoter.Pool
-	Path                        []byte
+	Path                        quoter.Path
 	Value                       *big.Int
 	SqrtPriceX96AfterList       []*big.Int
 	InitializedTicksCrossedList []uint32
@@ -334,7 +334,7 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 				From:                        from.Hex(),
 				To:                          to.Hex(),
 				Pools:                       []quoter.Pool{},
-				Path:                        []byte{},
+				Path:                        quoter.Path{},
 				Value:                       amountIn,
 				SqrtPriceX96AfterList:       []*big.Int{},
 				InitializedTicksCrossedList: []uint32{},
@@ -430,7 +430,7 @@ func (cacher *TokenCacher) QuoteExactInput(ctx context.Context, pools []quoter.P
 			From:  fromToken.Address,
 			To:    toToken.Address,
 			Pools: path.Pools,
-			Path:  path.ToBytes(),
+			Path:  path,
 		}
 		if result.Error != nil {
 			price.Err = result.Error
@@ -470,7 +470,7 @@ func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.
 				From:                        from.Hex(),
 				To:                          to.Hex(),
 				Pools:                       []quoter.Pool{},
-				Path:                        []byte{},
+				Path:                        quoter.Path{},
 				Value:                       usdAccuracy,
 				SqrtPriceX96AfterList:       []*big.Int{},
 				InitializedTicksCrossedList: []uint32{},
@@ -566,7 +566,7 @@ func (cacher *TokenCacher) QuoteExactOutput(ctx context.Context, pools []quoter.
 			From:  fromToken.Address,
 			To:    toToken.Address,
 			Pools: path.Pools,
-			Path:  path.ToBytes(),
+			Path:  path,
 		}
 		if result.Error != nil {
 			price.Err = result.Error
