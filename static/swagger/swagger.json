@@ -324,14 +324,16 @@
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "20"
           },
           {
             "name": "pageIndex",
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "1"
           }
         ],
         "tags": [
@@ -510,14 +512,16 @@
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "20"
           },
           {
             "name": "pageIndex",
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "1"
           }
         ],
         "tags": [
@@ -940,14 +944,16 @@
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "20"
           },
           {
             "name": "pageIndex",
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "1"
           },
           {
             "name": "noCache",
@@ -1122,14 +1128,16 @@
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "20"
           },
           {
             "name": "pageIndex",
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "1"
           }
         ],
         "tags": [
@@ -1186,14 +1194,16 @@
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "20"
           },
           {
             "name": "pageIndex",
             "in": "query",
             "required": false,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "default": "1"
           }
         ],
         "tags": [
@@ -1233,7 +1243,7 @@
           },
           {
             "name": "amount",
-            "description": " 金额（USD）",
+            "description": " 存入代币数量的全精度数量",
             "in": "query",
             "required": true,
             "type": "string"
@@ -1439,11 +1449,13 @@
       "properties": {
         "pageSize": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "20"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "1"
         },
         "incentiveId": {
           "type": "integer",
@@ -2100,11 +2112,13 @@
       "properties": {
         "pageSize": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "20"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "PageRequest"
@@ -2358,11 +2372,13 @@
         },
         "pageSize": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "20"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "PoolsRequest",
@@ -2819,11 +2835,13 @@
         },
         "pageSize": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "20"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "RewardDetailsRequest",
@@ -3891,11 +3909,13 @@
         },
         "pageSize": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "20"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "1"
         },
         "noCache": {
           "type": "boolean",
@@ -3976,11 +3996,13 @@
         },
         "pageSize": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "20"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "TransactionsRequest"
@@ -4131,11 +4153,13 @@
         },
         "pageSize": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "20"
         },
         "pageIndex": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "XpoolPoolListRequest"
@@ -4275,7 +4299,7 @@
         },
         "amount": {
           "type": "string",
-          "description": " 金额（USD）"
+          "description": " 存入代币数量的全精度数量"
         },
         "duration": {
           "type": "integer",

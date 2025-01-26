@@ -216,8 +216,8 @@ type NftDataResponse_Data struct {
 }
 
 type PageRequest struct {
-	PageSize  *int64 `form:"pageSize,optional"`
-	PageIndex *int64 `form:"pageIndex,optional"`
+	PageSize  *int64 `form:"pageSize,optional,default=20"`
+	PageIndex *int64 `form:"pageIndex,optional,default=1"`
 }
 
 type PageResponse struct {
@@ -805,7 +805,7 @@ type XpoolPoolListResponse_Pool struct {
 type XpoolPoolStatsRequest struct {
 	ChainRequest
 	PoolAddress string `form:"poolAddress"`                      // 质押池地址
-	Amount      string `form:"amount"`                           // 金额（USD）
+	Amount      string `form:"amount"`                           // 存入代币数量的全精度数量
 	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
 }
 

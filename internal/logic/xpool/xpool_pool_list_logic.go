@@ -202,6 +202,11 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			status = "active"
 		}
 
+		// filter staked only, if user address is not empty, only return staked xpool.
+		if (len(userAddress) > 0) && (tvlValue.Cmp(big.NewFloat(0)) == 0) {
+			continue
+		}
+
 		list = append(list, types.XpoolPoolListResponse_Pool{
 			StakingTokenName:     info.StakingTokenName,                     // 质押的代币名称
 			StakingTokenSymbol:   info.StakingTokenSymbol,                   // 质押的代币符号
