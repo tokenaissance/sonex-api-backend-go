@@ -62,23 +62,8 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	if amount.Cmp(big.NewInt(0)) <= 0 {
 		return &types.TokenQuoteResponse{
 			SwapRouter: sonexConf.SwapRouter,
-			BestRouter: &types.TokenQuoteResponse_Router{
-				TokenIn:                     common.HexToAddress(req.From).Hex(),
-				TokenOut:                    common.HexToAddress(req.To).Hex(),
-				AmountIn:                    "0",
-				AmountOut:                   "0",
-				Stablecoin:                  stablecoinAddress.Hex(),
-				PriceUSDIn:                  "0",
-				PriceUSDOut:                 "0",
-				Router:                      []types.TokenQuoteResponse_Router_Pool{},
-				Path:                        "0x",
-				SqrtPriceX96AfterList:       []string{},
-				InitializedTicksCrossedList: []int64{},
-				GasEstimate:                 "0",
-				PriceImpact:                 "0%",
-				FeeRate:                     "0%",
-			},
-			Routers: []types.TokenQuoteResponse_Router{},
+			BestRouter: nil,
+			Routers:    []types.TokenQuoteResponse_Router{},
 		}, nil
 	}
 
@@ -210,7 +195,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			PriceUSDIn:                  fromPriceUSD.String(),
 			PriceUSDOut:                 toPriceUSD.String(),
 			Router:                      router,
-			Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(bestRouter.Path)),
+			Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(bestRouter.Path.ToBytes())),
 			SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 			InitializedTicksCrossedList: initializedTicksCrossedList,
 			GasEstimate:                 bestRouter.GasEstimate.String(),
@@ -255,7 +240,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				PriceUSDIn:                  fromPriceUSD.String(),
 				PriceUSDOut:                 toPriceUSD.String(),
 				Router:                      router,
-				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path)),
+				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path.ToBytes())),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),
