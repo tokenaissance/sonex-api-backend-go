@@ -5,8 +5,8 @@ type ChainRequest {
 }
 
 type PageRequest {
-	PageSize  *int64 `form:"pageSize,optional"`
-	PageIndex *int64 `form:"pageIndex,optional"`
+	PageSize  *int64 `form:"pageSize,optional,default=20"`
+	PageIndex *int64 `form:"pageIndex,optional,default=1"`
 }
 
 type PageResponse {
