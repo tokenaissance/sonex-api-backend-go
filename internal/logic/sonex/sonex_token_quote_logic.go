@@ -162,78 +162,61 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 
 	// Best router
 	bestRouterA := linq.From(prices).
-		WhereT(func(item cache.Price) bool {
-			return math.Abs(item.PriceImpact) <= 0.5
-		}).
 		OrderByDescendingT(func(item cache.Price) lib_common.CompareableBigInt {
 			return lib_common.CompareableBigInt{
 				Value: item.Value,
 			}
+		}).
+		ThenByT(func(item cache.Price) float64 {
+			return math.Abs(item.PriceImpact)
 		}).First()
 	var bestRouter *cache.Price
 	if bestRouterA != nil {
 		if val, ok := bestRouterA.(cache.Price); ok {
 			bestRouter = &val
-		} else {
-			bestRouter = &cache.Price{
-				From:        fromAddress.Hex(),
-				To:          toAddress.Hex(),
-				Path:        []byte{},
-				Value:       common.Big0,
-				GasEstimate: common.Big0,
-				PriceImpact: 0,
-				FeeRate:     0,
-			}
-		}
-	} else {
-		bestRouter = &cache.Price{
-			From:        fromAddress.Hex(),
-			To:          toAddress.Hex(),
-			Path:        []byte{},
-			Value:       common.Big0,
-			GasEstimate: common.Big0,
-			PriceImpact: 0,
-			FeeRate:     0,
 		}
 	}
-	var router []types.TokenQuoteResponse_Router_Pool
-	linq.From(bestRouter.Pools).
-		SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
-			return types.TokenQuoteResponse_Router_Pool{
-				Address: pool.Address.Hex(),
-				Token0:  pool.Token0.Hex(),
-				Token1:  pool.Token1.Hex(),
-				Fee:     pool.Fee,
-			}
-		}).
-		ToSlice(&router)
-	var sqrtPriceX96AfterList []string
-	linq.From(bestRouter.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
-	var initializedTicksCrossedList []int64
-	linq.From(bestRouter.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
-	var amountIn *big.Int
-	var amountOut *big.Int
-	switch req.Type {
-	case "INPUT":
-		amountIn, amountOut = amount, bestRouter.Value
-	case "OUTPUT":
-		amountIn, amountOut = bestRouter.Value, amount
-	}
-	bestRouterResult := &types.TokenQuoteResponse_Router{
-		TokenIn:                     fromAddress.Hex(),
-		TokenOut:                    toAddress.Hex(),
-		AmountIn:                    amountIn.String(),
-		AmountOut:                   amountOut.String(),
-		Stablecoin:                  stablecoinAddress.Hex(),
-		PriceUSDIn:                  fromPriceUSD.String(),
-		PriceUSDOut:                 toPriceUSD.String(),
-		Router:                      router,
-		Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(bestRouter.Path)),
-		SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
-		InitializedTicksCrossedList: initializedTicksCrossedList,
-		GasEstimate:                 bestRouter.GasEstimate.String(),
-		PriceImpact:                 fmt.Sprintf("%f", math.Abs(bestRouter.PriceImpact)),
-		FeeRate:                     fmt.Sprintf("%.2f%%", bestRouter.FeeRate*100),
+	var bestRouterResult *types.TokenQuoteResponse_Router
+	if bestRouter != nil {
+		var router []types.TokenQuoteResponse_Router_Pool
+		linq.From(bestRouter.Pools).
+			SelectT(func(pool quoter.Pool) types.TokenQuoteResponse_Router_Pool {
+				return types.TokenQuoteResponse_Router_Pool{
+					Address: pool.Address.Hex(),
+					Token0:  pool.Token0.Hex(),
+					Token1:  pool.Token1.Hex(),
+					Fee:     pool.Fee,
+				}
+			}).
+			ToSlice(&router)
+		var sqrtPriceX96AfterList []string
+		linq.From(bestRouter.SqrtPriceX96AfterList).SelectT(func(sqrtPriceX96After *big.Int) string { return sqrtPriceX96After.String() }).ToSlice(&sqrtPriceX96AfterList)
+		var initializedTicksCrossedList []int64
+		linq.From(bestRouter.InitializedTicksCrossedList).SelectT(func(initializedTicksCrossed uint32) int64 { return int64(initializedTicksCrossed) }).ToSlice(&initializedTicksCrossedList)
+		var amountIn *big.Int
+		var amountOut *big.Int
+		switch req.Type {
+		case "INPUT":
+			amountIn, amountOut = amount, bestRouter.Value
+		case "OUTPUT":
+			amountIn, amountOut = bestRouter.Value, amount
+		}
+		bestRouterResult = &types.TokenQuoteResponse_Router{
+			TokenIn:                     fromAddress.Hex(),
+			TokenOut:                    toAddress.Hex(),
+			AmountIn:                    amountIn.String(),
+			AmountOut:                   amountOut.String(),
+			Stablecoin:                  stablecoinAddress.Hex(),
+			PriceUSDIn:                  fromPriceUSD.String(),
+			PriceUSDOut:                 toPriceUSD.String(),
+			Router:                      router,
+			Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(bestRouter.Path)),
+			SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
+			InitializedTicksCrossedList: initializedTicksCrossedList,
+			GasEstimate:                 bestRouter.GasEstimate.String(),
+			PriceImpact:                 fmt.Sprintf("%f", math.Abs(bestRouter.PriceImpact)),
+			FeeRate:                     fmt.Sprintf("%.2f%%", bestRouter.FeeRate*100),
+		}
 	}
 
 	// Routers
