@@ -1,6 +1,7 @@
 package quoter
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -11,6 +12,13 @@ type Path struct {
 	Pools  []Pool
 	Tokens []common.Address
 	Fees   []int64
+}
+
+func (path *Path) GetPool(index int64) (*Pool, *common.Address, *common.Address, error) {
+	if index >= int64(len(path.Pools)) {
+		return nil, nil, nil, fmt.Errorf("%s", "Out of range")
+	}
+	return &path.Pools[index], &path.Tokens[index], &path.Tokens[index+1], nil
 }
 
 func (path *Path) ToBytes() []byte {

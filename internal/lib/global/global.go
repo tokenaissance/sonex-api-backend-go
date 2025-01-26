@@ -424,21 +424,108 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 		}).ToSlice(&successedPrices)
 
 		// Calculate price impact and fee rate
+		var wg sync.WaitGroup
+		results := make(chan struct {
+			Index       int64
+			PriceImpact float64
+			FeeRate     float64
+			Err         error
+		}, len(successedPrices))
 		for i, price := range successedPrices {
-			totalPriceImpact := big.NewFloat(0)
-			totalLiquidity := big.NewFloat(0)
-			var totalFeeRate float64 = 1
-			for j, pool := range price.Pools {
-				info := poolMap[pool.Address.Hex()]
-				liquidity := new(big.Float).SetInt(info.Liquidity)
-				priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
-				totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
-				totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
-				totalFeeRate = totalFeeRate * (1 - float64(pool.Fee)/1000000)
+			wg.Add(1)
+			go func(ch chan struct {
+				Index       int64
+				PriceImpact float64
+				FeeRate     float64
+				Err         error
+			}) {
+				defer wg.Done()
+				defer func() {
+					if err := recover(); err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s(panic)", err),
+						}
+					}
+				}()
+
+				totalPriceImpact := big.NewFloat(0)
+				totalAmount := big.NewFloat(0)
+				stepAmountIn := amountIn
+				var totalFeeRate float64 = 1
+				for j, pool := range price.Pools {
+					info := poolMap[pool.Address.Hex()]
+					_, from, to, err := price.Path.GetPool(int64(j))
+					if err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s", err),
+						}
+						return
+					}
+					stepPrices, err := cacher.QuoteExactInput(ctx, []quoter.Pool{pool}, *from, *to, stepAmountIn, 0, 1)
+					if err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s", err),
+						}
+						return
+					}
+					if len(stepPrices) < 1 {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s", "Can not quote step price"),
+						}
+						return
+					}
+					stepAmountInF := new(big.Float).SetInt(stepAmountIn)
+					priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
+					totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, stepAmountInF))
+					totalAmount = new(big.Float).Add(totalAmount, stepAmountInF)
+					totalFeeRate = totalFeeRate * (1 - float64(pool.Fee)/1000000)
+					stepAmountIn = stepPrices[0].Value
+				}
+				avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalAmount).Float64()
+				ch <- struct {
+					Index       int64
+					PriceImpact float64
+					FeeRate     float64
+					Err         error
+				}{
+					Index:       int64(i),
+					PriceImpact: avgPriceImpact,
+					FeeRate:     1 - totalFeeRate,
+				}
+			}(results)
+		}
+		wg.Wait()
+		close(results)
+		for result := range results {
+			if result.Err != nil {
+				return nil, nil, result.Err
 			}
-			avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
-			successedPrices[i].PriceImpact = avgPriceImpact
-			successedPrices[i].FeeRate = 1 - totalFeeRate
+			successedPrices[result.Index].PriceImpact = result.PriceImpact
+			successedPrices[result.Index].FeeRate = result.FeeRate
 		}
 	}
 
@@ -597,21 +684,108 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 		}).ToSlice(&successedPrices)
 
 		// Calculate price impact and fee rate
+		var wg sync.WaitGroup
+		results := make(chan struct {
+			Index       int64
+			PriceImpact float64
+			FeeRate     float64
+			Err         error
+		}, len(successedPrices))
 		for i, price := range successedPrices {
-			totalPriceImpact := big.NewFloat(0)
-			totalLiquidity := big.NewFloat(0)
-			var totalFeeRate float64 = 1
-			for j, pool := range price.Pools {
-				info := poolMap[pool.Address.Hex()]
-				liquidity := new(big.Float).SetInt(info.Liquidity)
-				priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
-				totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, liquidity))
-				totalLiquidity = new(big.Float).Add(totalLiquidity, liquidity)
-				totalFeeRate = totalFeeRate * (1 - float64(pool.Fee)/1000000)
+			wg.Add(1)
+			go func(ch chan struct {
+				Index       int64
+				PriceImpact float64
+				FeeRate     float64
+				Err         error
+			}) {
+				defer wg.Done()
+				defer func() {
+					if err := recover(); err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s(panic)", err),
+						}
+					}
+				}()
+
+				totalPriceImpact := big.NewFloat(0)
+				totalAmount := big.NewFloat(0)
+				stepAmountOut := amountOut
+				var totalFeeRate float64 = 1
+				for j, pool := range price.Pools {
+					info := poolMap[pool.Address.Hex()]
+					_, from, to, err := price.Path.GetPool(int64(j))
+					if err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s", err),
+						}
+						return
+					}
+					stepPrices, err := cacher.QuoteExactOutput(ctx, []quoter.Pool{pool}, *from, *to, stepAmountOut, 0, 1)
+					if err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s", err),
+						}
+						return
+					}
+					if len(stepPrices) < 1 {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   fmt.Errorf("%s", "Can not quote step price"),
+						}
+						return
+					}
+					stepAmountOutF := new(big.Float).SetInt(stepAmountOut)
+					priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
+					totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, stepAmountOutF))
+					totalAmount = new(big.Float).Add(totalAmount, stepAmountOutF)
+					totalFeeRate = totalFeeRate * (1 - float64(pool.Fee)/1000000)
+					stepAmountOut = stepPrices[0].Value
+				}
+				avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalAmount).Float64()
+				ch <- struct {
+					Index       int64
+					PriceImpact float64
+					FeeRate     float64
+					Err         error
+				}{
+					Index:       int64(i),
+					PriceImpact: avgPriceImpact,
+					FeeRate:     1 - totalFeeRate,
+				}
+			}(results)
+		}
+		wg.Wait()
+		close(results)
+		for result := range results {
+			if result.Err != nil {
+				return nil, nil, result.Err
 			}
-			avgPriceImpact, _ := new(big.Float).Quo(totalPriceImpact, totalLiquidity).Float64()
-			successedPrices[i].PriceImpact = avgPriceImpact
-			successedPrices[i].FeeRate = 1 - totalFeeRate
+			successedPrices[result.Index].PriceImpact = result.PriceImpact
+			successedPrices[result.Index].FeeRate = result.FeeRate
 		}
 	}
 

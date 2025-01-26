@@ -62,23 +62,8 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	if amount.Cmp(big.NewInt(0)) <= 0 {
 		return &types.TokenQuoteResponse{
 			SwapRouter: sonexConf.SwapRouter,
-			BestRouter: &types.TokenQuoteResponse_Router{
-				TokenIn:                     common.HexToAddress(req.From).Hex(),
-				TokenOut:                    common.HexToAddress(req.To).Hex(),
-				AmountIn:                    "0",
-				AmountOut:                   "0",
-				Stablecoin:                  stablecoinAddress.Hex(),
-				PriceUSDIn:                  "0",
-				PriceUSDOut:                 "0",
-				Router:                      []types.TokenQuoteResponse_Router_Pool{},
-				Path:                        "0x",
-				SqrtPriceX96AfterList:       []string{},
-				InitializedTicksCrossedList: []int64{},
-				GasEstimate:                 "0",
-				PriceImpact:                 "0%",
-				FeeRate:                     "0%",
-			},
-			Routers: []types.TokenQuoteResponse_Router{},
+			BestRouter: nil,
+			Routers:    []types.TokenQuoteResponse_Router{},
 		}, nil
 	}
 
@@ -162,13 +147,13 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 
 	// Best router
 	bestRouterA := linq.From(prices).
-		OrderByDescendingT(func(item cache.Price) lib_common.CompareableBigInt {
+		OrderByT(func(item cache.Price) float64 {
+			return math.Abs(item.PriceImpact)
+		}).
+		ThenByDescendingT(func(item cache.Price) lib_common.CompareableBigInt {
 			return lib_common.CompareableBigInt{
 				Value: item.Value,
 			}
-		}).
-		ThenByT(func(item cache.Price) float64 {
-			return math.Abs(item.PriceImpact)
 		}).First()
 	var bestRouter *cache.Price
 	if bestRouterA != nil {
@@ -210,11 +195,11 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			PriceUSDIn:                  fromPriceUSD.String(),
 			PriceUSDOut:                 toPriceUSD.String(),
 			Router:                      router,
-			Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(bestRouter.Path)),
+			Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(bestRouter.Path.ToBytes())),
 			SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 			InitializedTicksCrossedList: initializedTicksCrossedList,
 			GasEstimate:                 bestRouter.GasEstimate.String(),
-			PriceImpact:                 fmt.Sprintf("%f", math.Abs(bestRouter.PriceImpact)),
+			PriceImpact:                 fmt.Sprintf("%f", bestRouter.PriceImpact),
 			FeeRate:                     fmt.Sprintf("%.2f%%", bestRouter.FeeRate*100),
 		}
 	}
@@ -255,11 +240,11 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				PriceUSDIn:                  fromPriceUSD.String(),
 				PriceUSDOut:                 toPriceUSD.String(),
 				Router:                      router,
-				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path)),
+				Path:                        fmt.Sprintf("0x%s", common.Bytes2Hex(item.Path.ToBytes())),
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),
-				PriceImpact:                 fmt.Sprintf("%f", math.Abs(item.PriceImpact)),
+				PriceImpact:                 fmt.Sprintf("%f", item.PriceImpact),
 				FeeRate:                     fmt.Sprintf("%.2f%%", item.FeeRate*100),
 			}
 		}).
