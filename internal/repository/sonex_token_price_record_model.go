@@ -28,7 +28,7 @@ type (
 		QueryLatestHistoryPricesByAddressesInterval(ctx context.Context, addresses []string, interval string) (map[string]*big.Int, error)
 		GetCurrentPrice(ctx context.Context, tokenAddress string) (float64, error)
 		GetCurrentPrices(ctx context.Context, tokenAddresses []string) (map[string]*TokenPriceRecord, error)
-		GetCurrentPricesAndTokenDecimals(ctx context.Context, tokenAddresses []string) ([]*TokenPriceRecordWithTokenDecimals, error)
+		GetCurrentPricesAndTokenDecimals(ctx context.Context, token0 string, token1 string) ([]*TokenPriceRecordWithTokenDecimals, error)
 		GetLastHourPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
 		GetYesterdayPrice(ctx context.Context, tokenAddress string) (map[string]*sonex.TokenPrice, error)
 	}
@@ -410,23 +410,16 @@ type TokenPriceRecordWithTokenDecimals struct {
 
 // 获取指定地址对应的token的decimals
 // 方便后续计算
-func (m *customSonexTokenPriceRecordModel) GetCurrentPricesAndTokenDecimals(ctx context.Context, tokenAddresses []string) ([]*TokenPriceRecordWithTokenDecimals, error) {
+func (m *customSonexTokenPriceRecordModel) GetCurrentPricesAndTokenDecimals(ctx context.Context, token0, token1 string) ([]*TokenPriceRecordWithTokenDecimals, error) {
 	var records []*TokenPriceRecordWithTokenDecimals
 	query := `
-	SELECT DISTINCT ON
-	(token_address) s1.*,
-	s2.decimals AS token_decimals 
-FROM
-	sonex_token_price_record s1
-	JOIN sonex_token s2 ON s2.address = s1.token_address 
-WHERE
-	s1.token_address = ANY ($1) 
-ORDER BY
-	s1.token_address,
-	s1.created_at DESC
+SELECT DISTINCT ON(token_address) s1.*,s2.decimals AS token_decimals
+FROM sonex_token_price_record s1 JOIN sonex_token s2 ON s2.address = s1.token_address
+WHERE s1.token_address IN ( $1,$2 ) 
+ORDER BY s1.token_address,s1.created_at DESC
 	`
 
-	err := m.conn.QueryRowsCtx(ctx, &records, query, tokenAddresses)
+	err := m.conn.QueryRowsCtx(ctx, &records, query, token0, token1)
 	if err != nil {
 		return nil, err
 	}
