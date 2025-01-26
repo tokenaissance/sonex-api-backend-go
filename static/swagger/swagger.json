@@ -1190,6 +1190,13 @@
             ]
           },
           {
+            "name": "keyword",
+            "description": " 模糊搜索关键词",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "pageSize",
             "in": "query",
             "required": false,
@@ -4150,6 +4157,10 @@
             "apr"
           ],
           "description": " 排序方式"
+        },
+        "keyword": {
+          "type": "string",
+          "description": " 模糊搜索关键词"
         },
         "pageSize": {
           "type": "integer",
