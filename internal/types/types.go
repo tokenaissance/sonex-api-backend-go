@@ -773,6 +773,7 @@ type XpoolPoolListRequest struct {
 	ChainRequest
 	UserAddress string `form:"userAddress,optional"`             // 用户地址
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"` // 排序方式
+	Keyword     string `form:"keyword,optional"`                 // 模糊搜索关键词
 	PageRequest
 }
 
