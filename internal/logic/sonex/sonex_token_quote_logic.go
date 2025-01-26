@@ -162,13 +162,13 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 
 	// Best router
 	bestRouterA := linq.From(prices).
-		OrderByDescendingT(func(item cache.Price) lib_common.CompareableBigInt {
+		OrderByT(func(item cache.Price) float64 {
+			return math.Abs(item.PriceImpact)
+		}).
+		ThenByDescendingT(func(item cache.Price) lib_common.CompareableBigInt {
 			return lib_common.CompareableBigInt{
 				Value: item.Value,
 			}
-		}).
-		ThenByT(func(item cache.Price) float64 {
-			return math.Abs(item.PriceImpact)
 		}).First()
 	var bestRouter *cache.Price
 	if bestRouterA != nil {
@@ -214,7 +214,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 			InitializedTicksCrossedList: initializedTicksCrossedList,
 			GasEstimate:                 bestRouter.GasEstimate.String(),
-			PriceImpact:                 fmt.Sprintf("%f", math.Abs(bestRouter.PriceImpact)),
+			PriceImpact:                 fmt.Sprintf("%f", bestRouter.PriceImpact),
 			FeeRate:                     fmt.Sprintf("%.2f%%", bestRouter.FeeRate*100),
 		}
 	}
@@ -259,7 +259,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),
-				PriceImpact:                 fmt.Sprintf("%f", math.Abs(item.PriceImpact)),
+				PriceImpact:                 fmt.Sprintf("%f", item.PriceImpact),
 				FeeRate:                     fmt.Sprintf("%.2f%%", item.FeeRate*100),
 			}
 		}).
