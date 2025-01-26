@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"sonex_api_backend_go/internal/lib/cache"
+	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/quoter"
 	"sonex_api_backend_go/internal/repository"
@@ -150,12 +151,24 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		}
 	}
 
-	bestRouterA := linq.From(prices).
+	// Filter and sort
+	linq.From(prices).
 		WhereT(func(item cache.Price) bool {
 			return item.Value.Cmp(common.Big0) > 0
 		}).
 		OrderByT(func(item cache.Price) float64 {
 			return math.Abs(item.PriceImpact)
+		}).ToSlice(&prices)
+
+	// Best router
+	bestRouterA := linq.From(prices).
+		WhereT(func(item cache.Price) bool {
+			return math.Abs(item.PriceImpact) <= 0.5
+		}).
+		OrderByDescendingT(func(item cache.Price) lib_common.CompareableBigInt {
+			return lib_common.CompareableBigInt{
+				Value: item.Value,
+			}
 		}).First()
 	var bestRouter *cache.Price
 	if bestRouterA != nil {
@@ -206,11 +219,6 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	case "OUTPUT":
 		amountIn, amountOut = bestRouter.Value, amount
 	}
-	priceImpactValue := math.Abs(bestRouter.PriceImpact)
-	priceImpact := fmt.Sprintf("%.2f%%", priceImpactValue*100)
-	if priceImpactValue > 1 {
-		priceImpact = "> 100.00%"
-	}
 	bestRouterResult := &types.TokenQuoteResponse_Router{
 		TokenIn:                     fromAddress.Hex(),
 		TokenOut:                    toAddress.Hex(),
@@ -224,10 +232,11 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 		SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 		InitializedTicksCrossedList: initializedTicksCrossedList,
 		GasEstimate:                 bestRouter.GasEstimate.String(),
-		PriceImpact:                 priceImpact,
+		PriceImpact:                 fmt.Sprintf("%f", math.Abs(bestRouter.PriceImpact)),
 		FeeRate:                     fmt.Sprintf("%.2f%%", bestRouter.FeeRate*100),
 	}
 
+	// Routers
 	routerResult := []types.TokenQuoteResponse_Router{}
 	linq.From(prices).
 		SelectT(func(item cache.Price) types.TokenQuoteResponse_Router {
@@ -254,11 +263,6 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			case "OUTPUT":
 				amountIn, amountOut = item.Value, amount
 			}
-			priceImpactValue := math.Abs(item.PriceImpact)
-			priceImpact := fmt.Sprintf("%.2f%%", priceImpactValue*100)
-			if priceImpactValue > 1 {
-				priceImpact = "> 100.00%"
-			}
 			return types.TokenQuoteResponse_Router{
 				TokenIn:                     fromAddress.Hex(),
 				TokenOut:                    toAddress.Hex(),
@@ -272,7 +276,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 				SqrtPriceX96AfterList:       sqrtPriceX96AfterList,
 				InitializedTicksCrossedList: initializedTicksCrossedList,
 				GasEstimate:                 item.GasEstimate.String(),
-				PriceImpact:                 priceImpact,
+				PriceImpact:                 fmt.Sprintf("%f", math.Abs(item.PriceImpact)),
 				FeeRate:                     fmt.Sprintf("%.2f%%", item.FeeRate*100),
 			}
 		}).

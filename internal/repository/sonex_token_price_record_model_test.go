@@ -56,51 +56,54 @@ func Test_GetCurrentPricesAndTokenDecimals(t *testing.T) {
 	ctx := context.Background()
 	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DateSource()))
 	// tokenAddresses := []string{"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"}
-	// ret, err := model.GetCurrentPricesAndTokenDecimals(ctx, tokenAddresses)
-	// if err != nil {
-	// 	t.Error(err)
-	// 	return
-	// }
-	// if len(ret) > 0 {
-	// 	for i, v := range ret {
-	// 		logx.Infof("i %v v %#v ", i, v)
-
-	// 	}
-
-	// }
-	addes := []string{
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
-		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
-	}
-
-	currentPriceRecords, err := model.QueryLatestHistoryPricesByAddresses(ctx, addes)
+	token0 := "0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"
+	token1 := "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"
+	ret, err := model.GetCurrentPricesAndTokenDecimals(ctx, token0, token1)
 	if err != nil {
-		logx.Errorf("TAGFORALL %v", err)
+		logx.Errorf("TAGFORALL:%v", err)
 		return
 	}
-	for i, v := range currentPriceRecords {
-		logx.Infof("i %v v :%v ", i, v)
+	logx.Infof("len: %v ", len(ret))
+	if len(ret) > 0 {
+		for i, v := range ret {
+			logx.Infof("i %v v %#v ", i, v)
+		}
 	}
+	/*
+		addes := []string{
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+			"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+		}
+
+		currentPriceRecords, err := model.QueryLatestHistoryPricesByAddresses(ctx, addes)
+		if err != nil {
+			logx.Errorf("TAGFORALL %v", err)
+			return
+		}
+		for i, v := range currentPriceRecords {
+			logx.Infof("i %v v :%v ", i, v)
+		}
+	*/
 }

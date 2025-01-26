@@ -69,8 +69,7 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 							)
 
 							// 获取价格 和 token 对于的 decimals
-							tokenAddresses := []string{pRecord.EventToken0, pRecord.EventToken1}
-							recordTokenDecimalsArray, err := tokenPrice.GetCurrentPricesAndTokenDecimals(ctx, tokenAddresses)
+							recordTokenDecimalsArray, err := tokenPrice.GetCurrentPricesAndTokenDecimals(ctx, pRecord.EventToken0, pRecord.EventToken1)
 							if err != nil {
 								logx.Errorf("GetCurrentPricesAndTokenDecimals,err:%v", err)
 							} else {
@@ -97,9 +96,8 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 									if err != nil {
 										logx.Errorf("err:%v", err)
 									} else {
-										// logx.Infof("TVL:update %v tvl:%v", )
+										logx.Debug("TVL:poolAddress:", pRecord.EventPool, " tvl:", _tvlString)
 									}
-
 								}
 							}
 						}(&pRecord2)
@@ -126,8 +124,10 @@ func CalucateOneTokenUsdInPool(balance *big.Int, tokenPrice string, usdDecimals 
 		tokenDecimal = 18
 	}
 
-	price0Quoprice0Decimal := new(big.Float).Quo(new(big.Float).SetInt(price), new(big.Float).SetFloat64(math.Pow10(int(priceDecimal))))
-	balance0QuoDecimal := new(big.Float).Quo(new(big.Float).SetInt(balance), new(big.Float).SetFloat64(math.Pow10(int(tokenDecimal))))
-	token0Volume := new(big.Float).Mul(price0Quoprice0Decimal, balance0QuoDecimal)
-	return token0Volume
+	balanceFloat, _ := new(big.Float).SetString(balance.String())
+
+	priceQuopriceDecimal := new(big.Float).Quo(new(big.Float).SetInt(price), new(big.Float).SetFloat64(math.Pow10(int(priceDecimal))))
+	balanceQuoDecimal := new(big.Float).Quo(balanceFloat, new(big.Float).SetFloat64(math.Pow10(int(tokenDecimal))))
+	tokenVolume := new(big.Float).Mul(priceQuopriceDecimal, balanceQuoDecimal)
+	return tokenVolume
 }
