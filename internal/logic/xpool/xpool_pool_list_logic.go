@@ -11,6 +11,7 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"strings"
 	"time"
 
 	"github.com/ahmetb/go-linq/v3"
@@ -47,6 +48,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	chainId := req.ChainId
 	userAddress := req.UserAddress
 	orderBy := req.OrderBy
+	searchKeyword := req.Keyword
 	pageIndex := req.PageIndex
 	pageSize := req.PageSize
 
@@ -196,10 +198,28 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 		// status
 		var status string
-		if info.IsDestroied {
-			status = "closed"
-		} else {
-			status = "active"
+		{
+			if info.IsDestroied {
+				status = "closed"
+			} else {
+				status = "active"
+			}
+		}
+
+		// filter staked only, if user address is not empty, only return staked xpool.
+		{
+			if (len(userAddress) > 0) && (tvlValue.Cmp(big.NewFloat(0)) == 0) {
+				continue
+			}
+		}
+
+		// filter keyword，如果有搜索关键字，进行不区分大小写的模糊匹配过滤
+		{
+			if len(searchKeyword) > 0 && !strings.Contains(
+				strings.ToLower(info.StakingTokenName),
+				strings.ToLower(searchKeyword)) {
+				continue
+			}
 		}
 
 		list = append(list, types.XpoolPoolListResponse_Pool{

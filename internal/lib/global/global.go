@@ -498,7 +498,21 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 						}
 						return
 					}
-					stepAmountInF := new(big.Float).SetInt(stepAmountIn)
+					fromToken, err := GetToken(chainId, from.Hex())
+					if err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   err,
+						}
+						return
+					}
+					fromAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(fromToken.Decimals), nil))
+					stepAmountInF := new(big.Float).Quo(new(big.Float).SetInt(stepAmountIn), fromAccuracy)
 					priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
 					totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, stepAmountInF))
 					totalAmount = new(big.Float).Add(totalAmount, stepAmountInF)
@@ -758,7 +772,21 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 						}
 						return
 					}
-					stepAmountOutF := new(big.Float).SetInt(stepAmountOut)
+					toToken, err := GetToken(chainId, to.Hex())
+					if err != nil {
+						ch <- struct {
+							Index       int64
+							PriceImpact float64
+							FeeRate     float64
+							Err         error
+						}{
+							Index: int64(i),
+							Err:   err,
+						}
+						return
+					}
+					toAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(toToken.Decimals), nil))
+					stepAmountOutF := new(big.Float).Quo(new(big.Float).SetInt(stepAmountOut), toAccuracy)
 					priceImpact := sonex.CalculatePriceImpact(info.Slot0.SqrtPriceX96, price.SqrtPriceX96AfterList[j])
 					totalPriceImpact = new(big.Float).Add(totalPriceImpact, new(big.Float).Mul(priceImpact, stepAmountOutF))
 					totalAmount = new(big.Float).Add(totalAmount, stepAmountOutF)
