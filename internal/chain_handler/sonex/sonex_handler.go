@@ -101,7 +101,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 	var wg sync.WaitGroup
 	results := make(chan struct {
 		Err error
-	})
+	}, 2)
 
 	wg.Add(1)
 	go func(ch chan struct {
@@ -232,7 +232,7 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					waitForRetryPools = []common.Address{}
 				}
 
-				results := make(chan struct {
+				poolResults := make(chan struct {
 					Err         error
 					PoolAddress common.Address
 				}, len(poolAddresses))
@@ -487,14 +487,14 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 							sendResult(err)
 							return
 						}
-					}(poolAddress, client, results)
+					}(poolAddress, client, poolResults)
 				}
 
 				poolWg.Wait()
-				close(results)
+				close(poolResults)
 
 				// Handle results
-				for result := range results {
+				for result := range poolResults {
 					if result.Err != nil {
 						waitForRetryPools = append(waitForRetryPools, result.PoolAddress)
 						logx.Errorf("Handle pool error: %s\n", result.Err)
