@@ -92,7 +92,7 @@ func TestSummarizeCurrentPositions(t *testing.T) {
 	Initialize(c)
 	{
 		ti := time.Now()
-		reslut, err := SummarizeCurrentPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
+		reslut, _, err := SummarizeCurrentPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
 		if err != nil {
 			t.Error(err)
 			return
@@ -104,7 +104,7 @@ func TestSummarizeCurrentPositions(t *testing.T) {
 
 	{
 		ti := time.Now()
-		reslut, err := SummarizeCurrentPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
+		reslut, _, err := SummarizeCurrentPositions(c, context.Background(), 1946, common.HexToAddress("0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D"), common.HexToAddress("0x435d6EE7b2Cc7a1e5cF5c8dc29E651441fC07062"))
 		if err != nil {
 			t.Error(err)
 			return

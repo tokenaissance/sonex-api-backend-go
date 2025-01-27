@@ -953,12 +953,12 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 }
 
 // Query current positions of an LP of `userAddress`, returns summary.
-func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
+func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, []*sonex.Position, error) {
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), true)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var tokenIds []*big.Int
@@ -973,25 +973,26 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 	totalEarnedUSDResult := big.NewInt(0)
 	detailsResult := []SummarizePositionsResult_Detail{}
 
+	positions := []*sonex.Position{}
 	if len(tokenIds) > 0 {
 		sonexConf := conf.GetSonexConfig(chainId)
 		if sonexConf == nil {
-			return nil, fmt.Errorf("%s", "Miss sonex configure")
+			return nil, nil, fmt.Errorf("%s", "Miss sonex configure")
 		}
 		caller, _ := sonex.NewStaticCaller(conf)
-		positions, err := caller.BatchGetPositions(
+		positions, err = caller.BatchGetPositions(
 			context.Background(),
 			sonexConf.ChainId,
 			common.HexToAddress(sonexConf.PositionManager),
 			tokenIds,
 		)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		totalBalanceUSDResult = totalBalanceUSD
 		totalEarnedUSDResult = totalEarnedUSD
@@ -1002,7 +1003,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 		TotalBalanceUSD: totalBalanceUSDResult,
 		TotalEarnedUSD:  totalEarnedUSDResult,
 		Details:         detailsResult,
-	}, nil
+	}, positions, nil
 }
 
 // Query closed positions of an LP of `userAddress`, returns summary.

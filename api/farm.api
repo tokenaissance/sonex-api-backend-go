@@ -3,6 +3,7 @@ syntax = "v1"
 /*
 Farm Module
 */
+// incentive list id
 type FarmIncentivesRequest {
 	ChainRequest
 	UserAddress string `form:"userAddress,optional"`                  // 用户地址
@@ -79,6 +80,7 @@ type FarmUserAssetDetailResponse {
 	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户参与质押的LP token ID数量
 }
 
+// 计算ROI 
 type FarmPoolRoiRequest {
 	ChainRequest
 	IncentiveId string `form:"incentiveId"`                      // 质押池ID
@@ -98,6 +100,9 @@ type FarmPoolRoiResponse {
 	EndTime             string `json:"endTime"`             // 质押池结束时间
 }
 
+// harvest 
+// 显示多少可以收获的
+// harvest 
 type FarmPoolLiquidityRequest {
 	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
@@ -117,6 +122,67 @@ type FarmPoolLiquidityResponse {
 	Token1Symbol           string `json:"token1Symbol"`          // token0符号
 }
 
+
+// 计算有userAddress 在这个里面有多少可以Staked 的
+type FarmStakeRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`                  // 用户地址
+	PoolAddress string `form:"poolAddress"`
+	PageSize    int64  `form:"pageSize,default=3"`
+	PageIndex   int64  `form:"pageIndex,default=1"`
+}
+
+
+// LIST :默认长度为3 个
+type FarmStakeResponse {
+	Total          int64  `json:"total"` 
+	FeeTier        int64  `json:"feeTier"`
+	Token0Decimal  int64  `json:"token0Decimal"`
+	Token1Decimal  int64  `json:"token1Decimal"`
+	SqrtPrice96    string `json:"sqrtPrice96"`
+	Token0Symbol   string `json:"token0Symbol"`
+	Token1Symbol   string `json:"token1Symbol"`
+	List []StakePositionsInfoResponse_Data     `json:"list"`
+}
+
+// PageSize :默认长度为3 个
+type StakePositionsInfoResponse_Data {
+	PositionId   int64 `json:"positionId"`
+	Token0Amount string  `json:"token0Amount"`
+	Token1Amount string  `json:"token1Amount"`
+	TokenUsd     string `json:"tokenUsd"` 
+}
+
+// 计算有userAddress 在这个里面有多少可以Staked 的
+type FarmUnstakeRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`                  // 用户地址
+	PoolAddress string `form:"poolAddress"`
+	PageSize    int64  `form:"pageSize,default=3"`
+	PageIndex   int64  `form:"pageIndex,default=1"`
+}
+
+// LIST :默认长度为3 个
+type FarmUnstakeResponse {
+	Total          int64  `json:"total"` 
+	FeeTier        int64  `json:"feeTier"`
+	Token0Decimal  int64  `json:"token0Decimal"`
+	Token1Decimal  int64  `json:"token1Decimal"`
+	SqrtPrice96    string `json:"sqrtPrice96"`
+	Token0Symbol   string `json:"token0Symbol"`
+	Token1Symbol   string `json:"token1Symbol"`
+	List []UnstakePositionsInfoResponse_Data     `json:"list"`
+}
+
+// PageSize :默认长度为3 个
+type UnstakePositionsInfoResponse_Data {
+	IncentiveId   int64   `json:"incentiveId"`
+	Token0Amount string   `json:"token0Amount"`
+	Token1Amount string   `json:"token1Amount"`
+	TokenUsd     string   `json:"tokenUsd"` 
+}
+
+
 @server (
 	prefix: /farm
 	group:  farm
@@ -126,6 +192,18 @@ service sonex_api_backend_go {
 	@handler FarmIncentivesHandler
 	get /incentives (FarmIncentivesRequest) returns (FarmIncentivesResponse)
 
+	@doc "Farm pool liquidity"
+	@handler FarmPoolLiquidity
+	get /pool/liquidity (FarmPoolLiquidityRequest) returns (FarmPoolLiquidityResponse)
+
+	@doc "Farm Stake positions"
+	@handler FarmStakePosition
+	get /pool/stakeposition (FarmStakeRequest) returns (FarmStakeResponse)
+
+	@doc "Farm untake positions"
+	@handler FarmUnstakePosition
+	get /pool/unstakeposition (FarmUnstakeRequest) returns (FarmUnstakeResponse)
+
 	@doc "Farm user's asset detail in pool"
 	@handler FarmUserAssetDetailHandler
 	get /user/asset/detail (FarmUserAssetDetailRequest) returns (FarmUserAssetDetailResponse)
@@ -134,7 +212,4 @@ service sonex_api_backend_go {
 	@handler FarmPoolRoiHandler
 	get /pool/roi (FarmPoolRoiRequest) returns (FarmPoolRoiResponse)
 
-	@doc "Farm pool liquidity"
-	@handler FarmPoolLiquidity
-	get /pool/liquidity (FarmPoolLiquidityRequest) returns (FarmPoolLiquidityResponse)
 }
