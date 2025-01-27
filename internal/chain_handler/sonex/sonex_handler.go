@@ -99,24 +99,39 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 	}
 
 	var wg sync.WaitGroup
+	results := make(chan struct {
+		Err error
+	})
 
-	var handleErr error
 	wg.Add(1)
-	go func() {
+	go func(ch chan struct {
+		Err error
+	}) {
 		defer wg.Done()
+		defer func() {
+			if err := recover(); err != nil {
+				ch <- struct{ Err error }{
+					Err: fmt.Errorf("%s(panic)", err),
+				}
+			}
+		}()
 
 		numberSet := map[int64]struct{}{}
 
 		// PoolCreated Event
 		poolCreatedLogs, err := factory.FilterPoolCreated(opt, nil, nil, nil)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 		poolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
 		for poolCreatedLogs.Next() {
 			if err = poolCreatedLogs.Error(); err != nil {
-				handleErr = err
+				ch <- struct{ Err error }{
+					Err: err,
+				}
 				return
 			}
 			numberSet[int64(poolCreatedLogs.Event.Raw.BlockNumber)] = struct{}{}
@@ -127,7 +142,9 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
 		transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 
@@ -210,14 +227,19 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			return nil
 		})
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 		poolCreatedRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainIdPositionManager(opt.Context, handler.chain.ChainId, handler.config.PositionManager)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
+			return
 		}
 		var poolAddresses []common.Address
 		linq.From(poolCreatedRecords).SelectT(func(item repository.EventSonexFactoryPoolCreated) common.Address {
@@ -519,10 +541,12 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		if err != nil {
 			logx.Errorf("%s", log.Alert("Retry handle pools %d times, but failed: %v", retrys, waitForRetryPools))
 		}
-	}()
+	}(results)
 
 	wg.Add(1)
-	go func() {
+	go func(ch chan struct {
+		Err error
+	}) {
 		defer wg.Done()
 
 		numberSet := map[int64]struct{}{}
@@ -530,13 +554,17 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		// Transfer Event
 		transferLogs, err := positionManager.FilterTransfer(opt, nil, nil, nil)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 		transferEvents := []*uniswap_v3.NonfungiblePositionManagerTransfer{}
 		for transferLogs.Next() {
 			if err = transferLogs.Error(); err != nil {
-				handleErr = err
+				ch <- struct{ Err error }{
+					Err: err,
+				}
 				return
 			}
 			numberSet[int64(transferLogs.Event.Raw.BlockNumber)] = struct{}{}
@@ -546,13 +574,17 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		// IncreaseLiquidity Event
 		increaseLiquidityLogs, err := positionManager.FilterIncreaseLiquidity(opt, nil)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 		increaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity{}
 		for increaseLiquidityLogs.Next() {
 			if err = increaseLiquidityLogs.Error(); err != nil {
-				handleErr = err
+				ch <- struct{ Err error }{
+					Err: err,
+				}
 				return
 			}
 			numberSet[int64(increaseLiquidityLogs.Event.Raw.BlockNumber)] = struct{}{}
@@ -562,13 +594,17 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		// DecreaseLiquidity Event
 		decreaseLiquidityLogs, err := positionManager.FilterDecreaseLiquidity(opt, nil)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 		decreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity{}
 		for decreaseLiquidityLogs.Next() {
 			if err = decreaseLiquidityLogs.Error(); err != nil {
-				handleErr = err
+				ch <- struct{ Err error }{
+					Err: err,
+				}
 				return
 			}
 			numberSet[int64(decreaseLiquidityLogs.Event.Raw.BlockNumber)] = struct{}{}
@@ -578,13 +614,17 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		// Collect Event
 		collectLogs, err := positionManager.FilterCollect(opt, nil)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 		collectEvents := []*uniswap_v3.NonfungiblePositionManagerCollect{}
 		for collectLogs.Next() {
 			if err = collectLogs.Error(); err != nil {
-				handleErr = err
+				ch <- struct{ Err error }{
+					Err: err,
+				}
 				return
 			}
 			numberSet[int64(collectLogs.Event.Raw.BlockNumber)] = struct{}{}
@@ -595,7 +635,9 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
 		transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
 
@@ -794,14 +836,20 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 			return nil
 		})
 		if err != nil {
-			handleErr = err
+			ch <- struct{ Err error }{
+				Err: err,
+			}
 			return
 		}
-	}()
+	}(results)
 
 	wg.Wait()
-	if handleErr != nil {
-		return handleErr, false
+	close(results)
+
+	for result := range results {
+		if result.Err != nil {
+			return result.Err, false
+		}
 	}
 
 	return nil, false
