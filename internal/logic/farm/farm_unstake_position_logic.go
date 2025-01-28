@@ -39,6 +39,9 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 	if req.ChainId <= 0 {
 		return nil, errors.New("FarmUnstakePosition invalid parameter")
 	}
+	if strings.EqualFold(req.IncentiveId, "") {
+		return nil, errors.New("invalid parameter")
+	}
 	if req.PageSize < 1 {
 		req.PageSize = 3
 	}
@@ -98,10 +101,10 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 		return
 	}
 
-	return returnUnstakedPositionByPoolAddress(req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String())
+	return returnUnstakedPositionByPoolAddress(req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
 }
 
-func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string) (resp *types.FarmUnstakeResponse, err error) {
+func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmUnstakeResponse, err error) {
 
 	// 处理成需要的结构体
 	if len(positions) == 0 {
@@ -172,6 +175,7 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 
 	if len(List) > 0 {
 		resp = &types.FarmUnstakeResponse{
+			IncentiveId:   incentiveId,
 			Total:         count,
 			FeeTier:       feeTier,
 			SqrtPrice96:   sqrtPrice96,
