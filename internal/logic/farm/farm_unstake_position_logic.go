@@ -154,7 +154,7 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 					count++
 
 					list := types.UnstakePositionsInfoResponse_Data{
-						IncentiveId:  0,
+						PositionId:   0,
 						Token0Amount: token0AmountQuoTokenDecimals.String(),
 						Token1Amount: token1AmountQuoTokenDecimals.String(),
 						TokenUsd:     tokenUsd.String(),
