@@ -38,6 +38,9 @@ func (l *FarmStakePositionLogic) FarmStakePosition(req *types.FarmStakeRequest) 
 	if req.ChainId <= 0 {
 		return nil, errors.New("invalid parameter")
 	}
+	if strings.EqualFold(req.IncentiveId, "") {
+		return nil, errors.New("invalid parameter")
+	}
 	if req.PageSize < 1 {
 		req.PageSize = 3
 	}
@@ -70,10 +73,10 @@ func (l *FarmStakePositionLogic) FarmStakePosition(req *types.FarmStakeRequest) 
 		logx.Errorf("SummarizeCurrentPositions Err:%v", err)
 		return &types.FarmStakeResponse{}, err
 	}
-	return returnPositionByPoolAddress(req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String())
+	return returnPositionByPoolAddress(req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
 }
 
-func returnPositionByPoolAddress(chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string) (resp *types.FarmStakeResponse, err error) {
+func returnPositionByPoolAddress(chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmStakeResponse, err error) {
 
 	// 处理成需要的结构体
 	if len(positions) == 0 {
@@ -145,6 +148,7 @@ func returnPositionByPoolAddress(chainRequest types.ChainRequest, config config.
 	if len(List) > 0 {
 		resp = &types.FarmStakeResponse{
 			Total:         count,
+			IncentiveId:   incentiveId,
 			FeeTier:       feeTier,
 			SqrtPrice96:   sqrtPrice96,
 			Token0Decimal: token0Decimals,

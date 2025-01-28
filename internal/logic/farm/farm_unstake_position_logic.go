@@ -39,6 +39,9 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 	if req.ChainId <= 0 {
 		return nil, errors.New("FarmUnstakePosition invalid parameter")
 	}
+	if strings.EqualFold(req.IncentiveId, "") {
+		return nil, errors.New("invalid parameter")
+	}
 	if req.PageSize < 1 {
 		req.PageSize = 3
 	}
@@ -62,9 +65,13 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 
-	eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
+	farmToAddress := l.svcCtx.Config.Farms[0].Staker
 
-	record, err := eventFarmTokenUnstakedModel.FindByChainId(context.Background(), req.ChainId, req.UserAddress)
+	farmToAddress_Hex := common.HexToAddress(farmToAddress)
+
+	eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
+
+	tokenIds, err := eventSonexPositionManagerTransferModel.GetTransferEventsFarm(context.Background(), req.ChainId, req.UserAddress, farmToAddress_Hex.String())
 	if err != nil {
 		logx.Errorf(" FindByChainId:%v  ", err)
 		return &types.FarmUnstakeResponse{}, err
@@ -75,21 +82,10 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 		logx.Error(fmt.Errorf("NewStaticCaller error: %v", err))
 		return
 	}
-	tokenIds := []*big.Int{}
-	if len(record) == 0 {
-		return &types.FarmUnstakeResponse{}, nil
+	if len(tokenIds) == 0 {
+		return &types.FarmUnstakeResponse{}, errors.New("No Data")
 	}
 
-	// var recordForTokenId sync.Map
-	// var recordForIncentiveId sync.Map
-
-	// if len(record) > 0 {
-	// 	for i, v := range record {
-	// 		tokenIds = append(tokenIds, big.NewInt(v.EventTokenId))
-	// 		recordForIncentiveId.Store(v.Id, v.EventIncentiveId)
-	// 		recordForTokenId.Store(v.Id, v.EventTokenId)
-	// 	}
-	// }
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
 	positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
@@ -98,10 +94,10 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 		return
 	}
 
-	return returnUnstakedPositionByPoolAddress(req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String())
+	return returnUnstakedPositionByPoolAddress(req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
 }
 
-func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string) (resp *types.FarmUnstakeResponse, err error) {
+func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmUnstakeResponse, err error) {
 
 	// 处理成需要的结构体
 	if len(positions) == 0 {
@@ -154,7 +150,7 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 					count++
 
 					list := types.UnstakePositionsInfoResponse_Data{
-						PositionId:   0,
+						PositionId:   v.TokenId.Int64(),
 						Token0Amount: token0AmountQuoTokenDecimals.String(),
 						Token1Amount: token1AmountQuoTokenDecimals.String(),
 						TokenUsd:     tokenUsd.String(),
@@ -172,6 +168,7 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 
 	if len(List) > 0 {
 		resp = &types.FarmUnstakeResponse{
+			IncentiveId:   incentiveId,
 			Total:         count,
 			FeeTier:       feeTier,
 			SqrtPrice96:   sqrtPrice96,
