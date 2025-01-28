@@ -65,9 +65,13 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 
-	eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
+	farmToAddress := l.svcCtx.Config.Farms[0].Staker
 
-	record, err := eventFarmTokenUnstakedModel.FindByChainId(context.Background(), req.ChainId, req.UserAddress)
+	farmToAddress_Hex := common.HexToAddress(farmToAddress)
+
+	eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
+
+	tokenIds, err := eventSonexPositionManagerTransferModel.GetTransferEventsFarm(context.Background(), req.ChainId, req.UserAddress, farmToAddress_Hex.String())
 	if err != nil {
 		logx.Errorf(" FindByChainId:%v  ", err)
 		return &types.FarmUnstakeResponse{}, err
@@ -78,21 +82,10 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 		logx.Error(fmt.Errorf("NewStaticCaller error: %v", err))
 		return
 	}
-	tokenIds := []*big.Int{}
-	if len(record) == 0 {
-		return &types.FarmUnstakeResponse{}, nil
+	if len(tokenIds) == 0 {
+		return &types.FarmUnstakeResponse{}, errors.New("No Data")
 	}
 
-	// var recordForTokenId sync.Map
-	// var recordForIncentiveId sync.Map
-
-	// if len(record) > 0 {
-	// 	for i, v := range record {
-	// 		tokenIds = append(tokenIds, big.NewInt(v.EventTokenId))
-	// 		recordForIncentiveId.Store(v.Id, v.EventIncentiveId)
-	// 		recordForTokenId.Store(v.Id, v.EventTokenId)
-	// 	}
-	// }
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
 	positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
@@ -157,7 +150,7 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 					count++
 
 					list := types.UnstakePositionsInfoResponse_Data{
-						PositionId:   0,
+						PositionId:   v.TokenId.Int64(),
 						Token0Amount: token0AmountQuoTokenDecimals.String(),
 						Token1Amount: token1AmountQuoTokenDecimals.String(),
 						TokenUsd:     tokenUsd.String(),
