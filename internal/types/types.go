@@ -129,12 +129,14 @@ type FarmStakeRequest struct {
 	ChainRequest
 	UserAddress string `form:"userAddress"` // 用户地址
 	PoolAddress string `form:"poolAddress"`
+	IncentiveId string `form:"incentiveId"` // 质押池ID
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
 }
 
 type FarmStakeResponse struct {
 	Total         int64                             `json:"total"`
+	IncentiveId   string                            `form:"incentiveId"` // 质押池ID
 	FeeTier       int64                             `json:"feeTier"`
 	Token0Decimal int64                             `json:"token0Decimal"`
 	Token1Decimal int64                             `json:"token1Decimal"`
@@ -146,6 +148,7 @@ type FarmStakeResponse struct {
 
 type FarmUnstakeRequest struct {
 	ChainRequest
+	IncentiveId string `form:"incentiveId"` // 质押池ID
 	UserAddress string `form:"userAddress"` // 用户地址
 	PoolAddress string `form:"poolAddress"`
 	PageSize    int64  `form:"pageSize,default=3"`
@@ -153,6 +156,7 @@ type FarmUnstakeRequest struct {
 }
 
 type FarmUnstakeResponse struct {
+	IncentiveId   string                              `form:"incentiveId"` // 质押池ID
 	Total         int64                               `json:"total"`
 	FeeTier       int64                               `json:"feeTier"`
 	Token0Decimal int64                               `json:"token0Decimal"`
@@ -795,7 +799,7 @@ type TransactionsResponse_Transaction struct {
 }
 
 type UnstakePositionsInfoResponse_Data struct {
-	IncentiveId  int64  `json:"incentiveId"`
+	PositionId   int64  `json:"positionId"`
 	Token0Amount string `json:"token0Amount"`
 	Token1Amount string `json:"token1Amount"`
 	TokenUsd     string `json:"tokenUsd"`

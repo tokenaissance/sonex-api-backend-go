@@ -128,6 +128,7 @@ type FarmStakeRequest {
 	ChainRequest
 	UserAddress string `form:"userAddress"`                  // 用户地址
 	PoolAddress string `form:"poolAddress"`
+	IncentiveId string `form:"incentiveId"`      // 质押池ID
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
 }
@@ -136,6 +137,7 @@ type FarmStakeRequest {
 // LIST :默认长度为3 个
 type FarmStakeResponse {
 	Total          int64  `json:"total"` 
+	IncentiveId     string `form:"incentiveId"`      // 质押池ID
 	FeeTier        int64  `json:"feeTier"`
 	Token0Decimal  int64  `json:"token0Decimal"`
 	Token1Decimal  int64  `json:"token1Decimal"`
@@ -156,6 +158,7 @@ type StakePositionsInfoResponse_Data {
 // 计算有userAddress 在这个里面有多少可以Staked 的
 type FarmUnstakeRequest {
 	ChainRequest
+	IncentiveId string `form:"incentiveId"`      // 质押池ID
 	UserAddress string `form:"userAddress"`                  // 用户地址
 	PoolAddress string `form:"poolAddress"`
 	PageSize    int64  `form:"pageSize,default=3"`
@@ -164,6 +167,7 @@ type FarmUnstakeRequest {
 
 // LIST :默认长度为3 个
 type FarmUnstakeResponse {
+	IncentiveId    string `form:"incentiveId"`      // 质押池ID
 	Total          int64  `json:"total"` 
 	FeeTier        int64  `json:"feeTier"`
 	Token0Decimal  int64  `json:"token0Decimal"`
@@ -176,12 +180,11 @@ type FarmUnstakeResponse {
 
 // PageSize :默认长度为3 个
 type UnstakePositionsInfoResponse_Data {
-	IncentiveId   int64   `json:"incentiveId"`
+	PositionId   int64    `json:"positionId"`
 	Token0Amount string   `json:"token0Amount"`
 	Token1Amount string   `json:"token1Amount"`
 	TokenUsd     string   `json:"tokenUsd"` 
 }
-
 
 @server (
 	prefix: /farm
