@@ -92,7 +92,7 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
 				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
-				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
+				U.event_reward_token AS extra_reward_token, U.event_new_rate_per_second AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
 			FROM %s F
 			JOIN %s P ON P.event_pool = F.event_pool 
