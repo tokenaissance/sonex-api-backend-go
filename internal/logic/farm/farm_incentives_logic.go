@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 	"sync"
@@ -161,11 +162,14 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 	// 查看是否过期
 	if resp == nil {
 		resp, tokenIds, err = l.getResponse(req)
+		if len(tokenIds) == 0 {
+			logx.Info("no tokenid founds")
+			return nil, nil
+		}
 		if err != nil {
-			logx.Errorf("ERR:%v", err)
+			logx.Errorf("ERR from getResponse:%v", err)
 			return nil, err
 		}
-
 		// Set cache
 		// TODO  not in cache
 		// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
@@ -306,12 +310,14 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 		logx.Errorf("ERR1:%v ", err)
 		return nil, nil, err
 	}
+	logx.Infof("incentiveCreatedRecords:%v len :%v  ", incentiveCreatedRecords, len(incentiveCreatedRecords))
 	validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(l.ctx, req.ChainId)
 	if err != nil {
 		logx.Errorf("ERR2:%v ", err)
 		return nil, nil, err
 	}
 	validStakeRecordMap := map[int64][]repository.EventFarmTokenStaked{}
+	logx.Infof("validStakeRecords:%v ", validStakeRecords)
 	linq.From(validStakeRecords).
 		GroupByT(
 			func(item repository.EventFarmTokenStaked) int64 { return item.EventIncentiveId },
@@ -329,12 +335,14 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 			},
 		)
 
+	logx.Infof("validStakeRecordMap:%v ", validStakeRecordMap)
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
 	if err != nil {
 		logx.Errorf("ERR3:%v ", err)
 		return nil, nil, err
 	}
 
+	logx.Infof("prices:%#v ", prices)
 	var wg sync.WaitGroup
 	results := make(chan struct {
 		Data     types.FarmIncentivesResponse_Data
@@ -380,16 +388,25 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				logx.Errorf("%s", fmt.Sprintf("Get extra token error: %s %s", record.EventRewardToken, err))
 				return
 			}
+			logx.Infof("rewardToken:%#v", rewardToken)
 			reward, _ := new(big.Float).SetString(record.ExtraRate)
+			logx.Info("333333:", rewardToken.Address, "prices[rewardToken.Address]:", prices[rewardToken.Address])
 			rewardPrice := new(big.Float).SetInt(prices[rewardToken.Address])
-			rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil))
+			logx.Info("4444444:")
+			// rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil))
+			rewardTokenAccuracy := new(big.Float).SetFloat64(math.Pow10(int(rewardToken.Decimals)))
+			logx.Info("555555:")
+
 			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(reward, rewardPrice), rewardTokenAccuracy), usdAccuracy)
+			logx.Info("666666:")
+
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
+			logx.Info("77777777:")
 
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
 			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
-
+			logx.Info("1111111111111111111111:", ok)
 			var status string
 			if record.ExtraEnded {
 				status = "closed"
@@ -397,7 +414,9 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				status = "active"
 			}
 
+			logx.Info("2222222222222:", ok)
 			if ok {
+				logx.Info("okokokok")
 				tokenIds := []*big.Int{}
 				userAddressesMap := map[string]struct{}{}
 				linq.From(validStakeRecords).ForEachT(func(item repository.EventFarmTokenStaked) {
@@ -456,6 +475,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				}
 				tokenIdsResult = tids
 			} else {
+				logx.Info("notoknotok")
 				apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 
 				dataResult = types.FarmIncentivesResponse_Data{
@@ -501,10 +521,10 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 	list := []types.FarmIncentivesResponse_Data{}
 	tokenIds = map[int64][]int64{}
 	for result := range results {
-		// if result.Err != nil {
-		// 	logx.Errorf("ERR6:%v", err)
-		// 	return nil, nil, result.Err
-		// }
+		if result.Err != nil {
+			logx.Errorf("result error:%v", err)
+			return nil, nil, result.Err
+		}
 		list = append(list, result.Data)
 		tokenIds[result.Data.IncentiveId] = result.TokenIds
 	}
