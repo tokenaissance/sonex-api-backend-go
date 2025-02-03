@@ -180,16 +180,15 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 
 	conn := repository.NewConn(handler.dataSource)
 	err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-		callablePoolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
+		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
 		eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(sqlx.NewSqlConnFromSession(s))
 		eventSonexPositionManagerIncreaseLiquidityModel := repository.NewEventSonexPositionManagerIncreaseLiquidityModel(sqlx.NewSqlConnFromSession(s))
 		eventSonexPositionManagerDecreaseLiquidityModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(sqlx.NewSqlConnFromSession(s))
 		eventSonexPositionManagerCollectModel := repository.NewEventSonexPositionManagerCollectModel(sqlx.NewSqlConnFromSession(s))
 
+		callablePoolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
 		// Pool created event
 		for _, event := range poolCreatedEvents {
-			eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
-
 			blockNumber := int64(event.Raw.BlockNumber)
 			tx := transactions[event.Raw.TxHash.Hex()]
 			txIndex := int64(event.Raw.Index)
