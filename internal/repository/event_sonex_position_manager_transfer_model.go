@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"sonex_api_backend_go/internal/types"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ type (
 		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
+		GetTransferEventsFarm(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*big.Int, error)
+		GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, error)
 	}
 
 	customEventSonexPositionManagerTransferModel struct {
@@ -305,4 +308,37 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 	result[eventTokenId] = position
 
 	return result, nil
+}
+
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarm(ctx context.Context, chainId int64, addressfrom, addressto string) ([]*big.Int, error) {
+
+	validEvents, err := m.GetTransferEventsByFromAddressAndToAddress(ctx, chainId, addressfrom, addressto)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenIds := make([]*big.Int, 0)
+	for _, event := range validEvents {
+		eventTokenId_big := new(big.Int).SetInt64(event.EventTokenId)
+		tokenIds = append(tokenIds, eventTokenId_big)
+	}
+
+	return tokenIds, nil
+}
+
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, error) {
+	query := fmt.Sprintf(`
+		SELECT * FROM %s
+		WHERE
+			chain_id = $1 AND event_from = $2 AND  event_to = $3
+	`, m.table)
+	var resp []*EventSonexPositionManagerTransfer
+	address_from := common.HexToAddress(fromaddress).Hex()
+	address_to := common.HexToAddress(tofarmAddress).Hex()
+
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address_from, address_to)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

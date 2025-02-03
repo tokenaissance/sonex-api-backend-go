@@ -98,63 +98,137 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		return err, false
 	}
 
-	var wg sync.WaitGroup
-	results := make(chan struct {
-		Err error
-	}, 2)
+	numberSet := map[int64]struct{}{}
 
-	wg.Add(1)
-	go func(ch chan struct {
-		Err error
-	}) {
-		defer wg.Done()
-		defer func() {
-			if err := recover(); err != nil {
-				ch <- struct{ Err error }{
-					Err: fmt.Errorf("%s(panic)", err),
-				}
-			}
-		}()
-
-		numberSet := map[int64]struct{}{}
-
-		// PoolCreated Event
-		poolCreatedLogs, err := factory.FilterPoolCreated(opt, nil, nil, nil)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
+	// PoolCreated Event
+	poolCreatedLogs, err := factory.FilterPoolCreated(opt, nil, nil, nil)
+	if err != nil {
+		return err, false
+	}
+	poolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
+	for poolCreatedLogs.Next() {
+		if err = poolCreatedLogs.Error(); err != nil {
+			return err, false
 		}
-		poolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
-		for poolCreatedLogs.Next() {
-			if err = poolCreatedLogs.Error(); err != nil {
-				ch <- struct{ Err error }{
-					Err: err,
-				}
-				return
+		numberSet[int64(poolCreatedLogs.Event.Raw.BlockNumber)] = struct{}{}
+		poolCreatedEvents = append(poolCreatedEvents, poolCreatedLogs.Event)
+	}
+
+	// Transfer Event
+	transferLogs, err := positionManager.FilterTransfer(opt, nil, nil, nil)
+	if err != nil {
+		return err, false
+	}
+	transferEvents := []*uniswap_v3.NonfungiblePositionManagerTransfer{}
+	for transferLogs.Next() {
+		if err = transferLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(transferLogs.Event.Raw.BlockNumber)] = struct{}{}
+		transferEvents = append(transferEvents, transferLogs.Event)
+	}
+
+	// IncreaseLiquidity Event
+	increaseLiquidityLogs, err := positionManager.FilterIncreaseLiquidity(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	increaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity{}
+	for increaseLiquidityLogs.Next() {
+		if err = increaseLiquidityLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(increaseLiquidityLogs.Event.Raw.BlockNumber)] = struct{}{}
+		increaseLiquidityEvents = append(increaseLiquidityEvents, increaseLiquidityLogs.Event)
+	}
+
+	// DecreaseLiquidity Event
+	decreaseLiquidityLogs, err := positionManager.FilterDecreaseLiquidity(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	decreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity{}
+	for decreaseLiquidityLogs.Next() {
+		if err = decreaseLiquidityLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(decreaseLiquidityLogs.Event.Raw.BlockNumber)] = struct{}{}
+		decreaseLiquidityEvents = append(decreaseLiquidityEvents, decreaseLiquidityLogs.Event)
+	}
+
+	// Collect Event
+	collectLogs, err := positionManager.FilterCollect(opt, nil)
+	if err != nil {
+		return err, false
+	}
+	collectEvents := []*uniswap_v3.NonfungiblePositionManagerCollect{}
+	for collectLogs.Next() {
+		if err = collectLogs.Error(); err != nil {
+			return err, false
+		}
+		numberSet[int64(collectLogs.Event.Raw.BlockNumber)] = struct{}{}
+		collectEvents = append(collectEvents, collectLogs.Event)
+	}
+
+	var numbers []int64
+
+	linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
+	transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
+	if err != nil {
+		return err, false
+	}
+
+	conn := repository.NewConn(handler.dataSource)
+	err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
+		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
+		eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(sqlx.NewSqlConnFromSession(s))
+		eventSonexPositionManagerIncreaseLiquidityModel := repository.NewEventSonexPositionManagerIncreaseLiquidityModel(sqlx.NewSqlConnFromSession(s))
+		eventSonexPositionManagerDecreaseLiquidityModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(sqlx.NewSqlConnFromSession(s))
+		eventSonexPositionManagerCollectModel := repository.NewEventSonexPositionManagerCollectModel(sqlx.NewSqlConnFromSession(s))
+
+		callablePoolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
+		// Pool created event
+		for _, event := range poolCreatedEvents {
+			blockNumber := int64(event.Raw.BlockNumber)
+			tx := transactions[event.Raw.TxHash.Hex()]
+			txIndex := int64(event.Raw.Index)
+			txHash := tx.Tx().Hash().Hex()
+			txAt := tx.TxAt
+			from := tx.From.Hex()
+			to := tx.Tx().To().Hex()
+			value := tx.Tx().Value().String()
+			token0 := event.Token0.Hex()
+			token1 := event.Token1.Hex()
+			fee := event.Fee.String()
+			tickSpacing := event.TickSpacing.String()
+			pool := event.Pool.Hex()
+
+			// If handled, ignore
+			_, err := eventSonexFactoryPoolCreatedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				continue
+			default:
+				return err
 			}
-			numberSet[int64(poolCreatedLogs.Event.Raw.BlockNumber)] = struct{}{}
-			poolCreatedEvents = append(poolCreatedEvents, poolCreatedLogs.Event)
+
+			id, err := global.NewId()
+			if err != nil {
+				return err
+			}
+			err = eventSonexFactoryPoolCreatedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
+			if err != nil {
+				return err
+			}
+
+			callablePoolCreatedEvents = append(callablePoolCreatedEvents, event)
 		}
 
-		var numbers []int64
-		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-
-		conn := repository.NewConn(handler.dataSource)
-		err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-			callablePoolCreatedEvents := []*uniswap_v3.UniswapV3FactoryPoolCreated{}
-			// Pool created event
-			for _, event := range poolCreatedEvents {
-				eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(sqlx.NewSqlConnFromSession(s))
-
+		callableTransferEvents := []*uniswap_v3.NonfungiblePositionManagerTransfer{}
+		// Transfer Event
+		{
+			for _, event := range transferEvents {
 				blockNumber := int64(event.Raw.BlockNumber)
 				tx := transactions[event.Raw.TxHash.Hex()]
 				txIndex := int64(event.Raw.Index)
@@ -163,14 +237,12 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				from := tx.From.Hex()
 				to := tx.Tx().To().Hex()
 				value := tx.Tx().Value().String()
-				token0 := event.Token0.Hex()
-				token1 := event.Token1.Hex()
-				fee := event.Fee.String()
-				tickSpacing := event.TickSpacing.String()
-				pool := event.Pool.Hex()
+				fromE := event.From.Hex()
+				toE := event.To.Hex()
+				tokenId := event.TokenId.Int64()
 
 				// If handled, ignore
-				_, err := eventSonexFactoryPoolCreatedModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+				_, err := eventSonexPositionManagerTransferModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
@@ -179,677 +251,482 @@ func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 					return err
 				}
 
-				existed, err := eventSonexFactoryPoolCreatedModel.FindByPoolAddress(ctx, pool)
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventSonexPositionManagerTransferModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
+				if err != nil {
+					return err
+				}
+
+				callableTransferEvents = append(callableTransferEvents, event)
+			}
+		}
+
+		callableIncreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity{}
+		// IncreaseLiquidity Event
+		{
+			for _, event := range increaseLiquidityEvents {
+				blockNumber := int64(event.Raw.BlockNumber)
+				tx := transactions[event.Raw.TxHash.Hex()]
+				txIndex := int64(event.Raw.Index)
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
+				from := tx.From.Hex()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
+				tokenId := event.TokenId.Int64()
+				liquidity := event.Liquidity.String()
+				amount0 := event.Amount0.String()
+				amount1 := event.Amount1.String()
+
+				// If handled, ignore
+				_, err := eventSonexPositionManagerIncreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
 				switch err {
 				case repository.ErrNotFound:
 				case nil:
+					continue
 				default:
 					return err
 				}
-				var id int64
-				if existed == nil {
-					id, err = global.NewId()
-					if err != nil {
-						return err
-					}
-					err = eventSonexFactoryPoolCreatedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, token0, token1, fee, tickSpacing, pool)
-					if err != nil {
-						return err
-					}
-				} else {
-					// Temporary handle
-					// Minato resent some data about same event infomation but different tx hash
-					existed.UpdatedAt = time.Now().UTC()
-					existed.TxIndex = txIndex
-					existed.TxHash = txHash
-					existed.TxAt = txAt
-					existed.From = from
-					existed.To = to
-					existed.Value = value
-					err := eventSonexFactoryPoolCreatedModel.Update(ctx, existed)
-					if err != nil {
-						return err
-					}
+
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventSonexPositionManagerIncreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+				if err != nil {
+					return err
+				}
+
+				callableIncreaseLiquidityEvents = append(callableIncreaseLiquidityEvents, event)
+			}
+		}
+
+		callableDecreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity{}
+		// DecreaseLiquidity Event
+		{
+			for _, event := range decreaseLiquidityEvents {
+				blockNumber := int64(event.Raw.BlockNumber)
+				tx := transactions[event.Raw.TxHash.Hex()]
+				txIndex := int64(event.Raw.Index)
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
+				from := tx.From.Hex()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
+				tokenId := event.TokenId.Int64()
+				liquidity := event.Liquidity.String()
+				amount0 := event.Amount0.String()
+				amount1 := event.Amount1.String()
+
+				// If handled, ignore
+				_, err := eventSonexPositionManagerDecreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
 					continue
+				default:
+					return err
 				}
 
-				callablePoolCreatedEvents = append(callablePoolCreatedEvents, event)
-			}
-
-			// Callback
-			for _, event := range callablePoolCreatedEvents {
-				for _, callback := range handler.onFactoryPoolCreated {
-					tx := transactions[event.Raw.TxHash.Hex()]
-					go callback(handler.chain.ChainId, tx, event)
+				id, err := global.NewId()
+				if err != nil {
+					return err
 				}
-			}
+				err = eventSonexPositionManagerDecreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
+				if err != nil {
+					return err
+				}
 
-			return nil
-		})
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
+				callableDecreaseLiquidityEvents = append(callableDecreaseLiquidityEvents, event)
 			}
-			return
 		}
 
-		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-		poolCreatedRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainIdPositionManager(opt.Context, handler.chain.ChainId, handler.config.PositionManager)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-		var poolAddresses []common.Address
-		linq.From(poolCreatedRecords).SelectT(func(item repository.EventSonexFactoryPoolCreated) common.Address {
-			return common.HexToAddress(item.EventPool)
-		}).ToSlice(&poolAddresses)
+		callableCollectEvents := []*uniswap_v3.NonfungiblePositionManagerCollect{}
+		// Collect Event
+		{
+			for _, event := range collectEvents {
+				blockNumber := int64(event.Raw.BlockNumber)
+				tx := transactions[event.Raw.TxHash.Hex()]
+				txIndex := int64(event.Raw.Index)
+				txHash := tx.Tx().Hash().Hex()
+				txAt := tx.TxAt
+				from := tx.From.Hex()
+				to := tx.Tx().To().Hex()
+				value := tx.Tx().Value().String()
+				tokenId := event.TokenId.Int64()
+				recipient := event.Recipient.Hex()
+				amount0 := event.Amount0.String()
+				amount1 := event.Amount1.String()
 
-		retrys := 0
-		waitForRetryPools := []common.Address{}
-		err = retry.Do(
-			func() error {
-				var poolWg sync.WaitGroup
-
-				if len(waitForRetryPools) != 0 {
-					poolAddresses = waitForRetryPools
-					waitForRetryPools = []common.Address{}
+				// If handled, ignore
+				_, err := eventSonexPositionManagerCollectModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+				switch err {
+				case repository.ErrNotFound:
+				case nil:
+					continue
+				default:
+					return err
 				}
 
-				poolResults := make(chan struct {
-					Err         error
-					PoolAddress common.Address
-				}, len(poolAddresses))
+				id, err := global.NewId()
+				if err != nil {
+					return err
+				}
+				err = eventSonexPositionManagerCollectModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
+				if err != nil {
+					return err
+				}
 
-				for _, poolAddress := range poolAddresses {
-					poolWg.Add(1)
-					go func(
-						poolAddress common.Address,
-						client *ethclient.Client,
-						ch chan struct {
+				callableCollectEvents = append(callableCollectEvents, event)
+			}
+		}
+
+		// Callback
+		for _, event := range callablePoolCreatedEvents {
+			for _, callback := range handler.onFactoryPoolCreated {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range callableTransferEvents {
+			for _, callback := range handler.onPositionManagerTransfer {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range callableIncreaseLiquidityEvents {
+			for _, callback := range handler.onPositionManagerIncreaseLiquidity {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range callableDecreaseLiquidityEvents {
+			for _, callback := range handler.onPositionManagerDecreaseLiquidity {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+		for _, event := range callableCollectEvents {
+			for _, callback := range handler.onPositionManagerCollect {
+				tx := transactions[event.Raw.TxHash.Hex()]
+				go callback(handler.chain.ChainId, tx, event)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err, false
+	}
+
+	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+	poolCreatedRecords, err := eventSonexFactoryPoolCreatedModel.QueryByChainIdPositionManager(opt.Context, handler.chain.ChainId, handler.config.PositionManager)
+	if err != nil {
+		return err, false
+	}
+	var poolAddresses []common.Address
+	linq.From(poolCreatedRecords).SelectT(func(item repository.EventSonexFactoryPoolCreated) common.Address {
+		return common.HexToAddress(item.EventPool)
+	}).ToSlice(&poolAddresses)
+
+	retrys := 0
+	waitForRetryPools := []common.Address{}
+	err = retry.Do(
+		func() error {
+			var poolWg sync.WaitGroup
+
+			if len(waitForRetryPools) != 0 {
+				poolAddresses = waitForRetryPools
+				waitForRetryPools = []common.Address{}
+			}
+
+			poolResults := make(chan struct {
+				Err         error
+				PoolAddress common.Address
+			}, len(poolAddresses))
+
+			for _, poolAddress := range poolAddresses {
+				poolWg.Add(1)
+				go func(
+					poolAddress common.Address,
+					client *ethclient.Client,
+					ch chan struct {
+						Err         error
+						PoolAddress common.Address
+					}) {
+					sendResult := func(err error) {
+						ch <- struct {
 							Err         error
 							PoolAddress common.Address
-						}) {
-						sendResult := func(err error) {
-							ch <- struct {
-								Err         error
-								PoolAddress common.Address
-							}{
-								Err:         err,
-								PoolAddress: poolAddress,
-							}
+						}{
+							Err:         err,
+							PoolAddress: poolAddress,
 						}
+					}
 
-						defer poolWg.Done()
-						defer func() {
-							if err := recover(); err != nil {
-								sendResult(fmt.Errorf("%s %s(panic)", poolAddress, err))
-								return
-							}
-						}()
+					defer poolWg.Done()
+					defer func() {
+						if err := recover(); err != nil {
+							sendResult(fmt.Errorf("%s %s(panic)", poolAddress, err))
+							return
+						}
+					}()
 
-						numberSet := map[int64]struct{}{}
+					var poolNumbers []int64
+					poolNumberSet := map[int64]struct{}{}
 
-						pool, err := uniswap_v3.NewUniswapV3Pool(poolAddress, client)
-						if err != nil {
+					pool, err := uniswap_v3.NewUniswapV3Pool(poolAddress, client)
+					if err != nil {
+						sendResult(err)
+						return
+					}
+
+					// Mint event
+					mintLogs, err := pool.FilterMint(opt, nil, nil, nil)
+					if err != nil {
+						sendResult(err)
+						return
+					}
+					mintEvents := []*uniswap_v3.UniswapV3PoolMint{}
+					for mintLogs.Next() {
+						if err = mintLogs.Error(); err != nil {
 							sendResult(err)
 							return
 						}
+						poolNumberSet[int64(mintLogs.Event.Raw.BlockNumber)] = struct{}{}
+						mintEvents = append(mintEvents, mintLogs.Event)
+					}
 
+					// Swap event
+					swapLogs, err := pool.FilterSwap(opt, nil, nil)
+					if err != nil {
+						sendResult(err)
+						return
+					}
+					swapEvents := []*uniswap_v3.UniswapV3PoolSwap{}
+					for swapLogs.Next() {
+						if err = swapLogs.Error(); err != nil {
+							sendResult(err)
+							return
+						}
+						poolNumberSet[int64(swapLogs.Event.Raw.BlockNumber)] = struct{}{}
+						swapEvents = append(swapEvents, swapLogs.Event)
+					}
+
+					// Burn event
+					burnLogs, err := pool.FilterBurn(opt, nil, nil, nil)
+					if err != nil {
+						sendResult(err)
+						return
+					}
+					burnEvents := []*uniswap_v3.UniswapV3PoolBurn{}
+					for burnLogs.Next() {
+						if err = burnLogs.Error(); err != nil {
+							sendResult(err)
+							return
+						}
+						poolNumberSet[int64(burnLogs.Event.Raw.BlockNumber)] = struct{}{}
+						burnEvents = append(burnEvents, burnLogs.Event)
+					}
+
+					linq.From(poolNumberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&poolNumbers)
+					transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, poolNumbers)
+					if err != nil {
+						sendResult(err)
+						return
+					}
+
+					conn := repository.NewConn(handler.dataSource)
+					err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
+						eventSonexPoolMintModel := repository.NewEventSonexPoolMintModel(sqlx.NewSqlConnFromSession(s))
+						eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(sqlx.NewSqlConnFromSession(s))
+						eventSonexPoolBurnModel := repository.NewEventSonexPoolBurnModel(sqlx.NewSqlConnFromSession(s))
+
+						callableMintEvents := []*uniswap_v3.UniswapV3PoolMint{}
 						// Mint event
-						mintLogs, err := pool.FilterMint(opt, nil, nil, nil)
-						if err != nil {
-							sendResult(err)
-							return
-						}
-						mintEvents := []*uniswap_v3.UniswapV3PoolMint{}
-						for mintLogs.Next() {
-							if err = mintLogs.Error(); err != nil {
-								sendResult(err)
-								return
+						{
+							for _, event := range mintEvents {
+								blockNumber := int64(event.Raw.BlockNumber)
+								tx := transactions[event.Raw.TxHash.Hex()]
+								txIndex := int64(event.Raw.Index)
+								txHash := tx.Tx().Hash().Hex()
+								txAt := tx.TxAt
+								from := tx.From.Hex()
+								to := tx.Tx().To().Hex()
+								value := tx.Tx().Value().String()
+								sender := event.Sender.Hex()
+								owner := event.Owner.Hex()
+								tickLower := event.TickLower.String()
+								tickUpper := event.TickUpper.String()
+								amount0 := event.Amount0.String()
+								amount1 := event.Amount1.String()
+
+								// If handled, ignore
+								_, err := eventSonexPoolMintModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+								switch err {
+								case repository.ErrNotFound:
+								case nil:
+									continue
+								default:
+									return err
+								}
+
+								id, err := global.NewId()
+								if err != nil {
+									return err
+								}
+								err = eventSonexPoolMintModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
+								if err != nil {
+									return err
+								}
+
+								callableMintEvents = append(callableMintEvents, event)
 							}
-							numberSet[int64(mintLogs.Event.Raw.BlockNumber)] = struct{}{}
-							mintEvents = append(mintEvents, mintLogs.Event)
+
 						}
 
+						callableSwapEvents := []*uniswap_v3.UniswapV3PoolSwap{}
 						// Swap event
-						swapLogs, err := pool.FilterSwap(opt, nil, nil)
-						if err != nil {
-							sendResult(err)
-							return
-						}
-						swapEvents := []*uniswap_v3.UniswapV3PoolSwap{}
-						for swapLogs.Next() {
-							if err = swapLogs.Error(); err != nil {
-								sendResult(err)
-								return
+						{
+							for _, event := range swapEvents {
+								blockNumber := int64(event.Raw.BlockNumber)
+								tx := transactions[event.Raw.TxHash.Hex()]
+								txIndex := int64(event.Raw.Index)
+								txHash := tx.Tx().Hash().Hex()
+								txAt := tx.TxAt
+								from := tx.From.Hex()
+								to := tx.Tx().To().Hex()
+								value := tx.Tx().Value().String()
+								sender := event.Sender.Hex()
+								recipient := event.Recipient.Hex()
+								amount0 := event.Amount0.String()
+								amount1 := event.Amount1.String()
+								sqrtPriceX96 := event.SqrtPriceX96.String()
+								tick := event.Tick.String()
+
+								// If handled, ignore
+								_, err := eventSonexPoolSwapModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+								switch err {
+								case repository.ErrNotFound:
+								case nil:
+									continue
+								default:
+									return err
+								}
+
+								id, err := global.NewId()
+								if err != nil {
+									return err
+								}
+								err = eventSonexPoolSwapModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
+								if err != nil {
+									return err
+								}
+
+								callableSwapEvents = append(callableSwapEvents, event)
 							}
-							numberSet[int64(swapLogs.Event.Raw.BlockNumber)] = struct{}{}
-							swapEvents = append(swapEvents, swapLogs.Event)
 						}
 
+						callableBurnEvents := []*uniswap_v3.UniswapV3PoolBurn{}
 						// Burn event
-						burnLogs, err := pool.FilterBurn(opt, nil, nil, nil)
-						if err != nil {
-							sendResult(err)
-							return
+						{
+							for _, event := range burnEvents {
+								blockNumber := int64(event.Raw.BlockNumber)
+								tx := transactions[event.Raw.TxHash.Hex()]
+								txIndex := int64(event.Raw.Index)
+								txHash := tx.Tx().Hash().Hex()
+								txAt := tx.TxAt
+								from := tx.From.Hex()
+								to := tx.Tx().To().Hex()
+								value := tx.Tx().Value().String()
+								owner := event.Owner.Hex()
+								tickLower := event.TickLower.String()
+								tickUpper := event.TickUpper.String()
+								amount := event.Amount.String()
+								amount0 := event.Amount0.String()
+								amount1 := event.Amount1.String()
+
+								// If handled, ignore
+								_, err := eventSonexPoolBurnModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
+								switch err {
+								case repository.ErrNotFound:
+								case nil:
+									continue
+								default:
+									return err
+								}
+
+								id, err := global.NewId()
+								if err != nil {
+									return err
+								}
+								err = eventSonexPoolBurnModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
+								if err != nil {
+									return err
+								}
+
+								callableBurnEvents = append(callableBurnEvents, event)
+							}
 						}
-						burnEvents := []*uniswap_v3.UniswapV3PoolBurn{}
-						for burnLogs.Next() {
-							if err = burnLogs.Error(); err != nil {
-								sendResult(err)
-								return
+
+						// Callback
+						for _, event := range callableMintEvents {
+							for _, callback := range handler.onPoolMint {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
 							}
-							numberSet[int64(burnLogs.Event.Raw.BlockNumber)] = struct{}{}
-							burnEvents = append(burnEvents, burnLogs.Event)
+						}
+						for _, event := range callableSwapEvents {
+							for _, callback := range handler.onPoolSwap {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
+						}
+						for _, event := range callableBurnEvents {
+							for _, callback := range handler.onPoolBurn {
+								tx := transactions[event.Raw.TxHash.Hex()]
+								go callback(handler.chain.ChainId, poolAddress, tx, event)
+							}
 						}
 
-						var numbers []int64
-						linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-						transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
-						if err != nil {
-							sendResult(err)
-							return
-						}
-
-						conn := repository.NewConn(handler.dataSource)
-						err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-							eventSonexPoolMintModel := repository.NewEventSonexPoolMintModel(sqlx.NewSqlConnFromSession(s))
-							eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(sqlx.NewSqlConnFromSession(s))
-							eventSonexPoolBurnModel := repository.NewEventSonexPoolBurnModel(sqlx.NewSqlConnFromSession(s))
-
-							callableMintEvents := []*uniswap_v3.UniswapV3PoolMint{}
-							// Mint event
-							{
-								for _, event := range mintEvents {
-									blockNumber := int64(event.Raw.BlockNumber)
-									tx := transactions[event.Raw.TxHash.Hex()]
-									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx().Hash().Hex()
-									txAt := tx.TxAt
-									from := tx.From.Hex()
-									to := tx.Tx().To().Hex()
-									value := tx.Tx().Value().String()
-									sender := event.Sender.Hex()
-									owner := event.Owner.Hex()
-									tickLower := event.TickLower.String()
-									tickUpper := event.TickUpper.String()
-									amount0 := event.Amount0.String()
-									amount1 := event.Amount1.String()
-
-									// If handled, ignore
-									_, err := eventSonexPoolMintModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
-									switch err {
-									case repository.ErrNotFound:
-									case nil:
-										continue
-									default:
-										return err
-									}
-
-									id, err := global.NewId()
-									if err != nil {
-										return err
-									}
-									err = eventSonexPoolMintModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, owner, tickLower, tickUpper, amount0, amount1, poolAddress.Hex())
-									if err != nil {
-										return err
-									}
-
-									callableMintEvents = append(callableMintEvents, event)
-								}
-
-							}
-
-							callableSwapEvents := []*uniswap_v3.UniswapV3PoolSwap{}
-							// Swap event
-							{
-								for _, event := range swapEvents {
-									blockNumber := int64(event.Raw.BlockNumber)
-									tx := transactions[event.Raw.TxHash.Hex()]
-									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx().Hash().Hex()
-									txAt := tx.TxAt
-									from := tx.From.Hex()
-									to := tx.Tx().To().Hex()
-									value := tx.Tx().Value().String()
-									sender := event.Sender.Hex()
-									recipient := event.Recipient.Hex()
-									amount0 := event.Amount0.String()
-									amount1 := event.Amount1.String()
-									sqrtPriceX96 := event.SqrtPriceX96.String()
-									tick := event.Tick.String()
-
-									// If handled, ignore
-									_, err := eventSonexPoolSwapModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
-									switch err {
-									case repository.ErrNotFound:
-									case nil:
-										continue
-									default:
-										return err
-									}
-
-									id, err := global.NewId()
-									if err != nil {
-										return err
-									}
-									err = eventSonexPoolSwapModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, poolAddress.Hex())
-									if err != nil {
-										return err
-									}
-
-									callableSwapEvents = append(callableSwapEvents, event)
-								}
-							}
-
-							callableBurnEvents := []*uniswap_v3.UniswapV3PoolBurn{}
-							// Burn event
-							{
-								for _, event := range burnEvents {
-									blockNumber := int64(event.Raw.BlockNumber)
-									tx := transactions[event.Raw.TxHash.Hex()]
-									txIndex := int64(event.Raw.Index)
-									txHash := tx.Tx().Hash().Hex()
-									txAt := tx.TxAt
-									from := tx.From.Hex()
-									to := tx.Tx().To().Hex()
-									value := tx.Tx().Value().String()
-									owner := event.Owner.Hex()
-									tickLower := event.TickLower.String()
-									tickUpper := event.TickUpper.String()
-									amount := event.Amount.String()
-									amount0 := event.Amount0.String()
-									amount1 := event.Amount1.String()
-
-									// If handled, ignore
-									_, err := eventSonexPoolBurnModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
-									switch err {
-									case repository.ErrNotFound:
-									case nil:
-										continue
-									default:
-										return err
-									}
-
-									id, err := global.NewId()
-									if err != nil {
-										return err
-									}
-									err = eventSonexPoolBurnModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, owner, tickLower, tickUpper, amount, amount0, amount1, poolAddress.Hex())
-									if err != nil {
-										return err
-									}
-
-									callableBurnEvents = append(callableBurnEvents, event)
-								}
-							}
-
-							// Callback
-							for _, event := range callableMintEvents {
-								for _, callback := range handler.onPoolMint {
-									tx := transactions[event.Raw.TxHash.Hex()]
-									go callback(handler.chain.ChainId, poolAddress, tx, event)
-								}
-							}
-							for _, event := range callableSwapEvents {
-								for _, callback := range handler.onPoolSwap {
-									tx := transactions[event.Raw.TxHash.Hex()]
-									go callback(handler.chain.ChainId, poolAddress, tx, event)
-								}
-							}
-							for _, event := range callableBurnEvents {
-								for _, callback := range handler.onPoolBurn {
-									tx := transactions[event.Raw.TxHash.Hex()]
-									go callback(handler.chain.ChainId, poolAddress, tx, event)
-								}
-							}
-
-							return nil
-						})
-						if err != nil {
-							sendResult(err)
-							return
-						}
-					}(poolAddress, client, poolResults)
-				}
-
-				poolWg.Wait()
-				close(poolResults)
-
-				// Handle results
-				for result := range poolResults {
-					if result.Err != nil {
-						waitForRetryPools = append(waitForRetryPools, result.PoolAddress)
-						logx.Errorf("Handle pool error: %s\n", result.Err)
-					}
-				}
-				if len(waitForRetryPools) != 0 {
-					return fmt.Errorf("%s", fmt.Sprintf("Retry handle pools[%d]: %v", len(waitForRetryPools), waitForRetryPools))
-				}
-
-				return nil
-			},
-			retry.Delay(time.Second*5),
-			retry.DelayType(retry.FixedDelay),
-			retry.OnRetry(func(n uint, err error) {
-				retrys += 1
-				logx.Infof("%s", log.Warning("Retrying handle pools %d times, pools: %v", retrys, waitForRetryPools))
-			}),
-		)
-		if err != nil {
-			logx.Errorf("%s", log.Alert("Retry handle pools %d times, but failed: %v", retrys, waitForRetryPools))
-		}
-	}(results)
-
-	wg.Add(1)
-	go func(ch chan struct {
-		Err error
-	}) {
-		defer wg.Done()
-
-		numberSet := map[int64]struct{}{}
-
-		// Transfer Event
-		transferLogs, err := positionManager.FilterTransfer(opt, nil, nil, nil)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-		transferEvents := []*uniswap_v3.NonfungiblePositionManagerTransfer{}
-		for transferLogs.Next() {
-			if err = transferLogs.Error(); err != nil {
-				ch <- struct{ Err error }{
-					Err: err,
-				}
-				return
-			}
-			numberSet[int64(transferLogs.Event.Raw.BlockNumber)] = struct{}{}
-			transferEvents = append(transferEvents, transferLogs.Event)
-		}
-
-		// IncreaseLiquidity Event
-		increaseLiquidityLogs, err := positionManager.FilterIncreaseLiquidity(opt, nil)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-		increaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity{}
-		for increaseLiquidityLogs.Next() {
-			if err = increaseLiquidityLogs.Error(); err != nil {
-				ch <- struct{ Err error }{
-					Err: err,
-				}
-				return
-			}
-			numberSet[int64(increaseLiquidityLogs.Event.Raw.BlockNumber)] = struct{}{}
-			increaseLiquidityEvents = append(increaseLiquidityEvents, increaseLiquidityLogs.Event)
-		}
-
-		// DecreaseLiquidity Event
-		decreaseLiquidityLogs, err := positionManager.FilterDecreaseLiquidity(opt, nil)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-		decreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity{}
-		for decreaseLiquidityLogs.Next() {
-			if err = decreaseLiquidityLogs.Error(); err != nil {
-				ch <- struct{ Err error }{
-					Err: err,
-				}
-				return
-			}
-			numberSet[int64(decreaseLiquidityLogs.Event.Raw.BlockNumber)] = struct{}{}
-			decreaseLiquidityEvents = append(decreaseLiquidityEvents, decreaseLiquidityLogs.Event)
-		}
-
-		// Collect Event
-		collectLogs, err := positionManager.FilterCollect(opt, nil)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-		collectEvents := []*uniswap_v3.NonfungiblePositionManagerCollect{}
-		for collectLogs.Next() {
-			if err = collectLogs.Error(); err != nil {
-				ch <- struct{ Err error }{
-					Err: err,
-				}
-				return
-			}
-			numberSet[int64(collectLogs.Event.Raw.BlockNumber)] = struct{}{}
-			collectEvents = append(collectEvents, collectLogs.Event)
-		}
-
-		var numbers []int64
-		linq.From(numberSet).SelectT(func(item linq.KeyValue) int64 { return item.Key.(int64) }).ToSlice(&numbers)
-		transactions, err := nodeCaller.BatchGetTranscationsByNumber(opt.Context, numbers)
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-
-		conn := repository.NewConn(handler.dataSource)
-		err = conn.TransactCtx(opt.Context, func(ctx context.Context, s sqlx.Session) error {
-			eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(sqlx.NewSqlConnFromSession(s))
-			eventSonexPositionManagerIncreaseLiquidityModel := repository.NewEventSonexPositionManagerIncreaseLiquidityModel(sqlx.NewSqlConnFromSession(s))
-			eventSonexPositionManagerDecreaseLiquidityModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(sqlx.NewSqlConnFromSession(s))
-			eventSonexPositionManagerCollectModel := repository.NewEventSonexPositionManagerCollectModel(sqlx.NewSqlConnFromSession(s))
-
-			callableTransferEvents := []*uniswap_v3.NonfungiblePositionManagerTransfer{}
-			// Transfer Event
-			{
-				for _, event := range transferEvents {
-					blockNumber := int64(event.Raw.BlockNumber)
-					tx := transactions[event.Raw.TxHash.Hex()]
-					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx().Hash().Hex()
-					txAt := tx.TxAt
-					from := tx.From.Hex()
-					to := tx.Tx().To().Hex()
-					value := tx.Tx().Value().String()
-					fromE := event.From.Hex()
-					toE := event.To.Hex()
-					tokenId := event.TokenId.Int64()
-
-					// If handled, ignore
-					_, err := eventSonexPositionManagerTransferModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
-					switch err {
-					case repository.ErrNotFound:
-					case nil:
-						continue
-					default:
-						return err
-					}
-
-					id, err := global.NewId()
+						return nil
+					})
 					if err != nil {
-						return err
+						sendResult(err)
+						return
 					}
-					err = eventSonexPositionManagerTransferModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
-					if err != nil {
-						return err
-					}
-
-					callableTransferEvents = append(callableTransferEvents, event)
-				}
+				}(poolAddress, client, poolResults)
 			}
 
-			callableIncreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerIncreaseLiquidity{}
-			// IncreaseLiquidity Event
-			{
-				for _, event := range increaseLiquidityEvents {
-					blockNumber := int64(event.Raw.BlockNumber)
-					tx := transactions[event.Raw.TxHash.Hex()]
-					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx().Hash().Hex()
-					txAt := tx.TxAt
-					from := tx.From.Hex()
-					to := tx.Tx().To().Hex()
-					value := tx.Tx().Value().String()
-					tokenId := event.TokenId.Int64()
-					liquidity := event.Liquidity.String()
-					amount0 := event.Amount0.String()
-					amount1 := event.Amount1.String()
+			poolWg.Wait()
+			close(poolResults)
 
-					// If handled, ignore
-					_, err := eventSonexPositionManagerIncreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
-					switch err {
-					case repository.ErrNotFound:
-					case nil:
-						continue
-					default:
-						return err
-					}
-
-					id, err := global.NewId()
-					if err != nil {
-						return err
-					}
-					err = eventSonexPositionManagerIncreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
-					if err != nil {
-						return err
-					}
-
-					callableIncreaseLiquidityEvents = append(callableIncreaseLiquidityEvents, event)
+			// Handle results
+			for result := range poolResults {
+				if result.Err != nil {
+					waitForRetryPools = append(waitForRetryPools, result.PoolAddress)
+					logx.Errorf("Handle pool error: %s\n", result.Err)
 				}
 			}
-
-			callableDecreaseLiquidityEvents := []*uniswap_v3.NonfungiblePositionManagerDecreaseLiquidity{}
-			// DecreaseLiquidity Event
-			{
-				for _, event := range decreaseLiquidityEvents {
-					blockNumber := int64(event.Raw.BlockNumber)
-					tx := transactions[event.Raw.TxHash.Hex()]
-					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx().Hash().Hex()
-					txAt := tx.TxAt
-					from := tx.From.Hex()
-					to := tx.Tx().To().Hex()
-					value := tx.Tx().Value().String()
-					tokenId := event.TokenId.Int64()
-					liquidity := event.Liquidity.String()
-					amount0 := event.Amount0.String()
-					amount1 := event.Amount1.String()
-
-					// If handled, ignore
-					_, err := eventSonexPositionManagerDecreaseLiquidityModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
-					switch err {
-					case repository.ErrNotFound:
-					case nil:
-						continue
-					default:
-						return err
-					}
-
-					id, err := global.NewId()
-					if err != nil {
-						return err
-					}
-					err = eventSonexPositionManagerDecreaseLiquidityModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, liquidity, amount0, amount1)
-					if err != nil {
-						return err
-					}
-
-					callableDecreaseLiquidityEvents = append(callableDecreaseLiquidityEvents, event)
-				}
-			}
-
-			callableCollectEvents := []*uniswap_v3.NonfungiblePositionManagerCollect{}
-			// Collect Event
-			{
-				for _, event := range collectEvents {
-					blockNumber := int64(event.Raw.BlockNumber)
-					tx := transactions[event.Raw.TxHash.Hex()]
-					txIndex := int64(event.Raw.Index)
-					txHash := tx.Tx().Hash().Hex()
-					txAt := tx.TxAt
-					from := tx.From.Hex()
-					to := tx.Tx().To().Hex()
-					value := tx.Tx().Value().String()
-					tokenId := event.TokenId.Int64()
-					recipient := event.Recipient.Hex()
-					amount0 := event.Amount0.String()
-					amount1 := event.Amount1.String()
-
-					// If handled, ignore
-					_, err := eventSonexPositionManagerCollectModel.FindOneByChainIdTxHashTxIndex(ctx, handler.chain.ChainId, txHash, txIndex)
-					switch err {
-					case repository.ErrNotFound:
-					case nil:
-						continue
-					default:
-						return err
-					}
-
-					id, err := global.NewId()
-					if err != nil {
-						return err
-					}
-					err = eventSonexPositionManagerCollectModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, tokenId, recipient, amount0, amount1)
-					if err != nil {
-						return err
-					}
-
-					callableCollectEvents = append(callableCollectEvents, event)
-				}
-			}
-
-			// Callback
-			for _, event := range callableTransferEvents {
-				for _, callback := range handler.onPositionManagerTransfer {
-					tx := transactions[event.Raw.TxHash.Hex()]
-					go callback(handler.chain.ChainId, tx, event)
-				}
-			}
-			for _, event := range callableIncreaseLiquidityEvents {
-				for _, callback := range handler.onPositionManagerIncreaseLiquidity {
-					tx := transactions[event.Raw.TxHash.Hex()]
-					go callback(handler.chain.ChainId, tx, event)
-				}
-			}
-			for _, event := range callableDecreaseLiquidityEvents {
-				for _, callback := range handler.onPositionManagerDecreaseLiquidity {
-					tx := transactions[event.Raw.TxHash.Hex()]
-					go callback(handler.chain.ChainId, tx, event)
-				}
-			}
-			for _, event := range callableCollectEvents {
-				for _, callback := range handler.onPositionManagerCollect {
-					tx := transactions[event.Raw.TxHash.Hex()]
-					go callback(handler.chain.ChainId, tx, event)
-				}
+			if len(waitForRetryPools) != 0 {
+				return fmt.Errorf("%s", fmt.Sprintf("Retry handle pools[%d]: %v", len(waitForRetryPools), waitForRetryPools))
 			}
 
 			return nil
-		})
-		if err != nil {
-			ch <- struct{ Err error }{
-				Err: err,
-			}
-			return
-		}
-	}(results)
-
-	wg.Wait()
-	close(results)
-
-	for result := range results {
-		if result.Err != nil {
-			return result.Err, false
-		}
+		},
+		retry.Delay(time.Second*5),
+		retry.DelayType(retry.FixedDelay),
+		retry.OnRetry(func(n uint, err error) {
+			retrys += 1
+			logx.Infof("%s", log.Warning("Retrying handle pools %d times, pools: %v", retrys, waitForRetryPools))
+		}),
+	)
+	if err != nil {
+		logx.Errorf("%s", log.Alert("Retry handle pools %d times, but failed: %v", retrys, waitForRetryPools))
+		return err, false
 	}
 
 	return nil, false

@@ -196,6 +196,136 @@
         ]
       }
     },
+    "/farm/pool/stakeposition": {
+      "get": {
+        "summary": "Farm Stake positions",
+        "operationId": "FarmStakePosition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmStakeResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "userAddress",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "poolAddress",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "incentiveId",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "3"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/farm/pool/unstakeposition": {
+      "get": {
+        "summary": "Farm untake positions",
+        "operationId": "FarmUnstakePosition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmUnstakeResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "incentiveId",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userAddress",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "poolAddress",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "3"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/farm/user/asset/detail": {
       "get": {
         "summary": "Farm user's asset detail in pool",
@@ -1776,6 +1906,178 @@
         "endTime"
       ]
     },
+    "FarmStakeRequest": {
+      "type": "object",
+      "properties": {
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "poolAddress": {
+          "type": "string"
+        },
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "3"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "FarmStakeRequest",
+      "required": [
+        "userAddress",
+        "poolAddress",
+        "incentiveId",
+        "pageSize",
+        "pageIndex"
+      ]
+    },
+    "FarmStakeResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "feeTier": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token0Decimal": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token1Decimal": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sqrtPrice96": {
+          "type": "string"
+        },
+        "token0Symbol": {
+          "type": "string"
+        },
+        "token1Symbol": {
+          "type": "string"
+        },
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StakePositionsInfoResponse_Data"
+          }
+        }
+      },
+      "title": "FarmStakeResponse",
+      "required": [
+        "total",
+        "incentiveId",
+        "feeTier",
+        "token0Decimal",
+        "token1Decimal",
+        "sqrtPrice96",
+        "token0Symbol",
+        "token1Symbol",
+        "list"
+      ]
+    },
+    "FarmUnstakeRequest": {
+      "type": "object",
+      "properties": {
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "poolAddress": {
+          "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "3"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "FarmUnstakeRequest",
+      "required": [
+        "incentiveId",
+        "userAddress",
+        "poolAddress",
+        "pageSize",
+        "pageIndex"
+      ]
+    },
+    "FarmUnstakeResponse": {
+      "type": "object",
+      "properties": {
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "feeTier": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token0Decimal": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token1Decimal": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sqrtPrice96": {
+          "type": "string"
+        },
+        "token0Symbol": {
+          "type": "string"
+        },
+        "token1Symbol": {
+          "type": "string"
+        },
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UnstakePositionsInfoResponse_Data"
+          }
+        }
+      },
+      "title": "FarmUnstakeResponse",
+      "required": [
+        "incentiveId",
+        "total",
+        "feeTier",
+        "token0Decimal",
+        "token1Decimal",
+        "sqrtPrice96",
+        "token0Symbol",
+        "token1Symbol",
+        "list"
+      ]
+    },
     "FarmUserAssetDetailRequest": {
       "type": "object",
       "properties": {
@@ -3002,6 +3304,31 @@
         "message"
       ]
     },
+    "StakePositionsInfoResponse_Data": {
+      "type": "object",
+      "properties": {
+        "positionId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token0Amount": {
+          "type": "string"
+        },
+        "token1Amount": {
+          "type": "string"
+        },
+        "tokenUsd": {
+          "type": "string"
+        }
+      },
+      "title": "StakePositionsInfoResponse_Data",
+      "required": [
+        "positionId",
+        "token0Amount",
+        "token1Amount",
+        "tokenUsd"
+      ]
+    },
     "SummaryRequest": {
       "type": "object",
       "properties": {
@@ -4060,6 +4387,31 @@
         "fromAmount",
         "toAmount",
         "valueUSD"
+      ]
+    },
+    "UnstakePositionsInfoResponse_Data": {
+      "type": "object",
+      "properties": {
+        "positionId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token0Amount": {
+          "type": "string"
+        },
+        "token1Amount": {
+          "type": "string"
+        },
+        "tokenUsd": {
+          "type": "string"
+        }
+      },
+      "title": "UnstakePositionsInfoResponse_Data",
+      "required": [
+        "positionId",
+        "token0Amount",
+        "token1Amount",
+        "tokenUsd"
       ]
     },
     "UserAssetData": {

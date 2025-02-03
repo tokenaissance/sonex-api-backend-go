@@ -18,6 +18,7 @@ type (
 		withSession(session sqlx.Session) EventFarmTokenUnstakedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64, liquidity string) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenUnstaked, error)
+		FindByChainId(ctx context.Context, chainId int64, event_user string) ([]*EventFarmTokenUnstaked, error)
 	}
 
 	customEventFarmTokenUnstakedModel struct {
@@ -49,6 +50,20 @@ func (m *customEventFarmTokenUnstakedModel) FindLatestByChainId(ctx context.Cont
 	switch err {
 	case nil:
 		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *customEventFarmTokenUnstakedModel) FindByChainId(ctx context.Context, chainId int64, event_user string) ([]*EventFarmTokenUnstaked, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 and event_user = $2", eventFarmTokenUnstakedRows, m.table)
+	var resp []*EventFarmTokenUnstaked
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, event_user)
+	switch err {
+	case nil:
+		return resp, nil
 	case sqlx.ErrNotFound:
 		return nil, ErrNotFound
 	default:

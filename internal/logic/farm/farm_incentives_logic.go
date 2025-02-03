@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -157,13 +158,16 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 	}
 
 	// No cache
+	// 查看是否过期
 	if resp == nil {
 		resp, tokenIds, err = l.getResponse(req)
 		if err != nil {
+			logx.Errorf("ERR:%v", err)
 			return nil, err
 		}
 
 		// Set cache
+		// TODO  not in cache
 		// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
 		// if err != nil {
 		// 	logx.Errorf("Marshal response error: %v", err)
@@ -175,7 +179,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 	}
 
 	// Filter
-	if req.UserAddress != "" && common.IsHexAddress(req.UserAddress) {
+	if !strings.EqualFold(req.UserAddress, "") && common.IsHexAddress(req.UserAddress) {
 		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
 		_ = usdAccuracy
 
@@ -184,6 +188,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 
 		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserWithExtra(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
 		if err != nil {
+			logx.Errorf("ERR:%v", err)
 			return nil, err
 		}
 
@@ -218,10 +223,12 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 		linq.From(resp.List).SelectT(func(item types.FarmIncentivesResponse_Data) int64 { return item.IncentiveId }).ToSlice(&incentiveIds)
 		statcCaller, err := farm.NewStaticCaller(l.svcCtx.Config)
 		if err != nil {
+			logx.Errorf("ERR:%v", err)
 			return nil, err
 		}
 		unclaimeds, err := statcCaller.BatchGetUnclaimeds(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress), incentiveIds)
 		if err != nil {
+			logx.Errorf("ERR:%v", err)
 			return nil, err
 		}
 
@@ -244,19 +251,20 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 			return item.Staked > 0
 		}).ToSlice(&resp.List)
 	}
-	if req.KeyWord != "" {
-		// linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
-		// 	return strings.Contains(item.Token0.Symbol, req.KeyWord) || strings.Contains(item.Token1.Symbol, req.KeyWord)
-		// }).ToSlice(&resp.List)
+	if !strings.EqualFold(req.KeyWord, "") {
+		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
+			return strings.Contains(item.Token0Symbol, req.KeyWord) || strings.Contains(item.Token1Symbol, req.KeyWord)
+
+		}).ToSlice(&resp.List)
 	}
-	if req.Status != "" && (req.Status == "active" || req.Status == "closed") {
+	if !strings.EqualFold(req.Status, "") && (strings.EqualFold(req.Status, "active") || strings.EqualFold(req.Status, "closed")) {
 		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
 			return item.Status == req.Status
 		}).ToSlice(&resp.List)
 	}
 
 	// Sorts
-	if req.OrderBy != "" {
+	if !strings.EqualFold(req.OrderBy, "") {
 		switch req.OrderBy {
 		case "hot":
 			linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) int64 {
@@ -283,6 +291,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
 	if err != nil {
+		logx.Errorf("ERR:%v ", err)
 		return nil, nil, err
 	}
 	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
@@ -294,10 +303,12 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 
 	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, req.ChainId, common.HexToAddress(framConf.Staker).Hex())
 	if err != nil {
+		logx.Errorf("ERR1:%v ", err)
 		return nil, nil, err
 	}
 	validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(l.ctx, req.ChainId)
 	if err != nil {
+		logx.Errorf("ERR2:%v ", err)
 		return nil, nil, err
 	}
 	validStakeRecordMap := map[int64][]repository.EventFarmTokenStaked{}
@@ -320,6 +331,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
 	if err != nil {
+		logx.Errorf("ERR3:%v ", err)
 		return nil, nil, err
 	}
 
@@ -345,7 +357,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 						TokenIds []int64
 						Err      error
 					}{
-						Err: fmt.Errorf("%d %s(panic)", incincentiveCreatedRecord.EventIncentiveId, err),
+						Err: fmt.Errorf("%d %s(panic)", record.EventIncentiveId, err),
 					}
 				}
 			}()
@@ -419,7 +431,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				totalLiquidityUSDValue, _ := totalLiquidityUSD.Float64()
 				_ = totalLiquidityUSDValue
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
+					IncentiveId:         record.EventIncentiveId,
 					PoolAddress:         record.EventPool,
 					FeeRatio:            record.ExtraFee,
 					RewardTokenAddress:  rewardToken.Address,
@@ -447,7 +459,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId:         incincentiveCreatedRecord.EventIncentiveId,
+					IncentiveId:         record.EventIncentiveId,
 					PoolAddress:         record.EventPool,
 					FeeRatio:            record.ExtraFee,
 					RewardTokenAddress:  rewardToken.Address,
@@ -479,6 +491,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 			}{
 				Data:     dataResult,
 				TokenIds: tokenIdsResult,
+				Err:      err,
 			}
 		}(&incincentiveCreatedRecord, results)
 	}
@@ -488,9 +501,10 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 	list := []types.FarmIncentivesResponse_Data{}
 	tokenIds = map[int64][]int64{}
 	for result := range results {
-		if result.Err != nil {
-			return nil, nil, result.Err
-		}
+		// if result.Err != nil {
+		// 	logx.Errorf("ERR6:%v", err)
+		// 	return nil, nil, result.Err
+		// }
 		list = append(list, result.Data)
 		tokenIds[result.Data.IncentiveId] = result.TokenIds
 	}

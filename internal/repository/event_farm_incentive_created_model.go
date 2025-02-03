@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -92,7 +93,7 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
 				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
-				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
+				U.event_reward_token AS extra_reward_token, U.event_new_rate_per_second AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
 			FROM %s F
 			JOIN %s P ON P.event_pool = F.event_pool 
@@ -101,16 +102,17 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 		)
 
 		SELECT  
-			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
-			event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp
-			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
-			extra_reward_token, extra_rate,
-			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
+		id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
+      	event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp, extra_token0, extra_token1, extra_fee, extra_tick_spacing,
+      	extra_reward_token, extra_rate,
+      	CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 
+		THEN TRUE ELSE FALSE END AS extra_ended
 		FROM SelectTemp
 		WHERE rn = 1
 	`, m.table, eventSonexFactoryPoolCreatedModel.table, eventFarmRewardRateUpdatedModel.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, staker)
 	if err != nil {
+		logx.Errorf("ERR %v", err)
 		return nil, err
 	}
 	return resp, nil
@@ -142,7 +144,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithExtra
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
 				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
-				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
+				U.event_reward_token AS extra_reward_token, U.event_new_rate_per_second AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
 			FROM %s F
 			JOIN %s P ON P.event_pool = F.event_pool 
@@ -185,7 +187,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWith
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
 				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
-				U.event_reward_token AS extra_reward_token, U.event_new_rate AS extra_rate,
+				U.event_reward_token AS extra_reward_token, U.event_new_rate_per_second AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
 			FROM %s F
 			JOIN %s P ON P.event_pool = F.event_pool 
