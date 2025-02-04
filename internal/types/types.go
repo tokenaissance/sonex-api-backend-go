@@ -54,30 +54,31 @@ type FarmIncentivesResponse struct {
 
 type FarmIncentivesResponse_Data struct {
 	PageRequest
-	IncentiveId         int64  `json:"incentiveId"`
-	PoolAddress         string `json:"poolAddress"` // 池子合约地址
-	FeeRatio            string `json:"feeRatio"`    // 池子手续费率
-	RewardTokenAddress  string `json:"rewardTokenAddress"`
-	RewardTokenSymbol   string `json:"rewardTokensymbol"`
-	RewardTokenDecimals int64  `json:"rewardTokenDecimals"`
-	RewardTokenPrice    string `json:"rewardTokenPrice"`
-	Token0Address       string `json:"token0Address"`  // token0合约地址
-	Token0Symbol        string `json:"token0symbol"`   // token0代币符号
-	Token0Decimals      int64  `json:"token0Decimals"` // token0精度
-	Token0Price         string `json:"token0Price"`    // token0价格
-	Token1Address       string `json:"token1Address"`  // token1合约地址
-	Token1Symbol        string `json:"token1Symbol"`   // token1代币符号
-	Token1Decimals      int64  `json:"token1Decimals"` // token1精度
-	Token1Price         string `json:"token1Price"`    // token1价格
-	Liquidity           string `json:"liquidity"`      // 池子的流动性
-	LiquidityUSD        string `json:"liquidityUsd"`   // 池子的流动性价值（USD）
-	APR                 string `json:"APR"`            // 年化收益率
-	JoinNum             int64  `json:"joinNum"`        // 参与人数
-	Status              string `json:"status"`         // 运行状态（active or closed）
-	StartAt             int64  `json:"startAt"`
-	Balance             int64  `json:"balance"`
-	Staked              int64  `json:"staked"`
-	Earned              string `json:"earned"`
+	IncentiveId         int64       `json:"incentiveId"`
+	PoolAddress         string      `json:"poolAddress"` // 池子合约地址
+	FeeRatio            string      `json:"feeRatio"`    // 池子手续费率
+	RewardTokenAddress  string      `json:"rewardTokenAddress"`
+	RewardTokenSymbol   string      `json:"rewardTokensymbol"`
+	RewardTokenDecimals int64       `json:"rewardTokenDecimals"`
+	RewardTokenPrice    string      `json:"rewardTokenPrice"`
+	Token0Address       string      `json:"token0Address"`  // token0合约地址
+	Token0Symbol        string      `json:"token0symbol"`   // token0代币符号
+	Token0Decimals      int64       `json:"token0Decimals"` // token0精度
+	Token0Price         string      `json:"token0Price"`    // token0价格
+	Token1Address       string      `json:"token1Address"`  // token1合约地址
+	Token1Symbol        string      `json:"token1Symbol"`   // token1代币符号
+	Token1Decimals      int64       `json:"token1Decimals"` // token1精度
+	Token1Price         string      `json:"token1Price"`    // token1价格
+	Liquidity           string      `json:"liquidity"`      // 池子的流动性
+	LiquidityUSD        string      `json:"liquidityUsd"`   // 池子的流动性价值（USD）
+	APR                 string      `json:"APR"`            // 年化收益率
+	JoinNum             int64       `json:"joinNum"`        // 参与人数
+	Status              string      `json:"status"`         // 运行状态（active or closed）
+	StartAt             int64       `json:"startAt"`
+	Balance             int64       `json:"balance"`
+	Staked              int64       `json:"staked"`
+	Earned              string      `json:"earned"`
+	Positions           []*Position `json:"-"`
 }
 
 type FarmIncentivesResponse_Token struct {

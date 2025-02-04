@@ -45,7 +45,7 @@ func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fa
 	}
 }
 
-func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (resp *types.FarmIncentivesResponse, err error) {
+func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, positions []*types.Position) (resp *types.FarmIncentivesResponse, err error) {
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
@@ -184,9 +184,24 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 
 	// Filter
 	if !strings.EqualFold(req.UserAddress, "") && common.IsHexAddress(req.UserAddress) {
-		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
-		_ = usdAccuracy
 
+		// loop assgin
+		// TODO 优化
+		if len(positions) > 0 {
+			if len(resp.List) > 0 {
+				for i, item := range resp.List {
+					for _, vv := range positions {
+						if vv.Pool.Address == item.PoolAddress {
+							resp.List[i].Positions = append(resp.List[i].Positions, vv)
+						}
+					}
+				}
+			}
+		}
+
+		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
+
+		_ = usdAccuracy
 		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
@@ -235,11 +250,11 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest) (
 			logx.Errorf("ERR:%v", err)
 			return nil, err
 		}
-
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
-				resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
+				// resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
+				resp.List[i].Balance = int64(len(resp.List[i].Positions))
 			}
 			_ = unclaimeds
 			// if val, ok := unclaimeds[item.IncentiveId]; ok {
