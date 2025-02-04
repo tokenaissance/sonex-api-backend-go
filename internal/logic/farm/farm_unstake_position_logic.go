@@ -83,7 +83,7 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 		return
 	}
 	if len(tokenIds) == 0 {
-		return &types.FarmUnstakeResponse{}, errors.New("No Data")
+		return &types.FarmUnstakeResponse{}, nil
 	}
 
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)

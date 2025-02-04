@@ -414,9 +414,7 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 				status = "active"
 			}
 
-			logx.Info("2222222222222:", ok)
 			if ok {
-				logx.Info("okokokok")
 				tokenIds := []*big.Int{}
 				userAddressesMap := map[string]struct{}{}
 				linq.From(validStakeRecords).ForEachT(func(item repository.EventFarmTokenStaked) {
@@ -528,6 +526,8 @@ func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (res
 		list = append(list, result.Data)
 		tokenIds[result.Data.IncentiveId] = result.TokenIds
 	}
+
+	logx.Info(" tokenIds: ", tokenIds)
 
 	return &types.FarmIncentivesResponse{
 		USD: types.FarmIncentivesResponse_Token{

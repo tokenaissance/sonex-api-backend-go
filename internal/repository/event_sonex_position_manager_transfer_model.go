@@ -326,11 +326,26 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarm(ctx
 	return tokenIds, nil
 }
 
+/*
+一个 event_token_id 可以先stake 再unsake，然后再stake，不限制次数
+因此要 pg里面要 用  event_token_id 的最后一次 unstake
+*/
 func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, error) {
+
 	query := fmt.Sprintf(`
-		SELECT * FROM %s
-		WHERE
-			chain_id = $1 AND event_from = $2 AND  event_to = $3
+		WITH SelectTemp AS (
+			SELECT 
+				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
+				S.event_from,S.event_to, S.event_token_id, 
+				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
+			FROM %s S
+			WHERE 
+				S.chain_id = $1 AND s.event_from=$2 AND S.event_to = $3 
+		)
+
+		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_from,event_to, event_token_id
+		FROM SelectTemp
+		WHERE rn = 1
 	`, m.table)
 	var resp []*EventSonexPositionManagerTransfer
 	address_from := common.HexToAddress(fromaddress).Hex()
