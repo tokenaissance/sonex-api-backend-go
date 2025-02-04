@@ -15,6 +15,12 @@ type FarmIncentivesRequest {
 	PageIndex   int64  `form:"pageIndex,default=1"`
 }
 
+type FarmIncentivesResponse {
+	USD   FarmIncentivesResponse_Token  `json:"usd"`
+	List  []FarmIncentivesResponse_Data `json:"list"`
+	Total int64                         `json:"total"`
+}
+
 type FarmIncentivesResponse_Token {
 	Address  string `json:"sddress"`
 	Symbol   string `json:"symbol"`
@@ -48,12 +54,7 @@ type FarmIncentivesResponse_Data {
 	Balance             int64  `json:"balance"`
 	Staked              int64  `json:"staked"`
 	Earned              string `json:"earned"`
-}
-
-type FarmIncentivesResponse {
-	USD   FarmIncentivesResponse_Token  `json:"usd"`
-	List  []FarmIncentivesResponse_Data `json:"list"`
-	Total int64                         `json:"total"`
+	Positions           []*Position  `json:"-"` 
 }
 
 type UserAssetData {

@@ -1688,6 +1688,12 @@
         },
         "earned": {
           "type": "string"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Position"
+          }
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -1715,7 +1721,8 @@
         "startAt",
         "balance",
         "staked",
-        "earned"
+        "earned",
+        "-"
       ]
     },
     "FarmIncentivesResponse_Token": {
