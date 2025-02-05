@@ -38,7 +38,7 @@ Chains:
       http://10.1.30.112:8545: 50
     MinConfirmations: 0
     MinDelayWaitMillisecond: 1000
-    MaxLogsNumber: 5000
+    MaxLogsNumber: 3000
     Multicall: 0xB981161Be7D05d7a291Ffa5CE32c2771422De385
     Tokens:
       - Address: 0x4200000000000000000000000000000000000006
