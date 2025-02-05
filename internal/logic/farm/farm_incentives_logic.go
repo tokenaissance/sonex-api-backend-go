@@ -49,12 +49,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
-	if req.PageSize < 1 {
-		req.PageSize = 20
-	}
-	if req.PageIndex < 1 {
-		req.PageIndex = 1
-	}
 
 	cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
@@ -299,8 +293,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 	// Page
 	resp.Total = int64(len(resp.List))
-	linq.From(resp.List).Skip(int((req.PageIndex - 1) * req.PageSize)).Take(int(req.PageSize)).ToSlice(&resp.List)
-
 	return resp, nil
 }
 

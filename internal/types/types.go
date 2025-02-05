@@ -42,8 +42,6 @@ type FarmIncentivesRequest struct {
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
 	KeyWord     string `form:"keyWord,optional"`
 	StakedOnly  bool   `form:"stakedOnly"`
-	PageSize    int64  `form:"pageSize,default=20"`
-	PageIndex   int64  `form:"pageIndex,default=1"`
 }
 
 type FarmIncentivesResponse struct {

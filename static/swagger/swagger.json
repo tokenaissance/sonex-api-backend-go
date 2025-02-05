@@ -76,22 +76,6 @@
             "required": true,
             "type": "boolean",
             "format": "boolean"
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "20"
-          },
-          {
-            "name": "pageIndex",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64",
-            "default": "1"
           }
         ],
         "tags": [
@@ -1538,23 +1522,11 @@
         "stakedOnly": {
           "type": "boolean",
           "format": "boolean"
-        },
-        "pageSize": {
-          "type": "integer",
-          "format": "int64",
-          "default": "20"
-        },
-        "pageIndex": {
-          "type": "integer",
-          "format": "int64",
-          "default": "1"
         }
       },
       "title": "FarmIncentivesRequest",
       "required": [
-        "stakedOnly",
-        "pageSize",
-        "pageIndex"
+        "stakedOnly"
       ]
     },
     "FarmIncentivesResponse": {
