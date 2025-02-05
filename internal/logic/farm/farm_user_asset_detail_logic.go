@@ -5,11 +5,16 @@ import (
 	"errors"
 	"math/big"
 	"strconv"
+	"strings"
 
-	"sonex_api_backend_go/internal/logic/sonex"
+	"sonex_api_backend_go/internal/config"
+	contract_common "sonex_api_backend_go/internal/lib/contract/common"
+	contract_farm "sonex_api_backend_go/internal/lib/contract/farm"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -39,7 +44,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 
 	userAddres := common.HexToAddress(req.UserAddress).Hex()
-	if common.IsHexAddress(userAddres) {
+	if !common.IsHexAddress(userAddres) {
 		return resp, errors.New("invalid user addressss")
 	}
 
@@ -53,23 +58,81 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
 
 	rewards := big.NewInt(0)
-	call1 := sonex.Call{
+	call1 := Call{
 		Contract: common.HexToAddress(framConf.Staker),
 		Method:   "getPendingRewards",
 		Args:     []interface{}{common.HexToAddress(req.UserAddress), incentiveId},
 		Result:   &rewards,
 	}
-	err = sonex.Multicall(context.Background(), *chain, call1)
+	err = Multicall(context.Background(), *chain, call1)
 	if err != nil {
 		return resp, err
 	}
 
-	totalClaimableFees := ""
+	logx.Infof("rewards :%v ", rewards.String())
+	totalClaimableFees := rewards.String()
 	if rewards.Cmp(big.NewInt(0)) == 0 {
-		totalClaimableFees = ""
+		totalClaimableFees = "0"
+	}
+	//  获取该reward token 对应的 usd 额度
+	//   FindRewardTokenInfoByIncentiveId
+
+
+
+	resp = &types.FarmUserAssetDetailResponse{
+		TotalClaimableFees: totalClaimableFees,
+		IncentiveId:        req.IncentiveId,
+	}
+	return
+}
+
+type Call struct {
+	Contract common.Address
+	Method   string
+	Args     []interface{}
+	Result   interface{}
+}
+
+func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
+	farmStaker, _ := abi.JSON(strings.NewReader(contract_farm.UniswapV3StakerABI))
+
+	call3 := make([]contract_common.Multicall3Call3, len(calls))
+	for i, c := range calls {
+		data, _ := farmStaker.Pack(c.Method, c.Args...)
+		call3[i] = contract_common.Multicall3Call3{
+			Target:       c.Contract,
+			AllowFailure: true,
+			CallData:     data,
+		}
 	}
 
-	resp.TotalClaimableFees = totalClaimableFees
-	resp.IncentiveId = req.IncentiveId
-	return
+	multicallABI, _ := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+	data, err := multicallABI.Pack("aggregate3", call3)
+	if err != nil {
+		return err
+	}
+
+	caller, err := node_caller.NewNodeCaller(chain)
+	if err != nil {
+		return err
+	}
+
+	var results []contract_common.Multicall3Result
+	err = caller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &results)
+	if err != nil {
+		return err
+	}
+	if !results[0].Success {
+		return errors.New("multicall fails")
+	}
+
+	for i, r := range results {
+		c := calls[i]
+		err := farmStaker.UnpackIntoInterface(c.Result, c.Method, r.ReturnData)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -34,3 +34,15 @@ func Test_PageQueryByChainIdStakerWithExtra(t *testing.T) {
 	logx.Infof("records:%v  n:%v ", records, n)
 	_ = records
 }
+
+func Test_FindRewardTokenInfoByIncentiveId(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	records, err := model.FindRewardTokenInfoByIncentiveId(context.Background(), 1946, 0)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+	}
+	logx.Infof("records:%#v  ", records)
+}

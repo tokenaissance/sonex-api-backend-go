@@ -19,6 +19,7 @@ type (
 		withSession(session sqlx.Session) EventFarmIncentiveCreatedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, incentiveId int64, startTime int64, weight int64, timestamp int64) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmIncentiveCreated, error)
+		FindRewardTokenInfoByIncentiveId(ctx context.Context, chainId int64, incentiveId int64) (*TokenPriceRateRecordWithExtra, error)
 		QueryByChainIdStaker(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreated, error)
 		QueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithExtra, error)
 		PageQueryByChainIdStaker(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreated, int64, error)
@@ -218,4 +219,26 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWith
 		return nil, 0, err
 	}
 	return resp, total, err
+}
+
+type TokenPriceRateRecordWithExtra struct {
+	TokenPriceRecord
+	TokenDecimals int64 `db:"token_decimals"`
+}
+
+func (m *customEventFarmIncentiveCreatedModel) FindRewardTokenInfoByIncentiveId(ctx context.Context, chainId int64, incentiveId int64) (*TokenPriceRateRecordWithExtra, error) {
+	query := `
+SELECT
+	DISTINCT ON (token_address)  sonex_token_price_record.* , sonex_token.decimals as token_decimals
+FROM
+	sonex_token_price_record
+	JOIN event_farm_incentive_created ON sonex_token_price_record.token_address = event_farm_incentive_created.event_reward_token 
+	JOIN sonex_token ON sonex_token.address = event_farm_incentive_created.event_reward_token 
+	AND event_farm_incentive_created.chain_id = $1 AND event_farm_incentive_created.event_incentive_id  = $2 
+	ORDER BY sonex_token_price_record.token_address, sonex_token_price_record.created_at DESC ;
+	`
+	tokenPriceRecordwithExtra := &TokenPriceRateRecordWithExtra{}
+
+	err := m.conn.QueryRowCtx(ctx, tokenPriceRecordwithExtra, query, chainId, incentiveId)
+	return tokenPriceRecordwithExtra, err
 }
