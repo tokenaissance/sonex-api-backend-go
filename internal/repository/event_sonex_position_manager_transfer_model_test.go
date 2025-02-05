@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"reflect"
 	"sonex_api_backend_go/internal/config"
-	"sonex_api_backend_go/internal/types"
 	"testing"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -25,38 +23,38 @@ func Test_GetTransferEventsFarm(t *testing.T) {
 	logx.Infof("A:%v ", a)
 }
 
-func Test_customEventSonexPositionManagerTransferModel_GetTransferEventsGroupByPoolAddress(t *testing.T) {
-	type fields struct {
-		defaultEventSonexPositionManagerTransferModel *defaultEventSonexPositionManagerTransferModel
-	}
-	type args struct {
-		ctx         context.Context
-		chainId     int64
-		address     string
-		filterBurnt bool
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantRet map[string][]*types.Position
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &customEventSonexPositionManagerTransferModel{
-				defaultEventSonexPositionManagerTransferModel: tt.fields.defaultEventSonexPositionManagerTransferModel,
-			}
-			gotRet, err := m.GetTransferEventsGroupByPoolAddress(tt.args.ctx, tt.args.chainId, tt.args.address, tt.args.filterBurnt)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("customEventSonexPositionManagerTransferModel.GetTransferEventsGroupByPoolAddress() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotRet, tt.wantRet) {
-				t.Errorf("customEventSonexPositionManagerTransferModel.GetTransferEventsGroupByPoolAddress() = %v, want %v", gotRet, tt.wantRet)
-			}
-		})
-	}
-}
+// func Test_customEventSonexPositionManagerTransferModel_GetTransferEventsGroupByPoolAddress(t *testing.T) {
+// 	type fields struct {
+// 		defaultEventSonexPositionManagerTransferModel *defaultEventSonexPositionManagerTransferModel
+// 	}
+// 	type args struct {
+// 		ctx         context.Context
+// 		chainId     int64
+// 		address     string
+// 		filterBurnt bool
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		fields  fields
+// 		args    args
+// 		wantRet map[string][]*types.Position
+// 		wantErr bool
+// 	}{
+// 		// TODO: Add test cases.
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			m := &customEventSonexPositionManagerTransferModel{
+// 				defaultEventSonexPositionManagerTransferModel: tt.fields.defaultEventSonexPositionManagerTransferModel,
+// 			}
+// 			gotRet, err := m.GetTransferEventsGroupByPoolAddress(tt.args.ctx, tt.args.chainId, tt.args.address, tt.args.filterBurnt)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("customEventSonexPositionManagerTransferModel.GetTransferEventsGroupByPoolAddress() error = %v, wantErr %v", err, tt.wantErr)
+// 				return
+// 			}
+// 			if !reflect.DeepEqual(gotRet, tt.wantRet) {
+// 				t.Errorf("customEventSonexPositionManagerTransferModel.GetTransferEventsGroupByPoolAddress() = %v, want %v", gotRet, tt.wantRet)
+// 			}
+// 		})
+// 	}
+// }
