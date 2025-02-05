@@ -240,5 +240,12 @@ FROM
 	tokenPriceRecordwithExtra := &TokenPriceRateRecordWithExtra{}
 
 	err := m.conn.QueryRowCtx(ctx, tokenPriceRecordwithExtra, query, chainId, incentiveId)
-	return tokenPriceRecordwithExtra, err
+	switch err {
+	case nil:
+		return tokenPriceRecordwithExtra, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
