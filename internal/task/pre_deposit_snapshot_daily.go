@@ -166,6 +166,9 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 		}
 	}
 	offsetRate := new(big.Float).Quo(currentTotalRewardAmount, new(big.Float).SetInt(rewardDailyAmount))
+	if offsetRate.Cmp(big.NewFloat(1)) <= 0 {
+		offsetRate = big.NewFloat(1)
+	}
 	for _, reward := range rewards {
 		finalReward := new(big.Float).Quo(reward.Reward, offsetRate)
 		finalRewardI, _ := finalReward.Int(nil)
