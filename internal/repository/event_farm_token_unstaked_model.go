@@ -78,6 +78,8 @@ func (m *customEventFarmTokenUnstakedModel) FindByChainId(ctx context.Context, c
 }
 
 /*
+	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
+
 AND (
 
 		(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
@@ -86,7 +88,7 @@ AND (
 */
 func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string) ([]EventFarmTokenUnStakedWithExtra, error) {
 	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
-	// eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
+	// eventFarmTokenUnStakedModel := newEventFarmTokenUnStakedModel(m.conn)
 	query := fmt.Sprintf(`
 		WITH SelectTemp AS (
 			SELECT 
@@ -98,6 +100,7 @@ func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserWithExtra(ctx
 			JOIN %s C ON C.event_incentive_id = S.event_incentive_id
 			WHERE 
 				S.chain_id = $1 AND S.event_user = $2
+		
 		)
 
 		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id, extra_reward_token, extra_pool

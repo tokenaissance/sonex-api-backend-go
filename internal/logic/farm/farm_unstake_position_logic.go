@@ -71,7 +71,7 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 
-	tokenIds, err := eventSonexPositionManagerTransferModel.GetTransferEventsFarm(context.Background(), req.ChainId, req.UserAddress, farmToAddress_Hex.String())
+	_, tokenIds, err := eventSonexPositionManagerTransferModel.GetTransferEventsFarmUnstake(context.Background(), req.ChainId, farmToAddress_Hex.String(), req.UserAddress)
 	if err != nil {
 		logx.Errorf(" FindByChainId:%v  ", err)
 		return &types.FarmUnstakeResponse{}, err

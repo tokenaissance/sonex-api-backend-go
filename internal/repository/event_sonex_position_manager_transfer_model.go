@@ -26,7 +26,7 @@ type (
 		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
-		GetTransferEventsFarm(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*big.Int, error)
+		GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error)
 		GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, error)
 	}
 
@@ -310,11 +310,11 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 	return result, nil
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarm(ctx context.Context, chainId int64, addressfrom, addressto string) ([]*big.Int, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, addressfrom, addressto string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error) {
 
 	validEvents, err := m.GetTransferEventsByFromAddressAndToAddress(ctx, chainId, addressfrom, addressto)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tokenIds := make([]*big.Int, 0)
@@ -323,7 +323,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarm(ctx
 		tokenIds = append(tokenIds, eventTokenId_big)
 	}
 
-	return tokenIds, nil
+	return validEvents, tokenIds, nil
 }
 
 /*
@@ -340,7 +340,11 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAd
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
 			FROM %s S
 			WHERE 
-				S.chain_id = $1 AND s.event_from=$2 AND S.event_to = $3 
+				S.chain_id = $1 AND S.event_from=$2 AND S.event_to = $3 
+				AND (
+					(SELECT COUNT(*) FROM event_farm_token_staked WHERE  event_farm_token_staked.event_token_id = S.event_token_id) >
+					(SELECT COUNT(*) FROM event_farm_token_unstaked WHERE  event_farm_token_unstaked.event_token_id = S.event_token_id)
+			)
 		)
 
 		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_from,event_to, event_token_id
