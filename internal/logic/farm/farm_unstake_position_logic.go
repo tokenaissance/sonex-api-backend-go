@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"strconv"
 	"strings"
 
 	"sonex_api_backend_go/internal/config"
@@ -65,18 +66,29 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 
-	farmToAddress := l.svcCtx.Config.Farms[0].Staker
+	// farmToAddress := l.svcCtx.Config.Farms[0].Staker
 
-	farmToAddress_Hex := common.HexToAddress(farmToAddress)
+	// farmToAddress_Hex := common.HexToAddress(farmToAddress)
+	incentiveIdint, err := strconv.Atoi(req.IncentiveId)
+	if err != nil {
+		return resp, errors.New("invalid IncentiveId")
+	}
+	// eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 
-	eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
+	// _, tokenIds, err := eventSonexPositionManagerTransferModel.GetTransferEventsFarmUnstake(context.Background(), req.ChainId, farmToAddress_Hex.String(), req.UserAddress, poolAddress.String())
+	// if err != nil {
+	// 	logx.Errorf(" FindByChainId:%v  ", err)
+	// 	return &types.FarmUnstakeResponse{}, err
+	// }
 
-	_, tokenIds, err := eventSonexPositionManagerTransferModel.GetTransferEventsFarmUnstake(context.Background(), req.ChainId, farmToAddress_Hex.String(), req.UserAddress)
+	eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
+
+	_, tokenIds, err := eventFarmTokenUnstakedModel.QueryValidByChainIdUserWithExtra(context.Background(), req.ChainId, req.UserAddress, int64(incentiveIdint))
+
 	if err != nil {
 		logx.Errorf(" FindByChainId:%v  ", err)
 		return &types.FarmUnstakeResponse{}, err
 	}
-
 	staticCaller, err := sonex.NewStaticCaller(l.svcCtx.Config)
 	if err != nil {
 		logx.Error(fmt.Errorf("NewStaticCaller error: %v", err))

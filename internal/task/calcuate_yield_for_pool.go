@@ -100,7 +100,6 @@ func Hander_CalcuateYiledForPool(config *config.Config) error {
 					feeTire_Quo_10000 := new(big.Float).Quo(feeTire, new(big.Float).SetFloat64(1000000))
 					//  365/7 = 52 weeks
 					volume24H_Mul365 := new(big.Float).Mul(_volume168H_bigFloat, new(big.Float).SetFloat64(52))
-
 					feeTireMulVolume := new(big.Float).Mul(feeTire_Quo_10000, volume24H_Mul365)
 					// 减去无常损失  15.8%
 					im_100 := new(big.Float).SetFloat64(0.842)
