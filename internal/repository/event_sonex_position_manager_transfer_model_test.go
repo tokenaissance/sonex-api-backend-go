@@ -15,7 +15,7 @@ func Test_GetTransferEventsFarm(t *testing.T) {
 
 	model := NewEventSonexPositionManagerTransferModel(NewConn(c.PostgreSQL.DateSource()))
 
-	a, err := model.GetTransferEventsFarm(context.Background(), 1946, "0x8d8aCE89639F82ed130463135FeeDaa476B3A3A9", "0x41Bc39CEa9eD3a41F67C7a9D65DE47a8aA1E09E1")
+	_, a, err := model.GetTransferEventsFarmUnstake(context.Background(), 1946, "0x8d8aCE89639F82ed130463135FeeDaa476B3A3A9", "0x41Bc39CEa9eD3a41F67C7a9D65DE47a8aA1E09E1")
 	if err != nil {
 		logx.Errorf("err:%v ", err)
 		return
