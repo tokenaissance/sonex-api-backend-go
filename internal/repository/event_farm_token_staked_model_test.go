@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
-func TestEventFarmTokenStakedModelQueryValidByChainId(t *testing.T) {
+func Test_EventFarmTokenStakedModelQueryValidByChainId(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
@@ -17,7 +18,7 @@ func TestEventFarmTokenStakedModelQueryValidByChainId(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_ = records
+	logx.Infof("records:%#v", records)
 }
 
 func TestEventFarmTokenStakedModelQueryValidByChainIdUser(t *testing.T) {
@@ -37,7 +38,7 @@ func TestEventFarmTokenStakedModelQueryValidByChainIdUserWithExtra(t *testing.T)
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DateSource()))
-	records, err := model.QueryValidByChainIdUserWithExtra(context.Background(), 1946, "0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D")
+	records, err := model.QueryValidByChainIdUserWithExtra(context.Background(), 1946, "0x2A32B1623a7F6431697F7d7643d629aa41dB5181")
 	if err != nil {
 		t.Error(err)
 	}
