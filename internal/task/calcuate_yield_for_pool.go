@@ -148,10 +148,23 @@ func Hander_CalcuateYiledForPool(config *config.Config) error {
 					yield_Py_USD_mul_power10_32 := new(big.Float).Mul(yield_sub_im, new(big.Float).SetFloat64(math.Pow10(35)))
 					yield_100 := new(big.Float).Mul(yield_Py_USD_mul_power10_32, new(big.Float).SetFloat64(100))
 
-					if yield_100.IsInf() {
-						yield_100 = new(big.Float).SetInt64(0)
+					// ASTR 代币是  https://soneium.blockscout.com/address/0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441
+					// 因此要特殊处理
+					yield_100_final := yield_100
+					// 0xe15bD143D36E329567aE9A176682AB9fAFc9C3D2: 交易对 ASTR / WETH 0.3%
+					if strings.EqualFold(vPool.poolAddress, "0xe15bD143D36E329567aE9A176682AB9fAFc9C3D2") {
+						yield_100_final = new(big.Float).Mul(yield_100, new(big.Float).SetFloat64(math.Pow10(15)))
 					}
-					yield_String := yield_100.String()
+
+					// 0xA220915d382D249FCD60E340cCD26958B17345cA: 交易对 ASTR / nsASTR 0.05%
+					if strings.EqualFold(vPool.poolAddress, "0xA220915d382D249FCD60E340cCD26958B17345cA") {
+						yield_100_final = new(big.Float).Mul(yield_100, new(big.Float).SetFloat64(math.Pow10(17)))
+					}
+
+					if yield_100_final.IsInf() {
+						yield_100_final = new(big.Float).SetInt64(0)
+					}
+					yield_String := yield_100_final.String()
 					logx.Infof("yield:%v vpool:%v  yield_100:%v  ", yield_String, vPool.poolAddress, yield_100)
 
 					err = global.SetVolume24HTvlValue(cacher, global.YiedlRateKey, vPool.pool.Address.Hex(), yield_String)
