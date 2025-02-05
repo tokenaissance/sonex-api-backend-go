@@ -103,8 +103,15 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 	for _, item := range totalWithdrawns {
 		totalWithdrawnAmount = new(big.Int).Add(new(big.Int).Add(totalWithdrawnAmount, item.WASTR), item.VASTR)
 	}
-	currentTotalStatedAmount := new(big.Int).Sub(totalStakedAmount, totalWithdrawnAmount)
+	currentTotalStakedAmount := new(big.Int).Sub(totalStakedAmount, totalWithdrawnAmount)
 
+	rewards := []struct {
+		User        string
+		WastrAmount *big.Int
+		VastrAmount *big.Int
+		Reward      *big.Float
+	}{}
+	currentTotalRewardAmount := big.NewFloat(0)
 	for user, tokenStakeds := range totalStakeds {
 		for token, tokenStaked := range tokenStakeds {
 			currentStaked := tokenStaked
@@ -138,20 +145,40 @@ func PreDepositSnapshotDaily(ctx context.Context, conn sqlx.SqlConn, chainConf c
 			}
 
 			// Calculate reward
-			rewardRate := new(big.Float).Quo(new(big.Float).SetInt(currentStaked), new(big.Float).SetInt(currentTotalStatedAmount))
+			rewardRate := new(big.Float).Quo(new(big.Float).SetInt(currentStaked), new(big.Float).SetInt(currentTotalStakedAmount))
 			reward := new(big.Float).Mul(rewardRate, new(big.Float).SetInt(rewardDailyAmount))
-			rewardI, _ := reward.Int(nil)
-			if rewardI.Cmp(common.Big0) <= 0 {
+			if reward.Cmp(big.NewFloat(0)) <= 0 {
 				continue
 			}
-			id, err := global.NewId()
-			if err != nil {
-				return err
-			}
-			err = preDepositRewardSnapshotModel.New(ctx, id, chainConf.ChainId, user, wastrAmount, vastrAmount, preDepositConf.RewardToken, rewardI)
-			if err != nil {
-				return err
-			}
+
+			rewards = append(rewards, struct {
+				User        string
+				WastrAmount *big.Int
+				VastrAmount *big.Int
+				Reward      *big.Float
+			}{
+				User:        user,
+				WastrAmount: wastrAmount,
+				VastrAmount: vastrAmount,
+				Reward:      reward,
+			})
+			currentTotalRewardAmount = new(big.Float).Add(currentTotalRewardAmount, reward)
+		}
+	}
+	offsetRate := new(big.Float).Quo(currentTotalRewardAmount, new(big.Float).SetInt(rewardDailyAmount))
+	if offsetRate.Cmp(big.NewFloat(1)) <= 0 {
+		offsetRate = big.NewFloat(1)
+	}
+	for _, reward := range rewards {
+		finalReward := new(big.Float).Quo(reward.Reward, offsetRate)
+		finalRewardI, _ := finalReward.Int(nil)
+		id, err := global.NewId()
+		if err != nil {
+			return err
+		}
+		err = preDepositRewardSnapshotModel.New(ctx, id, chainConf.ChainId, reward.User, reward.WastrAmount, reward.VastrAmount, preDepositConf.RewardToken, finalRewardI)
+		if err != nil {
+			return err
 		}
 	}
 
