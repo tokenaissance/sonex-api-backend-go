@@ -72,7 +72,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainId(ctx context.Contex
 		WITH SelectTemp AS (
 			SELECT 
 				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_user, S.event_token_id, S.event_incentive_id,
+				S.event_user, S.event_token_id, S.event_incentive_id,S.event_total_liquidity,
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
 			FROM %s S
 			WHERE 
@@ -83,11 +83,11 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainId(ctx context.Contex
 				)
 		)
 
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id
+		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id,event_total_liquidity
 		FROM SelectTemp
 		WHERE rn = 1
 	`, m.table, m.table, eventFarmTokenUnstakedModel.table)
-	var resp []EventFarmTokenStaked
+	resp := []EventFarmTokenStaked{}
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUser(ctx context.Co
 		WITH SelectTemp AS (
 			SELECT 
 				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_user, S.event_token_id, S.event_incentive_id,
+				S.event_user, S.event_token_id, S.event_incentive_id,S.event_total_liquidity,
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
 			FROM %s S
 			WHERE 
@@ -112,7 +112,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUser(ctx context.Co
 				)
 		)
 
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id
+		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id,event_total_liquidity
 		FROM SelectTemp
 		WHERE rn = 1
 	`, m.table, m.table, eventFarmTokenUnstakedModel.table)
@@ -131,7 +131,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserWithExtra(ctx c
 		WITH SelectTemp AS (
 			SELECT 
 				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_user, S.event_token_id, S.event_incentive_id,
+				S.event_user, S.event_token_id, S.event_incentive_id,S.event_total_liquidity,
 				C.event_reward_token AS extra_reward_token, C.event_pool AS extra_pool,
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
 			FROM %s S
@@ -144,7 +144,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserWithExtra(ctx c
 				)
 		)
 
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id, extra_reward_token, extra_pool
+		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id, event_total_liquidity,extra_reward_token, extra_pool
 		FROM SelectTemp
 		WHERE rn = 1
 	`, m.table, eventFarmIncentiveCreatedModel.table, m.table, eventFarmTokenUnstakedModel.table)
@@ -163,7 +163,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserIncentiveIdWith
 		WITH SelectTemp AS (
 			SELECT 
 				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_user, S.event_token_id, S.event_incentive_id,
+				S.event_user, S.event_token_id, S.event_incentive_id,S.event_total_liquidity,
 				C.event_reward_token AS extra_reward_token, C.event_pool AS extra_pool,
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
 			FROM %s S
@@ -176,7 +176,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserIncentiveIdWith
 				)
 		)
 
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id, extra_reward_token, extra_pool
+		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id, event_total_liquidity,extra_reward_token, extra_pool
 		FROM SelectTemp
 		WHERE rn = 1
 	`, m.table, eventFarmIncentiveCreatedModel.table, m.table, eventFarmTokenUnstakedModel.table)
