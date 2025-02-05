@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/robfig/cron/v3"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var c config.Config
@@ -844,6 +845,12 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 		EarnedUSD  *big.Int
 		Err        error
 	}, len(positions))
+	conn := repository.NewConn(conf.PostgreSQL.DateSource())
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+
+	// sonexTokenPriceRecordModel := repository.SonexTokenPriceRecordModel(conn)
+	// sonexTokenPriceRecordModel.GetPrices()
+	// items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), true)
 
 	for _, position := range positions {
 		wg.Add(1)
@@ -872,7 +879,8 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			amount0, amount1 := position.Amounts()
 			fee0, fee1 := position.UnclaimedFees()
 
-			token0CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2)
+			pricesInDb, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(ctx, []string{position.Token0.Hex(), position.Token1.Hex()})
+			// token0CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token0.Hex(), true, 2)
 			if err != nil {
 				ch <- struct {
 					BalanceUSD *big.Int
@@ -892,21 +900,29 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 			}
 			tokne0Decimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil)
 			token0Price := big.NewInt(0)
-			if token0CachePrice != nil {
-				token0Price = token0CachePrice.Value
+			token1Price := big.NewInt(0)
+			price0, ok := pricesInDb[position.Token0.Hex()]
+			if ok {
+				token0Price = price0
 			}
+
+			price1, ok1 := pricesInDb[position.Token1.Hex()]
+			if ok1 {
+				token1Price = price1
+			}
+
 			balanceUSD = new(big.Int).Add(balanceUSD, new(big.Int).Div(new(big.Int).Mul(amount0, token0Price), tokne0Decimals))
 			earnedUSD = new(big.Int).Add(earnedUSD, new(big.Int).Div(new(big.Int).Mul(fee0, token0Price), tokne0Decimals))
 
-			token1CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2)
-			if err != nil {
-				ch <- struct {
-					BalanceUSD *big.Int
-					EarnedUSD  *big.Int
-					Err        error
-				}{Err: err}
-				return
-			}
+			// token1CachePrice, _, _, err := GetPrices(ctx, nil, chainId, position.Token1.Hex(), true, 2)
+			// if err != nil {
+			// 	ch <- struct {
+			// 		BalanceUSD *big.Int
+			// 		EarnedUSD  *big.Int
+			// 		Err        error
+			// 	}{Err: err}
+			// 	return
+			// }
 			token1, err := GetToken(chainId, position.Token1.Hex())
 			if err != nil {
 				ch <- struct {
@@ -917,10 +933,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 				return
 			}
 			tokne1Decimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil)
-			token1Price := big.NewInt(0)
-			if token1CachePrice != nil {
-				token1Price = token1CachePrice.Value
-			}
+
 			balanceUSD = new(big.Int).Add(balanceUSD, new(big.Int).Quo(new(big.Int).Mul(amount1, token1Price), tokne1Decimals))
 			earnedUSD = new(big.Int).Add(earnedUSD, new(big.Int).Quo(new(big.Int).Mul(fee1, token1Price), tokne1Decimals))
 			details = append(details, SummarizePositionsResult_Detail{
@@ -958,6 +971,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), true)
 	if err != nil {
+		logx.Errorf("err:%v ", err)
 		return nil, nil, err
 	}
 
@@ -987,11 +1001,13 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 			tokenIds,
 		)
 		if err != nil {
+			logx.Errorf("err:%v ", err)
 			return nil, nil, err
 		}
 
 		totalBalanceUSD, totalEarnedUSD, details, err := SummarizePositions(conf, ctx, chainId, positions)
 		if err != nil {
+			logx.Errorf("err:%v ", err)
 			return nil, nil, err
 		}
 		totalBalanceUSDResult = totalBalanceUSD

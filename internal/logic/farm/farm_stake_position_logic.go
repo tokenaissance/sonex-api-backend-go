@@ -64,7 +64,7 @@ func (l *FarmStakePositionLogic) FarmStakePosition(req *types.FarmStakeRequest) 
 	logx.Infof("userAddress:%v,poolAddress:%v  ", userAddress, poolAddress)
 
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
-	if !strings.EqualFold(chain.USD, "") {
+	if strings.EqualFold(chain.USD, "") {
 		return &types.FarmStakeResponse{}, errors.New("config file chain error")
 	}
 

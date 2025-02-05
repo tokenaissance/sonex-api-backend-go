@@ -39,7 +39,6 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	// todo: add your logic here and delete this line
 
 	// get user claimed info
-	//
 	// static caller
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 
@@ -77,7 +76,10 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	//  获取该reward token 对应的 usd 额度
 	//   FindRewardTokenInfoByIncentiveId
 
+	// conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	// eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 
+	// tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), req.ChainId, int64(incentiveIdintd))
 
 	resp = &types.FarmUserAssetDetailResponse{
 		TotalClaimableFees: totalClaimableFees,
