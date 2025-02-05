@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -19,14 +20,14 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64, liquidity string) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenUnstaked, error)
 		FindByChainId(ctx context.Context, chainId int64, event_user string) ([]*EventFarmTokenUnstaked, error)
-		QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string) ([]EventFarmTokenUnStakedWithExtra, error)
+		QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenUnStakedWithExtra, []*big.Int, error)
 	}
 
 	customEventFarmTokenUnstakedModel struct {
 		*defaultEventFarmTokenUnstakedModel
 	}
 	EventFarmTokenUnStakedWithExtra struct {
-		EventFarmTokenUnstaked
+		EventFarmTokenStaked
 		ExtraRewardToken string `db:"extra_reward_token"`
 		ExtraPool        string `db:"extra_pool"`
 	}
@@ -80,37 +81,44 @@ func (m *customEventFarmTokenUnstakedModel) FindByChainId(ctx context.Context, c
 /*
 	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
 
-AND (
-
-		(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
-		(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
-	)
+//
 */
-func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string) ([]EventFarmTokenUnStakedWithExtra, error) {
+func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenUnStakedWithExtra, []*big.Int, error) {
 	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
-	// eventFarmTokenUnStakedModel := newEventFarmTokenUnStakedModel(m.conn)
+	// eventFarmTokenStakedModel := newEventFarmTokenStakedModel(m.conn)
 	query := fmt.Sprintf(`
 		WITH SelectTemp AS (
-			SELECT 
-				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_user, S.event_token_id, S.event_incentive_id,
+			SELECT
+				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value,
+				S.event_user, S.event_token_id, S.event_incentive_id,S.event_total_liquidity,
 				C.event_reward_token AS extra_reward_token, C.event_pool AS extra_pool,
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
-			FROM %s S
+			FROM event_farm_token_staked S
 			JOIN %s C ON C.event_incentive_id = S.event_incentive_id
-			WHERE 
-				S.chain_id = $1 AND S.event_user = $2
-		
+			WHERE
+				S.chain_id = $1 AND S.event_user = $2 AND C.event_incentive_id = $3
+				AND (
+					(SELECT COUNT(*) FROM  event_farm_token_staked WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
+					(SELECT COUNT(*) FROM  event_farm_token_unstaked WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
+			)
+
 		)
 
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id, extra_reward_token, extra_pool
+		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id,event_total_liquidity, extra_reward_token, extra_pool
 		FROM SelectTemp
 		WHERE rn = 1
-	`, m.table, eventFarmIncentiveCreatedModel.table)
+	`, eventFarmIncentiveCreatedModel.table)
 	var resp []EventFarmTokenUnStakedWithExtra
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, incentiveId)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return resp, nil
+
+	tokenIds := make([]*big.Int, 0)
+	for _, event := range resp {
+		eventTokenId_big := new(big.Int).SetInt64(event.EventTokenId)
+		tokenIds = append(tokenIds, eventTokenId_big)
+	}
+
+	return resp, tokenIds, nil
 }

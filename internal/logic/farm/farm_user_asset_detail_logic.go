@@ -53,7 +53,6 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	incentiveIdint, err := strconv.Atoi(req.IncentiveId)
 	if err != nil {
 		return resp, errors.New("invalid IncentiveId")
-
 	}
 	incentiveId := big.NewInt(int64(incentiveIdint))
 

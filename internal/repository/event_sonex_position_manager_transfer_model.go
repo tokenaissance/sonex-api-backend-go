@@ -26,8 +26,8 @@ type (
 		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
-		GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error)
-		GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, error)
+		GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error)
+		GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, error)
 	}
 
 	customEventSonexPositionManagerTransferModel struct {
@@ -310,9 +310,9 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 	return result, nil
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, addressfrom, addressto string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, addressfrom, addressto, poolAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error) {
 
-	validEvents, err := m.GetTransferEventsByFromAddressAndToAddress(ctx, chainId, addressfrom, addressto)
+	validEvents, err := m.GetTransferEventsByFromAddressAndToAddress(ctx, chainId, addressfrom, addressto, poolAddress)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -330,7 +330,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarmUnst
 一个 event_token_id 可以先stake 再unsake，然后再stake，不限制次数
 因此要 pg里面要 用  event_token_id 的最后一次 unstake
 */
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress string) ([]*EventSonexPositionManagerTransfer, error) {
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, error) {
 
 	query := fmt.Sprintf(`
 		WITH SelectTemp AS (
@@ -340,11 +340,8 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAd
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
 			FROM %s S
 			WHERE 
-				S.chain_id = $1 AND S.event_from=$2 AND S.event_to = $3 
-				AND (
-					(SELECT COUNT(*) FROM event_farm_token_staked WHERE  event_farm_token_staked.event_token_id = S.event_token_id) >
-					(SELECT COUNT(*) FROM event_farm_token_unstaked WHERE  event_farm_token_unstaked.event_token_id = S.event_token_id)
-			)
+				S.chain_id = $1 AND S.event_from=$2 AND S.event_to = $3 AND S.to_ = $4 
+				
 		)
 
 		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_from,event_to, event_token_id
@@ -355,7 +352,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAd
 	address_from := common.HexToAddress(fromaddress).Hex()
 	address_to := common.HexToAddress(tofarmAddress).Hex()
 
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address_from, address_to)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address_from, address_to, poolAddress)
 	if err != nil {
 		return nil, err
 	}
