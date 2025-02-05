@@ -9,9 +9,9 @@ Domains:
   - api-point.sonex.so
   - sonex-9ybwjtvxi3hr38z3p13d8e.vercel.app
 Sentry:
-    Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
-    TracesSampleRate: 1.0
-    Environment: mainnet
+  Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
+  TracesSampleRate: 1.0
+  Environment: mainnet
 PostgreSQL:
   Host: PG_HOST
   Port: PG_PORT
@@ -38,7 +38,7 @@ Chains:
       http://10.1.30.112:8545: 50
     MinConfirmations: 0
     MinDelayWaitMillisecond: 1000
-    MaxLogsNumber: 3000
+    MaxLogsNumber: 1000
     Multicall: 0xB981161Be7D05d7a291Ffa5CE32c2771422De385
     Tokens:
       - Address: 0x4200000000000000000000000000000000000006
