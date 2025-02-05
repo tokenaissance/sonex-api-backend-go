@@ -3,20 +3,25 @@ package farm
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
 
 	"sonex_api_backend_go/internal/config"
+	"sonex_api_backend_go/internal/lib/cache"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	contract_farm "sonex_api_backend_go/internal/lib/contract/farm"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmUserAssetDetailLogic struct {
@@ -37,9 +42,7 @@ func NewFarmUserAssetDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext
 
 func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetDetailRequest) (resp *types.FarmUserAssetDetailResponse, err error) {
 	// todo: add your logic here and delete this line
-
 	// get user claimed info
-	// static caller
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 
 	userAddres := common.HexToAddress(req.UserAddress).Hex()
@@ -73,17 +76,56 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	if rewards.Cmp(big.NewInt(0)) == 0 {
 		totalClaimableFees = "0"
 	}
-	//  获取该reward token 对应的 usd 额度
-	//   FindRewardTokenInfoByIncentiveId
 
-	// conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	// eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), req.ChainId, int64(incentiveIdint))
+	if err != nil && err != sqlx.ErrNotFound {
+		logx.Errorf("err %v ", err)
+		return resp, err
+	}
 
-	// tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), req.ChainId, int64(incentiveIdintd))
+	if err != nil && err == sqlx.ErrNotFound {
+		logx.Errorf("err %v ", err)
+		tokenInfo.Price = "1000000"
+		tokenInfo.UsdDecimals = 6
+		tokenInfo.TokenDecimals = 18
+	}
+	totalClaimableFeesUSD := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
+	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
+	// 获取质押的数量
+	stakedNum := int64(0)
+	respStake, err := eventFarmTokenStakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(l.ctx, req.ChainId, req.UserAddress, int64(incentiveIdint))
+	if err != nil && err != sqlx.ErrNotFound {
+		return resp, err
+	}
+	if err != nil && err == sqlx.ErrNotFound {
+		stakedNum = 0
+	}
+	stakedNum = int64(len(respStake))
+	logx.Infof("useraddress:%v IncentiveId:%v  ", userAddres, req.IncentiveId)
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+
+	lpBalance := new(big.Float).SetFloat64(0)
+	for i, v := range respStake {
+		logx.Infof("respStake i:%v v:%v ", i, v)
+		eventTokenIdUsdString, err := GetPositionValue(cacher, v.ExtraPool, v.EventTokenId)
+		if err != nil {
+			logx.Errorf("ERR :%v ", err)
+			continue
+		}
+		eventTokenIdUsdStringBigFloat, _ := new(big.Float).SetString(eventTokenIdUsdString)
+		lpBalance = new(big.Float).Add(lpBalance, eventTokenIdUsdStringBigFloat)
+	}
+	logx.Infof("lpBalance:%v ", lpBalance)
 	resp = &types.FarmUserAssetDetailResponse{
-		TotalClaimableFees: totalClaimableFees,
-		IncentiveId:        req.IncentiveId,
+		IncentiveId:           req.IncentiveId,
+		TotalClaimableFees:    totalClaimableFees,
+		TotalClaimableFeesUSD: totalClaimableFeesUSD.String(),
+		Decimals:              tokenInfo.TokenDecimals,
+		LPStakedNum:           stakedNum,
+		LPBalance:             lpBalance.String(),
 	}
 	return
 }

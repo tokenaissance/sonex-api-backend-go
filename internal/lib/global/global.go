@@ -848,10 +848,6 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 	conn := repository.NewConn(conf.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
-	// sonexTokenPriceRecordModel := repository.SonexTokenPriceRecordModel(conn)
-	// sonexTokenPriceRecordModel.GetPrices()
-	// items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), true)
-
 	for _, position := range positions {
 		wg.Add(1)
 
@@ -1084,4 +1080,25 @@ func BatchGetTotalSupplies(ctx context.Context, chainId int64, tokens []common.A
 		return nil, fmt.Errorf("%s", "Miss token cacher")
 	}
 	return cacher.BatchGetTotalSupplies(ctx, tokens)
+}
+
+// CalucateOneTokenUsdInPool(balance0,oneItems.Price, oneItems.UsdDecimals,oneItems.TokenDecimals)
+func CalucateOneTokenUsdInPool(balance *big.Int, tokenPrice string, usdDecimals int64, tokenDecimals int64) *big.Float {
+
+	price, _ := new(big.Int).SetString(tokenPrice, 10)
+	priceDecimal := int64(usdDecimals)
+	tokenDecimal := int64(tokenDecimals)
+	if priceDecimal == 0 {
+		priceDecimal = 6
+	}
+	if tokenDecimal == 0 {
+		tokenDecimal = 18
+	}
+
+	balanceFloat, _ := new(big.Float).SetString(balance.String())
+
+	priceQuopriceDecimal := new(big.Float).Quo(new(big.Float).SetInt(price), new(big.Float).SetFloat64(math.Pow10(int(priceDecimal))))
+	balanceQuoDecimal := new(big.Float).Quo(balanceFloat, new(big.Float).SetFloat64(math.Pow10(int(tokenDecimal))))
+	tokenVolume := new(big.Float).Mul(priceQuopriceDecimal, balanceQuoDecimal)
+	return tokenVolume
 }

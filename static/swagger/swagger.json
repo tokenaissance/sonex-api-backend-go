@@ -2096,9 +2096,8 @@
           "description": " 手续费token的精度"
         },
         "lpBalance": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户的LP token ID余额"
+          "type": "string",
+          "description": " 用户的 LP token ID余额,USD 计价"
         },
         "lpStakedNum": {
           "type": "integer",

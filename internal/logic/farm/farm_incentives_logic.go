@@ -155,13 +155,13 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	// No cache
 	// 查看是否过期
 	if resp == nil {
-		resp, tokenIds, err = l.getResponse(req)
+		resp, tokenIds, err = l.GetResponse(req)
 		if len(tokenIds) == 0 {
 			logx.Info("no tokenid founds")
 			return nil, nil
 		}
 		if err != nil {
-			logx.Errorf("ERR from getResponse:%v", err)
+			logx.Errorf("ERR from GetResponse:%v", err)
 			return nil, err
 		}
 		// Set cache
@@ -293,12 +293,12 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		}
 	}
 
-	// Page
+	// Total
 	resp.Total = int64(len(resp.List))
 	return resp, nil
 }
 
-func (l *FarmIncentivesLogic) getResponse(req *types.FarmIncentivesRequest) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
+func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)

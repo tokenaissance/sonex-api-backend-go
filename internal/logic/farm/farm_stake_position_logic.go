@@ -3,12 +3,15 @@ package farm
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"sort"
 	"strings"
+	"time"
 
 	"sonex_api_backend_go/internal/config"
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	sonex_logic "sonex_api_backend_go/internal/logic/sonex"
 	"sonex_api_backend_go/internal/module/sonex"
@@ -73,10 +76,12 @@ func (l *FarmStakePositionLogic) FarmStakePosition(req *types.FarmStakeRequest) 
 		logx.Errorf("SummarizeCurrentPositions Err:%v", err)
 		return &types.FarmStakeResponse{}, err
 	}
-	return returnPositionByPoolAddress(req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+
+	return returnPositionByPoolAddress(cacher, req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
 }
 
-func returnPositionByPoolAddress(chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmStakeResponse, err error) {
+func returnPositionByPoolAddress(cacher cache.ICache, chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmStakeResponse, err error) {
 
 	// 处理成需要的结构体
 	if len(positions) == 0 {
@@ -135,6 +140,11 @@ func returnPositionByPoolAddress(chainRequest types.ChainRequest, config config.
 						TokenUsd:     tokenUsd.String(),
 					}
 					List = append(List, list)
+					// 更新到  cache 缓存
+					err = SetPositionValue(cacher, v.Pool.Address.String(), v.TokenId.Int64(), tokenUsd.String())
+					if err != nil {
+						logx.Errorf("SetPositionValue:%v ", err)
+					}
 				}
 			}
 		}
@@ -174,4 +184,13 @@ func calucateTokenUsd(tokenAmount string, tokenDecimals int, tokenPrice string, 
 	token0Usd := new(big.Float).Mul(token0AmountString_BigFloatQuoDecimals, token0PriceString_BigFloatQuoDecimals)
 
 	return token0Usd, token0AmountString_BigFloatQuoDecimals
+}
+
+func GetPositionValue(cacher cache.ICache, poolAddress string, tokenId int64) (string, error) {
+	return cacher.Get(fmt.Sprintf("positionvalue_%v_%v", poolAddress, tokenId))
+}
+
+// pool address 和  tokenid  可以唯一确定一个 position 在 incentiveid 里面
+func SetPositionValue(cacher cache.ICache, poolAddress string, tokenId int64, valueUSD string) error {
+	return cacher.Set(fmt.Sprintf("positionvalue_%v_%v", poolAddress, tokenId), valueUSD, 24*360*time.Hour)
 }
