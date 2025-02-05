@@ -185,7 +185,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			if len(resp.List) > 0 {
 				for i, item := range resp.List {
 					for _, vv := range positions {
-						if vv.Pool.Address == item.PoolAddress {
+						if strings.EqualFold(vv.Pool.Address, item.PoolAddress) {
 							resp.List[i].Positions = append(resp.List[i].Positions, vv)
 						}
 					}
@@ -248,8 +248,9 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
 				// resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
-				resp.List[i].Balance = int64(len(resp.List[i].Positions))
 			}
+			resp.List[i].Balance = int64(len(resp.List[i].Positions))
+
 			_ = unclaimeds
 			// if val, ok := unclaimeds[item.IncentiveId]; ok {
 			// rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
@@ -258,6 +259,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			// resp.List[i].EarnedUSD, _ = unclaimedUSD.Float64()
 			// }
 		}
+
 	}
 	if req.StakedOnly {
 		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
