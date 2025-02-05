@@ -177,7 +177,7 @@ type FarmUserAssetDetailResponse struct {
 	TotalClaimableFees    string `json:"totalClaimableFees"`    // 用户总可领取的手续费
 	TotalClaimableFeesUSD string `json:"totalClaimableFeesUsd"` // 用户总可领取的手续费的价值
 	Decimals              int64  `json:"decimals"`              // 手续费token的精度
-	LPBalance             int64  `json:"lpBalance"`             // 用户的LP token ID余额
+	LPBalance             string `json:"lpBalance"`             // 用户的 LP token ID余额,USD 计价
 	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户参与质押的LP token ID数量
 }
 

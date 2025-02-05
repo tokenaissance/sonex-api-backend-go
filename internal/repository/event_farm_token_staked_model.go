@@ -21,6 +21,7 @@ type (
 		QueryValidByChainId(ctx context.Context, chainId int64) ([]EventFarmTokenStaked, error)
 		QueryValidByChainIdUser(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStaked, error)
 		QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStakedWithExtra, error)
+		QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenStakedWithExtra, error)
 	}
 
 	customEventFarmTokenStakedModel struct {
@@ -153,4 +154,44 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserWithExtra(ctx c
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenStakedWithExtra, error) {
+	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
+	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
+	query := fmt.Sprintf(`
+		WITH SelectTemp AS (
+			SELECT 
+				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
+				S.event_user, S.event_token_id, S.event_incentive_id,
+				C.event_reward_token AS extra_reward_token, C.event_pool AS extra_pool,
+				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
+			FROM %s S
+			JOIN %s C ON C.event_incentive_id = S.event_incentive_id
+			WHERE 
+				S.chain_id = $1 AND S.event_user = $2  AND S.event_incentive_id = $3
+				AND (
+					(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
+					(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
+				)
+		)
+
+		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id, extra_reward_token, extra_pool
+		FROM SelectTemp
+		WHERE rn = 1
+	`, m.table, eventFarmIncentiveCreatedModel.table, m.table, eventFarmTokenUnstakedModel.table)
+	var resp []EventFarmTokenStakedWithExtra
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, incentiveId)
+	if err != nil {
+		return nil, err
+	}
+
+	switch err {
+	case nil:
+		return resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
