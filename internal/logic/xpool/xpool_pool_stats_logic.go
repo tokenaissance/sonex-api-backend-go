@@ -93,7 +93,6 @@ func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (
 		}
 		tvlValue = stakingTokenValue.Value()
 
-		logx.Info("[XpoolPoolStats]: Staking token value: %f", tvlValue)
 	}
 
 	// reward token
