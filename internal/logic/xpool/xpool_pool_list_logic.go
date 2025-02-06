@@ -208,7 +208,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 		// filter staked only, if user address is not empty, only return staked xpool.
 		{
-			if (len(userAddress) > 0) && (tvlValue.Cmp(big.NewFloat(0)) == 0) {
+			if (len(userAddress) > 0) && (staked.Cmp(big.NewInt(0)) <= 0) {
 				continue
 			}
 		}
