@@ -161,7 +161,6 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			}
 			tvlValue = stakingTokenValue.Value()
 
-			logx.Infof("[XpoolPoolList]: Staking token value: %f", tvlValue)
 		}
 
 		// reward token
@@ -184,7 +183,6 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 				continue
 			}
 			rewardPerYearValue = rewardTokenValue.Value()
-			logx.Infof("[XpoolPoolList]: Reward token value: %f", rewardPerYearValue)
 		}
 
 		// APR
@@ -208,7 +206,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 		// filter staked only, if user address is not empty, only return staked xpool.
 		{
-			if (len(userAddress) > 0) && (tvlValue.Cmp(big.NewFloat(0)) == 0) {
+			if (len(userAddress) > 0) && (staked.Cmp(big.NewInt(0)) <= 0) {
 				continue
 			}
 		}
