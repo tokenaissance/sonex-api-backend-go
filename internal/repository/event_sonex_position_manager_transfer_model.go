@@ -78,14 +78,23 @@ type transferData struct {
 }
 
 func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error) {
-	// 过滤掉当前地址已经销毁的 position，以及当前地址操作通过钱包转移的 position，交易记录的 event_from 是当前地址
+	// 目标：过滤掉当前地址已经销毁的 position，以及当前地址操作通过钱包转移的 position
+
+	// 步骤：
+	// 找出所有 event_to 是目标地址的记录
+	// 使用 NOT EXISTS 确保没有比这条记录更新的转账记录
+	// 保证返回的记录都是 token_id 的最后一次 transfer，且接收方 event_to 是目标地址
+	// db index: (chain_id, event_token_id, created_at)
 	query := fmt.Sprintf(`
-		SELECT * FROM %s
-		WHERE
-			chain_id = $1 AND event_to = $2
-		 	AND event_token_id NOT IN (
-				SELECT event_token_id FROM %s WHERE chain_id = $1 AND event_from = $2
-			)
+		SELECT t1.* FROM %s t1
+		WHERE t1.chain_id = $1
+		AND NOT EXISTS (
+			SELECT 1 FROM %s t2
+			WHERE t2.chain_id = t1.chain_id
+			AND t2.event_token_id = t1.event_token_id
+			AND t2.created_at > t1.created_at
+		)
+		AND t1.event_to = $2
 	`, m.table, m.table)
 	var resp []*EventSonexPositionManagerTransfer
 	address = common.HexToAddress(address).Hex()
