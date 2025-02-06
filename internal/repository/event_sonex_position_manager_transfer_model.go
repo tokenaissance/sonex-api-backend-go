@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -79,21 +78,24 @@ type transferData struct {
 }
 
 func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error) {
-	// 过滤掉当前地址已经销毁的 position，以及当前地址操作通过钱包转移的 position，交易记录的 event_from 是当前地址
-	// query := fmt.Sprintf(`
-	// 	SELECT * FROM %s
-	// 	WHERE
-	// 		chain_id = $1 AND event_to = $2
-	// 	 	AND event_token_id NOT IN (
-	// 			SELECT event_token_id FROM %s WHERE chain_id = $1 AND event_from = $2
-	// 		)
-	// `, m.table, m.table)
+	// 目标：过滤掉当前地址已经销毁的 position，以及当前地址操作通过钱包转移的 position
 
+	// 步骤：
+	// 找出所有 event_to 是目标地址的记录
+	// 使用 NOT EXISTS 确保没有比这条记录更新的转账记录
+	// 保证返回的记录都是 token_id 的最后一次 transfer，且接收方 event_to 是目标地址
+	// db index: (chain_id, event_token_id, created_at)
 	query := fmt.Sprintf(`
-		SELECT * FROM %s
-		WHERE
-			chain_id = $1 AND event_to = $2
-	`, m.table)
+		SELECT t1.* FROM %s t1
+		WHERE t1.chain_id = $1
+		AND NOT EXISTS (
+			SELECT 1 FROM %s t2
+			WHERE t2.chain_id = t1.chain_id
+			AND t2.event_token_id = t1.event_token_id
+			AND t2.created_at > t1.created_at
+		)
+		AND t1.event_to = $2
+	`, m.table, m.table)
 	var resp []*EventSonexPositionManagerTransfer
 	address = common.HexToAddress(address).Hex()
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address)
@@ -120,70 +122,33 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 
 	var items []*transferData
 
-	query := `
-SELECT T.event_token_id AS event_token_id,
-	T.event_from,
-	T.event_to,
-	T.tx_at,
-	M.extra_pool,
-	T.id,
-	M.ID AS pool_id,
-	f.event_fee,
-	M.event_tick_lower,
-	M.event_tick_upper,
-	token0.address AS token0_address,
-	token0.symbol AS token0_symbol,
-	token0.NAME AS token0_name,
-	token0.logo AS token0_logo,
-	token0.decimals AS token0_decimals,
-	token0.additional AS token0_additional,
-	token1.address AS token1_address,
-	token1.symbol AS token1_symbol,
-	token1.NAME AS token1_name,
-	token1.logo AS token1_logo,
-	token1.decimals AS token1_decimals,
-	token1.additional AS token1_additional,
-	
-CASE
-		
-		WHEN EXISTS (
+	query := fmt.Sprintf(`
 		SELECT
-			1 
-		FROM
-			"public"."event_sonex_position_manager_transfer" 
-		WHERE
-			event_token_id = T.event_token_id 
-			AND event_to = '0x0000000000000000000000000000000000000000' 
-			AND chain_id = $2 
-			) THEN
-		TRUE ELSE FALSE 
-		END AS is_burnt 
-	FROM
-		"public"."event_sonex_position_manager_transfer"		T 
-		JOIN event_sonex_pool_mint M ON T.tx_hash = M.tx_hash
-		JOIN event_sonex_factory_pool_created f ON M.extra_pool = f.event_pool
+			t.event_token_id,
+			t.event_from,
+			t.event_to,
+			t.tx_at,
+			m.extra_pool,
+			m.id as pool_id,
+			f.event_fee,
+			m.event_tick_lower,
+			m.event_tick_upper,
+			token0.address AS token0_address, token0.symbol AS token0_symbol, token0.name AS token0_name, token0.logo AS token0_logo, token0.decimals AS token0_decimals, token0.additional AS token0_additional,
+			token1.address AS token1_address, token1.symbol AS token1_symbol, token1.name AS token1_name, token1.logo AS token1_logo, token1.decimals AS token1_decimals, token1.additional AS token1_additional,
+			CASE WHEN EXISTS (
+				SELECT 1 
+				FROM %[1]s 
+				WHERE event_token_id = t.event_token_id
+				AND event_to = '0x0000000000000000000000000000000000000000' AND chain_id = $2
+			) THEN true ELSE false END AS is_burnt
+		FROM %[1]s t
+		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
+		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
 		JOIN sonex_token token0 ON f.event_token0 = token0.address
 		JOIN sonex_token token1 ON f.event_token1 = token1.address
-		JOIN event_farm_incentive_created fc ON fc.event_pool = f.event_pool
-	WHERE
-		T.event_token_id = ANY ( $1) 
-		AND T.chain_id = $2 
-		AND T.event_token_id in  (
-		 SELECT event_token_id FROM (
-		SELECT
-        t1.event_token_id,
-        count(t1.*) - count(t2.*) AS a  		
-    FROM event_farm_token_staked AS t1
-    LEFT JOIN event_farm_token_unstaked AS t2
-        ON t2.event_token_id=t1.event_token_id
-    GROUP BY t1.event_token_id
-		) WHERE a  = 0
-		)
-		ORDER BY event_token_id desc
+		WHERE t.event_token_id = ANY($1) AND t.chain_id = $2
+	`, m.table)
 
-	`
-
-	logx.Infof("XXXXXXX:%v tokenIds:%v ", query, tokenIds)
 	err = m.conn.QueryRowsCtx(ctx, &items, query, tokenIds, chainId)
 	if err != nil {
 		return nil, err
