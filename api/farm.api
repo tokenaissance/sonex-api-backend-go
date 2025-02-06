@@ -154,6 +154,7 @@ type StakePositionsInfoResponse_Data {
 	Token0Amount string  `json:"token0Amount"`
 	Token1Amount string  `json:"token1Amount"`
 	TokenUsd     string `json:"tokenUsd"` 
+	IsNeedApproved int64 `json:"isNeedApproved"` // IsNeedApproved: 1 ,需要approved  ; IsNeedApproved: 2 ,不需要approved  
 }
 
 // 计算有userAddress 在这个里面有多少可以Staked 的
