@@ -161,7 +161,6 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			}
 			tvlValue = stakingTokenValue.Value()
 
-			logx.Infof("[XpoolPoolList]: Staking token value: %f", tvlValue)
 		}
 
 		// reward token
@@ -184,7 +183,6 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 				continue
 			}
 			rewardPerYearValue = rewardTokenValue.Value()
-			logx.Infof("[XpoolPoolList]: Reward token value: %f", rewardPerYearValue)
 		}
 
 		// APR
