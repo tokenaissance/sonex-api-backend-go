@@ -214,7 +214,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		// filter keyword，如果有搜索关键字，进行不区分大小写的模糊匹配过滤
 		{
 			if len(searchKeyword) > 0 && !strings.Contains(
-				strings.ToLower(info.StakingTokenName),
+				strings.ToLower(fmt.Sprintf("%s %s %s %s", info.StakingTokenName, info.StakingTokenSymbol, info.RewardTokenName, info.RewardTokenSymbol)),
 				strings.ToLower(searchKeyword)) {
 				continue
 			}
