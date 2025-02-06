@@ -12,12 +12,17 @@ import (
 
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
+	contract_common "sonex_api_backend_go/internal/lib/contract/common"
+	lib_uniswap_v3 "sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/lib/node_caller"
 	sonex_logic "sonex_api_backend_go/internal/logic/sonex"
+
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -77,11 +82,10 @@ func (l *FarmStakePositionLogic) FarmStakePosition(req *types.FarmStakeRequest) 
 		return &types.FarmStakeResponse{}, err
 	}
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-
-	return returnPositionByPoolAddress(cacher, req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
+	return returnPositionByPoolAddress(chain, cacher, req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
 }
 
-func returnPositionByPoolAddress(cacher cache.ICache, chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmStakeResponse, err error) {
+func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache, chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmStakeResponse, err error) {
 
 	// 处理成需要的结构体
 	if len(positions) == 0 {
@@ -93,6 +97,9 @@ func returnPositionByPoolAddress(cacher cache.ICache, chainRequest types.ChainRe
 	sqrtPrice96 := "0"
 	token0Decimals, token1Decimals := int64(0), int64(0)
 	token0Symbol, token1Symbol := "", ""
+
+	sonexConf := config.GetSonexConfig(chainRequest.ChainId)
+	farmConf := config.GetFarmConfig(chainRequest.ChainId)
 
 	// 开始处理
 	if len(positions) > 0 {
@@ -134,11 +141,13 @@ func returnPositionByPoolAddress(cacher cache.ICache, chainRequest types.ChainRe
 					tokenUsd := new(big.Float).Add(token0Usd, token1Usd)
 					count++
 					list := types.StakePositionsInfoResponse_Data{
-						PositionId:   v.TokenId.Int64(),
-						Token0Amount: token0AmountQuoTokenDecimals.String(),
-						Token1Amount: token1AmountQuoTokenDecimals.String(),
-						TokenUsd:     tokenUsd.String(),
+						PositionId:     v.TokenId.Int64(),
+						Token0Amount:   token0AmountQuoTokenDecimals.String(),
+						Token1Amount:   token1AmountQuoTokenDecimals.String(),
+						TokenUsd:       tokenUsd.String(),
+						IsNeedApproved: getTokenIdApprovedOrNot(*chain, v.TokenId.Int64(), sonexConf.PositionManager, farmConf.Staker),
 					}
+					logx.Infof("ZZZZZ:tokenId:%v,isApproved:%v ", list.PositionId, list.IsNeedApproved)
 					List = append(List, list)
 					// 更新到  cache 缓存
 					err = SetPositionValue(cacher, v.Pool.Address.String(), v.TokenId.Int64(), tokenUsd.String())
@@ -193,4 +202,67 @@ func GetPositionValue(cacher cache.ICache, poolAddress string, tokenId int64) (s
 // pool address 和  tokenid  可以唯一确定一个 position 在 incentiveid 里面
 func SetPositionValue(cacher cache.ICache, poolAddress string, tokenId int64, valueUSD string) error {
 	return cacher.Set(fmt.Sprintf("positionvalue_%v_%v", poolAddress, tokenId), valueUSD, 24*360*time.Hour)
+}
+
+// IsNeedApproved: 1 ,需要approved
+// IsNeedApproved: 2 ,不需要approved
+var IsNeedApprovedTrue = int64(1)
+var IsNeedApprovedFalse = int64(2)
+
+func getTokenIdApprovedOrNot(chain config.ChainConfig, tokenId int64, positionManagerAddress, farmAddress string) int64 {
+	ret := common.Address{}
+	call := Call{
+		Contract: common.HexToAddress(positionManagerAddress),
+		Method:   "getApproved",
+		Args:     []interface{}{tokenId},
+		Result:   &ret,
+	}
+	MulticallForGetApproved(context.Background(), chain, call)
+	if strings.EqualFold(ret.String(), farmAddress) {
+		return IsNeedApprovedFalse
+	}
+	return IsNeedApprovedTrue
+}
+func MulticallForGetApproved(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
+	nftPositionManager, _ := abi.JSON(strings.NewReader(lib_uniswap_v3.NonfungiblePositionManagerABI))
+
+	call3 := make([]contract_common.Multicall3Call3, len(calls))
+	for i, c := range calls {
+		data, _ := nftPositionManager.Pack(c.Method, c.Args...)
+		call3[i] = contract_common.Multicall3Call3{
+			Target:       c.Contract,
+			AllowFailure: true,
+			CallData:     data,
+		}
+	}
+
+	multicallABI, _ := abi.JSON(strings.NewReader(contract_common.MulticallABI))
+	data, err := multicallABI.Pack("aggregate3", call3)
+	if err != nil {
+		return err
+	}
+
+	caller, err := node_caller.NewNodeCaller(chain)
+	if err != nil {
+		return err
+	}
+
+	var results []contract_common.Multicall3Result
+	err = caller.StaticCall(ctx, multicallABI, common.HexToAddress(chain.Multicall), "aggregate3", data, &results)
+	if err != nil {
+		return err
+	}
+	if !results[0].Success {
+		return errors.New("multicall fails")
+	}
+
+	for i, r := range results {
+		c := calls[i]
+		err := nftPositionManager.UnpackIntoInterface(c.Result, c.Method, r.ReturnData)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

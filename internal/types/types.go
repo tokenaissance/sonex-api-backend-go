@@ -515,10 +515,11 @@ type SonexTokenPricesResponse struct {
 }
 
 type StakePositionsInfoResponse_Data struct {
-	PositionId   int64  `json:"positionId"`
-	Token0Amount string `json:"token0Amount"`
-	Token1Amount string `json:"token1Amount"`
-	TokenUsd     string `json:"tokenUsd"`
+	PositionId     int64  `json:"positionId"`
+	Token0Amount   string `json:"token0Amount"`
+	Token1Amount   string `json:"token1Amount"`
+	TokenUsd       string `json:"tokenUsd"`
+	IsNeedApproved int64  `json:"isNeedApproved"` // IsNeedApproved: 1 ,需要approved  ; IsNeedApproved: 2 ,不需要approved
 }
 
 type SummaryRequest struct {

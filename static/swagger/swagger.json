@@ -3297,6 +3297,11 @@
         },
         "tokenUsd": {
           "type": "string"
+        },
+        "isNeedApproved": {
+          "type": "integer",
+          "format": "int64",
+          "description": " IsNeedApproved: 1 ,需要approved  ; IsNeedApproved: 2 ,不需要approved"
         }
       },
       "title": "StakePositionsInfoResponse_Data",
@@ -3304,7 +3309,8 @@
         "positionId",
         "token0Amount",
         "token1Amount",
-        "tokenUsd"
+        "tokenUsd",
+        "isNeedApproved"
       ]
     },
     "SummaryRequest": {
