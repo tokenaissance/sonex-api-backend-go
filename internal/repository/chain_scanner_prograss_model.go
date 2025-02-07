@@ -53,13 +53,11 @@ func (m *customChainScannerPrograssModel) UpdateHeightByChainId(ctx context.Cont
 	}
 	chainScannerPrograssA := linq.From(records).SingleWithT(func(item ChainScannerPrograss) bool { return item.ChainId == chainId })
 	if chainScannerPrograssA == nil {
-		m.Insert(ctx, &ChainScannerPrograss{
-			Id:        int64(len(records) + 1),
-			CreatedAt: NowUTC(),
-			UpdatedAt: NowUTC(),
-			ChainId:   chainId,
-			Height:    height,
-		})
+		query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5)", m.table, chainScannerPrograssRows)
+		_, err := m.conn.ExecCtx(ctx, query, int64(len(records)+1), NowUTC(), NowUTC(), chainId, height)
+		if err != nil {
+			return err
+		}
 	} else {
 
 	}
