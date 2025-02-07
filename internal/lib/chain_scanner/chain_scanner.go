@@ -230,11 +230,11 @@ func (chainScanner *ChainScanner) Start() {
 
 						// Delay handle
 						if !isReplay {
-							delayOpt := opt
+							delayOpt := *opt
 							delayOpt.Start = delayOpt.Start - 50
 							delayEnd := *delayOpt.End - 50
 							delayOpt.End = &delayEnd
-							err, skip = handler.Execute(client, delayOpt, false)
+							err, skip = handler.Execute(client, &delayOpt, false)
 							ch <- struct {
 								Err     error
 								Skip    bool
