@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -81,99 +82,174 @@ func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers
 	if len(numbers) == 0 {
 		return map[int64]*types.Block{}, nil
 	}
-	requests := make([]rpc.BatchElem, len(numbers))
-	rawMessages := make([]*json.RawMessage, len(numbers))
-	for i, number := range numbers {
-		requests[i] = rpc.BatchElem{
-			Method: "eth_getBlockByNumber",
-			Args:   []any{toBlockNumArg(big.NewInt(number)), true},
-			Result: &rawMessages[i],
+
+	batchCall := func(ctx context.Context, numbers []int64) (map[int64]*types.Block, error) {
+		requests := make([]rpc.BatchElem, len(numbers))
+		rawMessages := make([]*json.RawMessage, len(numbers))
+		for i, number := range numbers {
+			requests[i] = rpc.BatchElem{
+				Method: "eth_getBlockByNumber",
+				Args:   []any{toBlockNumArg(big.NewInt(number)), true},
+				Result: &rawMessages[i],
+			}
 		}
-	}
-	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
-	if err != nil {
-		return nil, err
-	}
-	err = client.Client().BatchCallContext(ctx, requests)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[int64]*types.Block, len(numbers))
-	for i, number := range numbers {
-		if requests[i].Error != nil {
-			return nil, requests[i].Error
-		}
-		rawMessage := rawMessages[i]
-		if rawMessage == nil {
-			return nil, fmt.Errorf("%s", fmt.Sprintf("Get block[%d] raw data failed", number))
-		}
-		var head *types.Header
-		err := json.Unmarshal(*rawMessages[i], &head)
+		client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
 		if err != nil {
 			return nil, err
 		}
-		if head == nil {
-			return nil, ethereum.NotFound
-		}
-		var body Block
-		if err := json.Unmarshal(*rawMessages[i], &body); err != nil {
+		err = client.Client().BatchCallContext(ctx, requests)
+		if err != nil {
 			return nil, err
 		}
-		// Quick-verify transaction and uncle lists. This mostly helps with debugging the server.
-		if head.UncleHash == types.EmptyUncleHash && len(body.UncleHashes) > 0 {
-			return nil, errors.New("server returned non-empty uncle list but block header indicates no uncles")
-		}
-		if head.UncleHash != types.EmptyUncleHash && len(body.UncleHashes) == 0 {
-			return nil, errors.New("server returned empty uncle list but block header indicates uncles")
-		}
-		if head.TxHash == types.EmptyTxsHash && len(body.Transactions) > 0 {
-			return nil, errors.New("server returned non-empty transaction list but block header indicates no transactions")
-		}
-		if head.TxHash != types.EmptyTxsHash && len(body.Transactions) == 0 {
-			return nil, errors.New("server returned empty transaction list but block header indicates transactions")
-		}
-		// Load uncles because they are not included in the block response.
-		var uncles []*types.Header
-		if len(body.UncleHashes) > 0 {
-			uncles = make([]*types.Header, len(body.UncleHashes))
-			reqs := make([]rpc.BatchElem, len(body.UncleHashes))
-			for i := range reqs {
-				reqs[i] = rpc.BatchElem{
-					Method: "eth_getUncleByBlockHashAndIndex",
-					Args:   []interface{}{body.Hash, hexutil.EncodeUint64(uint64(i))},
-					Result: &uncles[i],
-				}
+		result := make(map[int64]*types.Block, len(numbers))
+		for i, number := range numbers {
+			if requests[i].Error != nil {
+				return nil, requests[i].Error
 			}
-			client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+			rawMessage := rawMessages[i]
+			if rawMessage == nil {
+				return nil, fmt.Errorf("%s", fmt.Sprintf("Get block[%d] raw data failed", number))
+			}
+			var head *types.Header
+			err := json.Unmarshal(*rawMessages[i], &head)
 			if err != nil {
 				return nil, err
 			}
-			err = client.Client().BatchCallContext(ctx, reqs)
-			if err != nil {
+			if head == nil {
+				return nil, ethereum.NotFound
+			}
+			var body Block
+			if err := json.Unmarshal(*rawMessages[i], &body); err != nil {
 				return nil, err
 			}
-			for i := range reqs {
-				if reqs[i].Error != nil {
-					return nil, reqs[i].Error
+			// Quick-verify transaction and uncle lists. This mostly helps with debugging the server.
+			if head.UncleHash == types.EmptyUncleHash && len(body.UncleHashes) > 0 {
+				return nil, errors.New("server returned non-empty uncle list but block header indicates no uncles")
+			}
+			if head.UncleHash != types.EmptyUncleHash && len(body.UncleHashes) == 0 {
+				return nil, errors.New("server returned empty uncle list but block header indicates uncles")
+			}
+			if head.TxHash == types.EmptyTxsHash && len(body.Transactions) > 0 {
+				return nil, errors.New("server returned non-empty transaction list but block header indicates no transactions")
+			}
+			if head.TxHash != types.EmptyTxsHash && len(body.Transactions) == 0 {
+				return nil, errors.New("server returned empty transaction list but block header indicates transactions")
+			}
+			// Load uncles because they are not included in the block response.
+			var uncles []*types.Header
+			if len(body.UncleHashes) > 0 {
+				uncles = make([]*types.Header, len(body.UncleHashes))
+				reqs := make([]rpc.BatchElem, len(body.UncleHashes))
+				for i := range reqs {
+					reqs[i] = rpc.BatchElem{
+						Method: "eth_getUncleByBlockHashAndIndex",
+						Args:   []interface{}{body.Hash, hexutil.EncodeUint64(uint64(i))},
+						Result: &uncles[i],
+					}
 				}
-				if uncles[i] == nil {
-					return nil, fmt.Errorf("got null header for uncle %d of block %x", i, body.Hash[:])
+				client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+				if err != nil {
+					return nil, err
+				}
+				err = client.Client().BatchCallContext(ctx, reqs)
+				if err != nil {
+					return nil, err
+				}
+				for i := range reqs {
+					if reqs[i].Error != nil {
+						return nil, reqs[i].Error
+					}
+					if uncles[i] == nil {
+						return nil, fmt.Errorf("got null header for uncle %d of block %x", i, body.Hash[:])
+					}
 				}
 			}
+			txs := make([]*types.Transaction, len(body.Transactions))
+			for i, tx := range body.Transactions {
+				txs[i] = tx.tx
+			}
+			result[number] = types.NewBlockWithHeader(head).WithBody(
+				types.Body{
+					Transactions: txs,
+					Uncles:       uncles,
+					Withdrawals:  body.Withdrawals,
+					Requests:     body.Requests,
+				})
 		}
-		txs := make([]*types.Transaction, len(body.Transactions))
-		for i, tx := range body.Transactions {
-			txs[i] = tx.tx
-		}
-		result[number] = types.NewBlockWithHeader(head).WithBody(
-			types.Body{
-				Transactions: txs,
-				Uncles:       uncles,
-				Withdrawals:  body.Withdrawals,
-				Requests:     body.Requests,
-			})
+		return result, nil
 	}
-	return result, nil
+
+	batchSize := 100
+	batchCount := len(numbers) / batchSize
+	if len(numbers)%batchSize > 0 {
+		batchCount++
+	}
+
+	var wg sync.WaitGroup
+	results := make(chan struct {
+		Blocks map[int64]*types.Block
+		Err    error
+	}, batchCount)
+
+	for i := 0; i < batchCount; i++ {
+		start := i * batchSize
+		end := (i + 1) * batchSize
+		if end > len(numbers) {
+			end = len(numbers)
+		}
+		currentNumbers := numbers[start:end]
+
+		wg.Add(1)
+		go func(ctx context.Context, currentNumbers []int64, ch chan struct {
+			Blocks map[int64]*types.Block
+			Err    error
+		}) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct {
+						Blocks map[int64]*types.Block
+						Err    error
+					}{
+						Err: fmt.Errorf("%s(panic)", err),
+					}
+				}
+			}()
+
+			blocks, err := batchCall(ctx, currentNumbers)
+			if err != nil {
+				ch <- struct {
+					Blocks map[int64]*types.Block
+					Err    error
+				}{
+					Err: err,
+				}
+				return
+			}
+
+			ch <- struct {
+				Blocks map[int64]*types.Block
+				Err    error
+			}{
+				Blocks: blocks,
+			}
+		}(ctx, currentNumbers, results)
+	}
+
+	wg.Wait()
+	close(results)
+
+	blocks := map[int64]*types.Block{}
+	for result := range results {
+		if result.Err != nil {
+			return nil, result.Err
+		}
+		for key, value := range result.Blocks {
+			blocks[key] = value
+		}
+	}
+
+	return blocks, nil
 }
 
 // Batch query transactions of specified block numbers
