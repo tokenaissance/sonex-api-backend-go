@@ -39,7 +39,7 @@ func HandlePreDepositSnapshotDaily(config *config.Config) {
 					err := PreDepositSnapshotDaily(ctx, sqlx.NewSqlConnFromSession(s), chainConf, *preDepositConf)
 					if err != nil {
 						logx.Errorf("HandlePreDepositSnapshot failed: %d %s", chainConf.ChainId, err)
-						continue
+						return err
 					}
 				}
 
