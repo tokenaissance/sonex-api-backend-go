@@ -93,7 +93,7 @@ func (chainScanner *ChainScanner) Start() {
 			default:
 			}
 
-			startTime := time.Now()
+			var startTime time.Time
 			err := func(ctx context.Context) (result error) {
 				defer func() {
 					if err := recover(); err != nil {
@@ -145,6 +145,8 @@ func (chainScanner *ChainScanner) Start() {
 						newEnd := height - uint64(chainScanner.config.MinConfirmations)
 						end = &newEnd
 					}
+
+					startTime = time.Now()
 
 					retrys := 0
 					err = retry.Do(func() error {
