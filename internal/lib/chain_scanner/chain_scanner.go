@@ -243,7 +243,6 @@ func (chainScanner *ChainScanner) Start() {
 								Skip:    skip,
 								Handler: handler,
 							}
-							fmt.Printf("%d %d %d %d\n", opt.Start, *opt.End, delayOpt.Start, *delayOpt.End)
 						}
 					}(handler, client, opt, isReplay, results)
 				}
