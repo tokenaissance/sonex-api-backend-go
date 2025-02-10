@@ -1666,6 +1666,14 @@
           "items": {
             "$ref": "#/definitions/Position"
           }
+        },
+        "totalClaimableFeesUsd": {
+          "type": "string",
+          "description": " 用户未领取的手续费的价值"
+        },
+        "totalClaimedFeesUSD": {
+          "type": "string",
+          "description": " 用户已经领取的手续的价值"
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -1694,7 +1702,9 @@
         "balance",
         "staked",
         "earned",
-        "-"
+        "-",
+        "totalClaimableFeesUsd",
+        "totalClaimedFeesUSD"
       ]
     },
     "FarmIncentivesResponse_Token": {
