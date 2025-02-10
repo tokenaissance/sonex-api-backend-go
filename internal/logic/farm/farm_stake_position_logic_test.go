@@ -100,22 +100,27 @@ func Test_MulticallForGetApproved2(t *testing.T) {
 
 }
 
-
-
 func Test_getpendingRewards(t *testing.T) {
 
-	rewards := big.NewInt(0)
-	decimals := int64(18)
-	call1 := Call{
-		Contract: common.HexToAddress(stakerAddress),
-		Method:   "getPendingRewards",
-		Args:     []interface{}{common.HexToAddress(userAddress), incentiveId},
-		Result:   &rewards,
-	}
-	err := MulticallForPendingRewards(context.Background(), *chain, call1)
-	if err != nil {
-		logx.Infof("Multicall error:%v ", err)
-		return big.NewInt(0), big.NewFloat(0), big.NewFloat(0), decimals, err
+	var c config.Config
+	conf.MustLoad("../../../etc/forlocaluse0109.yaml", &c)
+
+	for _, chain := range c.Chains {
+		stakerAddress := "0xA35b60B847Bff39900316A259b9F3da9cbEc6C48"
+		userAddress := "0x2A32B1623a7F6431697F7d7643d629aa41dB5181"
+		incentiveId := int64(1)
+		rewards := big.NewInt(0)
+		call1 := Call{
+			Contract: common.HexToAddress(stakerAddress),
+			Method:   "getPendingRewards",
+			Args:     []interface{}{common.HexToAddress(userAddress), incentiveId},
+			Result:   &rewards,
+		}
+		err := Multicall(context.Background(), chain, call1)
+		if err != nil {
+			logx.Infof("Multicall error:%v ", err)
+		}
+		logx.Infof("rewards:%v ", rewards)
 	}
 
 }

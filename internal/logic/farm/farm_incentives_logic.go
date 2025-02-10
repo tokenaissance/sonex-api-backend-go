@@ -252,16 +252,35 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
+
 				// resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
+				rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, item.IncentiveId, *chain)
+				if err != nil {
+					return resp, err
+				}
+
+				logx.Infof("rewards :%v ", rewards.String())
+				totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, item.IncentiveId, req.ChainId, chain, conn)
+				if err != nil {
+					return resp, err
+				}
+				resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
 			}
 			resp.List[i].Balance = int64(len(resp.List[i].Positions))
 
-			_, totalClaimableFeesUSD, totalClaimedFeesUSD, _, err := getPendingRewards(req.UserAddress, farmConf.Staker, item.IncentiveId, req.ChainId, chain, conn)
+			logx.Infof("SSSSA:%v B:%v c:%v", farmConf.Staker, req.UserAddress, item.IncentiveId)
+
+			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
 			if err != nil {
 				return resp, err
 			}
-			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
-			resp.List[i].TotalClaimedFeesUSD = totalClaimedFeesUSD.String()
+
+			totalClaimedFeesUSD_bigFloat, _, err := getValueOfAmountToken(totalClaimedAmount, item.IncentiveId, req.ChainId, chain, conn)
+
+			if err != nil {
+				return resp, err
+			}
+			resp.List[i].TotalClaimedFeesUSD = totalClaimedFeesUSD_bigFloat.String()
 			_ = unclaimeds
 			// if val, ok := unclaimeds[item.IncentiveId]; ok {
 			// rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
@@ -554,50 +573,4 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 		},
 		List: list,
 	}, tokenIds, nil
-}
-
-func getPendingRewards(userAddress, stakerAddress string, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (*big.Int, *big.Float, *big.Float, int64, error) {
-
-	rewards := big.NewInt(0)
-	decimals := int64(18)
-	call1 := Call{
-		Contract: common.HexToAddress(stakerAddress),
-		Method:   "getPendingRewards",
-		Args:     []interface{}{common.HexToAddress(userAddress), incentiveId},
-		Result:   &rewards,
-	}
-	err := MulticallForPendingRewards(context.Background(), *chain, call1)
-	if err != nil {
-		logx.Infof("Multicall error:%v ", err)
-		return big.NewInt(0), big.NewFloat(0), big.NewFloat(0), decimals, err
-	}
-
-	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
-	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId)
-	if err != nil && err != sqlx.ErrNotFound {
-		logx.Errorf("err %v ", err)
-		return big.NewInt(0), big.NewFloat(0), big.NewFloat(0), decimals, err
-	}
-
-	if err != nil && err == sqlx.ErrNotFound {
-		logx.Errorf("err %v ", err)
-		tokenInfo.Price = "1000000"
-		tokenInfo.UsdDecimals = 6
-		tokenInfo.TokenDecimals = decimals
-	}
-	totalClaimableFeesUSD := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
-
-	logx.Infof("totalClaimableFeesUSD:%v", totalClaimableFeesUSD)
-
-	// 已经领取的奖励
-	newEventFarmRewardClaimedModel := repository.NewEventFarmRewardClaimedModel(conn)
-	claimedRewardAmount, err := newEventFarmRewardClaimedModel.SummarizeTotalClaimedByChainIdIncentiveIdUser(context.Background(), chainId, incentiveId, userAddress)
-	if err != nil {
-		logx.Infof("ERR:%v", err)
-		claimedRewardAmount = big.NewInt(0)
-	}
-
-	totalClaimabedFeesUSD := global.CalucateOneTokenUsdInPool(claimedRewardAmount, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
-
-	return rewards, totalClaimableFeesUSD, totalClaimabedFeesUSD, tokenInfo.TokenDecimals, nil
 }

@@ -12,6 +12,7 @@ import (
 	"sonex_api_backend_go/internal/lib/cache"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	contract_farm "sonex_api_backend_go/internal/lib/contract/farm"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -55,17 +56,21 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	}
 
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	rewards, totalClaimableFeesUSD, _, tokenInfoTokenDecimals, err := getPendingRewards(userAddres, farmConf.Staker, int64(incentiveIdint), req.ChainId, chain, conn)
+	rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, int64(incentiveIdint), *chain)
 	if err != nil {
 		return resp, err
 	}
-
+	logx.Infof("rewards :%v ", rewards.String())
 	totalClaimableFees := rewards.String()
 	if rewards.Cmp(big.NewInt(0)) == 0 {
 		totalClaimableFees = "0"
 	}
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 
+	totalClaimableFeesUSD, tokenDecials, err := getValueOfAmountToken(rewards, int64(incentiveIdint), req.ChainId, chain, conn)
+	if err != nil {
+		return resp, err
+	}
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
 	// 获取质押的数量
@@ -97,7 +102,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 		IncentiveId:           req.IncentiveId,
 		TotalClaimableFees:    totalClaimableFees,
 		TotalClaimableFeesUSD: totalClaimableFeesUSD.String(),
-		Decimals:              tokenInfoTokenDecimals,
+		Decimals:              tokenDecials,
 		LPStakedNum:           stakedNum,
 		LPBalance:             lpBalance.String(),
 	}
@@ -111,7 +116,23 @@ type Call struct {
 	Result   interface{}
 }
 
-func MulticallForPendingRewards(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
+func getRewardsAmount(staker, useraddress string, incentiveId int64, chain config.ChainConfig) (*big.Int, error) {
+	rewards := big.NewInt(0)
+	call1 := Call{
+		Contract: common.HexToAddress(staker),
+		Method:   "getPendingRewards",
+		Args:     []interface{}{common.HexToAddress(useraddress), big.NewInt(incentiveId)},
+		Result:   &rewards,
+	}
+	err := Multicall(context.Background(), chain, call1)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return rewards, err
+	}
+	return rewards, nil
+
+}
+func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
 	farmStaker, _ := abi.JSON(strings.NewReader(contract_farm.UniswapV3StakerABI))
 
 	call3 := make([]contract_common.Multicall3Call3, len(calls))
@@ -153,4 +174,39 @@ func MulticallForPendingRewards(ctx context.Context, chain config.ChainConfig, c
 	}
 
 	return nil
+}
+
+func getValueOfAmountToken(rewards *big.Int, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (*big.Float, int64, error) {
+
+	decimals := int64(18)
+	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId)
+	if err != nil && err != sqlx.ErrNotFound {
+		logx.Errorf("err %v ", err)
+		return big.NewFloat(0), decimals, err
+	}
+
+	if err != nil && err == sqlx.ErrNotFound {
+		logx.Errorf("err %v ", err)
+		tokenInfo.Price = "1000000"
+		tokenInfo.UsdDecimals = 6
+		tokenInfo.TokenDecimals = decimals
+	}
+	totalClaimableFeesUSD := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
+
+	logx.Infof("totalClaimableFeesUSD:%v", totalClaimableFeesUSD)
+
+	// 已经领取的奖励
+	return totalClaimableFeesUSD, tokenInfo.TokenDecimals, nil
+}
+
+func getClainedAmount(userAddress string, chainId, incentiveId int64, conn sqlx.SqlConn) (*big.Int, error) {
+	newEventFarmRewardClaimedModel := repository.NewEventFarmRewardClaimedModel(conn)
+	claimedRewardAmount, err := newEventFarmRewardClaimedModel.SummarizeTotalClaimedByChainIdIncentiveIdUser(context.Background(), chainId, incentiveId, userAddress)
+	if err != nil {
+		logx.Infof("ERR:%v", err)
+		claimedRewardAmount = big.NewInt(0)
+		return claimedRewardAmount, err
+	}
+	return claimedRewardAmount, nil
 }
