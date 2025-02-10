@@ -86,6 +86,7 @@ func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (
 			logx.Errorf("[XpoolPoolStats]: Staking token price not found: %s", poolInfo.StakingToken.Hex())
 			return nil, fmt.Errorf("%s", "Staking token price not found")
 		}
+		profitTokenPrice = stakingTokenPrice
 		stakingTokenValue, err := sonex.NewTokenValue(poolInfo.TotalStaked.String(), int(poolInfo.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
 		if err != nil {
 			logx.Errorf("[XpoolPoolStats]: Invalid staking token value: %s", err)
@@ -98,7 +99,6 @@ func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (
 	// reward token
 	{
 		rewardTokenPrice, exists := prices[poolInfo.RewardToken.Hex()]
-		profitTokenPrice = rewardTokenPrice
 		if !exists {
 			logx.Errorf("[XpoolPoolStats]: Reward token price not found: %s", poolInfo.RewardToken.Hex())
 			return nil, fmt.Errorf("%s", "Reward token price not found")
@@ -127,7 +127,7 @@ func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (
 		roi := new(big.Float).Mul(apr, durationRatio)
 		roiPercentageFloat, _ := new(big.Float).Mul(roi, big.NewFloat(100)).Float64()
 		roiPercentageString = fmt.Sprintf("%.2f%%", roiPercentageFloat)
-		profitTokenValue, err := sonex.NewTokenValue(amount, int(poolInfo.RewardTokenDecimals), sonex.WithTokenPrice(profitTokenPrice))
+		profitTokenValue, err := sonex.NewTokenValue(amount, int(poolInfo.StakingTokenDecimals), sonex.WithTokenPrice(profitTokenPrice))
 		if err != nil {
 			logx.Errorf("[XpoolPoolStats]: Invalid profit token value: %s", err)
 			return nil, err
