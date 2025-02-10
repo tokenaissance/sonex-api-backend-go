@@ -99,3 +99,23 @@ func Test_MulticallForGetApproved2(t *testing.T) {
 	}
 
 }
+
+
+
+func Test_getpendingRewards(t *testing.T) {
+
+	rewards := big.NewInt(0)
+	decimals := int64(18)
+	call1 := Call{
+		Contract: common.HexToAddress(stakerAddress),
+		Method:   "getPendingRewards",
+		Args:     []interface{}{common.HexToAddress(userAddress), incentiveId},
+		Result:   &rewards,
+	}
+	err := MulticallForPendingRewards(context.Background(), *chain, call1)
+	if err != nil {
+		logx.Infof("Multicall error:%v ", err)
+		return big.NewInt(0), big.NewFloat(0), big.NewFloat(0), decimals, err
+	}
+
+}

@@ -12,7 +12,6 @@ import (
 	"sonex_api_backend_go/internal/lib/cache"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	contract_farm "sonex_api_backend_go/internal/lib/contract/farm"
-	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -43,7 +42,7 @@ func NewFarmUserAssetDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext
 func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetDetailRequest) (resp *types.FarmUserAssetDetailResponse, err error) {
 	// todo: add your logic here and delete this line
 	// get user claimed info
-	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
+	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 
 	userAddres := common.HexToAddress(req.UserAddress).Hex()
 	if !common.IsHexAddress(userAddres) {
@@ -54,43 +53,19 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	if err != nil {
 		return resp, errors.New("invalid IncentiveId")
 	}
-	incentiveId := big.NewInt(int64(incentiveIdint))
 
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
-
-	rewards := big.NewInt(0)
-	call1 := Call{
-		Contract: common.HexToAddress(framConf.Staker),
-		Method:   "getPendingRewards",
-		Args:     []interface{}{common.HexToAddress(req.UserAddress), incentiveId},
-		Result:   &rewards,
-	}
-	err = Multicall(context.Background(), *chain, call1)
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	rewards, totalClaimableFeesUSD, _, tokenInfoTokenDecimals, err := getPendingRewards(userAddres, farmConf.Staker, int64(incentiveIdint), req.ChainId, chain, conn)
 	if err != nil {
 		return resp, err
 	}
 
-	logx.Infof("rewards :%v ", rewards.String())
 	totalClaimableFees := rewards.String()
 	if rewards.Cmp(big.NewInt(0)) == 0 {
 		totalClaimableFees = "0"
 	}
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
-	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
-	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), req.ChainId, int64(incentiveIdint))
-	if err != nil && err != sqlx.ErrNotFound {
-		logx.Errorf("err %v ", err)
-		return resp, err
-	}
-
-	if err != nil && err == sqlx.ErrNotFound {
-		logx.Errorf("err %v ", err)
-		tokenInfo.Price = "1000000"
-		tokenInfo.UsdDecimals = 6
-		tokenInfo.TokenDecimals = 18
-	}
-	totalClaimableFeesUSD := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
 	// 获取质押的数量
@@ -122,7 +97,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 		IncentiveId:           req.IncentiveId,
 		TotalClaimableFees:    totalClaimableFees,
 		TotalClaimableFeesUSD: totalClaimableFeesUSD.String(),
-		Decimals:              tokenInfo.TokenDecimals,
+		Decimals:              tokenInfoTokenDecimals,
 		LPStakedNum:           stakedNum,
 		LPBalance:             lpBalance.String(),
 	}
@@ -136,7 +111,7 @@ type Call struct {
 	Result   interface{}
 }
 
-func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
+func MulticallForPendingRewards(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
 	farmStaker, _ := abi.JSON(strings.NewReader(contract_farm.UniswapV3StakerABI))
 
 	call3 := make([]contract_common.Multicall3Call3, len(calls))
