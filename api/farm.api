@@ -53,6 +53,9 @@ type FarmIncentivesResponse_Data {
 	Staked              int64  `json:"staked"`
 	Earned              string `json:"earned"`
 	Positions           []*Position  `json:"-"` 
+
+	TotalClaimableFeesUSD string `json:"totalClaimableFeesUsd"` // 用户未领取的手续费的价值
+	TotalClaimedFeesUSD string `json:"totalClaimedFeesUSD"`     // 用户已经领取的手续的价值
 }
 
 type UserAssetData {
