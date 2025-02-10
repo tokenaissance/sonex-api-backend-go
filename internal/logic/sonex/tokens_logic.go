@@ -41,8 +41,6 @@ func NewTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *TokensLogi
 }
 
 func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiResponse, err error) {
-	st := time.Now()
-
 	if req.ChainId == 0 {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
@@ -137,9 +135,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		}).
 		WhereT(func(item types.TokensResponse_Token) bool { return !item.Hidden }).ToSlice(&dataResult)
 
-	fmt.Printf("1 ====> %s\n", time.Since(st))
-	st = time.Now()
-
 	var wg sync.WaitGroup
 
 	// Summarize volumes
@@ -218,9 +213,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	}()
 
 	wg.Wait()
-
-	fmt.Printf("2 ====> %s\n", time.Since(st))
-	st = time.Now()
 
 	var results = make(chan struct {
 		Data types.TokensResponse_Token
@@ -353,9 +345,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	wg.Wait()
 	close(results)
 
-	fmt.Printf("3 ====> %s\n", time.Since(st))
-	st = time.Now()
-
 	// Handle results
 	dataResult = []types.TokensResponse_Token{}
 	var eth *types.TokensResponse_Token
@@ -468,8 +457,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		}
 	}
 	meta.Total = totalResult
-
-	fmt.Printf("4 ====> %s\n", time.Since(st))
 
 	return &response.ApiResponse{
 		Data: dataResult,
