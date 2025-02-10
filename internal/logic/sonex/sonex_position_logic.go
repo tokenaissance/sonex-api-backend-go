@@ -526,8 +526,8 @@ func (l *SonexPositionLogic) cacheAddressTokenIds(ctx context.Context, address s
 		return err
 	}
 
-	// set expire time
-	err = cacher.Expire(cacheKey, 5*time.Minute)
+	// set expire time - 1day
+	err = cacher.Expire(cacheKey, 24*time.Hour)
 	if err != nil {
 		return err
 	}

@@ -68,7 +68,7 @@ PreDeposits:
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1946
-    Staker: 0xab9065de75f0A345A973Db54032Aa85A0971dA9C
+    Staker: 0xA35b60B847Bff39900316A259b9F3da9cbEc6C48
 Xpools:
   - ChainId: 1946
     Factory: 0xD8a869B43389Db1A55072808e406a5B60F26e4e0

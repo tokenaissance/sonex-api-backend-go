@@ -93,7 +93,7 @@ func (chainScanner *ChainScanner) Start() {
 			default:
 			}
 
-			startTime := time.Now()
+			var startTime time.Time
 			err := func(ctx context.Context) (result error) {
 				defer func() {
 					if err := recover(); err != nil {
@@ -146,6 +146,8 @@ func (chainScanner *ChainScanner) Start() {
 						end = &newEnd
 					}
 
+					startTime = time.Now()
+
 					retrys := 0
 					err = retry.Do(func() error {
 						if *end > start {
@@ -185,7 +187,7 @@ func (chainScanner *ChainScanner) Start() {
 					Err     error
 					Skip    bool
 					Handler IHandler
-				}, len(handlers))
+				}, len(handlers)*2)
 
 				// Handle by activity handler
 				for _, handler := range handlers {
@@ -216,6 +218,7 @@ func (chainScanner *ChainScanner) Start() {
 							}
 						}()
 
+						// Main handle
 						err, skip := handler.Execute(client, opt, isReplay)
 						ch <- struct {
 							Err     error
@@ -225,6 +228,23 @@ func (chainScanner *ChainScanner) Start() {
 							Err:     err,
 							Skip:    skip,
 							Handler: handler,
+						}
+
+						// Delay handle
+						if !isReplay {
+							delayOpt := *opt
+							delayOpt.Start = opt.Start - 50
+							delayOpt.End = &opt.Start
+							err, skip = handler.Execute(client, &delayOpt, false)
+							ch <- struct {
+								Err     error
+								Skip    bool
+								Handler IHandler
+							}{
+								Err:     err,
+								Skip:    skip,
+								Handler: handler,
+							}
 						}
 					}(handler, client, opt, isReplay, results)
 				}
