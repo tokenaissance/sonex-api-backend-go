@@ -1,4 +1,4 @@
-package pre_deposit
+package util
 
 import (
 	"fmt"

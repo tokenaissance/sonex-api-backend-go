@@ -72,7 +72,7 @@ type FarmIncentivesResponse_Data struct {
 	APR                   string      `json:"APR"`            // 年化收益率
 	JoinNum               int64       `json:"joinNum"`        // 参与人数
 	Status                string      `json:"status"`         // 运行状态（active or closed）
-	StartAt               int64       `json:"startAt"`
+	StartAt               int64       `json:"startAt"`        // position 开始的时间
 	Balance               int64       `json:"balance"`
 	Staked                int64       `json:"staked"`
 	Earned                string      `json:"earned"`
@@ -186,6 +186,14 @@ type FarmUserAssetDetailResponse struct {
 type Fees struct {
 	FeeAmount0 string `json:"feeAmount0"`
 	FeeAmount1 string `json:"feeAmount1"`
+}
+
+type GalxeAddLiquidityRequest struct {
+	Address string `form:"address"`
+}
+
+type GalxeAddLiquidityResponse struct {
+	IsAddLiquidityOrNot bool `json:"isAddLiquidityOrNot"`
 }
 
 type GalxeSwapRequest struct {
@@ -398,7 +406,7 @@ type PortfolioFarm struct {
 
 type PortfolioRequest struct {
 	ChainRequest
-	Type    string `form:"type,options=all|liquidity|farm|xpool"`
+	Type    string `form:"type,options=all|liquidity|farm|xpool,default=all"`
 	Address string `form:"address"`
 }
 

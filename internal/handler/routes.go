@@ -101,6 +101,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
+				Path:    "/galxeaddliquidity",
+				Handler: sonex.SonexGalxeAddliquidityHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/galxeswap",
 				Handler: sonex.SonexGalxeswapHandler(serverCtx),
 			},
