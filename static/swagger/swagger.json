@@ -1715,6 +1715,16 @@
         "totalClaimedFeesUSD": {
           "type": "string",
           "description": " 用户已经领取的手续的价值"
+        },
+        "liquidityUSDFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 池子的流动性价值（USD）"
+        },
+        "totalClaimableFeesUSDFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 用户未领取的手续费的价值"
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -2940,27 +2950,27 @@
           "type": "string",
           "description": " 池子手续费率"
         },
-        "stakingTokenName": {
+        "token0Name": {
           "type": "string",
           "description": " token0 代币名称"
         },
-        "stakingTokenSymbol": {
+        "token0Symbol": {
           "type": "string",
           "description": " token0 代币符号"
         },
-        "stakingTokenAddress": {
+        "token0Address": {
           "type": "string",
           "description": " token0 代币合约地址"
         },
-        "stakingTokenName": {
+        "token1Name": {
           "type": "string",
           "description": " token1 代币名称"
         },
-        "stakingTokenSymbol": {
+        "token1Symbol": {
           "type": "string",
           "description": " token1 代币符号"
         },
-        "stakingTokenAddress": {
+        "token1Address": {
           "type": "string",
           "description": " token1 代币合约地址"
         },
@@ -2981,9 +2991,12 @@
       "required": [
         "poolAddress",
         "feeRatio",
-        "stakingTokenName",
-        "stakingTokenSymbol",
-        "stakingTokenAddress",
+        "token0Name",
+        "token0Symbol",
+        "token0Address",
+        "token1Name",
+        "token1Symbol",
+        "token1Address",
         "positionValue",
         "feeRevenue",
         "earned"
@@ -3019,6 +3032,10 @@
           "type": "number",
           "format": "double",
           "description": " 所有资产净值"
+        },
+        "totalAssetsRate": {
+          "type": "string",
+          "description": " 所有资产净值相比前一天的变化率"
         },
         "claimableFees": {
           "type": "number",
@@ -3080,6 +3097,7 @@
       "title": "PortfolioResponse",
       "required": [
         "totalAssets",
+        "totalAssetsRate",
         "claimableFees",
         "totalPosition",
         "liquidityClaimableFees",
@@ -4864,6 +4882,24 @@
         "status": {
           "type": "string",
           "description": " 运行状态"
+        },
+        "stakingTokenPriceWithDecimals": {
+          "type": "string",
+          "description": " 质押的代币价格(包含精度)"
+        },
+        "stakingTokenPriceDecimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 质押的代币价格精度"
+        },
+        "rewardTokenPriceWithDecimals": {
+          "type": "string",
+          "description": " 奖励的代币价格(包含精度)"
+        },
+        "rewardTokenPriceDecimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 奖励的代币价格精度"
         },
         "createdAt": {
           "type": "string"

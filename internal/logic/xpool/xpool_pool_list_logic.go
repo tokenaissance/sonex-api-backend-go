@@ -132,7 +132,9 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 		tvlValue := new(big.Float)
 		rewardPerYearValue := new(big.Float)
+		var stakingTokenPrice *sonex.TokenPrice
 		var stakingTokenPriceString string
+		var rewardTokenPrice *sonex.TokenPrice
 		var rewardTokenPriceString string
 		staked := new(big.Int)
 		earned := new(big.Int)
@@ -160,7 +162,6 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 				continue
 			}
 			tvlValue = stakingTokenValue.Value()
-
 		}
 
 		// reward token
@@ -224,12 +225,12 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			StakingTokenName:     info.StakingTokenName,                     // 质押的代币名称
 			StakingTokenSymbol:   info.StakingTokenSymbol,                   // 质押的代币符号
 			StakingTokenAddress:  info.StakingToken.Hex(),                   // 质押的代币合约地址
-			StakingTokenDecimals: info.StakingTokenDecimals,                 // 质押的代币合约精度
+			StakingTokenDecimals: info.StakingTokenDecimals,                 // 质押的代币精度
 			StakingTokenPrice:    stakingTokenPriceString,                   // 质押的代币价格
 			RewardTokenName:      info.RewardTokenName,                      // 奖励的代币名称
 			RewardTokenSymbol:    info.RewardTokenSymbol,                    // 奖励的代币符号
 			RewardTokenAddress:   info.RewardToken.Hex(),                    // 奖励的代币合约地址
-			RewardTokenDecimals:  info.RewardTokenDecimals,                  // 奖励的代币合约精度
+			RewardTokenDecimals:  info.RewardTokenDecimals,                  // 奖励的代币精度
 			RewardTokenPrice:     rewardTokenPriceString,                    // 奖励的代币价格
 			PoolAddress:          common.HexToAddress(pool.EventPool).Hex(), // 质押池合约地址
 			RewardPerBlock:       info.RewardPerBlock.String(),              // 出块奖励
@@ -242,8 +243,13 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			Staked:               staked.String(),                           // 用户已质押代币数量
 			Earned:               earned.String(),                           // 用户已获得奖励代币数量
 			Status:               status,                                    // 运行状态
-			CreatedAt:            pool.CreatedAt.Format(time.RFC3339),       // 创建时间
-			UpdatedAt:            pool.UpdatedAt.Format(time.RFC3339),       // 更新时间
+
+			StakingTokenPriceWithDecimals: stakingTokenPrice.Price(),
+			StakingTokenPriceDecimals:     int64(stakingTokenPrice.Decimals()),
+			RewardTokenPriceWithDecimals:  rewardTokenPrice.Price(),
+			RewardTokenPriceDecimals:      int64(rewardTokenPrice.Decimals()),
+			CreatedAt:                     pool.CreatedAt.Format(time.RFC3339), // 创建时间
+			UpdatedAt:                     pool.UpdatedAt.Format(time.RFC3339), // 更新时间
 		})
 	}
 
