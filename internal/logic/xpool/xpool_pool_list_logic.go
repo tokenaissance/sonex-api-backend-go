@@ -150,11 +150,12 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 		// staking token
 		{
-			stakingTokenPrice, exists := prices[info.StakingToken.Hex()]
+			price, exists := prices[info.StakingToken.Hex()]
 			if !exists {
 				logx.Errorf("[XpoolPoolList]: Staking token price not found: %s", info.StakingToken.Hex())
 				continue
 			}
+			stakingTokenPrice = price
 			stakingTokenPriceString = stakingTokenPrice.PriceWithoutDecimals()
 			stakingTokenValue, err := sonex.NewTokenValue(info.TotalStaked.String(), int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
 			if err != nil {
@@ -166,11 +167,12 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 		// reward token
 		{
-			rewardTokenPrice, exists := prices[info.RewardToken.Hex()]
+			price, exists := prices[info.RewardToken.Hex()]
 			if !exists {
 				logx.Errorf("[XpoolPoolList]: Reward token price not found: %s", info.RewardToken.Hex())
 				continue
 			}
+			rewardTokenPrice = price
 			rewardTokenPriceString = rewardTokenPrice.PriceWithoutDecimals()
 			if xpoolConf.BlockTime <= 0 {
 				logx.Errorf("[XpoolPoolList]: Invalid block time configure")
