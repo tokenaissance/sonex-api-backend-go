@@ -78,9 +78,12 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 	}
 	linq.From(stakedRecords).
 		WhereT(func(item repository.EventFarmTokenStaked) bool {
-			return time.Now().Unix()-item.TxAt.Unix() > farmConf.PointsHoldTimeLimits
+			return int64(time.Since(item.TxAt).Seconds()) >= farmConf.PointsHoldTimeLimits
 		}).
 		ToSlice(&stakedRecords)
+	if len(stakedRecords) <= 0 {
+		return nil
+	}
 	var tokenIds []*big.Int
 	linq.From(stakedRecords).SelectT(func(item repository.EventFarmTokenStaked) *big.Int { return big.NewInt(item.EventTokenId) }).ToSlice(&tokenIds)
 	caller, _ := sonex.NewStaticCaller(conf)
