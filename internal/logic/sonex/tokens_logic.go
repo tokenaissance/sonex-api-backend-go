@@ -41,6 +41,8 @@ func NewTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *TokensLogi
 }
 
 func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiResponse, err error) {
+	st := time.Now()
+
 	if req.ChainId == 0 {
 		return nil, fmt.Errorf("%s", "Invalid parameter")
 	}
@@ -135,11 +137,23 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		}).
 		WhereT(func(item types.TokensResponse_Token) bool { return !item.Hidden }).ToSlice(&dataResult)
 
-	// Update price
-	volumes, err := eventSonexPoolSwapModel.SummarizeVolumesByChainId(l.ctx, req.ChainId)
-	if err != nil {
-		return nil, err
-	}
+	fmt.Printf("1 ====> %s\n", time.Since(st))
+	st = time.Now()
+
+	var wg sync.WaitGroup
+
+	// Summarize volumes
+	var volumes map[string]*big.Int
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		volumes, err = eventSonexPoolSwapModel.SummarizeVolumesByChainId(l.ctx, req.ChainId)
+		if err != nil {
+			logx.Errorf("Summarize volumes error: %s", err)
+			return
+		}
+	}()
 
 	var tokenAddressesWithOutETH []common.Address
 	linq.From(dataResult).
@@ -148,24 +162,66 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		ToSlice(&tokenAddressesWithOutETH)
 	var tokenAddressStrs []string
 	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) string { return item.Address }).ToSlice(&tokenAddressStrs)
-	totalSupplies, err := global.BatchGetTotalSupplies(l.ctx, req.ChainId, tokenAddressesWithOutETH)
-	if err != nil {
-		return nil, err
-	}
-	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, tokenAddressStrs)
-	if err != nil {
-		return nil, err
-	}
-	last1DPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1d")
-	if err != nil {
-		return nil, err
-	}
-	last1HPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1h")
-	if err != nil {
-		return nil, err
-	}
 
-	var wg sync.WaitGroup
+	// Get total supplies
+	var totalSupplies map[common.Address]*big.Int
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		result, err := global.BatchGetTotalSupplies(l.ctx, req.ChainId, tokenAddressesWithOutETH)
+		if err != nil {
+			logx.Errorf("Get total supplies error: %s", err)
+			return
+		}
+
+		totalSupplies = result
+	}()
+
+	// Get current price
+	var currentPriceRecords map[string]*big.Int
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		currentPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, tokenAddressStrs)
+		if err != nil {
+			logx.Errorf("Get current price error: %s", err)
+			return
+		}
+	}()
+
+	// Get last 1D price
+	var last1DPriceRecords map[string]*big.Int
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		last1DPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1d")
+		if err != nil {
+			logx.Errorf("Get last 1D price error: %s", err)
+			return
+		}
+	}()
+
+	// Get last 1H price
+	var last1HPriceRecords map[string]*big.Int
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		last1HPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1h")
+		if err != nil {
+			logx.Errorf("Get last 1H price error: %s", err)
+			return
+		}
+	}()
+
+	wg.Wait()
+
+	fmt.Printf("2 ====> %s\n", time.Since(st))
+	st = time.Now()
+
 	var results = make(chan struct {
 		Data types.TokensResponse_Token
 		Err  error
@@ -173,6 +229,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 
 	for _, item := range dataResult {
 		wg.Add(1)
+
 		go func(item types.TokensResponse_Token, ch chan struct {
 			Data types.TokensResponse_Token
 			Err  error
@@ -296,6 +353,9 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	wg.Wait()
 	close(results)
 
+	fmt.Printf("3 ====> %s\n", time.Since(st))
+	st = time.Now()
+
 	// Handle results
 	dataResult = []types.TokensResponse_Token{}
 	var eth *types.TokensResponse_Token
@@ -408,6 +468,8 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		}
 	}
 	meta.Total = totalResult
+
+	fmt.Printf("4 ====> %s\n", time.Since(st))
 
 	return &response.ApiResponse{
 		Data: dataResult,

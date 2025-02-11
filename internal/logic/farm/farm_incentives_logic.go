@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/lib/global"
@@ -22,6 +23,7 @@ import (
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmIncentivesLogic struct {
@@ -50,6 +52,11 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		return nil, fmt.Errorf("invalid parameter")
 	}
 
+	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
+	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+
 	cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
@@ -65,7 +72,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			}
 			tokenIds = cacheWarpper.TokenIds
 			var respLock sync.Mutex
-			conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 			eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 			eventFarmIncentiveEndedModel := repository.NewEventFarmIncentiveEndedModel(conn)
 			eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
@@ -155,7 +161,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	// No cache
 	// 查看是否过期
 	if resp == nil {
-		resp, tokenIds, err = l.GetResponse(req)
+		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf)
 		if len(tokenIds) == 0 {
 			logx.Info("no tokenid founds")
 			return nil, nil
@@ -196,7 +202,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
 
 		_ = usdAccuracy
-		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
 		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserWithExtra(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
@@ -247,10 +252,35 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
+
 				// resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
+				rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, item.IncentiveId, *chain)
+				if err != nil {
+					return resp, err
+				}
+
+				logx.Infof("rewards :%v ", rewards.String())
+				totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, item.IncentiveId, req.ChainId, chain, conn)
+				if err != nil {
+					return resp, err
+				}
+				resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
 			}
 			resp.List[i].Balance = int64(len(resp.List[i].Positions))
 
+			logx.Infof("SSSSA:%v B:%v c:%v", farmConf.Staker, req.UserAddress, item.IncentiveId)
+
+			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
+			if err != nil {
+				return resp, err
+			}
+
+			totalClaimedFeesUSD_bigFloat, _, err := getValueOfAmountToken(totalClaimedAmount, item.IncentiveId, req.ChainId, chain, conn)
+
+			if err != nil {
+				return resp, err
+			}
+			resp.List[i].TotalClaimedFeesUSD = totalClaimedFeesUSD_bigFloat.String()
 			_ = unclaimeds
 			// if val, ok := unclaimeds[item.IncentiveId]; ok {
 			// rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
@@ -298,10 +328,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	return resp, nil
 }
 
-func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
-	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
-	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
-	framConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
+func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chainConf *config.ChainConfig, conn sqlx.SqlConn, farmConf *config.FarmConfig, sonexConf *config.SonexConfig) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
 	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
@@ -309,12 +336,11 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest) (res
 	}
 	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
-	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, req.ChainId, common.HexToAddress(framConf.Staker).Hex())
+	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, req.ChainId, common.HexToAddress(farmConf.Staker).Hex())
 	if err != nil {
 		logx.Errorf("ERR1:%v ", err)
 		return nil, nil, err

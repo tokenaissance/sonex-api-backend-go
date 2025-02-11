@@ -834,6 +834,18 @@
             "format": "int64"
           },
           {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "all",
+              "liquidity",
+              "farm",
+              "xpool"
+            ]
+          },
+          {
             "name": "address",
             "in": "query",
             "required": true,
@@ -1666,6 +1678,14 @@
           "items": {
             "$ref": "#/definitions/Position"
           }
+        },
+        "totalClaimableFeesUsd": {
+          "type": "string",
+          "description": " 用户未领取的手续费的价值"
+        },
+        "totalClaimedFeesUSD": {
+          "type": "string",
+          "description": " 用户已经领取的手续的价值"
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -1694,7 +1714,9 @@
         "balance",
         "staked",
         "earned",
-        "-"
+        "-",
+        "totalClaimableFeesUsd",
+        "totalClaimedFeesUSD"
       ]
     },
     "FarmIncentivesResponse_Token": {
@@ -2853,34 +2875,219 @@
         "volume"
       ]
     },
+    "PortfolioFarm": {
+      "type": "object",
+      "properties": {
+        "poolAddress": {
+          "type": "string",
+          "description": " v3 流动性池合约地址"
+        },
+        "feeRatio": {
+          "type": "string",
+          "description": " 池子手续费率"
+        },
+        "stakingTokenName": {
+          "type": "string",
+          "description": " token0 代币名称"
+        },
+        "stakingTokenSymbol": {
+          "type": "string",
+          "description": " token0 代币符号"
+        },
+        "stakingTokenAddress": {
+          "type": "string",
+          "description": " token0 代币合约地址"
+        },
+        "stakingTokenName": {
+          "type": "string",
+          "description": " token1 代币名称"
+        },
+        "stakingTokenSymbol": {
+          "type": "string",
+          "description": " token1 代币符号"
+        },
+        "stakingTokenAddress": {
+          "type": "string",
+          "description": " token1 代币合约地址"
+        },
+        "positionValue": {
+          "type": "string",
+          "description": " pool position 美元净值"
+        },
+        "feeRevenue": {
+          "type": "string",
+          "description": " 用户提取的质押奖励美元价值"
+        },
+        "earned": {
+          "type": "string",
+          "description": " 用户未提取的质押奖励美元价值"
+        }
+      },
+      "title": "PortfolioFarm",
+      "required": [
+        "poolAddress",
+        "feeRatio",
+        "stakingTokenName",
+        "stakingTokenSymbol",
+        "stakingTokenAddress",
+        "positionValue",
+        "feeRevenue",
+        "earned"
+      ]
+    },
     "PortfolioRequest": {
       "type": "object",
       "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "all",
+            "liquidity",
+            "farm",
+            "xpool"
+          ]
+        },
         "address": {
           "type": "string"
         }
       },
       "title": "PortfolioRequest",
       "required": [
+        "type",
         "address"
       ]
     },
     "PortfolioResponse": {
       "type": "object",
       "properties": {
-        "totalPosition": {
+        "totalAssets": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": " 所有资产净值"
         },
         "claimableFees": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": " 所有可提资产净值"
+        },
+        "totalPosition": {
+          "type": "number",
+          "format": "double",
+          "description": " liquidity position 净值总和"
+        },
+        "liquidityClaimableFees": {
+          "type": "number",
+          "format": "double",
+          "description": " liquidity 可提收益"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Position"
+          },
+          "description": " liquidity position list"
+        },
+        "totalFarmStaked": {
+          "type": "number",
+          "format": "double",
+          "description": " farm pool 净值总和"
+        },
+        "farmEarned": {
+          "type": "number",
+          "format": "double",
+          "description": " farm 可提 earn 净值总和"
+        },
+        "farmPools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PortfolioFarm"
+          },
+          "description": " farm pool list"
+        },
+        "totalXpoolStaked": {
+          "type": "number",
+          "format": "double",
+          "description": " xpool stake 净值总和"
+        },
+        "xpoolEarned": {
+          "type": "number",
+          "format": "double",
+          "description": " xpool 可提 earn 净值总和"
+        },
+        "xpools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PortfolioXpool"
+          },
+          "description": " farm pool list"
         }
       },
       "title": "PortfolioResponse",
       "required": [
+        "totalAssets",
+        "claimableFees",
         "totalPosition",
-        "claimableFees"
+        "liquidityClaimableFees",
+        "positions",
+        "totalFarmStaked",
+        "farmEarned",
+        "farmPools",
+        "totalXpoolStaked",
+        "xpoolEarned",
+        "xpools"
+      ]
+    },
+    "PortfolioXpool": {
+      "type": "object",
+      "properties": {
+        "poolAddress": {
+          "type": "string",
+          "description": " 质押池合约地址"
+        },
+        "stakingTokenName": {
+          "type": "string",
+          "description": " 质押的代币名称"
+        },
+        "stakingTokenSymbol": {
+          "type": "string",
+          "description": " 质押的代币符号"
+        },
+        "stakingTokenAddress": {
+          "type": "string",
+          "description": " 质押的代币合约地址"
+        },
+        "apr": {
+          "type": "string",
+          "description": " 年化收益率"
+        },
+        "staked": {
+          "type": "string",
+          "description": " 用户已经质押的美元价值"
+        },
+        "feeRevenue": {
+          "type": "string",
+          "description": " 用户提取的质押奖励美元价值"
+        },
+        "earned": {
+          "type": "string",
+          "description": " 用户未提取的质押奖励美元价值"
+        },
+        "status": {
+          "type": "string",
+          "description": " 运行状态{Staking}"
+        }
+      },
+      "title": "PortfolioXpool",
+      "required": [
+        "poolAddress",
+        "stakingTokenName",
+        "stakingTokenSymbol",
+        "stakingTokenAddress",
+        "apr",
+        "staked",
+        "feeRevenue",
+        "earned",
+        "status"
       ]
     },
     "Position": {

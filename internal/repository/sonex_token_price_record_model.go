@@ -309,15 +309,19 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices(ctx context.
 
 func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(ctx context.Context, tokenAddresses []string) (map[string]*big.Int, error) {
 	query := fmt.Sprintf(`
-		SELECT 
-			token_address, price, created_at 
-		FROM (
-			SELECT 
-				*, ROW_NUMBER() OVER (PARTITION BY token_address ORDER BY created_at DESC) AS rn
-			FROM %s
-			WHERE token_address = ANY($1)
+		WITH latest_prices AS (
+    		SELECT token_address, price, created_at
+    		FROM %s
+    		WHERE 
+				token_address = ANY($1)
 		)
-		WHERE rn = 1
+		SELECT lp.token_address, lp.price, lp.created_at
+		FROM latest_prices lp
+		JOIN (
+    		SELECT token_address, MAX(created_at) AS max_created_at
+    		FROM latest_prices
+    		GROUP BY token_address
+		) latest ON lp.token_address = latest.token_address AND lp.created_at = latest.max_created_at
 	`, m.table)
 
 	var records []MiniTokenPriceRecord
@@ -337,17 +341,20 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(c
 
 func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddressesInterval(ctx context.Context, tokenAddresses []string, interval string) (map[string]*big.Int, error) {
 	query := fmt.Sprintf(`
-		SELECT
-			token_address, price, created_at
-		FROM (
-			SELECT
-				*, ROW_NUMBER() OVER (PARTITION BY token_address ORDER BY created_at DESC) AS rn
-			FROM %s
-			WHERE
+		WITH latest_prices AS (
+    		SELECT token_address, price, created_at
+    		FROM %s
+    		WHERE 
 				token_address = ANY($1)
 				AND created_at <= TO_TIMESTAMP(%d)::TIMESTAMPTZ - INTERVAL '%s'
 		)
-		WHERE rn = 1
+		SELECT lp.token_address, lp.price, lp.created_at
+		FROM latest_prices lp
+		JOIN (
+    		SELECT token_address, MAX(created_at) AS max_created_at
+    		FROM latest_prices
+    		GROUP BY token_address
+		) latest ON lp.token_address = latest.token_address AND lp.created_at = latest.max_created_at
 	`, m.table, NowUTC().Unix(), getIntervalDuration(interval))
 
 	var records []MiniTokenPriceRecord
