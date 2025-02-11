@@ -571,7 +571,7 @@ type GalxeSwapRequest {
 }
 
 type GalxeSwapResponse {
-	isSwapOrNot    bool                `json:"isSwapOrNot"`
+	IsSwapOrNot    bool                `json:"isSwapOrNot"`
 }
 
 
@@ -589,7 +589,6 @@ type SonexPoolInfoKlineRequest {
 	Address  string `path:"address"`
 }
 
-
 // pool info address
 type SonexPoolInfoKlineResponse {
 	Records []VolumeDetailsRecord `json:"records"`
@@ -600,6 +599,14 @@ type VolumeDetailsRecord {
 	VolumeRatio     float64  `json:"volumeratio"` // 跟过去一天的volume最后一组24H的相比，相比的,是增加还是减弱 ,保留两位精度
 	VolumeUsd     	float64 `json:"volumeusd"` 
 	CreatedAt       int64   `json:"createdat"`
+}
+
+type GalxeAddLiquidityRequest {
+	Address string `form:"address"`
+}
+
+type GalxeAddLiquidityResponse {
+	IsAddLiquidityOrNot    bool                `json:"isAddLiquidityOrNot"`
 }
 
 @server (
@@ -658,4 +665,6 @@ service sonex_api_backend_go {
 	@handler SonexGalxeTgidHandler
 	get /galxetgid (GalxeTgIdRequest) returns (GalxeTgIdResponse)
 
+	@handler SonexGalxeAddliquidityHandler
+	get /galxeaddliquidity (GalxeAddLiquidityRequest) returns (GalxeAddLiquidityResponse)
 }
