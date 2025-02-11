@@ -477,7 +477,7 @@ type SonexTokenKlineResponse {
 
 type PortfolioRequest {
 	ChainRequest
-	Type string `form:"type,options=all|liquidity|farm|xpool"`
+	Type string `form:"type,options=all|liquidity|farm|xpool,default=all"`
 	Address string `form:"address"`
 }
 
