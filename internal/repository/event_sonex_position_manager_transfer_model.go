@@ -115,7 +115,8 @@ func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEventsFor
 	query := `
 	SELECT * FROM event_sonex_position_manager_transfer
 	WHERE event_sonex_position_manager_transfer.event_to = $1
-	AND event_sonex_position_manager_transfer.event_from = '0x0000000000000000000000000000000000000000' 
+	AND event_sonex_position_manager_transfer.event_from = '0x0000000000000000000000000000000000000000'
+	AND event_sonex_position_manager_transfer.created_at > timestamp '2025-02-14'
 `
 	var resp []*EventSonexPositionManagerTransfer
 	address = common.HexToAddress(address).Hex()
