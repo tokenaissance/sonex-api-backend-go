@@ -119,8 +119,8 @@ func main() {
 	global.AddCronJob("0 30 0 * * ?", func() {
 		task.HandlePreDepositSnapshotDaily(&c)
 	})
-	global.AddCronJob("0 30 0 * * ?", func() {
-		task.HandleFarmPointsDaily(&c)
+	global.AddCronJob("0 0/1 * * * ?", func() {
+		task.HandleFarmPoints(&c)
 	})
 
 	// every 6 hours,calcuate the vol and Tvl for pool

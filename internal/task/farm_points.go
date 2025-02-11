@@ -22,19 +22,11 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpc"
 )
 
-func HandleFarmPointsDaily(config *config.Config) {
-	logx.Info("HandleFarmPointsDaily start")
-
-	summaryDate := time.Now().Add(time.Hour).UTC().Format("2006-01-02")
-
+func HandleFarmPoints(config *config.Config) {
+	logx.Info("HandleFarmPoints start")
 	retrys := 0
 	err := retry.Do(
 		func() error {
-			if time.Now().Add(time.Hour).UTC().Format("2006-01-02") != summaryDate {
-				logx.Infof("HandleFarmPointsDaily retry failed")
-				return nil
-			}
-
 			conn := repository.NewConn(config.PostgreSQL.DateSource())
 			err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 				for _, chainConf := range config.Chains {
@@ -42,9 +34,9 @@ func HandleFarmPointsDaily(config *config.Config) {
 					if farmConf == nil {
 						continue
 					}
-					err := farmPointsDaily(ctx, sqlx.NewSqlConnFromSession(s), *config, chainConf)
+					err := farmPointsLogic(ctx, sqlx.NewSqlConnFromSession(s), *config, chainConf)
 					if err != nil {
-						logx.Errorf("HandleFarmPointsDaily failed: %d %s", chainConf.ChainId, err)
+						logx.Errorf("HandleFarmPoints failed: %d %s", chainConf.ChainId, err)
 						return err
 					}
 				}
@@ -59,20 +51,20 @@ func HandleFarmPointsDaily(config *config.Config) {
 		},
 		retry.Delay(time.Second*5),
 		retry.DelayType(retry.FixedDelay),
-		retry.Attempts(0),
+		retry.Attempts(5),
 		retry.OnRetry(func(n uint, err error) {
 			retrys += 1
-			logx.Infof("HandleFarmPointsDaily retry %d times", retrys)
+			logx.Infof("HandleFarmPoints retry %d times", retrys)
 		}),
 	)
 	if err != nil {
-		logx.Errorf("HandleFarmPointsDaily error: %s", err)
+		logx.Errorf("HandleFarmPoints error: %s", err)
 	}
 
-	logx.Info("HandleFarmPointsDaily successfully")
+	logx.Info("HandleFarmPoints successfully")
 }
 
-func farmPointsDaily(ctx context.Context, conn sqlx.SqlConn, conf config.Config, chainConf config.ChainConfig) error {
+func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config, chainConf config.ChainConfig) error {
 	sonexConf := conf.GetSonexConfig(chainConf.ChainId)
 	farmConf := conf.GetFarmConfig(chainConf.ChainId)
 

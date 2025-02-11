@@ -10,7 +10,7 @@ import (
 	"github.com/zeromicro/go-zero/core/conf"
 )
 
-func TestHandleFarmPointsDaily(t *testing.T) {
+func TestHandleFarmPoints(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
 
@@ -22,7 +22,7 @@ func TestHandleFarmPointsDaily(t *testing.T) {
 	global.InitIdGenerater(0)
 
 	start := time.Now()
-	HandleFarmPointsDaily(&c)
+	HandleFarmPoints(&c)
 	elapsed := time.Since(start)
 	fmt.Printf("Time token: %s\n", elapsed)
 }
