@@ -11,7 +11,7 @@ import (
 
 func Test_EventFarmTokenStakedModelQueryValidByChainId(t *testing.T) {
 	var c config.Config
-	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
 
 	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DateSource()))
 	records, err := model.QueryValidByChainId(context.Background(), 1946)
