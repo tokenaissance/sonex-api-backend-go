@@ -69,7 +69,7 @@ PreDeposits:
 Farms:
   - ChainId: 1946
     Staker: 0xA35b60B847Bff39900316A259b9F3da9cbEc6C48
-    PointsHoldTimeLimits: 86400
+    PointsHoldTimeLimits: 300
     PointsUSDLimits: 10
     Points: 5000
     SubTitle: Farm
