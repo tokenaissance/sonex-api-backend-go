@@ -48,7 +48,7 @@ type FarmIncentivesResponse_Data {
 	APR                 string `json:"APR"`            // 年化收益率
 	JoinNum             int64  `json:"joinNum"`        // 参与人数
 	Status              string `json:"status"`         // 运行状态（active or closed）
-	StartAt             int64  `json:"startAt"`
+	StartAt             int64  `json:"startAt"`        // position 开始的时间
 	Balance             int64  `json:"balance"`
 	Staked              int64  `json:"staked"`
 	Earned              string `json:"earned"`
