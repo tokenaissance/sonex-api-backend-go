@@ -146,22 +146,16 @@
                 "type": "address"
             },
             {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "_ethBalance",
-                "type": "uint256"
+                "indexed": true,
+                "internalType": "address",
+                "name": "_initiator",
+                "type": "address"
             },
             {
                 "indexed": false,
-                "internalType": "uint256",
-                "name": "_stakingBalance",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "_rewardBalance",
-                "type": "uint256"
+                "internalType": "address",
+                "name": "_confirmor",
+                "type": "address"
             },
             {
                 "indexed": true,
@@ -254,23 +248,20 @@
             }
         ],
         "name": "destroyPool",
-        "outputs": [
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
             {
-                "internalType": "uint256",
-                "name": "_ethBalance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_stakingBalance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_rewardBalance",
-                "type": "uint256"
+                "internalType": "address",
+                "name": "_pool",
+                "type": "address"
             }
         ],
+        "name": "destroyPoolConfirm",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },

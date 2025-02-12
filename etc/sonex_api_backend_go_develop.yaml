@@ -75,5 +75,5 @@ Farms:
     SubTitle: Farm
 Xpools:
   - ChainId: 1946
-    Factory: 0xd0EA29914420Cb8EdC2A931E6E6F078fF5FA1784
+    Factory: 0xc0e265567f7236fbEb532eA12687Fe6Ec7AA6C16
     BlockTime: 2000

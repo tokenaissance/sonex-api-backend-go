@@ -38,20 +38,21 @@ type (
 	}
 
 	EventXpoolPoolWithdrawed struct {
-		Id          int64     `db:"id"`
-		CreatedAt   time.Time `db:"created_at"`
-		UpdatedAt   time.Time `db:"updated_at"`
-		ChainId     int64     `db:"chain_id"`
-		BlockNumber int64     `db:"block_number"`
-		TxIndex     int64     `db:"tx_index"`
-		TxHash      string    `db:"tx_hash"`
-		TxAt        time.Time `db:"tx_at"`
-		From        string    `db:"from_"`
-		To          string    `db:"to_"`
-		Value       string    `db:"value"`
-		EventUser   string    `db:"event_user"`
-		EventAmount string    `db:"event_amount"`
-		EventHeight int64     `db:"event_height"`
+		Id             int64     `db:"id"`
+		CreatedAt      time.Time `db:"created_at"`
+		UpdatedAt      time.Time `db:"updated_at"`
+		ChainId        int64     `db:"chain_id"`
+		BlockNumber    int64     `db:"block_number"`
+		TxIndex        int64     `db:"tx_index"`
+		TxHash         string    `db:"tx_hash"`
+		TxAt           time.Time `db:"tx_at"`
+		From           string    `db:"from_"`
+		To             string    `db:"to_"`
+		Value          string    `db:"value"`
+		EventUser      string    `db:"event_user"`
+		EventWithdrawn string    `db:"event_withdrawn"`
+		EventClaimed   string    `db:"event_claimed"`
+		EventHeight    int64     `db:"event_height"`
 	}
 )
 
@@ -97,14 +98,14 @@ func (m *defaultEventXpoolPoolWithdrawedModel) FindOneByChainIdTxHashTxIndex(ctx
 }
 
 func (m *defaultEventXpoolPoolWithdrawedModel) Insert(ctx context.Context, data *EventXpoolPoolWithdrawed) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, eventXpoolPoolWithdrawedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventAmount, data.EventHeight)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", m.table, eventXpoolPoolWithdrawedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventUser, data.EventWithdrawn, data.EventClaimed, data.EventHeight)
 	return ret, err
 }
 
 func (m *defaultEventXpoolPoolWithdrawedModel) Update(ctx context.Context, newData *EventXpoolPoolWithdrawed) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventXpoolPoolWithdrawedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventUser, newData.EventAmount, newData.EventHeight)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventUser, newData.EventWithdrawn, newData.EventClaimed, newData.EventHeight)
 	return err
 }
 

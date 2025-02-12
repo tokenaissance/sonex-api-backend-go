@@ -148,7 +148,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 		rewardPerBlockSetEvents = append(rewardPerBlockSetEvents, rewardPerBlockSetLogs.Event)
 	}
 
-	poolDestroiedLogs, err := factory.FilterPoolDestroied(opt, nil, nil)
+	poolDestroiedLogs, err := factory.FilterPoolDestroied(opt, nil, nil, nil)
 	if err != nil {
 		return err, false
 	}
@@ -342,9 +342,8 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				to := tx.Tx().To().Hex()
 				value := tx.Tx().Value().String()
 				pool := event.Pool.Hex()
-				ethBalance := event.EthBalance.String()
-				stakingBalance := event.StakingBalance.String()
-				rewardBalance := event.RewardBalance.String()
+				initiator := event.Initiator.Hex()
+				confirmor := event.Confirmor.Hex()
 				recipient := event.Recipient.Hex()
 
 				// If handled, ignore
@@ -361,7 +360,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 				if err != nil {
 					return err
 				}
-				err = eventXpoolFactoryPoolDestroiedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, ethBalance, stakingBalance, rewardBalance, recipient)
+				err = eventXpoolFactoryPoolDestroiedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, pool, initiator, confirmor, recipient)
 				if err != nil {
 					return err
 				}
@@ -610,7 +609,8 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									to := tx.Tx().To().Hex()
 									value := tx.Tx().Value().String()
 									user := event.User.Hex()
-									amount := event.Amount.String()
+									withdrawed := event.Withdrawed.String()
+									claimed := event.Claimed.String()
 									height := event.Height.Int64()
 
 									// If handled, ignore
@@ -627,7 +627,7 @@ func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterO
 									if err != nil {
 										return err
 									}
-									err = eventXpoolPoolWithdrawedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+									err = eventXpoolPoolWithdrawedModel.New(ctx, id, handler.chain.ChainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, withdrawed, claimed, height)
 									if err != nil {
 										return err
 									}

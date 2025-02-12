@@ -12,7 +12,7 @@
  Target Server Version : 160003 (160003)
  File Encoding         : 65001
 
- Date: 20/01/2025 17:06:10
+ Date: 12/02/2025 15:59:24
 */
 
 
@@ -96,9 +96,8 @@ CREATE TABLE "public"."event_xpool_factory_pool_destroied" (
   "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_pool" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_eth_balance" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_staking_balance" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_reward_balance" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_initiator" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_confirmor" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_recipient" varchar(255) COLLATE "pg_catalog"."default" NOT NULL
 )
 ;
@@ -186,7 +185,8 @@ CREATE TABLE "public"."event_xpool_pool_withdrawed" (
   "to_" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "value" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_user" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "event_amount" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_withdrawn" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "event_claimed" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "event_height" int8 NOT NULL
 )
 ;

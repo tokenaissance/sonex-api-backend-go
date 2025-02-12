@@ -59,6 +59,17 @@
         "type": "error"
     },
     {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            }
+        ],
+        "name": "SafeERC20FailedOperation",
+        "type": "error"
+    },
+    {
         "anonymous": false,
         "inputs": [
             {
@@ -139,7 +150,13 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "_amount",
+                "name": "_withdrawed",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "_claimed",
                 "type": "uint256"
             },
             {
@@ -158,7 +175,7 @@
         "outputs": [
             {
                 "internalType": "uint256",
-                "name": "_claimed",
+                "name": "_amount",
                 "type": "uint256"
             },
             {
@@ -206,28 +223,12 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "recipient",
+                "name": "_recipient",
                 "type": "address"
             }
         ],
         "name": "destroy",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "_ethBalance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_stakingBalance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_rewardBalance",
-                "type": "uint256"
-            }
-        ],
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -456,6 +457,11 @@
             {
                 "internalType": "uint256",
                 "name": "_withdrawed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_claimed",
                 "type": "uint256"
             },
             {
