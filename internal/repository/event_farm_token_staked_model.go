@@ -67,26 +67,29 @@ func (m *customEventFarmTokenStakedModel) FindLatestByChainId(ctx context.Contex
 }
 
 func (m *customEventFarmTokenStakedModel) QueryValidByChainId(ctx context.Context, chainId int64) ([]EventFarmTokenStaked, error) {
+	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
 	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
+
 	query := fmt.Sprintf(`
 		WITH SelectTemp AS (
 			SELECT 
-				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_user, S.event_token_id, S.event_incentive_id,S.event_total_liquidity,
-				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
+				S.*, C.event_pool AS extral_pool
 			FROM %s S
-			WHERE 
+			LEFT JOIN %s C ON C.event_incentive_id = S.event_incentive_id
+			WHERE
 				S.chain_id = $1
-				AND (
-					(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
-					(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
+				AND S.event_incentive_id IN (
+					SELECT event_incentive_id FROM %s C
+					WHERE event_incentive_id NOT IN (SELECT event_incentive_id FROM event_farm_incentive_ended)
 				)
+				AND (SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
+				(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
 		)
 
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id,event_total_liquidity
-		FROM SelectTemp
-		WHERE rn = 1
-	`, m.table, m.table, eventFarmTokenUnstakedModel.table)
+		SELECT DISTINCT ON (event_token_id) *
+		FROM SelectTemp ORDER BY event_token_id, tx_at DESC
+	`, m.table, eventFarmIncentiveCreatedModel.table, eventFarmIncentiveCreatedModel.table, m.table, eventFarmTokenUnstakedModel.table)
+
 	resp := []EventFarmTokenStaked{}
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId)
 	if err != nil {
@@ -96,26 +99,24 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainId(ctx context.Contex
 }
 
 func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUser(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStaked, error) {
+	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
 	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
 	query := fmt.Sprintf(`
 		WITH SelectTemp AS (
 			SELECT 
-				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_user, S.event_token_id, S.event_incentive_id,S.event_total_liquidity,
-				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
+				S.*, C.event_pool AS extral_pool
 			FROM %s S
-			WHERE 
+			LEFT JOIN %s C ON C.event_incentive_id = S.event_incentive_id
+			WHERE
 				S.chain_id = $1 AND S.event_user = $2
-				AND (
-					(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
-					(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
+				AND S.event_incentive_id IN (
+					SELECT event_incentive_id FROM %s C
+					WHERE event_incentive_id NOT IN (SELECT event_incentive_id FROM event_farm_incentive_ended)
 				)
+				AND (SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
+				(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
 		)
-
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_user, event_token_id, event_incentive_id,event_total_liquidity
-		FROM SelectTemp
-		WHERE rn = 1
-	`, m.table, m.table, eventFarmTokenUnstakedModel.table)
+	`, m.table, eventFarmIncentiveCreatedModel.table, eventFarmIncentiveCreatedModel.table, m.table, eventFarmTokenUnstakedModel.table)
 	var resp []EventFarmTokenStaked
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user)
 	if err != nil {

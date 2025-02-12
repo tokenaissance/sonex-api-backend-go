@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -24,6 +25,7 @@ type (
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
 		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
+		GetValidTransferEventsForGalxeAddLiquidity(ctx context.Context, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
 		GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error)
@@ -100,6 +102,27 @@ func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEvents(ct
 	address = common.HexToAddress(address).Hex()
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address)
 	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// only add liquidity ,
+// from = 0x0000000000000000000000000000000000000000
+// t0 = useraddress
+// not inclued the position transfered from other user address
+func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEventsForGalxeAddLiquidity(ctx context.Context, address string) ([]*EventSonexPositionManagerTransfer, error) {
+	query := `
+	SELECT * FROM event_sonex_position_manager_transfer
+	WHERE event_sonex_position_manager_transfer.event_to = $1
+	AND event_sonex_position_manager_transfer.event_from = '0x0000000000000000000000000000000000000000'
+	AND event_sonex_position_manager_transfer.created_at > timestamp '2025-02-14'
+`
+	var resp []*EventSonexPositionManagerTransfer
+	address = common.HexToAddress(address).Hex()
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, address)
+	if err != nil {
+		logx.Errorf("GetValidTransferEventsForGalxeAddLiquidity ERR:%v ", err)
 		return nil, err
 	}
 	return resp, nil

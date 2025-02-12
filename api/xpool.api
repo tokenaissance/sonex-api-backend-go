@@ -37,6 +37,12 @@ type XpoolPoolListResponse_Pool {
 	Earned               string `json:"earned"`              // 用户已获得奖励代币数量
 	JoinNum              int64  `json:"joinNum"`             // 参与人数
 	Status               string `json:"status"`              // 运行状态
+
+	StakingTokenPriceWithDecimals    string `json:"-"`    // 质押的代币价格(包含精度)
+	StakingTokenPriceDecimals        int64  `json:"-"`       // 质押的代币价格精度
+	RewardTokenPriceWithDecimals     string `json:"-"`     // 奖励的代币价格(包含精度)
+	RewardTokenPriceDecimals         int64  `json:"-"`        // 奖励的代币价格精度
+
 	CreatedAt            string `json:"createdAt"`
 	UpdatedAt            string `json:"updatedAt"`
 }

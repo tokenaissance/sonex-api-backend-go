@@ -48,11 +48,17 @@ type FarmIncentivesResponse_Data {
 	APR                 string `json:"APR"`            // 年化收益率
 	JoinNum             int64  `json:"joinNum"`        // 参与人数
 	Status              string `json:"status"`         // 运行状态（active or closed）
-	StartAt             int64  `json:"startAt"`
+	StartAt             int64  `json:"startAt"`        // position 开始的时间
 	Balance             int64  `json:"balance"`
 	Staked              int64  `json:"staked"`
 	Earned              string `json:"earned"`
 	Positions           []*Position  `json:"-"` 
+
+	TotalClaimableFeesUSD string `json:"totalClaimableFeesUsd"` // 用户未领取的手续费的价值
+	TotalClaimedFeesUSD string `json:"totalClaimedFeesUSD"`     // 用户已经领取的手续的价值
+
+	LiquidityUSDFloat64        	 float64 `json:"-"`   // 池子的流动性价值（USD）
+	TotalClaimableFeesUSDFloat64 float64 `json:"-"` // 用户未领取的手续费的价值
 }
 
 type UserAssetData {

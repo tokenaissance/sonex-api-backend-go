@@ -9,7 +9,7 @@ import (
 	"sonex_api_backend_go/internal/lib/contract/pre_deposit"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
-	module_pre_deposit "sonex_api_backend_go/internal/module/pre_deposit"
+	"sonex_api_backend_go/internal/lib/util"
 	"sonex_api_backend_go/internal/repository"
 	"strconv"
 	"strings"
@@ -150,7 +150,7 @@ func StakedCallback(conf config.Config, chainId int64, tx *node_caller.Transacti
 						"timestamp": event.Timestamp.String(),
 					},
 				}
-				signature, err := module_pre_deposit.Sign(&req, pointsServiceConf.PrivateKey)
+				signature, err := util.Sign(&req, pointsServiceConf.PrivateKey)
 				if err != nil {
 					return fmt.Errorf("%s", fmt.Sprintf("Sign failed: %s", err))
 				}
