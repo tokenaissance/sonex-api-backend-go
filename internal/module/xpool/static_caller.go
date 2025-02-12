@@ -69,6 +69,14 @@ func (staticCaller *StaticCaller) BatchGetAddressPoolInfos(ctx context.Context, 
 			Target:   pool,
 			CallData: earnedRewardData,
 		})
+		claimedRewardData, err := poolABI.Pack("claimed", userAddress)
+		if err != nil {
+			return nil, err
+		}
+		multicallData = append(multicallData, contract_common.Multicall3Call3{
+			Target:   pool,
+			CallData: claimedRewardData,
+		})
 		data, err := multicallABI.Pack("aggregate3", multicallData)
 		if err != nil {
 			return nil, err
@@ -80,7 +88,7 @@ func (staticCaller *StaticCaller) BatchGetAddressPoolInfos(ctx context.Context, 
 	}
 
 	result := map[string]*AddressPoolInfo{}
-	fieldNumber := 2
+	fieldNumber := 3
 	type earnedRewardInfo struct {
 		Earned *big.Int
 		Height *big.Int
@@ -102,11 +110,20 @@ func (staticCaller *StaticCaller) BatchGetAddressPoolInfos(ctx context.Context, 
 		if err != nil {
 			return nil, err
 		}
+		var claimedReward *big.Int
+		if !multicallResults[i*fieldNumber+2].Success {
+			continue
+		}
+		err = poolABI.UnpackIntoInterface(&claimedReward, "claimed", multicallResults[i*fieldNumber+2].ReturnData)
+		if err != nil {
+			return nil, err
+		}
 		result[pool.Hex()] = &AddressPoolInfo{
 			Address:      userAddress,
 			EarnedReward: earnedReward.Earned,
 			Height:       earnedReward.Height,
 			Staked:       staked,
+			Claimed:      claimedReward,
 		}
 	}
 
