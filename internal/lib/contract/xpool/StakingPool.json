@@ -309,6 +309,19 @@
     },
     {
         "inputs": [],
+        "name": "rewardBalance",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "_rewardBalance",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "rewardPerBlock",
         "outputs": [
             {
@@ -397,7 +410,7 @@
         "outputs": [
             {
                 "internalType": "uint256",
-                "name": "_totalClaimed",
+                "name": "",
                 "type": "uint256"
             }
         ],

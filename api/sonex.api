@@ -498,12 +498,12 @@ type PortfolioXpool {
 type PortfolioFarm {
 	PoolAddress       string `json:"poolAddress"`           // v3 流动性池合约地址
 	FeeRatio          string `json:"feeRatio"`              // 池子手续费率
-	Token0Name        string `json:"stakingTokenName"`      // token0 代币名称
-	Token0Symbol      string `json:"stakingTokenSymbol"`    // token0 代币符号
-	Token0Address     string `json:"stakingTokenAddress"`   // token0 代币合约地址
-	Token1Name        string `json:"stakingTokenName"`      // token1 代币名称
-	Token1Symbol      string `json:"stakingTokenSymbol"`    // token1 代币符号
-	Token1Address     string `json:"stakingTokenAddress"`   // token1 代币合约地址
+	Token0Name        string `json:"token0Name"`      		// token0 代币名称
+	Token0Symbol      string `json:"token0Symbol"`    		// token0 代币符号
+	Token0Address     string `json:"token0Address"`   		// token0 代币合约地址
+	Token1Name        string `json:"token1Name"`      		// token1 代币名称
+	Token1Symbol      string `json:"token1Symbol"`    		// token1 代币符号
+	Token1Address     string `json:"token1Address"`   		// token1 代币合约地址
 	PositionValue     string `json:"positionValue"`         // pool position 美元净值
 	FeeRevenue        string `json:"feeRevenue"`            // 用户提取的质押奖励美元价值
 	Earned            string `json:"earned"`                // 用户未提取的质押奖励美元价值
@@ -511,6 +511,7 @@ type PortfolioFarm {
 
 type PortfolioResponse {
 	TotalAssets   float64 `json:"totalAssets"`   // 所有资产净值
+	TotalAssetsRate string `json:"totalAssetsRate"` // 所有资产净值相比前一天的变化率
 	ClaimableFees float64 `json:"claimableFees"` // 所有可提资产净值
 	
 	// liquidity

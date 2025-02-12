@@ -68,12 +68,12 @@ PreDeposits:
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1946
-    Staker: 0xA35b60B847Bff39900316A259b9F3da9cbEc6C48
+    Staker: 0x330104ea738276971a6A7BCbAB60A56e2BF558f3
     PointsHoldTimeLimits: 300
     PointsUSDLimits: 10
     Points: 5000
     SubTitle: Farm
 Xpools:
   - ChainId: 1946
-    Factory: 0xD8a869B43389Db1A55072808e406a5B60F26e4e0
+    Factory: 0xd0EA29914420Cb8EdC2A931E6E6F078fF5FA1784
     BlockTime: 2000
