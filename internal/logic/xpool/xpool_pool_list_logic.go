@@ -189,10 +189,11 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		}
 
 		// APR
-		apr := new(big.Float).Quo(rewardPerYearValue, tvlValue)
-		if tvlValue.Cmp(big.NewFloat(0)) == 0 {
-			apr = big.NewFloat(0)
+		if tvlValue.Cmp(big.NewFloat(1)) <= 0 {
+			tvlValue = big.NewFloat(1)
 		}
+		apr := new(big.Float).Quo(rewardPerYearValue, tvlValue)
+
 		aprFloat, _ := apr.Float64()
 		aprPercentage, _ := new(big.Float).Mul(apr, big.NewFloat(100)).Float64()
 		aprPercentageString := fmt.Sprintf("%.2f%%", aprPercentage)
