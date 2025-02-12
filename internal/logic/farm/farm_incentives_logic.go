@@ -161,7 +161,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	// No cache
 	// 查看是否过期
 	if resp == nil {
-		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf)
+		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 		if len(tokenIds) == 0 {
 			logx.Info("no tokenid founds")
 			return nil, nil
@@ -330,7 +330,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	return resp, nil
 }
 
-func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chainConf *config.ChainConfig, conn sqlx.SqlConn, farmConf *config.FarmConfig, sonexConf *config.SonexConfig) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
+func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chainConf *config.ChainConfig, conn sqlx.SqlConn, farmConf *config.FarmConfig, sonexConf *config.SonexConfig, cacher cache.ICache) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
 	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
@@ -478,7 +478,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), new(big.Float).SetInt(price1)), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil))))
 				}
 
-				apr := new(big.Float).Quo(totalRewardUSD, totalLiquidityUSD)
+				apr := getApr(record.EventPool, record.EventIncentiveId, totalRewardUSD, totalLiquidityUSD, record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
+
 				var tids []int64
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 
@@ -502,7 +503,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Token1Price:         price1.String(),
 					Liquidity:           totalLiquidity.String(),
 					LiquidityUSD:        totalLiquidityUSD.String(),
-					APR:                 apr.String(),
+					APR:                 apr,
 					JoinNum:             int64(len(userAddressesMap)),
 					Status:              status,
 					StartAt:             record.EventStartTime,
@@ -511,7 +512,10 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				tokenIdsResult = tids
 			} else {
 				logx.Info("notoknotok")
-				apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
+				// apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
+				// 0 的时候  就应该按照1来算
+				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
+				apr := getApr(record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
 
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:         record.EventIncentiveId,
@@ -531,7 +535,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Token1Price:         price1.String(),
 					Liquidity:           big.NewInt(0).String(),
 					LiquidityUSD:        big.NewInt(0).String(),
-					APR:                 apr.String(),
+					APR:                 apr,
 					JoinNum:             0,
 					Status:              status,
 					StartAt:             record.EventStartTime,
