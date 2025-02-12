@@ -429,7 +429,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				return
 			}
 			logx.Infof("rewardToken:%#v", rewardToken)
-			reward, _ := new(big.Float).SetString(record.ExtraRate)
+			ratepersecond, _ := new(big.Float).SetString(record.ExtraRate)
 			logx.Info("333333:", rewardToken.Address, "prices[rewardToken.Address]:", prices[rewardToken.Address])
 			rewardPrice := new(big.Float).SetInt(prices[rewardToken.Address])
 			logx.Info("4444444:")
@@ -437,11 +437,11 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			rewardTokenAccuracy := new(big.Float).SetFloat64(math.Pow10(int(rewardToken.Decimals)))
 			logx.Info("555555:")
 
-			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(reward, rewardPrice), rewardTokenAccuracy), usdAccuracy)
-			logx.Info("666666:")
+			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(ratepersecond, rewardPrice), rewardTokenAccuracy), usdAccuracy)
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
 			logx.Info("77777777:")
+			logx.Infof("666666:rewardToken:%#v ratepersecond :%v  rewardPrice:%v totalRewardUSD365: %v  ", rewardToken, ratepersecond, rewardPrice, totalRewardUSD)
 
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
@@ -453,6 +453,16 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			} else {
 				status = "active"
 			}
+
+			rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, record.EventIncentiveId, *chainConf)
+			if err != nil {
+				logx.Error("getRewardsAmount:%v ", err)
+			}
+
+			logx.Infof("rewards :%v ", rewards.String())
+			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
+
+			totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
 
 			if ok {
 				tokenIds := []*big.Int{}
@@ -505,7 +515,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Token1Price:                  price1.String(),
 					Liquidity:                    totalLiquidity.String(),
 					LiquidityUSD:                 totalLiquidityUSD.String(),
-					TotalClaimableFeesUSDFloat64: totalLiquidityUSDValue,
+					LiquidityUSDFloat64:          totalLiquidityUSDValue,
+					TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
 					APR:                          apr,
 					JoinNum:                      int64(len(userAddressesMap)),
 					Status:                       status,
@@ -538,7 +549,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Token1Price:                  price1.String(),
 					Liquidity:                    big.NewInt(0).String(),
 					LiquidityUSD:                 big.NewInt(0).String(),
-					TotalClaimableFeesUSDFloat64: 0,
+					TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
+					TotalClaimableFeesUSD:        totalClaimableFeesUSD.String(),
 					APR:                          apr,
 					JoinNum:                      0,
 					Status:                       status,

@@ -224,7 +224,7 @@ APR年化收益率 = （奖励池的每日总产出 * 当前池子权重 /总权
 APR年化收益率 = （奖励池的每日总产出 *365 * 当前池子权重 /总权重） / 当前总质押量
 */
 func calucateFarmApr(tatalReward365 *big.Float, totalLiquidityUsd *big.Float, incentiveWeight int64, staker string, rewardToken string, chain config.ChainConfig, cacher cache.ICache) *big.Float {
-	logx.Infof("tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
+	// logx.Infof("tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
 
 	var totalWeightString = "0"
 	var err error
@@ -319,6 +319,7 @@ func getApr(poolAddress string, incentiveId int64, tatalReward365 *big.Float, to
 
 	aprString, err := global.GetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId)
 
+	logx.Infof("poolAddress:%v incentiveId:%v  tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", poolAddress, incentiveId, tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
 	if errors.Is(err, redis.Nil) {
 		// 写入一次
 		aprBigFloat := calucateFarmApr(tatalReward365, totalLiquidityUsd, incentiveWeight, staker, rewardToken, chain, cacher)
