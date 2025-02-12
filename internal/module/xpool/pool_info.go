@@ -28,4 +28,5 @@ type AddressPoolInfo struct {
 	EarnedReward *big.Int       // 用户已获得的奖励
 	Height       *big.Int       // 用户获得奖励的区块高度
 	Staked       *big.Int       // 用户已质押的代币数量
+	Claimed      *big.Int       // 用户已领取的奖励
 }

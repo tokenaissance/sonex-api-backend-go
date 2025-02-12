@@ -94,6 +94,12 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						continue
 					}
 
+					claimedRewardTokenValue, err := sonex_module.NewTokenValue(xpool.Claimed, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: claimedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+
 					pools = append(pools, &types.PortfolioXpool{
 						PoolAddress:         xpool.PoolAddress,               // 质押池合约地址
 						StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
@@ -101,9 +107,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
 						APR:                 xpool.APR,                       // 年化收益率
 						Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
-						// FeeRevenue:          xpool.Earned,
-						Status: xpool.Status,
-						Earned: rewardTokenValue.ValueString(),
+						FeeRevenue:          claimedRewardTokenValue.ValueString(),
+						Status:              xpool.Status,
+						Earned:              rewardTokenValue.ValueString(),
 					})
 
 					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
@@ -118,7 +124,10 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					if createdAt.Before(todayBegin) {
 						previousDayTotalAssets += xpoolStaked
 					}
-					// response.TotalXpoolEarned += xpool.Earned // todo: xpool earned 需要从 xpool 的 event 事件中获取
+
+					// 计算用户已领取的奖励代币价值
+					claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
+					response.XpoolEarned += claimedRewardTokenValueFloat64
 				}
 				response.Xpools = pools
 			}
