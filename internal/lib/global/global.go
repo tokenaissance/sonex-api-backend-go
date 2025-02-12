@@ -41,6 +41,9 @@ var tokenCachersLock sync.RWMutex
 var Volume24HKey = "Volume24H"
 var Tvl24HKey = "Tvl24HKey"
 var YiedlRateKey = "YiedlRateKey"
+var FarmTotalWeightKey = "FarmTotalWeightKey"
+
+var FarmAPRKey = "FarmAPRKey"
 
 func GetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string) (string, error) {
 	return cacher.Get(fmt.Sprintf("%v_%v", _key, _keyPoolAddress))
@@ -48,6 +51,22 @@ func GetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress stri
 
 func SetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string, _valueVolume24H string) error {
 	return cacher.Set(fmt.Sprintf("%v_%v", _key, _keyPoolAddress), _valueVolume24H, 24*time.Hour)
+}
+
+func SetFarmTotalWeightValue(cacher cache.ICache, _key string, rewardToken string, totalWeight string) error {
+	return cacher.Set(fmt.Sprintf("%v_%v", _key, rewardToken), totalWeight, time.Hour)
+}
+
+func GetFarmTotalWeightValue(cacher cache.ICache, _key string, rewardToken string) (string, error) {
+	return cacher.Get(fmt.Sprintf("%v_%v", _key, rewardToken))
+}
+
+func SetFarmApr(cacher cache.ICache, key string, poolAddress string, incentiveId int64, apr string) error {
+	return cacher.Set(fmt.Sprintf("%v_%v_%v", key, poolAddress, incentiveId), apr, time.Hour)
+}
+
+func GetFarmApr(cacher cache.ICache, key string, poolAddress string, incentiveId int64) (string, error) {
+	return cacher.Get(fmt.Sprintf("%v_%v_%v", key, poolAddress, incentiveId))
 }
 
 // Initialize application's components
