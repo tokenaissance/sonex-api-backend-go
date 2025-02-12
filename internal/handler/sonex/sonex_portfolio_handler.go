@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"sonex_api_backend_go/internal/logic/farm"
@@ -11,6 +12,7 @@ import (
 	sonex_module "sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -28,6 +30,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		response := &types.PortfolioResponse{}
 		positions := make([]*types.Position, 0)
+		// UTC + 0, 当日 00:00
+		todayBegin := time.Now().UTC().AddDate(0, 0, -1)
+		var previousDayTotalAssets float64
 
 		// 获取用户有效 positions 列表
 		{
@@ -44,6 +49,15 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				for _, position := range positions {
 					response.TotalPosition += position.Position
 					response.LiquidityClaimableFees += position.ClaimableFees
+					createdAt, err := time.Parse(time.RFC3339, position.CreatedAt)
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					// count in total position assets before today begin
+					if createdAt.UTC().Before(todayBegin) {
+						previousDayTotalAssets += position.Position
+					}
 				}
 			}
 		}
@@ -61,7 +75,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				for _, xpool := range xpools {
 					stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
 						continue
 					}
 					stakingTokenValue, err := sonex_module.NewTokenValue(xpool.Staked, int(xpool.StakingTokenDecimals), sonex_module.WithTokenPrice(stakingTokenPrice))
@@ -69,6 +83,17 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						logx.Errorf("[SonexPortfolioHandler]: NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
 						continue
 					}
+					rewardTokenPrice, err := sonex_module.NewTokenPrice(xpool.RewardTokenPriceWithDecimals, int(xpool.RewardTokenPriceDecimals))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					rewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+
 					pools = append(pools, &types.PortfolioXpool{
 						PoolAddress:         xpool.PoolAddress,               // 质押池合约地址
 						StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
@@ -77,9 +102,22 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						APR:                 xpool.APR,                       // 年化收益率
 						Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
 						// FeeRevenue:          xpool.Earned,
+						Status: xpool.Status,
+						Earned: rewardTokenValue.ValueString(),
 					})
+
 					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
 					response.TotalXpoolStaked += xpoolStaked
+
+					createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					// count in total xpool staked before today begin
+					if createdAt.Before(todayBegin) {
+						previousDayTotalAssets += xpoolStaked
+					}
 					// response.TotalXpoolEarned += xpool.Earned // todo: xpool earned 需要从 xpool 的 event 事件中获取
 				}
 				response.Xpools = pools
@@ -110,20 +148,21 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					})
 					response.TotalFarmStaked += farm.LiquidityUSDFloat64
 					response.FarmEarned += farm.TotalClaimableFeesUSDFloat64
+					// count in total farm staked before today begin
+					createdAt := time.Unix(farm.StartAt, 0).UTC()
+					if createdAt.Before(todayBegin) {
+						previousDayTotalAssets += farm.LiquidityUSDFloat64
+					}
 				}
 				response.FarmPools = pools
 			}
 		}
 
-		for _, position := range positions {
-			response.TotalPosition += position.Position
-			response.ClaimableFees += position.ClaimableFees
-		}
-
 		// 计算总资产和可提资产
 		response.TotalAssets = response.TotalPosition + response.TotalXpoolStaked + response.TotalFarmStaked
 		response.ClaimableFees = response.LiquidityClaimableFees + response.FarmEarned + response.XpoolEarned
-		response.TotalAssetsRate = "0.00%"
+
+		response.TotalAssetsRate = fmt.Sprintf("%.2f%%", (response.TotalAssets/previousDayTotalAssets-1.0)*100)
 
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}

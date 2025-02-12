@@ -77,6 +77,8 @@ type transferData struct {
 	EventTickUpper   sql.NullString `db:"event_tick_upper"`
 	TxAt             sql.NullTime   `db:"tx_at"`
 	IsBurnt          sql.NullBool   `db:"is_burnt"`
+	CreatedAt        sql.NullString `db:"created_at"`
+	UpdatedAt        sql.NullString `db:"updated_at"`
 }
 
 func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error) {
@@ -163,7 +165,9 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 				FROM %[1]s 
 				WHERE event_token_id = t.event_token_id
 				AND event_to = '0x0000000000000000000000000000000000000000' AND chain_id = $2
-			) THEN true ELSE false END AS is_burnt
+			) THEN true ELSE false END AS is_burnt,
+			t.created_at,
+			t.updated_at
 		FROM %[1]s t
 		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
@@ -222,7 +226,9 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 					Token1Price: "0",
 					Volume:      "0",
 				},
-				IsBurnt: item.IsBurnt.Bool,
+				IsBurnt:   item.IsBurnt.Bool,
+				CreatedAt: item.CreatedAt.String,
+				UpdatedAt: item.UpdatedAt.String,
 			}
 
 			// 当前地址是否持仓该 position
@@ -269,7 +275,9 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 				WHERE event_token_id = $1 
 				AND event_to = '0x0000000000000000000000000000000000000000'
 				AND chain_id = $3
-			) THEN true ELSE false END AS is_burnt
+			) THEN true ELSE false END AS is_burnt,
+			t.created_at,
+			t.updated_at
 		FROM %[1]s t
 		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
 		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
@@ -335,7 +343,9 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			Token1Price: "0",
 			Volume:      "0",
 		},
-		IsBurnt: item.IsBurnt.Bool,
+		IsBurnt:   item.IsBurnt.Bool,
+		CreatedAt: item.CreatedAt.String,
+		UpdatedAt: item.UpdatedAt.String,
 	}
 	result[eventTokenId] = position
 

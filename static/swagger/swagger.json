@@ -3228,6 +3228,12 @@
         },
         "totalCollected": {
           "$ref": "#/definitions/TokenValuePair"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
         }
       },
       "title": "Position",
@@ -3246,7 +3252,9 @@
         "unclaimedFee1",
         "tokenValue0",
         "tokenValue1",
-        "isHolding"
+        "isHolding",
+        "createdAt",
+        "updatedAt"
       ]
     },
     "PositionRequest": {
