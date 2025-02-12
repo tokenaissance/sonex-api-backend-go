@@ -265,9 +265,11 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 					return resp, err
 				}
 				resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
+			} else {
+				// unstaked
+				resp.List[i].Balance = int64(len(resp.List[i].Positions))
 			}
 
-			// resp.List[i].Balance = int64(len(resp.List[i].Positions))
 			logx.Infof("SSSSA:%v B:%v c:%v", farmConf.Staker, req.UserAddress, item.IncentiveId)
 
 			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
