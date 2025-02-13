@@ -32,21 +32,34 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		portfolioType := req.Type
+		liquiditySelected := req.LiquiditySelected
+		farmSelected := req.FarmSelected
+		xpoolSelected := req.XpoolSelected
 
 		response := &types.PortfolioResponse{}
+
+		// 持仓列表
 		portfolioPositions := make([]*types.PortfolioPosition, 0)
+		// 流动性持仓列表
 		liquidityPositions := make([]*types.Position, 0)
+		// 持仓统计
+		portfolioStats := &types.PortfolioStats{}
+
+		// 可提收益
+		liquidityClaimableFees := 0.0
+		farmEarns := 0.0
+		xpoolEarns := 0.0
+
 		// UTC + 0, 当日 00:00
 		todayBegin := time.Now().UTC().AddDate(0, 0, -1)
 		var previousDayTotalAssets float64
 
 		// 获取用户有效 positions 列表
 		{
-			if portfolioType == "liquidity" || portfolioType == "all" {
+			if liquiditySelected {
 				positions, err := getPositions(r.Context(), svcCtx, req)
 				if err != nil {
-					logx.Errorf("[SonexPortfolioHandler]: SonexPositions error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+					logx.Errorf("[SonexPortfolioHandler]: SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
@@ -57,11 +70,12 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						Type:              portfolioTypeLiquidity,
 						LiquidityPosition: position,
 					})
-					response.TotalPosition += position.Position
-					response.LiquidityClaimableFees += position.ClaimableFees
+					portfolioStats.LiquidityPosition += position.Position
+					liquidityClaimableFees += position.ClaimableFees
+
 					createdAt, err := time.Parse(time.RFC3339, position.CreatedAt)
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 					// count in total position assets before today begin
@@ -74,38 +88,38 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 获取用户有效 xpool 列表
 		{
-			if portfolioType == "xpool" || portfolioType == "all" {
+			if xpoolSelected {
 				xpools, err := getXPools(r.Context(), svcCtx, req)
 				if err != nil {
-					logx.Errorf("[SonexPortfolioHandler]: getXPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+					logx.Errorf("[SonexPortfolioHandler]: getXPools error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
 				for _, xpool := range xpools {
 					stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 					stakingTokenValue, err := sonex_module.NewTokenValue(xpool.Staked, int(xpool.StakingTokenDecimals), sonex_module.WithTokenPrice(stakingTokenPrice))
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: NewTokenValue error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 					rewardTokenPrice, err := sonex_module.NewTokenPrice(xpool.RewardTokenPriceWithDecimals, int(xpool.RewardTokenPriceDecimals))
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 					rewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 
 					claimedRewardTokenValue, err := sonex_module.NewTokenValue(xpool.Claimed, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: claimedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: claimedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 
@@ -125,11 +139,10 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					})
 
 					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
-					response.TotalXpoolStaked += xpoolStaked
-
+					portfolioStats.TotalXpoolStaked += xpoolStaked
 					createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
 					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 					// count in total xpool staked before today begin
@@ -137,19 +150,19 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						previousDayTotalAssets += xpoolStaked
 					}
 
-					// 计算用户已领取的奖励代币价值
-					claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
-					response.XpoolEarned += claimedRewardTokenValueFloat64
+					// 计算用户可领取的奖励代币价值
+					claimableRewardTokenValueFloat64, _ := rewardTokenValue.ValueFloat64()
+					xpoolEarns += claimableRewardTokenValueFloat64
 				}
 			}
 		}
 
 		// 获取用户有效 farm 列表
 		{
-			if portfolioType == "farm" || portfolioType == "all" {
+			if farmSelected {
 				farmPools, err := getFarmPools(r.Context(), svcCtx, req, liquidityPositions)
 				if err != nil {
-					logx.Errorf("[SonexPortfolioHandler]: getFarmPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+					logx.Errorf("[SonexPortfolioHandler]: getFarmPools error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
@@ -170,24 +183,27 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						},
 					})
 
-					response.TotalFarmStaked += farm.LiquidityUSDFloat64
-					response.FarmEarned += farm.TotalClaimableFeesUSDFloat64
+					portfolioStats.TotalFarmStaked += farm.LiquidityUSDFloat64
 					// count in total farm staked before today begin
 					createdAt := time.Unix(farm.StartAt, 0).UTC()
 					if createdAt.Before(todayBegin) {
 						previousDayTotalAssets += farm.LiquidityUSDFloat64
 					}
+
+					// 计算用户可领取的奖励代币价值
+					farmEarns += farm.TotalClaimableFeesUSDFloat64
 				}
 			}
 		}
 
 		// 计算总资产和可提资产
-		response.TotalAssets = response.TotalPosition + response.TotalXpoolStaked + response.TotalFarmStaked
-		response.ClaimableFees = response.LiquidityClaimableFees + response.FarmEarned + response.XpoolEarned
+		portfolioStats.TotalAssets = portfolioStats.LiquidityPosition + portfolioStats.TotalXpoolStaked + portfolioStats.TotalFarmStaked
+		portfolioStats.ClaimableFees = liquidityClaimableFees + farmEarns + xpoolEarns
 
-		response.TotalAssetsRate = fmt.Sprintf("%.2f%%", (response.TotalAssets/previousDayTotalAssets-1.0)*100)
+		portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
 
 		response.Positions = portfolioPositions
+		response.Stats = portfolioStats
 
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}
@@ -198,7 +214,7 @@ func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 	l := sonex.NewSonexPositionsLogic(ctx, svcCtx)
 	positions, err := l.SonexPositions(ctx, req.ChainId, req.Address)
 	if err != nil {
-		logx.Errorf("[getPositions]: SonexPositions error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		logx.Errorf("[getPositions]: SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 		return nil, err
 	}
 
@@ -221,13 +237,13 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 		},
 	})
 	if err != nil {
-		logx.Errorf("[getXPools]: XpoolPoolList error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		logx.Errorf("[getXPools]: XpoolPoolList error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 		return nil, err
 	}
 
 	list, ok := pools.Data.([]types.XpoolPoolListResponse_Pool)
 	if !ok {
-		logx.Errorf("[getXPools]: XpoolPoolList data type error, chainId: %d, address: %s, type: %s", req.ChainId, req.Address, req.Type)
+		logx.Errorf("[getXPools]: XpoolPoolList data type error, chainId: %d, address: %s", req.ChainId, req.Address)
 		return nil, errors.New("XpoolPoolList data type error")
 	}
 
@@ -247,7 +263,7 @@ func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 		StakedOnly:  true,
 	}, positions)
 	if err != nil {
-		logx.Errorf("[getFarmPools]: FarmIncentives error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		logx.Errorf("[getFarmPools]: FarmIncentives error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 		return nil, err
 	}
 
