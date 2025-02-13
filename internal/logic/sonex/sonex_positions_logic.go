@@ -140,6 +140,11 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 	validTokenIds := make([]int64, 0)
 
 	for tokenId, p := range positionM {
+		// validTokenIds 部分 tokenId 来源是缓存，缓存的 tokenId 可能已经被销毁或者通过 farm 等功能转移
+		// 所以需要过滤掉 owner 变更的 tokenId
+		if p.Owner.Hex() != common.HexToAddress(address).Hex() {
+			continue
+		}
 		validTokenIds = append(validTokenIds, tokenId)
 
 		token0, err := global.GetToken(chainId, p.Token0.Hex())
