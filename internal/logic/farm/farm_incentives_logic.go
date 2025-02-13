@@ -257,7 +257,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 				resp.List[i].Staked = val
 
 				// resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
-				// resp.List[i].Balance = int64(len(resp.List[i].Positions))
+				// resp.List[i].Balance = int64(len(resp.List[i].Positions)) - val
 				rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, item.IncentiveId, *chain)
 				if err != nil {
 					return resp, err
