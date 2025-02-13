@@ -35,10 +35,11 @@ type TokenCacher struct {
 
 // Represents metadata of a token.
 type Token struct {
-	Address  string
-	Name     string
-	Symbol   string
-	Decimals int64
+	Address     string
+	Name        string
+	Symbol      string
+	Decimals    int64
+	TotalSupply *big.Int
 }
 
 // Represents price details of a token pair
@@ -252,6 +253,14 @@ func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 			Target:   tokenAddress,
 			CallData: data,
 		})
+		data, err = erc20ABI.Pack("totalSupply")
+		if err != nil {
+			return nil, err
+		}
+		callDatas = append(callDatas, contract_common.Multicall3Call{
+			Target:   tokenAddress,
+			CallData: data,
+		})
 		data, err = multicallABI.Pack("aggregate", callDatas)
 		if err != nil {
 			return nil, err
@@ -275,12 +284,18 @@ func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 		if err != nil {
 			return nil, err
 		}
+		var totalSupply *big.Int
+		err = erc20ABI.UnpackIntoInterface(&totalSupply, "totalSupply", multicallResult.ReturnData[3])
+		if err != nil {
+			return nil, err
+		}
 
 		token = Token{
-			Address:  address.Hex(),
-			Name:     name,
-			Symbol:   symbol,
-			Decimals: int64(decimals),
+			Address:     address.Hex(),
+			Name:        name,
+			Symbol:      symbol,
+			Decimals:    int64(decimals),
+			TotalSupply: totalSupply,
 		}
 		cacher.tokensLock.Lock()
 		cacher.tokens[address.Hex()] = token
