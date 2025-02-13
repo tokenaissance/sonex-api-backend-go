@@ -32,9 +32,25 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
+		// 分页参数
+		pageIndex := *req.PageIndex
+		pageSize := *req.PageSize
+
 		liquiditySelected := req.LiquiditySelected
 		farmSelected := req.FarmSelected
 		xpoolSelected := req.XpoolSelected
+
+		// 计算用户选中的 portfolio 数量
+		selectedCnt := 0
+		if liquiditySelected {
+			selectedCnt++
+		}
+		if farmSelected {
+			selectedCnt++
+		}
+		if xpoolSelected {
+			selectedCnt++
+		}
 
 		response := &types.PortfolioResponse{}
 
@@ -64,6 +80,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					return
 				}
 				liquidityPositions = positions
+				liquidityFrames := make([]*types.PortfolioLiquidityFrame, 0)
 				// count in total position & liquidity claimable fees
 				for _, position := range positions {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
@@ -82,6 +99,22 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					if createdAt.UTC().Before(todayBegin) {
 						previousDayTotalAssets += position.Position
 					}
+
+					// 计算 liquidity position 的饼图 frame 数据
+					pool := position.Pool
+					liquidityFrames = append(liquidityFrames, &types.PortfolioLiquidityFrame{
+						Position:      position.Position,
+						Token0Name:    pool.Token0.Name,
+						Token0Symbol:  pool.Token0.Symbol,
+						Token0Address: pool.Token0.Address,
+						Token1Name:    pool.Token1.Name,
+						Token1Symbol:  pool.Token1.Symbol,
+						Token1Address: pool.Token1.Address,
+					})
+				}
+				// 单选时，才会返回 liquidityFrames
+				if selectedCnt == 1 {
+					portfolioStats.LiquidityFrames = liquidityFrames
 				}
 			}
 		}
@@ -95,6 +128,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
+				xpoolFrames := make([]*types.PortfolioXpoolFrame, 0)
 				for _, xpool := range xpools {
 					stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
 					if err != nil {
@@ -153,6 +187,18 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					// 计算用户可领取的奖励代币价值
 					claimableRewardTokenValueFloat64, _ := rewardTokenValue.ValueFloat64()
 					xpoolEarns += claimableRewardTokenValueFloat64
+
+					xpoolFrames = append(xpoolFrames, &types.PortfolioXpoolFrame{
+						Staked:              xpoolStaked,
+						StakingTokenName:    xpool.StakingTokenName,
+						StakingTokenSymbol:  xpool.StakingTokenSymbol,
+						StakingTokenAddress: xpool.StakingTokenAddress,
+					})
+				}
+
+				// 单选时，才会返回 xpoolFrames
+				if selectedCnt == 1 {
+					portfolioStats.XpoolFrames = xpoolFrames
 				}
 			}
 		}
@@ -166,7 +212,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
-
+				farmFrames := make([]*types.PortfolioFarmFrame, 0)
 				for _, farm := range farmPools {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: portfolioTypeFarm,
@@ -192,6 +238,19 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 					// 计算用户可领取的奖励代币价值
 					farmEarns += farm.TotalClaimableFeesUSDFloat64
+
+					farmFrames = append(farmFrames, &types.PortfolioFarmFrame{
+						Position:      farm.LiquidityUSDFloat64,
+						Token0Symbol:  farm.Token0Symbol,
+						Token0Address: farm.Token0Address,
+						Token1Symbol:  farm.Token1Symbol,
+						Token1Address: farm.Token1Address,
+					})
+				}
+
+				// 单选时，才会返回 farmFrames
+				if selectedCnt == 1 {
+					portfolioStats.FarmFrames = farmFrames
 				}
 			}
 		}
@@ -201,12 +260,37 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		portfolioStats.ClaimableFees = liquidityClaimableFees + farmEarns + xpoolEarns
 
 		portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
-
-		response.Positions = portfolioPositions
 		response.Stats = portfolioStats
+
+		// pagination
+		list := getPagination(portfolioPositions, pageIndex, pageSize)
+		response.Positions = list
+		response.Meta = types.PageResponse{
+			PageSize:  pageSize,
+			PageIndex: pageIndex,
+			Total:     int64(len(list)),
+		}
 
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}
+}
+
+// getPagination 获取分页数据
+func getPagination(list []*types.PortfolioPosition, pageIndex int64, pageSize int64) []*types.PortfolioPosition {
+	start := (pageIndex - 1) * pageSize
+	if start < 0 {
+		start = 0
+	}
+	end := start + pageSize
+	if start >= int64(len(list)) {
+		list = []*types.PortfolioPosition{}
+	} else {
+		if end > int64(len(list)) {
+			end = int64(len(list))
+		}
+		list = list[start:end]
+	}
+	return list
 }
 
 // getPositions 获取用户有效 positions 列表
