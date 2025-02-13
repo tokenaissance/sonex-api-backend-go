@@ -151,7 +151,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		}
 	}
 	tokenAddresses := []string{}
-	for key, _ := range tokenAddressMap {
+	for key := range tokenAddressMap {
 		tokenAddresses = append(tokenAddresses, key)
 	}
 	prices, err := tokenPriceModel.GetCurrentPrices(l.ctx, tokenAddresses)
