@@ -9,7 +9,6 @@ import (
 	"sonex_api_backend_go/internal/logic/farm"
 	"sonex_api_backend_go/internal/logic/sonex"
 	"sonex_api_backend_go/internal/logic/xpool"
-	sonex_module "sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 	"time"
@@ -62,76 +61,76 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			}
 		}
 
-		// 获取用户有效 xpool 列表
-		{
-			if portfolioType == "xpool" || portfolioType == "all" {
-				xpools, err := getXPools(r.Context(), svcCtx, req)
-				if err != nil {
-					logx.Errorf("[SonexPortfolioHandler]: getXPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-					httpx.ErrorCtx(r.Context(), w, err)
-					return
-				}
-				pools := make([]*types.PortfolioXpool, 0)
-				for _, xpool := range xpools {
-					stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
-					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-						continue
-					}
-					stakingTokenValue, err := sonex_module.NewTokenValue(xpool.Staked, int(xpool.StakingTokenDecimals), sonex_module.WithTokenPrice(stakingTokenPrice))
-					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-						continue
-					}
-					rewardTokenPrice, err := sonex_module.NewTokenPrice(xpool.RewardTokenPriceWithDecimals, int(xpool.RewardTokenPriceDecimals))
-					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-						continue
-					}
-					rewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
-					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-						continue
-					}
+		// // 获取用户有效 xpool 列表
+		// {
+		// 	if portfolioType == "xpool" || portfolioType == "all" {
+		// 		xpools, err := getXPools(r.Context(), svcCtx, req)
+		// 		if err != nil {
+		// 			logx.Errorf("[SonexPortfolioHandler]: getXPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 			httpx.ErrorCtx(r.Context(), w, err)
+		// 			return
+		// 		}
+		// 		pools := make([]*types.PortfolioXpool, 0)
+		// 		for _, xpool := range xpools {
+		// 			stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
+		// 			if err != nil {
+		// 				logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 				continue
+		// 			}
+		// 			stakingTokenValue, err := sonex_module.NewTokenValue(xpool.Staked, int(xpool.StakingTokenDecimals), sonex_module.WithTokenPrice(stakingTokenPrice))
+		// 			if err != nil {
+		// 				logx.Errorf("[SonexPortfolioHandler]: NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 				continue
+		// 			}
+		// 			rewardTokenPrice, err := sonex_module.NewTokenPrice(xpool.RewardTokenPriceWithDecimals, int(xpool.RewardTokenPriceDecimals))
+		// 			if err != nil {
+		// 				logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 				continue
+		// 			}
+		// 			rewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
+		// 			if err != nil {
+		// 				logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 				continue
+		// 			}
 
-					claimedRewardTokenValue, err := sonex_module.NewTokenValue(xpool.Claimed, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
-					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: claimedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-						continue
-					}
+		// 			claimedRewardTokenValue, err := sonex_module.NewTokenValue(xpool.Claimed, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
+		// 			if err != nil {
+		// 				logx.Errorf("[SonexPortfolioHandler]: claimedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 				continue
+		// 			}
 
-					pools = append(pools, &types.PortfolioXpool{
-						PoolAddress:         xpool.PoolAddress,               // 质押池合约地址
-						StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
-						StakingTokenSymbol:  xpool.StakingTokenSymbol,        // 质押的代币符号
-						StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
-						APR:                 xpool.APR,                       // 年化收益率
-						Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
-						FeeRevenue:          claimedRewardTokenValue.ValueString(),
-						Status:              xpool.Status,
-						Earned:              rewardTokenValue.ValueString(),
-					})
+		// 			pools = append(pools, &types.PortfolioXpool{
+		// 				PoolAddress:         xpool.PoolAddress,               // 质押池合约地址
+		// 				StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
+		// 				StakingTokenSymbol:  xpool.StakingTokenSymbol,        // 质押的代币符号
+		// 				StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
+		// 				APR:                 xpool.APR,                       // 年化收益率
+		// 				Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
+		// 				FeeRevenue:          claimedRewardTokenValue.ValueString(),
+		// 				Status:              xpool.Status,
+		// 				Earned:              rewardTokenValue.ValueString(),
+		// 			})
 
-					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
-					response.TotalXpoolStaked += xpoolStaked
+		// 			xpoolStaked, _ := stakingTokenValue.ValueFloat64()
+		// 			response.TotalXpoolStaked += xpoolStaked
 
-					createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
-					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-						continue
-					}
-					// count in total xpool staked before today begin
-					if createdAt.Before(todayBegin) {
-						previousDayTotalAssets += xpoolStaked
-					}
+		// 			createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
+		// 			if err != nil {
+		// 				logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 				continue
+		// 			}
+		// 			// count in total xpool staked before today begin
+		// 			if createdAt.Before(todayBegin) {
+		// 				previousDayTotalAssets += xpoolStaked
+		// 			}
 
-					// 计算用户已领取的奖励代币价值
-					claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
-					response.XpoolEarned += claimedRewardTokenValueFloat64
-				}
-				response.Xpools = pools
-			}
-		}
+		// 			// 计算用户已领取的奖励代币价值
+		// 			claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
+		// 			response.XpoolEarned += claimedRewardTokenValueFloat64
+		// 		}
+		// 		response.Xpools = pools
+		// 	}
+		// }
 
 		// 获取用户有效 farm 列表
 		{
