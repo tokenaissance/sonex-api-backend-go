@@ -330,7 +330,7 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, c
 			linq.From(opt.Tokens).SelectT(func(item string) string { return fmt.Sprintf("'%s'", item) }).ToSlice(&opt.Tokens)
 			tokens := strings.Join(opt.Tokens, " ")
 			options = fmt.Sprintf(`
-				%s AND (extra_token0 IN (%s) OR extra_token1 IN (%s))
+				%s AND (event_token0 IN (%s) OR event_token1 IN (%s))
 			`, options, tokens, tokens)
 			if opt.IsETH {
 				// options = fmt.Sprintf(`
@@ -365,9 +365,10 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, c
 				WHERE tx_hash = ANY(
 					SELECT tx_hash 
 					FROM (
-						SELECT DISTINCT ON (tx_hash, tx_at) tx_hash, tx_at
-						FROM %s
-						WHERE chain_id = $1 %s
+						SELECT DISTINCT ON (S.tx_hash, S.tx_at) S.tx_hash, S.tx_at
+						FROM %s S
+						LEFT JOIN %s C ON C.event_pool = S.extra_pool
+						WHERE S.chain_id = $1 %s
 						ORDER BY tx_at %s
 					)
 					%s
@@ -380,7 +381,7 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, c
 				C.event_fee AS extra_fee 
 			FROM latest_tx_hash H
 			LEFT JOIN %s C ON C.event_pool = H.extra_pool
-		`, m.table, m.table, options, orderBy, page, eventSonexFactoryPoolCreatedModel.table)
+		`, m.table, m.table, eventSonexFactoryPoolCreatedModel.table, options, orderBy, page, eventSonexFactoryPoolCreatedModel.table)
 		err := m.conn.QueryRowsCtx(ctx, &resp, latestTxQuery, chainId)
 		if err != nil {
 			ch <- struct{ Err error }{Err: err}
@@ -397,9 +398,13 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, c
 
 		totalQuery := fmt.Sprintf(`
 			SELECT COUNT(*) FROM (
-				SELECT 1 FROM %s WHERE chain_id = $1 %s GROUP BY tx_hash
+				SELECT 1 
+				FROM %s S
+				LEFT JOIN %s C ON C.event_pool = S.extra_pool 
+				WHERE S.chain_id = $1 %s 
+				GROUP BY S.tx_hash
 			)
-		`, m.table, options)
+		`, m.table, eventSonexFactoryPoolCreatedModel.table, options)
 		err := m.conn.QueryRowCtx(ctx, &total, totalQuery, chainId)
 		if err != nil {
 			ch <- struct{ Err error }{Err: err}
@@ -407,8 +412,10 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, c
 		}
 	}(results)
 
-	wg.Wait()
-	close(results)
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	for result := range results {
 		if result.Err != nil {
