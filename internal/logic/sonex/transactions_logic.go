@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
-	"time"
 
 	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/cache"
@@ -111,17 +110,12 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	}
 	options.PageIndex = req.PageIndex
 
-	st := time.Now()
-
 	// Query
 	swapRecords, total, err := eventSonexPoolSwapModel.QueryTransactions(l.ctx, req.ChainId, &options)
 	if err != nil {
 		return nil, err
 	}
 	totalResult = total
-
-	fmt.Printf("1 ====> %s\n", time.Since(st))
-	st = time.Now()
 
 	// Handle data
 	transactions := map[string][]repository.EventSonexPoolSwapWithPool{}
@@ -140,9 +134,6 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		},
 	)
 
-	fmt.Printf("2 ====> %s\n", time.Since(st))
-	st = time.Now()
-
 	tokenAddressMap := map[string]struct{}{}
 	for _, swaps := range transactions {
 		for _, swap := range swaps {
@@ -158,9 +149,6 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("3 ====> %s\n", time.Since(st))
-	st = time.Now()
 
 	poolMap := map[string]types.Pool{}
 	handlePool := func(poolAddress string, token0Address string, token1Address string, fee int64) (*types.Pool, error) {
@@ -360,8 +348,6 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	linq.From(dataResult).
 		OrderByDescendingT(func(item types.TransactionsResponse_Transaction) int64 { return item.TxAt }).
 		ToSlice(&dataResult)
-
-	fmt.Printf("4 ====> %s\n", time.Since(st))
 
 	return &response.ApiResponse{
 		Data: dataResult,
