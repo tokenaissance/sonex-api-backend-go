@@ -157,6 +157,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserWithExtra(ctx c
 	return resp, nil
 }
 
+// 获取用户的正在质押的代币的个数
 func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenStakedWithExtra, error) {
 	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
 	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)

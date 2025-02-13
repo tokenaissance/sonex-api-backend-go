@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"sonex_api_backend_go/internal/config"
 	"testing"
 
@@ -11,7 +12,7 @@ func Test_GetTransferEventsFarm(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	// model := NewEventSonexPositionManagerTransferModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPositionManagerTransferModel(NewConn(c.PostgreSQL.DateSource()))
 
 	// _, a, err := model.GetTransferEventsFarmUnstake(context.Background(), 1946, "0x8d8aCE89639F82ed130463135FeeDaa476B3A3A9", "0x41Bc39CEa9eD3a41F67C7a9D65DE47a8aA1E09E1")
 	// if err != nil {
@@ -19,6 +20,8 @@ func Test_GetTransferEventsFarm(t *testing.T) {
 	// 	return
 	// }
 	// logx.Infof("A:%v ", a)
+
+	model.GetAllUseablePositions(context.Background(), 1946, "0x74A5Fe281F4d8B9fB3e96D97bBDE14949B5c44e2", "0x330104ea738276971a6A7BCbAB60A56e2BF558f3")
 }
 
 // func Test_customEventSonexPositionManagerTransferModel_GetTransferEventsGroupByPoolAddress(t *testing.T) {

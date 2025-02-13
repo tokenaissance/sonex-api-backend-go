@@ -45,6 +45,8 @@ var FarmTotalWeightKey = "FarmTotalWeightKey"
 
 var FarmAPRKey = "FarmAPRKey"
 
+var Reward365ForIncentiveIdKey = "Reward365ForIncentiveId"
+
 func GetVolume24HTvlValue(cacher cache.ICache, _key string, _keyPoolAddress string) (string, error) {
 	return cacher.Get(fmt.Sprintf("%v_%v", _key, _keyPoolAddress))
 }
@@ -67,6 +69,15 @@ func SetFarmApr(cacher cache.ICache, key string, poolAddress string, incentiveId
 
 func GetFarmApr(cacher cache.ICache, key string, poolAddress string, incentiveId int64) (string, error) {
 	return cacher.Get(fmt.Sprintf("%v_%v_%v", key, poolAddress, incentiveId))
+}
+
+// 超时没有意义
+func SetTotalReward365ForIncentiveId(cacher cache.ICache, key string, incentiveId int64, reward365 string) error {
+	return cacher.Set(fmt.Sprintf("%v_%v", key, incentiveId), reward365, 0)
+}
+
+func GetTotalReward365ForIncentiveId(cacher cache.ICache, key string, incentiveId int64) (string, error) {
+	return cacher.Get(fmt.Sprintf("%v_%v", key, incentiveId))
 }
 
 // Initialize application's components
