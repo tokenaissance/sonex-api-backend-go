@@ -62,7 +62,7 @@ func GetFarmTotalWeightValue(cacher cache.ICache, _key string, rewardToken strin
 }
 
 func SetFarmApr(cacher cache.ICache, key string, poolAddress string, incentiveId int64, apr string) error {
-	return cacher.Set(fmt.Sprintf("%v_%v_%v", key, poolAddress, incentiveId), apr, time.Hour)
+	return cacher.Set(fmt.Sprintf("%v_%v_%v", key, poolAddress, incentiveId), apr, 2*time.Second)
 }
 
 func GetFarmApr(cacher cache.ICache, key string, poolAddress string, incentiveId int64) (string, error) {
