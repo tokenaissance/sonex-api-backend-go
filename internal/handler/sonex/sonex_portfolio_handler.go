@@ -9,12 +9,19 @@ import (
 	"sonex_api_backend_go/internal/logic/farm"
 	"sonex_api_backend_go/internal/logic/sonex"
 	"sonex_api_backend_go/internal/logic/xpool"
+	sonex_module "sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
+)
+
+const (
+	portfolioTypeLiquidity string = "liquidity"
+	portfolioTypeFarm      string = "farm"
+	portfolioTypeXpool     string = "xpool"
 )
 
 func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
@@ -28,7 +35,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		portfolioType := req.Type
 
 		response := &types.PortfolioResponse{}
-		positions := make([]*types.Position, 0)
+		portfolioPositions := make([]*types.PortfolioPosition, 0)
+		liquidityPositions := make([]*types.Position, 0)
 		// UTC + 0, 当日 00:00
 		todayBegin := time.Now().UTC().AddDate(0, 0, -1)
 		var previousDayTotalAssets float64
@@ -36,16 +44,19 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 获取用户有效 positions 列表
 		{
 			if portfolioType == "liquidity" || portfolioType == "all" {
-				res, err := getPositions(r.Context(), svcCtx, req)
+				positions, err := getPositions(r.Context(), svcCtx, req)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: SonexPositions error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
-				positions = res
-				response.Positions = res
+				liquidityPositions = positions
 				// count in total position & liquidity claimable fees
 				for _, position := range positions {
+					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
+						Type:              portfolioTypeLiquidity,
+						LiquidityPosition: position,
+					})
 					response.TotalPosition += position.Position
 					response.LiquidityClaimableFees += position.ClaimableFees
 					createdAt, err := time.Parse(time.RFC3339, position.CreatedAt)
@@ -61,99 +72,104 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			}
 		}
 
-		// // 获取用户有效 xpool 列表
-		// {
-		// 	if portfolioType == "xpool" || portfolioType == "all" {
-		// 		xpools, err := getXPools(r.Context(), svcCtx, req)
-		// 		if err != nil {
-		// 			logx.Errorf("[SonexPortfolioHandler]: getXPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-		// 			httpx.ErrorCtx(r.Context(), w, err)
-		// 			return
-		// 		}
-		// 		pools := make([]*types.PortfolioXpool, 0)
-		// 		for _, xpool := range xpools {
-		// 			stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
-		// 			if err != nil {
-		// 				logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-		// 				continue
-		// 			}
-		// 			stakingTokenValue, err := sonex_module.NewTokenValue(xpool.Staked, int(xpool.StakingTokenDecimals), sonex_module.WithTokenPrice(stakingTokenPrice))
-		// 			if err != nil {
-		// 				logx.Errorf("[SonexPortfolioHandler]: NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-		// 				continue
-		// 			}
-		// 			rewardTokenPrice, err := sonex_module.NewTokenPrice(xpool.RewardTokenPriceWithDecimals, int(xpool.RewardTokenPriceDecimals))
-		// 			if err != nil {
-		// 				logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-		// 				continue
-		// 			}
-		// 			rewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
-		// 			if err != nil {
-		// 				logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-		// 				continue
-		// 			}
+		// 获取用户有效 xpool 列表
+		{
+			if portfolioType == "xpool" || portfolioType == "all" {
+				xpools, err := getXPools(r.Context(), svcCtx, req)
+				if err != nil {
+					logx.Errorf("[SonexPortfolioHandler]: getXPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+					httpx.ErrorCtx(r.Context(), w, err)
+					return
+				}
+				for _, xpool := range xpools {
+					stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					stakingTokenValue, err := sonex_module.NewTokenValue(xpool.Staked, int(xpool.StakingTokenDecimals), sonex_module.WithTokenPrice(stakingTokenPrice))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					rewardTokenPrice, err := sonex_module.NewTokenPrice(xpool.RewardTokenPriceWithDecimals, int(xpool.RewardTokenPriceDecimals))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					rewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
 
-		// 			claimedRewardTokenValue, err := sonex_module.NewTokenValue(xpool.Claimed, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
-		// 			if err != nil {
-		// 				logx.Errorf("[SonexPortfolioHandler]: claimedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-		// 				continue
-		// 			}
+					claimedRewardTokenValue, err := sonex_module.NewTokenValue(xpool.Claimed, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: claimedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
 
-		// 			pools = append(pools, &types.PortfolioXpool{
-		// 				PoolAddress:         xpool.PoolAddress,               // 质押池合约地址
-		// 				StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
-		// 				StakingTokenSymbol:  xpool.StakingTokenSymbol,        // 质押的代币符号
-		// 				StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
-		// 				APR:                 xpool.APR,                       // 年化收益率
-		// 				Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
-		// 				FeeRevenue:          claimedRewardTokenValue.ValueString(),
-		// 				Status:              xpool.Status,
-		// 				Earned:              rewardTokenValue.ValueString(),
-		// 			})
+					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
+						Type: portfolioTypeXpool,
+						Xpool: &types.PortfolioXpool{
+							PoolAddress:         xpool.PoolAddress,               // 质押池合约地址
+							StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
+							StakingTokenSymbol:  xpool.StakingTokenSymbol,        // 质押的代币符号
+							StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
+							APR:                 xpool.APR,                       // 年化收益率
+							Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
+							FeeRevenue:          claimedRewardTokenValue.ValueString(),
+							Status:              xpool.Status,
+							Earned:              rewardTokenValue.ValueString(),
+						},
+					})
 
-		// 			xpoolStaked, _ := stakingTokenValue.ValueFloat64()
-		// 			response.TotalXpoolStaked += xpoolStaked
+					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
+					response.TotalXpoolStaked += xpoolStaked
 
-		// 			createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
-		// 			if err != nil {
-		// 				logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-		// 				continue
-		// 			}
-		// 			// count in total xpool staked before today begin
-		// 			if createdAt.Before(todayBegin) {
-		// 				previousDayTotalAssets += xpoolStaked
-		// 			}
+					createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					// count in total xpool staked before today begin
+					if createdAt.Before(todayBegin) {
+						previousDayTotalAssets += xpoolStaked
+					}
 
-		// 			// 计算用户已领取的奖励代币价值
-		// 			claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
-		// 			response.XpoolEarned += claimedRewardTokenValueFloat64
-		// 		}
-		// 		response.Xpools = pools
-		// 	}
-		// }
+					// 计算用户已领取的奖励代币价值
+					claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
+					response.XpoolEarned += claimedRewardTokenValueFloat64
+				}
+			}
+		}
 
 		// 获取用户有效 farm 列表
 		{
 			if portfolioType == "farm" || portfolioType == "all" {
-				farmPools, err := getFarmPools(r.Context(), svcCtx, req, positions)
+				farmPools, err := getFarmPools(r.Context(), svcCtx, req, liquidityPositions)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: getFarmPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
-				pools := make([]*types.PortfolioFarm, 0)
+
 				for _, farm := range farmPools {
-					pools = append(pools, &types.PortfolioFarm{
-						PoolAddress:   farm.PoolAddress,
-						FeeRatio:      farm.FeeRatio,
-						Token0Symbol:  farm.Token0Symbol,
-						Token0Address: farm.Token0Address,
-						Token1Symbol:  farm.Token1Symbol,
-						Token1Address: farm.Token1Address,
-						PositionValue: farm.LiquidityUSD,
-						FeeRevenue:    farm.TotalClaimedFeesUSD,
-						Earned:        farm.TotalClaimableFeesUSD,
+					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
+						Type: portfolioTypeFarm,
+						FarmPool: &types.PortfolioFarm{
+							PoolAddress:   farm.PoolAddress,
+							FeeRatio:      farm.FeeRatio,
+							Token0Symbol:  farm.Token0Symbol,
+							Token0Address: farm.Token0Address,
+							Token1Symbol:  farm.Token1Symbol,
+							Token1Address: farm.Token1Address,
+							PositionValue: farm.LiquidityUSD,
+							FeeRevenue:    farm.TotalClaimedFeesUSD,
+							Earned:        farm.TotalClaimableFeesUSD,
+						},
 					})
+
 					response.TotalFarmStaked += farm.LiquidityUSDFloat64
 					response.FarmEarned += farm.TotalClaimableFeesUSDFloat64
 					// count in total farm staked before today begin
@@ -162,7 +178,6 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						previousDayTotalAssets += farm.LiquidityUSDFloat64
 					}
 				}
-				response.FarmPools = pools
 			}
 		}
 
@@ -171,6 +186,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		response.ClaimableFees = response.LiquidityClaimableFees + response.FarmEarned + response.XpoolEarned
 
 		response.TotalAssetsRate = fmt.Sprintf("%.2f%%", (response.TotalAssets/previousDayTotalAssets-1.0)*100)
+
+		response.Positions = portfolioPositions
 
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}
