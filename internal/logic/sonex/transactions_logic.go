@@ -301,17 +301,50 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 				}
 			}
 
+			var subWg sync.WaitGroup
+			subResults := make(chan struct {
+				Pool *types.Pool
+				Err  error
+			}, len(swaps))
+
 			pools := []types.Pool{}
 			for _, swap := range swaps {
-				pool, err := handlePool(swap.ExtraPool, swap.ExtraToken0, swap.ExtraToken1, swap.ExtraFee)
-				if err != nil {
+				subWg.Add(1)
+				go func(ch chan struct {
+					Pool *types.Pool
+					Err  error
+				}) {
+					defer subWg.Done()
+
+					pool, err := handlePool(swap.ExtraPool, swap.ExtraToken0, swap.ExtraToken1, swap.ExtraFee)
+					if err != nil {
+						ch <- struct {
+							Pool *types.Pool
+							Err  error
+						}{Err: err}
+						return
+					}
+					ch <- struct {
+						Pool *types.Pool
+						Err  error
+					}{Pool: pool}
+				}(subResults)
+			}
+
+			go func() {
+				subWg.Wait()
+				close(subResults)
+			}()
+
+			for subResult := range subResults {
+				if subResult.Err != nil {
 					ch <- struct {
 						Tx  *types.TransactionsResponse_Transaction
 						Err error
-					}{Err: err}
+					}{Err: subResult.Err}
 					return
 				}
-				pools = append(pools, *pool)
+				pools = append(pools, *subResult.Pool)
 			}
 
 			_ = toPrice
@@ -343,8 +376,10 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		}(results)
 	}
 
-	wg.Wait()
-	close(results)
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	// Handle data
 	for result := range results {
