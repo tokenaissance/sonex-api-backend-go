@@ -97,7 +97,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			if err != nil {
 				logx.Errorf("Marshal response error: %v", err)
 			}
-			err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
+			err = redisCache.Set(cacheKey, respBytes, time.Hour*1)
 			if err != nil {
 				logx.Errorf("Set cache error: %v", err)
 			}
@@ -157,21 +157,6 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		ToSlice(&tokenAddressesWithOutETH)
 	var tokenAddressStrs []string
 	linq.From(dataResult).SelectT(func(item types.TokensResponse_Token) string { return item.Address }).ToSlice(&tokenAddressStrs)
-
-	// Get total supplies
-	var totalSupplies map[common.Address]*big.Int
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		result, err := global.BatchGetTotalSupplies(l.ctx, req.ChainId, tokenAddressesWithOutETH)
-		if err != nil {
-			logx.Errorf("Get total supplies error: %s", err)
-			return
-		}
-
-		totalSupplies = result
-	}()
 
 	// Get current price
 	var currentPriceRecords map[string]*big.Int
@@ -245,46 +230,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			price, _ := global.PriceToUSD(req.ChainId, priceI)
 			item.PriceUSD = fmt.Sprintf("%f", price)
 
-			totalSupply, ok := totalSupplies[common.HexToAddress(item.Address)]
-			if !ok {
-				totalSupply = big.NewInt(0)
-			}
 			accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(item.Decimals), nil)
-			fdv, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply, priceI), accuracy))
-			item.TotalSupply = totalSupply.String()
-			item.FdvUSD = fmt.Sprintf("%f", fdv)
-
-			for i, pool := range item.Pools {
-				price0I, ok := currentPriceRecords[pool.Token0.Address]
-				if !ok {
-					price0I = big.NewInt(0)
-				}
-				price0, _ := global.PriceToUSD(req.ChainId, price0I)
-				item.Pools[i].Token0.PriceUSD = fmt.Sprintf("%f", price0)
-				price1I, ok := currentPriceRecords[pool.Token1.Address]
-				if !ok {
-					price1I = big.NewInt(0)
-				}
-				price1, _ := global.PriceToUSD(req.ChainId, price1I)
-				item.Pools[i].Token1.PriceUSD = fmt.Sprintf("%f", price1)
-
-				totalSupply0, ok := totalSupplies[common.HexToAddress(pool.Token0.Address)]
-				if !ok {
-					totalSupply0 = big.NewInt(0)
-				}
-				accuracy0 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token0.Decimals), nil)
-				fdv0, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply0, price0I), accuracy0))
-				item.Pools[i].Token0.TotalSupply = totalSupply0.String()
-				item.Pools[i].Token0.FdvUSD = fmt.Sprintf("%f", fdv0)
-				totalSupply1, ok := totalSupplies[common.HexToAddress(pool.Token1.Address)]
-				if !ok {
-					totalSupply1 = big.NewInt(0)
-				}
-				accuracy1 := new(big.Int).Exp(big.NewInt(10), big.NewInt(pool.Token1.Decimals), nil)
-				fdv1, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(totalSupply1, price1I), accuracy1))
-				item.Pools[i].Token1.TotalSupply = totalSupply1.String()
-				item.Pools[i].Token1.FdvUSD = fmt.Sprintf("%f", fdv1)
-			}
 
 			volumeI, ok := volumes[item.Address]
 			if !ok {
@@ -473,6 +419,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 	whitelistTokens, err := tokenModel.QueryByChainId(l.ctx, req.ChainId)
 	if err != nil {
@@ -484,6 +431,15 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 		func(item repository.Token) string { return item.Address },
 		func(item repository.Token) repository.Token { return item },
 	)
+	whitelistTokenAddresses := []string{}
+	for key := range whitelistTokenMap {
+		whitelistTokenAddresses = append(whitelistTokenAddresses, key)
+	}
+
+	currentPriceRecords, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, whitelistTokenAddresses)
+	if err != nil {
+		return nil, err
+	}
 
 	dateResult := []types.TokensResponse_Token{}
 
@@ -531,13 +487,23 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 			dataLock.Lock()
 			token0, ok0 := tokenWithPoolsMap[record.EventToken0]
 			if !ok0 {
+				price, ok := currentPriceRecords[tokenInfo0.Address]
+				if !ok {
+					price = big.NewInt(0)
+				}
+				priceUSD, _ := global.PriceToUSD(req.ChainId, price)
+				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(tokenInfo0.Decimals), nil)
+				fdv, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(tokenInfo0.TotalSupply, price), accuracy))
 				token0 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
 						Token: types.Token{
-							Address:  tokenInfo0.Address,
-							Name:     tokenInfo0.Name,
-							Symbol:   tokenInfo0.Symbol,
-							Decimals: tokenInfo0.Decimals,
+							Address:     tokenInfo0.Address,
+							Name:        tokenInfo0.Name,
+							Symbol:      tokenInfo0.Symbol,
+							Decimals:    tokenInfo0.Decimals,
+							TotalSupply: tokenInfo0.TotalSupply.String(),
+							FdvUSD:      fmt.Sprintf("%f", fdv),
+							PriceUSD:    fmt.Sprintf("%f", priceUSD),
 						},
 					},
 				}
@@ -550,13 +516,23 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 
 			token1, ok1 := tokenWithPoolsMap[record.EventToken1]
 			if !ok1 {
+				price, ok := currentPriceRecords[tokenInfo1.Address]
+				if !ok {
+					price = big.NewInt(0)
+				}
+				priceUSD, _ := global.PriceToUSD(req.ChainId, price)
+				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(tokenInfo1.Decimals), nil)
+				fdv, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(tokenInfo1.TotalSupply, price), accuracy))
 				token1 = types.TokensResponse_Token{
 					TokenWithExtra: types.TokenWithExtra{
 						Token: types.Token{
-							Address:  tokenInfo1.Address,
-							Name:     tokenInfo1.Name,
-							Symbol:   tokenInfo1.Symbol,
-							Decimals: tokenInfo1.Decimals,
+							Address:     tokenInfo1.Address,
+							Name:        tokenInfo1.Name,
+							Symbol:      tokenInfo1.Symbol,
+							Decimals:    tokenInfo1.Decimals,
+							TotalSupply: tokenInfo1.TotalSupply.String(),
+							FdvUSD:      fmt.Sprintf("%f", fdv),
+							PriceUSD:    fmt.Sprintf("%f", priceUSD),
 						},
 					},
 				}
