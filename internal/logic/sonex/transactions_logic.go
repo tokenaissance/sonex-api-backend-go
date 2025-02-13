@@ -359,7 +359,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	}
 	linq.From(dataResult).
 		OrderByDescendingT(func(item types.TransactionsResponse_Transaction) int64 { return item.TxAt }).
-		ToSlice(dataResult)
+		ToSlice(&dataResult)
 
 	fmt.Printf("4 ====> %s\n", time.Since(st))
 
