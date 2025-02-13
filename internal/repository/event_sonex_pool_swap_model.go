@@ -27,7 +27,7 @@ type (
 		eventSonexPoolSwapModel
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
-		QueryTransactions(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexPoolSwapWithPool, int64, error)
+		QueryTransactions(ctx context.Context, chainId int64, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexPoolSwapWithPool, int64, error)
 		QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error)
 		QueryMergeByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexMergePoolSwapWithExtra, error)
@@ -305,9 +305,10 @@ func (m *customEventSonexPoolSwapModel) New(ctx context.Context, id int64, chain
 	return err
 }
 
-func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexPoolSwapWithPool, int64, error) {
+func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, chainId int64, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexPoolSwapWithPool, int64, error) {
 	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
 	orderBy := "DESC"
+	page := ""
 	options := ""
 	if opt != nil {
 		if opt.OrderBy != nil {
@@ -342,7 +343,7 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, o
 			}
 		}
 		if opt.PageSize != nil && opt.PageIndex != nil {
-			orderBy = fmt.Sprintf(`%s OFFSET %d LIMIT %d`, orderBy, *opt.PageSize*(*opt.PageIndex-1), *opt.PageSize)
+			page = fmt.Sprintf(`OFFSET %d LIMIT %d`, *opt.PageSize*(*opt.PageIndex-1), *opt.PageSize)
 		}
 	}
 
@@ -364,11 +365,12 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, o
 				WHERE tx_hash = ANY(
 					SELECT tx_hash 
 					FROM (
-						SELECT DISTINCT ON (tx_hash) tx_hash, tx_at
+						SELECT DISTINCT ON (tx_hash, tx_at) tx_hash, tx_at
 						FROM %s
-						WHERE 1 = 1 %s
+						WHERE chain_id = $1 %s
+						ORDER BY tx_at %s
 					)
-					ORDER BY tx_at %s
+					%s
 				)
 			)
 			SELECT 
@@ -378,8 +380,8 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, o
 				C.event_fee AS extra_fee 
 			FROM latest_tx_hash H
 			LEFT JOIN %s C ON C.event_pool = H.extra_pool
-		`, m.table, m.table, options, orderBy, eventSonexFactoryPoolCreatedModel.table)
-		err := m.conn.QueryRowsCtx(ctx, &resp, latestTxQuery)
+		`, m.table, m.table, options, orderBy, page, eventSonexFactoryPoolCreatedModel.table)
+		err := m.conn.QueryRowsCtx(ctx, &resp, latestTxQuery, chainId)
 		if err != nil {
 			ch <- struct{ Err error }{Err: err}
 			return
@@ -394,14 +396,11 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, o
 		defer wg.Done()
 
 		totalQuery := fmt.Sprintf(`
-			SELECT COUNT(*) 
-			FROM (
-				SELECT DISTINCT ON (tx_hash) tx_hash, tx_at
-				FROM %s
-				WHERE 1 = 1 %s
+			SELECT COUNT(*) FROM (
+				SELECT 1 FROM %s WHERE chain_id = $1 %s GROUP BY tx_hash
 			)
 		`, m.table, options)
-		err := m.conn.QueryRowCtx(ctx, &total, totalQuery)
+		err := m.conn.QueryRowCtx(ctx, &total, totalQuery, chainId)
 		if err != nil {
 			ch <- struct{ Err error }{Err: err}
 			return

@@ -34,8 +34,6 @@ func NewTransactionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Tran
 }
 
 func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *response.ApiResponse, err error) {
-	st := time.Now()
-
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
@@ -113,15 +111,17 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 	}
 	options.PageIndex = req.PageIndex
 
-	fmt.Printf("1 ====> %s\n", time.Since(st))
-	st = time.Now()
+	st := time.Now()
 
 	// Query
-	swapRecords, total, err := eventSonexPoolSwapModel.QueryTransactions(l.ctx, &options)
+	swapRecords, total, err := eventSonexPoolSwapModel.QueryTransactions(l.ctx, req.ChainId, &options)
 	if err != nil {
 		return nil, err
 	}
 	totalResult = total
+
+	fmt.Printf("1 ====> %s\n", time.Since(st))
+	st = time.Now()
 
 	// Handle data
 	transactions := map[string][]repository.EventSonexPoolSwapWithPool{}
