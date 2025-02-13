@@ -323,6 +323,13 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 			fromAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(fromToken.Decimals), nil))
 			valueUSD, _ := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).SetInt(new(big.Int).Mul(fromAmount, fromPrice)), fromAccuracy), usdAccuracy).Float64()
 
+			if fromToken.Address == common.HexToAddress(chainConf.WETH).Hex() && startTx.EventSender == startTx.EventRecipient {
+				fromToken.Address = (common.Address{}).Hex()
+			}
+			if toToken.Address == common.HexToAddress(chainConf.WETH).Hex() && startTx.EventSender == startTx.EventRecipient {
+				toToken.Address = (common.Address{}).Hex()
+			}
+
 			ch <- struct {
 				Tx  *types.TransactionsResponse_Transaction
 				Err error
