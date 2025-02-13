@@ -316,24 +316,26 @@ func SetRewardPoolInfo(staker string, rewardToken string, chain config.ChainConf
 
 // 已经做了 APR 缓存
 func getApr(poolAddress string, incentiveId int64, tatalReward365 *big.Float, totalLiquidityUsd *big.Float, incentiveWeight int64, staker string, rewardToken string, chain config.ChainConfig, cacher cache.ICache) string {
-
-	aprString, err := global.GetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId)
-
 	logx.Infof("poolAddress:%v incentiveId:%v  tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", poolAddress, incentiveId, tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
-	if errors.Is(err, redis.Nil) {
-		// 写入一次
-		aprBigFloat := calucateFarmApr(tatalReward365, totalLiquidityUsd, incentiveWeight, staker, rewardToken, chain, cacher)
-		err := global.SetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId, aprBigFloat.String())
-		if err != nil {
-			logx.Errorf("ERR:%v ", err)
-			return "0"
-		}
-		return aprBigFloat.String()
-	}
+	aprBigFloat := calucateFarmApr(tatalReward365, totalLiquidityUsd, incentiveWeight, staker, rewardToken, chain, cacher)
+	return aprBigFloat.String()
+	// aprString, err := global.GetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId)
 
-	if !errors.Is(err, redis.Nil) && err != nil {
-		return "0"
-	}
+	// logx.Infof("poolAddress:%v incentiveId:%v  tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", poolAddress, incentiveId, tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
+	// if errors.Is(err, redis.Nil) {
+	// 	// 写入一次
+	// 	aprBigFloat := calucateFarmApr(tatalReward365, totalLiquidityUsd, incentiveWeight, staker, rewardToken, chain, cacher)
+	// 	err := global.SetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId, aprBigFloat.String())
+	// 	if err != nil {
+	// 		logx.Errorf("ERR:%v ", err)
+	// 		return "0"
+	// 	}
+	// 	return aprBigFloat.String()
+	// }
 
-	return aprString
+	// if !errors.Is(err, redis.Nil) && err != nil {
+	// 	return "0"
+	// }
+
+	// return aprString
 }
