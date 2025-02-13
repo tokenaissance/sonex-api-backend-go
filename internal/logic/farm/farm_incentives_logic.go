@@ -399,7 +399,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 		Err      error
 	}, len(incentiveCreatedRecords))
 
-	for _, incincentiveCreatedRecord := range incentiveCreatedRecords {
+	for _, incincentiveCreatedRecordItem := range incentiveCreatedRecords {
 		wg.Add(1)
 		go func(record *repository.EventFarmIncentiveCreatedWithExtra, ch chan struct {
 			Data     types.FarmIncentivesResponse_Data
@@ -457,6 +457,10 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			logx.Info("77777777:")
 			logx.Infof("666666:rewardToken:%#v ratepersecond :%v  rewardPrice:%v totalRewardUSD365: %v  ", rewardToken, ratepersecond, rewardPrice, totalRewardUSD)
 
+			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, incincentiveCreatedRecordItem.EventIncentiveId, totalRewardUSD.String())
+			if err != nil {
+				logx.Errorf("ERR:%v ", err)
+			}
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
 			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
@@ -491,7 +495,14 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					logx.Error(fmt.Errorf("NewStaticCaller error: %v", err))
 					return
 				}
-				positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
+
+				tokenIdsTotal, err := getIncentiveInfoTokenIds(farmConf.Staker, record.EventIncentiveId, *chainConf)
+				if err != nil {
+					logx.Error(fmt.Errorf("getIncentiveInfoTokenIds error: %v", err))
+					return
+				}
+				logx.Infof("tokenIdsTotal:%v tokenIds:%v ", tokenIdsTotal, tokenIds)
+				positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIdsTotal)
 				if err != nil {
 					logx.Error(fmt.Errorf("BatchGetPositions error: %v", err))
 					return
@@ -582,7 +593,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				TokenIds: tokenIdsResult,
 				Err:      err,
 			}
-		}(&incincentiveCreatedRecord, results)
+		}(&incincentiveCreatedRecordItem, results)
 	}
 	wg.Wait()
 	close(results)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -14,13 +15,13 @@ import (
 	contract_farm "sonex_api_backend_go/internal/lib/contract/farm"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
+	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -41,6 +42,149 @@ func NewFarmUserAssetDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
+func getRewardsDetailInfo(stakerAddress, userAddress string, incentiveIdint, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (string, *big.Float, int64, error) {
+	rewards, err := getRewardsAmount(stakerAddress, userAddress, incentiveIdint, *chain)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return "0", big.NewFloat(0), 18, err
+	}
+	logx.Infof("rewards :%v ", rewards.String())
+	totalClaimableFees := rewards.String()
+	if rewards.Cmp(big.NewInt(0)) == 0 {
+		totalClaimableFees = "0"
+	}
+
+	totalClaimableFeesUSD, tokenDecials, err := getValueOfAmountToken(rewards, int64(incentiveIdint), chainId, chain, conn)
+	if err != nil {
+		return "0", big.NewFloat(0), 18, err
+	}
+
+	logx.Infof("totalClaimableFees:%v, totalClaimableFeesUSD:%v , tokenDecials:%v  ", totalClaimableFees, totalClaimableFeesUSD, tokenDecials)
+	return totalClaimableFees, totalClaimableFeesUSD, tokenDecials, nil
+}
+
+func getStakedNum(conn sqlx.SqlConn, cacher cache.ICache, chainId, incentiveIdint int64, userAddress string) (*big.Float, int64, string, string, error) {
+	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
+
+	// 获取质押的数量
+	stakedNum := int64(0)
+	respStake, err := eventFarmTokenStakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), chainId, userAddress, incentiveIdint)
+	if err != nil && err != sqlx.ErrNotFound {
+		logx.Errorf("ERR:%v ", err)
+		return nil, stakedNum, "", "", err
+	}
+	if err != nil && err == sqlx.ErrNotFound {
+		logx.Errorf("ERR:%v ", err)
+		return nil, stakedNum, "", "", err
+	}
+	stakedNum = int64(len(respStake))
+	rewardToken := ""
+	eventPool := ""
+	lpBalance := new(big.Float).SetFloat64(0)
+	for i, v := range respStake {
+		logx.Infof("respStake i:%v v:%v ", i, v)
+		rewardToken = v.ExtraRewardToken
+		eventPool = v.ExtraPool
+
+		eventTokenIdUsdString, err := GetPositionValue(cacher, v.ExtraPool, v.EventTokenId)
+		if err != nil {
+			logx.Errorf("ERR :%v ", err)
+			continue
+		}
+		eventTokenIdUsdStringBigFloat, _ := new(big.Float).SetString(eventTokenIdUsdString)
+		lpBalance = new(big.Float).Add(lpBalance, eventTokenIdUsdStringBigFloat)
+	}
+	logx.Infof("lpBalance:%v stakedNum:%v  rewardToken:%v  eventPool:%v", lpBalance, stakedNum, rewardToken, eventPool)
+	return lpBalance, stakedNum, rewardToken, eventPool, nil
+}
+
+func getBalance(chainId, incentiveIdint int64, userAddress, stakerAddress string, conn sqlx.SqlConn) (int64, int64, string, string, error) {
+	model := repository.NewEventSonexPositionManagerTransferModel(conn)
+	useablePositions, err := model.GetAllUseablePositions(context.Background(), chainId, userAddress, stakerAddress)
+	if err != nil {
+		logx.Errorf("err:%v ", err)
+		return 0, 0, "", "", err
+	}
+
+	var notburtPositions []*repository.PositionTmpStruct
+
+	event_weight := int64(1)
+	token0Address := ""
+	token1Address := ""
+	for i, v := range useablePositions {
+		logx.Infof("useablePositions i:%v v:%v ", i, v)
+		if v.IsBurnt {
+			continue
+		}
+		if v.EventIncentiveId == int64(incentiveIdint) {
+			notburtPositions = append(notburtPositions, v)
+			event_weight = v.EventWeight
+			token0Address = v.Token0address
+			token1Address = v.Token1address
+		}
+	}
+	// TODO : 删除
+	for i, v := range notburtPositions {
+		logx.Infof("notburtPositions i:%v v:%v ", i, v)
+	}
+	logx.Infof("event_weight:%v ", event_weight)
+	return int64(len(notburtPositions)), event_weight, token0Address, token1Address, nil
+}
+
+func getTotalLiquidity(stakerAddress, token0Address, token1Address, positionManagerAddress string, chainId, incentiveId int64, config config.Config, chain config.ChainConfig, conn sqlx.SqlConn) (*big.Float, error) {
+	tokenIds, err := getIncentiveInfoTokenIds(stakerAddress, incentiveId, chain)
+	if err != nil {
+		logx.Errorf("err:%v ", err)
+		return big.NewFloat(1), err
+	}
+
+	staticCaller, err := sonex.NewStaticCaller(config)
+	if err != nil {
+		logx.Errorf("NewStaticCaller error::%v ", err)
+		return big.NewFloat(1), err
+	}
+	positions, err := staticCaller.BatchGetPositions(context.Background(), chainId, common.HexToAddress(positionManagerAddress), tokenIds)
+	if err != nil {
+		logx.Errorf("ERR:%v  ", err)
+		return big.NewFloat(1), err
+	}
+
+	token0, err := global.GetToken(chainId, token0Address)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return big.NewFloat(1), err
+	}
+	token1, err := global.GetToken(chainId, token1Address)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return big.NewFloat(1), err
+	}
+
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
+
+	prices, err := tokenPriceModel.QueryLatestHistoryPrices(context.Background())
+	if err != nil {
+		logx.Errorf("ERR3:%v ", err)
+		return big.NewFloat(1), err
+	}
+
+	price0 := prices[token0.Address]
+	price1 := prices[token1.Address]
+
+	_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(6))))
+	_price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(6))))
+
+	totalLiquidity := big.NewInt(0)
+	totalLiquidityUSD := big.NewFloat(0)
+	for _, position := range positions {
+		totalLiquidity.Add(totalLiquidity, position.Liquidity)
+		amount0, amount1 := position.Amounts()
+		totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), _price0divUsdDecimals), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil))))
+		totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), _price1divUsdDecimals), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil))))
+	}
+	return totalLiquidityUSD, nil
+
+}
 func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetDetailRequest) (resp *types.FarmUserAssetDetailResponse, err error) {
 	// todo: add your logic here and delete this line
 	// get user claimed info
@@ -57,47 +201,43 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	}
 
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
-	rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, int64(incentiveIdint), *chain)
-	if err != nil {
-		return resp, err
-	}
-	logx.Infof("rewards :%v ", rewards.String())
-	totalClaimableFees := rewards.String()
-	if rewards.Cmp(big.NewInt(0)) == 0 {
-		totalClaimableFees = "0"
-	}
+	configFig := l.svcCtx.Config
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
+	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	// 获取 totalClaimableFeesUSD，  tokenDecials,
+	totalClaimableFees, totalClaimableFeesUSD, tokenDecials, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(incentiveIdint), req.ChainId, chain, conn)
 
-	totalClaimableFeesUSD, tokenDecials, err := getValueOfAmountToken(rewards, int64(incentiveIdint), req.ChainId, chain, conn)
 	if err != nil {
 		return resp, err
 	}
-	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
-
 	// 获取质押的数量
-	stakedNum := int64(0)
-	respStake, err := eventFarmTokenStakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(l.ctx, req.ChainId, req.UserAddress, int64(incentiveIdint))
+	// 获取用户的  lpbalance
+	lpBalance, stakedNum, rewardToken, eventPool, err := getStakedNum(conn, cacher, req.ChainId, int64(incentiveIdint), req.UserAddress)
 	if err != nil && err != sqlx.ErrNotFound {
 		return resp, err
 	}
-	if err != nil && err == sqlx.ErrNotFound {
-		stakedNum = 0
-	}
-	stakedNum = int64(len(respStake))
-	logx.Infof("useraddress:%v IncentiveId:%v  ", userAddres, req.IncentiveId)
-	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
-	lpBalance := new(big.Float).SetFloat64(0)
-	for i, v := range respStake {
-		logx.Infof("respStake i:%v v:%v ", i, v)
-		eventTokenIdUsdString, err := GetPositionValue(cacher, v.ExtraPool, v.EventTokenId)
-		if err != nil {
-			logx.Errorf("ERR :%v ", err)
-			continue
-		}
-		eventTokenIdUsdStringBigFloat, _ := new(big.Float).SetString(eventTokenIdUsdString)
-		lpBalance = new(big.Float).Add(lpBalance, eventTokenIdUsdStringBigFloat)
+	// 获取可用的postion 个数
+	balanceNum, event_weight, token0Address, token1Address, err := getBalance(req.ChainId, int64(incentiveIdint), req.UserAddress, farmConf.Staker, conn)
+	logx.Infof("useraddress:%v IncentiveId:%v ewardToken:%v , eventPool:%v ", userAddres, req.IncentiveId, rewardToken, eventPool)
+	if err != nil {
+		return resp, err
 	}
+	getTotalLiquidityUSD, err := getTotalLiquidity(farmConf.Staker, token0Address, token1Address, sonexConf.PositionManager, req.ChainId, int64(incentiveIdint), configFig, *chain, conn)
+	if err != nil {
+		return resp, err
+	}
+	totalRewardUSDString, err := global.GetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, int64(incentiveIdint))
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return resp, err
+	}
+
+	logx.Infof("totalRewardUSDString:%v", totalRewardUSDString)
+	totalRewardUSDBigFloat, _ := new(big.Float).SetString(totalRewardUSDString)
+	apr := getApr(eventPool, int64(incentiveIdint), totalRewardUSDBigFloat, getTotalLiquidityUSD, event_weight, farmConf.Staker, rewardToken, *chain, cacher)
+
 	logx.Infof("lpBalance:%v ", lpBalance)
 	resp = &types.FarmUserAssetDetailResponse{
 		IncentiveId:           req.IncentiveId,
@@ -106,6 +246,8 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 		Decimals:              tokenDecials,
 		LPStakedNum:           stakedNum,
 		LPBalance:             lpBalance.String(),
+		Balance:               balanceNum,
+		APR:                   apr,
 	}
 	return
 }
@@ -228,24 +370,29 @@ func calucateFarmApr(tatalReward365 *big.Float, totalLiquidityUsd *big.Float, in
 
 	var totalWeightString = "0"
 	var err error
-	totalWeightString, err = global.GetFarmTotalWeightValue(cacher, global.FarmTotalWeightKey, rewardToken)
+	// totalWeightString, err = global.GetFarmTotalWeightValue(cacher, global.FarmTotalWeightKey, rewardToken)
 
-	if errors.Is(err, redis.Nil) {
-		// 写入一次
-		totalWeightString, err = SetRewardPoolInfo(staker, rewardToken, chain, cacher)
-		if err != nil {
-			logx.Errorf("Err:%v ", err)
-			return big.NewFloat(0)
-		}
-	}
-	// 为空
-	if !errors.Is(err, redis.Nil) && err != nil {
-		// 写入一次
-		totalWeightString, err = SetRewardPoolInfo(staker, rewardToken, chain, cacher)
-		if err != nil {
-			logx.Errorf("Err:%v ", err)
-			return big.NewFloat(0)
-		}
+	// if errors.Is(err, redis.Nil) {
+	// 	// 写入一次
+	// 	totalWeightString, err = SetRewardPoolInfo(staker, rewardToken, chain, cacher)
+	// 	if err != nil {
+	// 		logx.Errorf("Err:%v ", err)
+	// 		return big.NewFloat(0)
+	// 	}
+	// }
+	// // 为空
+	// if !errors.Is(err, redis.Nil) && err != nil {
+	// 	// 写入一次
+	// 	totalWeightString, err = SetRewardPoolInfo(staker, rewardToken, chain, cacher)
+	// 	if err != nil {
+	// 		logx.Errorf("Err:%v ", err)
+	// 		return big.NewFloat(0)
+	// 	}
+	// }
+	totalWeightString, err = SetRewardPoolInfo(staker, rewardToken, chain, cacher)
+	if err != nil {
+		logx.Errorf("Err:%v ", err)
+		return big.NewFloat(0)
 	}
 	if strings.EqualFold(totalWeightString, "0") {
 		totalWeightString = "1000"

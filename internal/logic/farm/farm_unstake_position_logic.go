@@ -193,3 +193,42 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 	}
 	return
 }
+
+func getIncentiveInfoTokenIds(staker string, incetiveId int64, chain config.ChainConfig) ([]*big.Int, error) {
+
+	type IncentiveInfo struct {
+		RewardToken    common.Address `json:"rewardToken"`
+		Pool           common.Address `json:"pool"`
+		StartTime      *big.Int       `json:"startTime"`
+		EndTime        *big.Int       `json:"endTime"`
+		Weight         *big.Int       `json:"weight"`
+		TotalLiquidity *big.Int       `json:"totalLiquidity"`
+		TotalStakes    *big.Int       `json:"totalStakes"`
+		TokenIds       []*big.Int     `json:"tokenIds"`
+	}
+
+	incentiveInfo := IncentiveInfo{}
+	call1 := Call{
+		Contract: common.HexToAddress(staker),
+		Method:   "getIncentiveInfo",
+		Args:     []interface{}{big.NewInt(incetiveId)},
+		Result:   &incentiveInfo,
+	}
+	err := Multicall(context.Background(), chain, call1)
+
+	if err != nil {
+		logx.Errorf("ERR:%v", err)
+		return nil, err
+	} else {
+		logx.Infof("reardPool:%v ", incentiveInfo)
+		if incentiveInfo.StartTime.Cmp(big.NewInt(0)) > 0 {
+			// set totalweight to the index
+			if len(incentiveInfo.TokenIds) > 0 {
+				logx.Infof("tokenIds:%v ", incentiveInfo.TokenIds)
+				return incentiveInfo.TokenIds, nil
+			}
+		}
+
+		return nil, nil
+	}
+}

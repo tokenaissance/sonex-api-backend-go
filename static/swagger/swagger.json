@@ -2172,14 +2172,23 @@
           "format": "int64",
           "description": " 手续费token的精度"
         },
-        "lpBalance": {
-          "type": "string",
-          "description": " 用户的 LP token ID余额,USD 计价"
-        },
         "lpStakedNum": {
           "type": "integer",
           "format": "int64",
-          "description": " 用户参与质押的LP token ID数量"
+          "description": " 用户质押的LP token ID 数量"
+        },
+        "lpBalance": {
+          "type": "string",
+          "description": " 用户的LP token ID的余额, LiquidityUSD,USD 计价"
+        },
+        "balance": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 用户的LP token ID的个数余额"
+        },
+        "APR": {
+          "type": "string",
+          "description": " 年化收益率"
         }
       },
       "title": "FarmUserAssetDetailResponse",
@@ -2188,8 +2197,10 @@
         "totalClaimableFees",
         "totalClaimableFeesUsd",
         "decimals",
+        "lpStakedNum",
         "lpBalance",
-        "lpStakedNum"
+        "balance",
+        "APR"
       ]
     },
     "Fees": {
@@ -4746,15 +4757,24 @@
           "format": "int64",
           "description": " ClaimableFees的精度"
         },
-        "lpBalance": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户的LP token ID余额"
-        },
         "lpStakedNum": {
           "type": "integer",
           "format": "int64",
           "description": " 用户质押的LP token ID数量"
+        },
+        "lpBalance": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 用户的LP token ID的余额, LiquidityUSD"
+        },
+        "balance": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 用户的LP token ID的个数余额"
+        },
+        "APR": {
+          "type": "string",
+          "description": " 年化收益率"
         }
       },
       "title": "UserAssetData",
@@ -4763,8 +4783,10 @@
         "totalClaimableFees",
         "totalClaimableFeesUsd",
         "decimals",
+        "lpStakedNum",
         "lpBalance",
-        "lpStakedNum"
+        "balance",
+        "APR"
       ]
     },
     "VolumeDetailsRecord": {
