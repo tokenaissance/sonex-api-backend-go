@@ -861,17 +861,28 @@
             "format": "int64"
           },
           {
-            "name": "type",
+            "name": "liquiditySelected",
             "in": "query",
             "required": true,
-            "type": "string",
-            "enum": [
-              "all",
-              "liquidity",
-              "farm",
-              "xpool"
-            ],
-            "default": "all"
+            "type": "boolean",
+            "format": "boolean",
+            "default": "true"
+          },
+          {
+            "name": "farmSelected",
+            "in": "query",
+            "required": true,
+            "type": "boolean",
+            "format": "boolean",
+            "default": "true"
+          },
+          {
+            "name": "xpoolSelected",
+            "in": "query",
+            "required": true,
+            "type": "boolean",
+            "format": "boolean",
+            "default": "true"
           },
           {
             "name": "address",
@@ -2966,10 +2977,6 @@
           "type": "string",
           "description": " 池子手续费率"
         },
-        "token0Name": {
-          "type": "string",
-          "description": " token0 代币名称"
-        },
         "token0Symbol": {
           "type": "string",
           "description": " token0 代币符号"
@@ -2977,10 +2984,6 @@
         "token0Address": {
           "type": "string",
           "description": " token0 代币合约地址"
-        },
-        "token1Name": {
-          "type": "string",
-          "description": " token1 代币名称"
         },
         "token1Symbol": {
           "type": "string",
@@ -3007,15 +3010,101 @@
       "required": [
         "poolAddress",
         "feeRatio",
-        "token0Name",
         "token0Symbol",
         "token0Address",
-        "token1Name",
         "token1Symbol",
         "token1Address",
         "positionValue",
         "feeRevenue",
         "earned"
+      ]
+    },
+    "PortfolioFarmFrame": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "number",
+          "format": "double",
+          "description": " farmed liquidity position 净值"
+        },
+        "token0Name": {
+          "type": "string",
+          "description": " token0 代币名称"
+        },
+        "token0Symbol": {
+          "type": "string",
+          "description": " token0 代币符号"
+        },
+        "token0Address": {
+          "type": "string",
+          "description": " token0 代币合约地址"
+        },
+        "token1Name": {
+          "type": "string",
+          "description": " token1 代币名称"
+        },
+        "token1Symbol": {
+          "type": "string",
+          "description": " token1 代币符号"
+        },
+        "token1Address": {
+          "type": "string",
+          "description": " token1 代币合约地址"
+        }
+      },
+      "title": "PortfolioFarmFrame",
+      "required": [
+        "position",
+        "token0Name",
+        "token0Symbol",
+        "token0Address",
+        "token1Name",
+        "token1Symbol",
+        "token1Address"
+      ]
+    },
+    "PortfolioLiquidityFrame": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "number",
+          "format": "double",
+          "description": " liquidity position 净值"
+        },
+        "token0Name": {
+          "type": "string",
+          "description": " token0 代币名称"
+        },
+        "token0Symbol": {
+          "type": "string",
+          "description": " token0 代币符号"
+        },
+        "token0Address": {
+          "type": "string",
+          "description": " token0 代币合约地址"
+        },
+        "token1Name": {
+          "type": "string",
+          "description": " token1 代币名称"
+        },
+        "token1Symbol": {
+          "type": "string",
+          "description": " token1 代币符号"
+        },
+        "token1Address": {
+          "type": "string",
+          "description": " token1 代币合约地址"
+        }
+      },
+      "title": "PortfolioLiquidityFrame",
+      "required": [
+        "position",
+        "token0Name",
+        "token0Symbol",
+        "token0Address",
+        "token1Name",
+        "token1Symbol",
+        "token1Address"
       ]
     },
     "PortfolioPosition": {
@@ -3051,15 +3140,20 @@
     "PortfolioRequest": {
       "type": "object",
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "all",
-            "liquidity",
-            "farm",
-            "xpool"
-          ],
-          "default": "all"
+        "liquiditySelected": {
+          "type": "boolean",
+          "format": "boolean",
+          "default": "true"
+        },
+        "farmSelected": {
+          "type": "boolean",
+          "format": "boolean",
+          "default": "true"
+        },
+        "xpoolSelected": {
+          "type": "boolean",
+          "format": "boolean",
+          "default": "true"
         },
         "address": {
           "type": "string"
@@ -3077,11 +3171,39 @@
       },
       "title": "PortfolioRequest",
       "required": [
-        "type",
+        "liquiditySelected",
+        "farmSelected",
+        "xpoolSelected",
         "address"
       ]
     },
     "PortfolioResponse": {
+      "type": "object",
+      "properties": {
+        "stats": {
+          "$ref": "#/definitions/PortfolioStats",
+          "description": " portfolio 统计数据，所有资产净值，所有资产净值相比前一天的变化率，所有可提资产净值"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PortfolioPosition"
+          },
+          "description": " portfolio position list, include liquidity, farm, xpool"
+        },
+        "meta": {
+          "$ref": "#/definitions/PageResponse",
+          "description": " pagination meta"
+        }
+      },
+      "title": "PortfolioResponse",
+      "required": [
+        "stats",
+        "positions",
+        "meta"
+      ]
+    },
+    "PortfolioStats": {
       "type": "object",
       "properties": {
         "totalAssets": {
@@ -3098,56 +3220,51 @@
           "format": "double",
           "description": " 所有可提资产净值"
         },
-        "totalPosition": {
+        "liquidityPosition": {
           "type": "number",
           "format": "double",
           "description": " liquidity position 净值总和"
         },
-        "liquidityClaimableFees": {
-          "type": "number",
-          "format": "double",
-          "description": " liquidity 可提收益"
+        "liquidityFrame": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PortfolioLiquidityFrame"
+          },
+          "description": " liquidity position 的饼图 frame 数据"
         },
         "totalFarmStaked": {
           "type": "number",
           "format": "double",
           "description": " farm pool 净值总和"
         },
-        "farmEarned": {
-          "type": "number",
-          "format": "double",
-          "description": " farm 可提 earn 净值总和"
+        "farmFrame": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PortfolioFarmFrame"
+          },
+          "description": " farm pool 的饼图 frame 数据"
         },
         "totalXpoolStaked": {
           "type": "number",
           "format": "double",
           "description": " xpool stake 净值总和"
         },
-        "xpoolEarned": {
-          "type": "number",
-          "format": "double",
-          "description": " xpool 可提 earn 净值总和"
-        },
-        "positions": {
+        "xpoolFrame": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PortfolioPosition"
+            "$ref": "#/definitions/PortfolioXpoolFrame"
           },
-          "description": " portfolio position list, include liquidity, farm, xpool"
+          "description": " xpool 的饼图 frame 数据"
         }
       },
-      "title": "PortfolioResponse",
+      "title": "PortfolioStats",
       "required": [
         "totalAssets",
         "totalAssetsRate",
         "claimableFees",
-        "totalPosition",
-        "liquidityClaimableFees",
+        "liquidityPosition",
         "totalFarmStaked",
-        "farmEarned",
-        "totalXpoolStaked",
-        "xpoolEarned",
-        "positions"
+        "totalXpoolStaked"
       ]
     },
     "PortfolioXpool": {
@@ -3201,6 +3318,35 @@
         "feeRevenue",
         "earned",
         "status"
+      ]
+    },
+    "PortfolioXpoolFrame": {
+      "type": "object",
+      "properties": {
+        "staked": {
+          "type": "number",
+          "format": "double",
+          "description": " 用户已经质押的美元价值"
+        },
+        "stakingTokenName": {
+          "type": "string",
+          "description": " 质押的代币名称"
+        },
+        "stakingTokenSymbol": {
+          "type": "string",
+          "description": " 质押的代币符号"
+        },
+        "stakingTokenAddress": {
+          "type": "string",
+          "description": " 质押的代币合约地址"
+        }
+      },
+      "title": "PortfolioXpoolFrame",
+      "required": [
+        "staked",
+        "stakingTokenName",
+        "stakingTokenSymbol",
+        "stakingTokenAddress"
       ]
     },
     "Position": {
@@ -4920,7 +5066,7 @@
         },
         "earned": {
           "type": "string",
-          "description": " 用户已获得奖励代币数量"
+          "description": " 用户可获得未领取奖励代币数量"
         },
         "joinNum": {
           "type": "integer",

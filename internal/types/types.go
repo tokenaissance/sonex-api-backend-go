@@ -395,15 +395,33 @@ type PoolsResponse_Volume struct {
 type PortfolioFarm struct {
 	PoolAddress   string `json:"poolAddress"`   // v3 流动性池合约地址
 	FeeRatio      string `json:"feeRatio"`      // 池子手续费率
-	Token0Name    string `json:"token0Name"`    // token0 代币名称
 	Token0Symbol  string `json:"token0Symbol"`  // token0 代币符号
 	Token0Address string `json:"token0Address"` // token0 代币合约地址
-	Token1Name    string `json:"token1Name"`    // token1 代币名称
 	Token1Symbol  string `json:"token1Symbol"`  // token1 代币符号
 	Token1Address string `json:"token1Address"` // token1 代币合约地址
 	PositionValue string `json:"positionValue"` // pool position 美元净值
 	FeeRevenue    string `json:"feeRevenue"`    // 用户提取的质押奖励美元价值
 	Earned        string `json:"earned"`        // 用户未提取的质押奖励美元价值
+}
+
+type PortfolioFarmFrame struct {
+	Position      float64 `json:"position"`      // farmed liquidity position 净值
+	Token0Name    string  `json:"token0Name"`    // token0 代币名称
+	Token0Symbol  string  `json:"token0Symbol"`  // token0 代币符号
+	Token0Address string  `json:"token0Address"` // token0 代币合约地址
+	Token1Name    string  `json:"token1Name"`    // token1 代币名称
+	Token1Symbol  string  `json:"token1Symbol"`  // token1 代币符号
+	Token1Address string  `json:"token1Address"` // token1 代币合约地址
+}
+
+type PortfolioLiquidityFrame struct {
+	Position      float64 `json:"position"`      // liquidity position 净值
+	Token0Name    string  `json:"token0Name"`    // token0 代币名称
+	Token0Symbol  string  `json:"token0Symbol"`  // token0 代币符号
+	Token0Address string  `json:"token0Address"` // token0 代币合约地址
+	Token1Name    string  `json:"token1Name"`    // token1 代币名称
+	Token1Symbol  string  `json:"token1Symbol"`  // token1 代币符号
+	Token1Address string  `json:"token1Address"` // token1 代币合约地址
 }
 
 type PortfolioPosition struct {
@@ -415,22 +433,29 @@ type PortfolioPosition struct {
 
 type PortfolioRequest struct {
 	ChainRequest
-	Type    string `form:"type,options=all|liquidity|farm|xpool,default=all"`
-	Address string `form:"address"`
+	LiquiditySelected bool   `form:"liquiditySelected,default=true"`
+	FarmSelected      bool   `form:"farmSelected,default=true"`
+	XpoolSelected     bool   `form:"xpoolSelected,default=true"`
+	Address           string `form:"address"`
 	PageRequest
 }
 
 type PortfolioResponse struct {
-	TotalAssets            float64              `json:"totalAssets"`            // 所有资产净值
-	TotalAssetsRate        string               `json:"totalAssetsRate"`        // 所有资产净值相比前一天的变化率
-	ClaimableFees          float64              `json:"claimableFees"`          // 所有可提资产净值
-	TotalPosition          float64              `json:"totalPosition"`          // liquidity position 净值总和
-	LiquidityClaimableFees float64              `json:"liquidityClaimableFees"` // liquidity 可提收益
-	TotalFarmStaked        float64              `json:"totalFarmStaked"`        // farm pool 净值总和
-	FarmEarned             float64              `json:"farmEarned"`             // farm 可提 earn 净值总和
-	TotalXpoolStaked       float64              `json:"totalXpoolStaked"`       // xpool stake 净值总和
-	XpoolEarned            float64              `json:"xpoolEarned"`            // xpool 可提 earn 净值总和
-	Positions              []*PortfolioPosition `json:"positions"`              // portfolio position list, include liquidity, farm, xpool
+	Stats     *PortfolioStats      `json:"stats"`     // portfolio 统计数据，所有资产净值，所有资产净值相比前一天的变化率，所有可提资产净值
+	Positions []*PortfolioPosition `json:"positions"` // portfolio position list, include liquidity, farm, xpool
+	Meta      PageResponse         `json:"meta"`      // pagination meta
+}
+
+type PortfolioStats struct {
+	TotalAssets       float64                    `json:"totalAssets"`              // 所有资产净值
+	TotalAssetsRate   string                     `json:"totalAssetsRate"`          // 所有资产净值相比前一天的变化率
+	ClaimableFees     float64                    `json:"claimableFees"`            // 所有可提资产净值
+	LiquidityPosition float64                    `json:"liquidityPosition"`        // liquidity position 净值总和
+	LiquidityFrames   []*PortfolioLiquidityFrame `json:"liquidityFrame,omitempty"` // liquidity position 的饼图 frame 数据
+	TotalFarmStaked   float64                    `json:"totalFarmStaked"`          // farm pool 净值总和
+	FarmFrames        []*PortfolioFarmFrame      `json:"farmFrame,omitempty"`      // farm pool 的饼图 frame 数据
+	TotalXpoolStaked  float64                    `json:"totalXpoolStaked"`         // xpool stake 净值总和
+	XpoolFrames       []*PortfolioXpoolFrame     `json:"xpoolFrame,omitempty"`     // xpool 的饼图 frame 数据
 }
 
 type PortfolioXpool struct {
@@ -443,6 +468,13 @@ type PortfolioXpool struct {
 	FeeRevenue          string `json:"feeRevenue"`          // 用户提取的质押奖励美元价值
 	Earned              string `json:"earned"`              // 用户未提取的质押奖励美元价值
 	Status              string `json:"status"`              // 运行状态{Staking}
+}
+
+type PortfolioXpoolFrame struct {
+	Staked              float64 `json:"staked"`              // 用户已经质押的美元价值
+	StakingTokenName    string  `json:"stakingTokenName"`    // 质押的代币名称
+	StakingTokenSymbol  string  `json:"stakingTokenSymbol"`  // 质押的代币符号
+	StakingTokenAddress string  `json:"stakingTokenAddress"` // 质押的代币合约地址
 }
 
 type Position struct {
@@ -909,7 +941,7 @@ type XpoolPoolListResponse_Pool struct {
 	APR                           string  `json:"apr"`                  // 年化收益率
 	APRFloat                      float64 `json:"-"`                    // 年化收益率，辅助排序用
 	Staked                        string  `json:"staked"`               // 用户已质押代币数量
-	Earned                        string  `json:"earned"`               // 用户已获得奖励代币数量
+	Earned                        string  `json:"earned"`               // 用户可获得未领取奖励代币数量
 	JoinNum                       int64   `json:"joinNum"`              // 参与人数
 	Status                        string  `json:"status"`               // 运行状态
 	StakingTokenPriceWithDecimals string  `json:"-"`                    // 质押的代币价格(包含精度)
