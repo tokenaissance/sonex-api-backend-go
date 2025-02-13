@@ -32,7 +32,7 @@ func TestEventSonexPoolSwapModelQueryTransactions(t *testing.T) {
 	orderBy := "DESC"
 	var pageSize int64 = 10
 	var pageIndex int64 = 1
-	records, total, err := model.QueryTransactions(context.Background(), &QueryMergePoolSwapWithExtraOptions{
+	records, total, err := model.QueryTransactions(context.Background(), 1868, &QueryMergePoolSwapWithExtraOptions{
 		// Wallet:    &wallet,
 		// Tokens:    tokens,
 		OrderBy:   &orderBy,
