@@ -39,22 +39,21 @@ type (
 	}
 
 	EventXpoolFactoryPoolDestroied struct {
-		Id                  int64     `db:"id"`
-		CreatedAt           time.Time `db:"created_at"`
-		UpdatedAt           time.Time `db:"updated_at"`
-		ChainId             int64     `db:"chain_id"`
-		BlockNumber         int64     `db:"block_number"`
-		TxIndex             int64     `db:"tx_index"`
-		TxHash              string    `db:"tx_hash"`
-		TxAt                time.Time `db:"tx_at"`
-		From                string    `db:"from_"`
-		To                  string    `db:"to_"`
-		Value               string    `db:"value"`
-		EventPool           string    `db:"event_pool"`
-		EventEthBalance     string    `db:"event_eth_balance"`
-		EventStakingBalance string    `db:"event_staking_balance"`
-		EventRewardBalance  string    `db:"event_reward_balance"`
-		EventRecipient      string    `db:"event_recipient"`
+		Id             int64     `db:"id"`
+		CreatedAt      time.Time `db:"created_at"`
+		UpdatedAt      time.Time `db:"updated_at"`
+		ChainId        int64     `db:"chain_id"`
+		BlockNumber    int64     `db:"block_number"`
+		TxIndex        int64     `db:"tx_index"`
+		TxHash         string    `db:"tx_hash"`
+		TxAt           time.Time `db:"tx_at"`
+		From           string    `db:"from_"`
+		To             string    `db:"to_"`
+		Value          string    `db:"value"`
+		EventPool      string    `db:"event_pool"`
+		EventInitiator string    `db:"event_initiator"`
+		EventConfirmor string    `db:"event_confirmor"`
+		EventRecipient string    `db:"event_recipient"`
 	}
 )
 
@@ -114,14 +113,14 @@ func (m *defaultEventXpoolFactoryPoolDestroiedModel) FindOneByChainIdTxHashTxInd
 }
 
 func (m *defaultEventXpoolFactoryPoolDestroiedModel) Insert(ctx context.Context, data *EventXpoolFactoryPoolDestroied) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventXpoolFactoryPoolDestroiedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventPool, data.EventEthBalance, data.EventStakingBalance, data.EventRewardBalance, data.EventRecipient)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", m.table, eventXpoolFactoryPoolDestroiedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.BlockNumber, data.TxIndex, data.TxHash, data.TxAt, data.From, data.To, data.Value, data.EventPool, data.EventInitiator, data.EventConfirmor, data.EventRecipient)
 	return ret, err
 }
 
 func (m *defaultEventXpoolFactoryPoolDestroiedModel) Update(ctx context.Context, newData *EventXpoolFactoryPoolDestroied) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, eventXpoolFactoryPoolDestroiedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventPool, newData.EventEthBalance, newData.EventStakingBalance, newData.EventRewardBalance, newData.EventRecipient)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.BlockNumber, newData.TxIndex, newData.TxHash, newData.TxAt, newData.From, newData.To, newData.Value, newData.EventPool, newData.EventInitiator, newData.EventConfirmor, newData.EventRecipient)
 	return err
 }
 

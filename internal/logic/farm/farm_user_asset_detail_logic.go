@@ -20,6 +20,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -209,4 +210,130 @@ func getClainedAmount(userAddress string, chainId, incentiveId int64, conn sqlx.
 		return claimedRewardAmount, err
 	}
 	return claimedRewardAmount, nil
+}
+
+/*
+apr  计算公式
+注意  一个奖励代币 对应多个 质押池。不同质押池 权重不同。
+奖励池的每日总产出 * 当前池子权重 /总权重 = 每日质押池的总产量
+APR年化收益率 = （奖励池的每日总产出 * 当前池子权重 /总权重） / 当前总质押量 * 365
+
+// 本计算公式中，
+当前总质押量:USD
+
+APR年化收益率 = （奖励池的每日总产出 *365 * 当前池子权重 /总权重） / 当前总质押量
+*/
+func calucateFarmApr(tatalReward365 *big.Float, totalLiquidityUsd *big.Float, incentiveWeight int64, staker string, rewardToken string, chain config.ChainConfig, cacher cache.ICache) *big.Float {
+	// logx.Infof("tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
+
+	var totalWeightString = "0"
+	var err error
+	totalWeightString, err = global.GetFarmTotalWeightValue(cacher, global.FarmTotalWeightKey, rewardToken)
+
+	if errors.Is(err, redis.Nil) {
+		// 写入一次
+		totalWeightString, err = SetRewardPoolInfo(staker, rewardToken, chain, cacher)
+		if err != nil {
+			logx.Errorf("Err:%v ", err)
+			return big.NewFloat(0)
+		}
+	}
+	// 为空
+	if !errors.Is(err, redis.Nil) && err != nil {
+		// 写入一次
+		totalWeightString, err = SetRewardPoolInfo(staker, rewardToken, chain, cacher)
+		if err != nil {
+			logx.Errorf("Err:%v ", err)
+			return big.NewFloat(0)
+		}
+	}
+	if strings.EqualFold(totalWeightString, "0") {
+		totalWeightString = "1000"
+	}
+
+	incentiveWeightBigFloat := new(big.Float).SetInt64(incentiveWeight)
+
+	totalWeightBigFloat, okOrNot := new(big.Float).SetString(totalWeightString)
+	if !okOrNot {
+		totalWeightBigFloat = new(big.Float).SetInt64(1000)
+		logx.Infof("use default value:%v", totalWeightBigFloat)
+		return big.NewFloat(0)
+	}
+
+	incentiveWeightBigFloatQuototalWeightBigFloatBigFloat := new(big.Float).Quo(incentiveWeightBigFloat, totalWeightBigFloat)
+	tatalReward365QuototalLiquidityBigFloat := new(big.Float).Quo(tatalReward365, totalLiquidityUsd)
+	logx.Infof("incentiveWeightBigFloatQuototalWeightBigFloatBigFloat:%v tatalReward365QuototalLiquidityBigFloat:%v  ", incentiveWeightBigFloatQuototalWeightBigFloatBigFloat, tatalReward365QuototalLiquidityBigFloat)
+
+	apr := new(big.Float).Mul(incentiveWeightBigFloatQuototalWeightBigFloatBigFloat, tatalReward365QuototalLiquidityBigFloat)
+	apr_mul100 := new(big.Float).Mul(apr, new(big.Float).SetInt64(100))
+	logx.Infof("apr:%v", apr)
+	return apr_mul100
+}
+
+// total weight
+func SetRewardPoolInfo(staker string, rewardToken string, chain config.ChainConfig, cacher cache.ICache) (totalWeight string, err error) {
+	type RateStruct struct {
+		RatePerSecond *big.Int `json:"ratePerSecond"`
+		StartTime     *big.Int `json:"startTime"`
+	}
+
+	type RewardPool struct {
+		TotalReward    *big.Int   `json:"totalReward"`
+		LastUpdateTime *big.Int   `json:"lastUpdateTime"`
+		Rate           RateStruct `json:"rate"`
+		IncentiveIds   []*big.Int `json:"incentiveIds"`
+		TotalWeight    *big.Int   `json:"totalWeight"`
+	}
+
+	reardPool := RewardPool{}
+	call1 := Call{
+		Contract: common.HexToAddress(staker),
+		Method:   "getRewardPool",
+		Args:     []interface{}{common.HexToAddress(rewardToken)},
+		Result:   &reardPool,
+	}
+	err = Multicall(context.Background(), chain, call1)
+
+	totalWeight = "1000"
+	if err != nil {
+		logx.Errorf("ERR:%v", err)
+		return totalWeight, err
+	} else {
+		logx.Infof("reardPool:%v ", reardPool)
+		if reardPool.TotalWeight.Cmp(big.NewInt(0)) > 0 {
+			// set totalweight to the index
+			err := global.SetFarmTotalWeightValue(cacher, global.FarmTotalWeightKey, rewardToken, reardPool.TotalWeight.String())
+			if err != nil {
+				logx.Errorf("ERR:%v", err)
+				return totalWeight, err
+			}
+			logx.Infof("reardPool.TotalWeight.String():%v ", reardPool.TotalWeight.String())
+			return reardPool.TotalWeight.String(), nil
+		}
+		return totalWeight, nil
+	}
+}
+
+// 已经做了 APR 缓存
+func getApr(poolAddress string, incentiveId int64, tatalReward365 *big.Float, totalLiquidityUsd *big.Float, incentiveWeight int64, staker string, rewardToken string, chain config.ChainConfig, cacher cache.ICache) string {
+
+	aprString, err := global.GetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId)
+
+	logx.Infof("poolAddress:%v incentiveId:%v  tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", poolAddress, incentiveId, tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
+	if errors.Is(err, redis.Nil) {
+		// 写入一次
+		aprBigFloat := calucateFarmApr(tatalReward365, totalLiquidityUsd, incentiveWeight, staker, rewardToken, chain, cacher)
+		err := global.SetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId, aprBigFloat.String())
+		if err != nil {
+			logx.Errorf("ERR:%v ", err)
+			return "0"
+		}
+		return aprBigFloat.String()
+	}
+
+	if !errors.Is(err, redis.Nil) && err != nil {
+		return "0"
+	}
+
+	return aprString
 }

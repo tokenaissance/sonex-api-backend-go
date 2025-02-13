@@ -44,7 +44,7 @@ type IStakingFactoryStakingPoolInfo struct {
 
 // StakingFactoryMetaData contains all meta data concerning the StakingFactory contract.
 var StakingFactoryMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"OperatorAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"OperatorRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"PoolCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_ethBalance\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_stakingBalance\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_rewardBalance\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"PoolDestroied\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_old\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_new\",\"type\":\"uint256\"}],\"name\":\"RewardPerBlockSet\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"addOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"createPool\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"destroyPool\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"_ethBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_stakingBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_rewardBalance\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"name\":\"getPoolInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"stakingTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"stakingTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"stakingTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"rewardTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rewardTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"rewardTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"rewardPerBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIStakingFactory.StakingPoolInfo\",\"name\":\"_poolInfo\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"getPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"_nativeCoinDecimals\",\"type\":\"uint8\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"operators\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"removeOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"setRewardPerBlock\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"OperatorAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"OperatorRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"PoolCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_initiator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_confirmor\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"PoolDestroied\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_old\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_new\",\"type\":\"uint256\"}],\"name\":\"RewardPerBlockSet\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"addOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakingToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"createPool\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"}],\"name\":\"destroyPool\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"name\":\"destroyPoolConfirm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"name\":\"getPoolInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"stakingTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"stakingTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"stakingTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"rewardToken\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"rewardTokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rewardTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"rewardTokenDecimals\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"rewardPerBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIStakingFactory.StakingPoolInfo\",\"name\":\"_poolInfo\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"getPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_nativeCoinSymbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"_nativeCoinDecimals\",\"type\":\"uint8\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"operators\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"removeOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_rewardPerBlock\",\"type\":\"uint256\"}],\"name\":\"setRewardPerBlock\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // StakingFactoryABI is the input ABI used to generate the binding from.
@@ -392,23 +392,44 @@ func (_StakingFactory *StakingFactoryTransactorSession) CreatePool(_stakingToken
 
 // DestroyPool is a paid mutator transaction binding the contract method 0x63dbccac.
 //
-// Solidity: function destroyPool(address _pool, address _recipient) returns(uint256 _ethBalance, uint256 _stakingBalance, uint256 _rewardBalance)
+// Solidity: function destroyPool(address _pool, address _recipient) returns()
 func (_StakingFactory *StakingFactoryTransactor) DestroyPool(opts *bind.TransactOpts, _pool common.Address, _recipient common.Address) (*types.Transaction, error) {
 	return _StakingFactory.contract.Transact(opts, "destroyPool", _pool, _recipient)
 }
 
 // DestroyPool is a paid mutator transaction binding the contract method 0x63dbccac.
 //
-// Solidity: function destroyPool(address _pool, address _recipient) returns(uint256 _ethBalance, uint256 _stakingBalance, uint256 _rewardBalance)
+// Solidity: function destroyPool(address _pool, address _recipient) returns()
 func (_StakingFactory *StakingFactorySession) DestroyPool(_pool common.Address, _recipient common.Address) (*types.Transaction, error) {
 	return _StakingFactory.Contract.DestroyPool(&_StakingFactory.TransactOpts, _pool, _recipient)
 }
 
 // DestroyPool is a paid mutator transaction binding the contract method 0x63dbccac.
 //
-// Solidity: function destroyPool(address _pool, address _recipient) returns(uint256 _ethBalance, uint256 _stakingBalance, uint256 _rewardBalance)
+// Solidity: function destroyPool(address _pool, address _recipient) returns()
 func (_StakingFactory *StakingFactoryTransactorSession) DestroyPool(_pool common.Address, _recipient common.Address) (*types.Transaction, error) {
 	return _StakingFactory.Contract.DestroyPool(&_StakingFactory.TransactOpts, _pool, _recipient)
+}
+
+// DestroyPoolConfirm is a paid mutator transaction binding the contract method 0xe861d2df.
+//
+// Solidity: function destroyPoolConfirm(address _pool) returns()
+func (_StakingFactory *StakingFactoryTransactor) DestroyPoolConfirm(opts *bind.TransactOpts, _pool common.Address) (*types.Transaction, error) {
+	return _StakingFactory.contract.Transact(opts, "destroyPoolConfirm", _pool)
+}
+
+// DestroyPoolConfirm is a paid mutator transaction binding the contract method 0xe861d2df.
+//
+// Solidity: function destroyPoolConfirm(address _pool) returns()
+func (_StakingFactory *StakingFactorySession) DestroyPoolConfirm(_pool common.Address) (*types.Transaction, error) {
+	return _StakingFactory.Contract.DestroyPoolConfirm(&_StakingFactory.TransactOpts, _pool)
+}
+
+// DestroyPoolConfirm is a paid mutator transaction binding the contract method 0xe861d2df.
+//
+// Solidity: function destroyPoolConfirm(address _pool) returns()
+func (_StakingFactory *StakingFactoryTransactorSession) DestroyPoolConfirm(_pool common.Address) (*types.Transaction, error) {
+	return _StakingFactory.Contract.DestroyPoolConfirm(&_StakingFactory.TransactOpts, _pool)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0xf6d2ee86.
@@ -1344,22 +1365,25 @@ func (it *StakingFactoryPoolDestroiedIterator) Close() error {
 
 // StakingFactoryPoolDestroied represents a PoolDestroied event raised by the StakingFactory contract.
 type StakingFactoryPoolDestroied struct {
-	Pool           common.Address
-	EthBalance     *big.Int
-	StakingBalance *big.Int
-	RewardBalance  *big.Int
-	Recipient      common.Address
-	Raw            types.Log // Blockchain specific contextual infos
+	Pool      common.Address
+	Initiator common.Address
+	Confirmor common.Address
+	Recipient common.Address
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterPoolDestroied is a free log retrieval operation binding the contract event 0x8a1ea1f55ef0525ec0ea0b63984600112e22fa49fff322243c05a6325d1dae03.
+// FilterPoolDestroied is a free log retrieval operation binding the contract event 0x2dd0ae54dfdcdd4ad600e40277ab102f598d3a9307e7b0418c07b6444787cf8f.
 //
-// Solidity: event PoolDestroied(address indexed _pool, uint256 _ethBalance, uint256 _stakingBalance, uint256 _rewardBalance, address indexed _recipient)
-func (_StakingFactory *StakingFactoryFilterer) FilterPoolDestroied(opts *bind.FilterOpts, _pool []common.Address, _recipient []common.Address) (*StakingFactoryPoolDestroiedIterator, error) {
+// Solidity: event PoolDestroied(address indexed _pool, address indexed _initiator, address _confirmor, address indexed _recipient)
+func (_StakingFactory *StakingFactoryFilterer) FilterPoolDestroied(opts *bind.FilterOpts, _pool []common.Address, _initiator []common.Address, _recipient []common.Address) (*StakingFactoryPoolDestroiedIterator, error) {
 
 	var _poolRule []interface{}
 	for _, _poolItem := range _pool {
 		_poolRule = append(_poolRule, _poolItem)
+	}
+	var _initiatorRule []interface{}
+	for _, _initiatorItem := range _initiator {
+		_initiatorRule = append(_initiatorRule, _initiatorItem)
 	}
 
 	var _recipientRule []interface{}
@@ -1367,21 +1391,25 @@ func (_StakingFactory *StakingFactoryFilterer) FilterPoolDestroied(opts *bind.Fi
 		_recipientRule = append(_recipientRule, _recipientItem)
 	}
 
-	logs, sub, err := _StakingFactory.contract.FilterLogs(opts, "PoolDestroied", _poolRule, _recipientRule)
+	logs, sub, err := _StakingFactory.contract.FilterLogs(opts, "PoolDestroied", _poolRule, _initiatorRule, _recipientRule)
 	if err != nil {
 		return nil, err
 	}
 	return &StakingFactoryPoolDestroiedIterator{contract: _StakingFactory.contract, event: "PoolDestroied", logs: logs, sub: sub}, nil
 }
 
-// WatchPoolDestroied is a free log subscription operation binding the contract event 0x8a1ea1f55ef0525ec0ea0b63984600112e22fa49fff322243c05a6325d1dae03.
+// WatchPoolDestroied is a free log subscription operation binding the contract event 0x2dd0ae54dfdcdd4ad600e40277ab102f598d3a9307e7b0418c07b6444787cf8f.
 //
-// Solidity: event PoolDestroied(address indexed _pool, uint256 _ethBalance, uint256 _stakingBalance, uint256 _rewardBalance, address indexed _recipient)
-func (_StakingFactory *StakingFactoryFilterer) WatchPoolDestroied(opts *bind.WatchOpts, sink chan<- *StakingFactoryPoolDestroied, _pool []common.Address, _recipient []common.Address) (event.Subscription, error) {
+// Solidity: event PoolDestroied(address indexed _pool, address indexed _initiator, address _confirmor, address indexed _recipient)
+func (_StakingFactory *StakingFactoryFilterer) WatchPoolDestroied(opts *bind.WatchOpts, sink chan<- *StakingFactoryPoolDestroied, _pool []common.Address, _initiator []common.Address, _recipient []common.Address) (event.Subscription, error) {
 
 	var _poolRule []interface{}
 	for _, _poolItem := range _pool {
 		_poolRule = append(_poolRule, _poolItem)
+	}
+	var _initiatorRule []interface{}
+	for _, _initiatorItem := range _initiator {
+		_initiatorRule = append(_initiatorRule, _initiatorItem)
 	}
 
 	var _recipientRule []interface{}
@@ -1389,7 +1417,7 @@ func (_StakingFactory *StakingFactoryFilterer) WatchPoolDestroied(opts *bind.Wat
 		_recipientRule = append(_recipientRule, _recipientItem)
 	}
 
-	logs, sub, err := _StakingFactory.contract.WatchLogs(opts, "PoolDestroied", _poolRule, _recipientRule)
+	logs, sub, err := _StakingFactory.contract.WatchLogs(opts, "PoolDestroied", _poolRule, _initiatorRule, _recipientRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1421,9 +1449,9 @@ func (_StakingFactory *StakingFactoryFilterer) WatchPoolDestroied(opts *bind.Wat
 	}), nil
 }
 
-// ParsePoolDestroied is a log parse operation binding the contract event 0x8a1ea1f55ef0525ec0ea0b63984600112e22fa49fff322243c05a6325d1dae03.
+// ParsePoolDestroied is a log parse operation binding the contract event 0x2dd0ae54dfdcdd4ad600e40277ab102f598d3a9307e7b0418c07b6444787cf8f.
 //
-// Solidity: event PoolDestroied(address indexed _pool, uint256 _ethBalance, uint256 _stakingBalance, uint256 _rewardBalance, address indexed _recipient)
+// Solidity: event PoolDestroied(address indexed _pool, address indexed _initiator, address _confirmor, address indexed _recipient)
 func (_StakingFactory *StakingFactoryFilterer) ParsePoolDestroied(log types.Log) (*StakingFactoryPoolDestroied, error) {
 	event := new(StakingFactoryPoolDestroied)
 	if err := _StakingFactory.contract.UnpackLog(event, "PoolDestroied", log); err != nil {

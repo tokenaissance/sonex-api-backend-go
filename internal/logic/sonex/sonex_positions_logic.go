@@ -13,6 +13,7 @@ import (
 	"sonex_api_backend_go/internal/types"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -182,6 +183,10 @@ func (l *SonexPositionsLogic) SonexPositions(ctx context.Context, chainId int64,
 				TickUpper:   p.TickUpper.String(),
 				TickLower:   p.TickLower.String(),
 				PositionAge: 0,
+				// position id get from cache few seconds after position created,
+				// so it's not accurate but approximate.
+				CreatedAt: time.Now().UTC().Format(time.RFC3339),
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 			}
 		}
 	}

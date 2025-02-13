@@ -2,8 +2,10 @@ package farm
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
+	"sonex_api_backend_go/internal/lib/cache"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -123,4 +125,16 @@ func Test_getpendingRewards(t *testing.T) {
 		logx.Infof("rewards:%v ", rewards)
 	}
 
+}
+
+func Test_SetRewardPoolInfo(t *testing.T) {
+
+	var c config.Config
+	conf.MustLoad("../../../etc/forlocaluse0109.yaml", &c)
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port), c.Redis.Password, c.Redis.DB)
+	for _, chain := range c.Chains {
+		stakerAddress := "0xA35b60B847Bff39900316A259b9F3da9cbEc6C48"
+		rewardToken := "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"
+		SetRewardPoolInfo(stakerAddress, rewardToken, chain, cacher)
+	}
 }

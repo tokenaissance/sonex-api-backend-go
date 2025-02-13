@@ -3228,6 +3228,12 @@
         },
         "totalCollected": {
           "$ref": "#/definitions/TokenValuePair"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
         }
       },
       "title": "Position",
@@ -3246,7 +3252,9 @@
         "unclaimedFee1",
         "tokenValue0",
         "tokenValue1",
-        "isHolding"
+        "isHolding",
+        "createdAt",
+        "updatedAt"
       ]
     },
     "PositionRequest": {
@@ -4900,6 +4908,10 @@
           "type": "integer",
           "format": "int64",
           "description": " 奖励的代币价格精度"
+        },
+        "claimed": {
+          "type": "string",
+          "description": " 用户已领取的奖励代币数量"
         },
         "createdAt": {
           "type": "string"

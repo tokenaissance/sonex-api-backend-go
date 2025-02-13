@@ -458,6 +458,8 @@ type Position struct {
 	TotalInvested  TokenValuePair   `json:"totalInvested,omitempty"`
 	TotalWithdrawn TokenValuePair   `json:"totalWithdrawn,omitempty"`
 	TotalCollected TokenValuePair   `json:"totalCollected,omitempty"`
+	CreatedAt      string           `json:"createdAt"`
+	UpdatedAt      string           `json:"updatedAt"`
 }
 
 type PositionRequest struct {
@@ -908,6 +910,7 @@ type XpoolPoolListResponse_Pool struct {
 	StakingTokenPriceDecimals     int64   `json:"-"`                    // 质押的代币价格精度
 	RewardTokenPriceWithDecimals  string  `json:"-"`                    // 奖励的代币价格(包含精度)
 	RewardTokenPriceDecimals      int64   `json:"-"`                    // 奖励的代币价格精度
+	Claimed                       string  `json:"-"`                    // 用户已领取的奖励代币数量
 	CreatedAt                     string  `json:"createdAt"`
 	UpdatedAt                     string  `json:"updatedAt"`
 }

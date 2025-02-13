@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
-	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/farm"
 	"sonex_api_backend_go/internal/module/sonex"
@@ -161,7 +161,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	// No cache
 	// 查看是否过期
 	if resp == nil {
-		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf)
+		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 		if len(tokenIds) == 0 {
 			logx.Info("no tokenid founds")
 			return nil, nil
@@ -265,9 +265,14 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 					return resp, err
 				}
 				resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
+
+				totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
+				resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
+			} else {
+				// unstaked
+				resp.List[i].Balance = int64(len(resp.List[i].Positions))
 			}
 
-			// resp.List[i].Balance = int64(len(resp.List[i].Positions))
 			logx.Infof("SSSSA:%v B:%v c:%v", farmConf.Staker, req.UserAddress, item.IncentiveId)
 
 			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
@@ -316,10 +321,15 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 				return item.JoinNum
 			}).ToSlice(&resp.List)
 		case "apr":
-			linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) lib_common.CompareableBigInt {
-				apr, _ := new(big.Int).SetString(item.APR, 10)
-				return lib_common.CompareableBigInt{Value: apr}
-			}).ToSlice(&resp.List)
+			// linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) lib_common.CompareableBigInt {
+			// 	apr, _ := new(big.Int).SetString(item.APR, 10)
+			// 	return lib_common.CompareableBigInt{Value: apr}
+			// }).ToSlice(&resp.List)
+			sort.SliceStable(resp.List, func(i, j int) bool {
+				apr_i, _ := big.NewFloat(0).SetString(resp.List[i].APR)
+				apr_j, _ := big.NewFloat(0).SetString(resp.List[j].APR)
+				return apr_i.Cmp(apr_j) > 0
+			})
 		}
 	}
 
@@ -328,7 +338,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	return resp, nil
 }
 
-func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chainConf *config.ChainConfig, conn sqlx.SqlConn, farmConf *config.FarmConfig, sonexConf *config.SonexConfig) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
+func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chainConf *config.ChainConfig, conn sqlx.SqlConn, farmConf *config.FarmConfig, sonexConf *config.SonexConfig, cacher cache.ICache) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
 	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
@@ -418,13 +428,18 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			price0 := prices[token0.Address]
 			price1 := prices[token1.Address]
 
+			_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(6))))
+			_price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(6))))
+
+			// price0BigFloat :=  big.NewFloat()
+
 			rewardToken, err := global.GetToken(req.ChainId, record.EventRewardToken)
 			if err != nil {
 				logx.Errorf("%s", fmt.Sprintf("Get extra token error: %s %s", record.EventRewardToken, err))
 				return
 			}
 			logx.Infof("rewardToken:%#v", rewardToken)
-			reward, _ := new(big.Float).SetString(record.ExtraRate)
+			ratepersecond, _ := new(big.Float).SetString(record.ExtraRate)
 			logx.Info("333333:", rewardToken.Address, "prices[rewardToken.Address]:", prices[rewardToken.Address])
 			rewardPrice := new(big.Float).SetInt(prices[rewardToken.Address])
 			logx.Info("4444444:")
@@ -432,11 +447,11 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			rewardTokenAccuracy := new(big.Float).SetFloat64(math.Pow10(int(rewardToken.Decimals)))
 			logx.Info("555555:")
 
-			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(reward, rewardPrice), rewardTokenAccuracy), usdAccuracy)
-			logx.Info("666666:")
+			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(ratepersecond, rewardPrice), rewardTokenAccuracy), usdAccuracy)
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
 			logx.Info("77777777:")
+			logx.Infof("666666:rewardToken:%#v ratepersecond :%v  rewardPrice:%v totalRewardUSD365: %v  ", rewardToken, ratepersecond, rewardPrice, totalRewardUSD)
 
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
@@ -448,6 +463,16 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			} else {
 				status = "active"
 			}
+
+			rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, record.EventIncentiveId, *chainConf)
+			if err != nil {
+				logx.Errorf("getRewardsAmount:%v ", err)
+			}
+
+			logx.Infof("rewards :%v ", rewards.String())
+			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
+
+			totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
 
 			if ok {
 				tokenIds := []*big.Int{}
@@ -472,68 +497,75 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				for _, position := range positions {
 					totalLiquidity.Add(totalLiquidity, position.Liquidity)
 					amount0, amount1 := position.Amounts()
-					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), new(big.Float).SetInt(price0)), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil))))
-					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), new(big.Float).SetInt(price1)), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil))))
+					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), _price0divUsdDecimals), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil))))
+					totalLiquidityUSD.Add(totalLiquidityUSD, new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), _price1divUsdDecimals), new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil))))
 				}
 
-				apr := new(big.Float).Quo(totalRewardUSD, totalLiquidityUSD)
+				apr := getApr(record.EventPool, record.EventIncentiveId, totalRewardUSD, totalLiquidityUSD, record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
+
 				var tids []int64
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 
 				totalLiquidityUSDValue, _ := totalLiquidityUSD.Float64()
-				_ = totalLiquidityUSDValue
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId:         record.EventIncentiveId,
-					PoolAddress:         record.EventPool,
-					FeeRatio:            record.ExtraFee,
-					RewardTokenAddress:  rewardToken.Address,
-					RewardTokenDecimals: rewardToken.Decimals,
-					RewardTokenSymbol:   rewardToken.Symbol,
-					RewardTokenPrice:    rewardPrice.String(),
-					Token0Address:       token0.Address,
-					Token0Decimals:      token0.Decimals,
-					Token0Symbol:        token0.Symbol,
-					Token0Price:         price0.String(),
-					Token1Address:       token1.Address,
-					Token1Decimals:      token1.Decimals,
-					Token1Symbol:        token1.Symbol,
-					Token1Price:         price1.String(),
-					Liquidity:           totalLiquidity.String(),
-					LiquidityUSD:        totalLiquidityUSD.String(),
-					APR:                 apr.String(),
-					JoinNum:             int64(len(userAddressesMap)),
-					Status:              status,
-					StartAt:             record.EventStartTime,
-					Earned:              big.NewInt(0).String(),
+					IncentiveId:                  record.EventIncentiveId,
+					PoolAddress:                  record.EventPool,
+					FeeRatio:                     record.ExtraFee,
+					RewardTokenAddress:           rewardToken.Address,
+					RewardTokenDecimals:          rewardToken.Decimals,
+					RewardTokenSymbol:            rewardToken.Symbol,
+					RewardTokenPrice:             rewardPrice.String(),
+					Token0Address:                token0.Address,
+					Token0Decimals:               token0.Decimals,
+					Token0Symbol:                 token0.Symbol,
+					Token0Price:                  price0.String(),
+					Token1Address:                token1.Address,
+					Token1Decimals:               token1.Decimals,
+					Token1Symbol:                 token1.Symbol,
+					Token1Price:                  price1.String(),
+					Liquidity:                    totalLiquidity.String(),
+					LiquidityUSD:                 totalLiquidityUSD.String(),
+					LiquidityUSDFloat64:          totalLiquidityUSDValue,
+					TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
+					APR:                          apr,
+					JoinNum:                      int64(len(userAddressesMap)),
+					Status:                       status,
+					StartAt:                      record.EventStartTime,
+					Earned:                       big.NewInt(0).String(),
 				}
 				tokenIdsResult = tids
 			} else {
 				logx.Info("notoknotok")
-				apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
+				// apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
+				// 0 的时候  就应该按照1来算
+				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
+				apr := getApr(record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
 
 				dataResult = types.FarmIncentivesResponse_Data{
-					IncentiveId:         record.EventIncentiveId,
-					PoolAddress:         record.EventPool,
-					FeeRatio:            record.ExtraFee,
-					RewardTokenAddress:  rewardToken.Address,
-					RewardTokenDecimals: rewardToken.Decimals,
-					RewardTokenSymbol:   rewardToken.Symbol,
-					RewardTokenPrice:    rewardPrice.String(),
-					Token0Address:       token0.Address,
-					Token0Decimals:      token0.Decimals,
-					Token0Symbol:        token0.Symbol,
-					Token0Price:         price0.String(),
-					Token1Address:       token1.Address,
-					Token1Decimals:      token1.Decimals,
-					Token1Symbol:        token1.Symbol,
-					Token1Price:         price1.String(),
-					Liquidity:           big.NewInt(0).String(),
-					LiquidityUSD:        big.NewInt(0).String(),
-					APR:                 apr.String(),
-					JoinNum:             0,
-					Status:              status,
-					StartAt:             record.EventStartTime,
-					Earned:              big.NewInt(0).String(),
+					IncentiveId:                  record.EventIncentiveId,
+					PoolAddress:                  record.EventPool,
+					FeeRatio:                     record.ExtraFee,
+					RewardTokenAddress:           rewardToken.Address,
+					RewardTokenDecimals:          rewardToken.Decimals,
+					RewardTokenSymbol:            rewardToken.Symbol,
+					RewardTokenPrice:             rewardPrice.String(),
+					Token0Address:                token0.Address,
+					Token0Decimals:               token0.Decimals,
+					Token0Symbol:                 token0.Symbol,
+					Token0Price:                  price0.String(),
+					Token1Address:                token1.Address,
+					Token1Decimals:               token1.Decimals,
+					Token1Symbol:                 token1.Symbol,
+					Token1Price:                  price1.String(),
+					Liquidity:                    big.NewInt(0).String(),
+					LiquidityUSD:                 big.NewInt(0).String(),
+					TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
+					TotalClaimableFeesUSD:        totalClaimableFeesUSD.String(),
+					APR:                          apr,
+					JoinNum:                      0,
+					Status:                       status,
+					StartAt:                      record.EventStartTime,
+					Earned:                       big.NewInt(0).String(),
 				}
 			}
 

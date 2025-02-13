@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"sonex_api_backend_go/internal/logic/farm"
@@ -10,6 +11,7 @@ import (
 	"sonex_api_backend_go/internal/logic/xpool"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -27,6 +29,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		response := &types.PortfolioResponse{}
 		positions := make([]*types.Position, 0)
+		// UTC + 0, 当日 00:00
+		todayBegin := time.Now().UTC().AddDate(0, 0, -1)
+		var previousDayTotalAssets float64
 
 		// 获取用户有效 positions 列表
 		{
@@ -43,6 +48,15 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				for _, position := range positions {
 					response.TotalPosition += position.Position
 					response.LiquidityClaimableFees += position.ClaimableFees
+					createdAt, err := time.Parse(time.RFC3339, position.CreatedAt)
+					if err != nil {
+						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+						continue
+					}
+					// count in total position assets before today begin
+					if createdAt.UTC().Before(todayBegin) {
+						previousDayTotalAssets += position.Position
+					}
 				}
 			}
 		}
@@ -122,7 +136,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 计算总资产和可提资产
 		response.TotalAssets = response.TotalPosition + response.TotalXpoolStaked + response.TotalFarmStaked
 		response.ClaimableFees = response.LiquidityClaimableFees + response.FarmEarned + response.XpoolEarned
-		response.TotalAssetsRate = "0.00%"
+
+		response.TotalAssetsRate = fmt.Sprintf("%.2f%%", (response.TotalAssets/previousDayTotalAssets-1.0)*100)
 
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}

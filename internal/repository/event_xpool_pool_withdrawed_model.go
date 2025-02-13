@@ -16,7 +16,7 @@ type (
 	EventXpoolPoolWithdrawedModel interface {
 		eventXpoolPoolWithdrawedModel
 		withSession(session sqlx.Session) EventXpoolPoolWithdrawedModel
-		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, amount string, height int64) error
+		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, withdrawed string, claimed string, height int64) error
 	}
 
 	customEventXpoolPoolWithdrawedModel struct {
@@ -35,8 +35,8 @@ func (m *customEventXpoolPoolWithdrawedModel) withSession(session sqlx.Session) 
 	return NewEventXpoolPoolWithdrawedModel(sqlx.NewSqlConnFromSession(session))
 }
 
-func (m *customEventXpoolPoolWithdrawedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, amount string, height int64) error {
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventXpoolPoolWithdrawedRows)
-	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, amount, height)
+func (m *customEventXpoolPoolWithdrawedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, withdrawed string, claimed string, height int64) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", m.table, eventXpoolPoolWithdrawedRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, user, withdrawed, claimed, height)
 	return err
 }

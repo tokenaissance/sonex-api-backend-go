@@ -138,6 +138,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		var rewardTokenPriceString string
 		staked := new(big.Int)
 		earned := new(big.Int)
+		claimed := new(big.Int)
 
 		// 获取用户在池子中的质押状态信息
 		{
@@ -145,6 +146,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			if ok {
 				staked = addressPoolInfo.Staked
 				earned = addressPoolInfo.EarnedReward
+				claimed = addressPoolInfo.Claimed
 			}
 		}
 
@@ -189,10 +191,11 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 		}
 
 		// APR
-		apr := new(big.Float).Quo(rewardPerYearValue, tvlValue)
-		if tvlValue.Cmp(big.NewFloat(0)) == 0 {
-			apr = big.NewFloat(0)
+		if tvlValue.Cmp(big.NewFloat(1)) <= 0 {
+			tvlValue = big.NewFloat(1)
 		}
+		apr := new(big.Float).Quo(rewardPerYearValue, tvlValue)
+
 		aprFloat, _ := apr.Float64()
 		aprPercentage, _ := new(big.Float).Mul(apr, big.NewFloat(100)).Float64()
 		aprPercentageString := fmt.Sprintf("%.2f%%", aprPercentage)
@@ -246,10 +249,11 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			Earned:               earned.String(),                           // 用户已获得奖励代币数量
 			Status:               status,                                    // 运行状态
 
-			StakingTokenPriceWithDecimals: stakingTokenPrice.Price(),
-			StakingTokenPriceDecimals:     int64(stakingTokenPrice.Decimals()),
-			RewardTokenPriceWithDecimals:  rewardTokenPrice.Price(),
-			RewardTokenPriceDecimals:      int64(rewardTokenPrice.Decimals()),
+			StakingTokenPriceWithDecimals: stakingTokenPrice.Price(),           // 质押的代币价格(包含精度)
+			StakingTokenPriceDecimals:     int64(stakingTokenPrice.Decimals()), // 质押的代币价格精度
+			RewardTokenPriceWithDecimals:  rewardTokenPrice.Price(),            // 奖励的代币价格(包含精度)
+			RewardTokenPriceDecimals:      int64(rewardTokenPrice.Decimals()),  // 奖励的代币价格精度
+			Claimed:                       claimed.String(),                    // 用户已领取的奖励代币数量
 			CreatedAt:                     pool.CreatedAt.Format(time.RFC3339), // 创建时间
 			UpdatedAt:                     pool.UpdatedAt.Format(time.RFC3339), // 更新时间
 		})
