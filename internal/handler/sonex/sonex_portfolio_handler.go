@@ -86,33 +86,33 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// }
 
 		// 获取用户有效 farm 列表
-		{
-			if portfolioType == "farm" || portfolioType == "all" {
-				farmPools, err := getFarmPools(r.Context(), svcCtx, req, positions)
-				if err != nil {
-					logx.Errorf("[SonexPortfolioHandler]: getFarmPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
-					httpx.ErrorCtx(r.Context(), w, err)
-					return
-				}
-				pools := make([]*types.PortfolioFarm, 0)
-				for _, farm := range farmPools {
-					pools = append(pools, &types.PortfolioFarm{
-						PoolAddress:   farm.PoolAddress,
-						FeeRatio:      farm.FeeRatio,
-						Token0Symbol:  farm.Token0Symbol,
-						Token0Address: farm.Token0Address,
-						Token1Symbol:  farm.Token1Symbol,
-						Token1Address: farm.Token1Address,
-						PositionValue: farm.LiquidityUSD,
-						FeeRevenue:    farm.TotalClaimedFeesUSD,
-						Earned:        farm.TotalClaimableFeesUSD,
-					})
-					response.TotalFarmStaked += farm.LiquidityUSDFloat64
-					response.FarmEarned += farm.TotalClaimableFeesUSDFloat64
-				}
-				response.FarmPools = pools
-			}
-		}
+		// {
+		// 	if portfolioType == "farm" || portfolioType == "all" {
+		// 		farmPools, err := getFarmPools(r.Context(), svcCtx, req, positions)
+		// 		if err != nil {
+		// 			logx.Errorf("[SonexPortfolioHandler]: getFarmPools error: %s, chainId: %d, address: %s, type: %s", err.Error(), req.ChainId, req.Address, req.Type)
+		// 			httpx.ErrorCtx(r.Context(), w, err)
+		// 			return
+		// 		}
+		// 		pools := make([]*types.PortfolioFarm, 0)
+		// 		for _, farm := range farmPools {
+		// 			pools = append(pools, &types.PortfolioFarm{
+		// 				PoolAddress:   farm.PoolAddress,
+		// 				FeeRatio:      farm.FeeRatio,
+		// 				Token0Symbol:  farm.Token0Symbol,
+		// 				Token0Address: farm.Token0Address,
+		// 				Token1Symbol:  farm.Token1Symbol,
+		// 				Token1Address: farm.Token1Address,
+		// 				PositionValue: farm.LiquidityUSD,
+		// 				FeeRevenue:    farm.TotalClaimedFeesUSD,
+		// 				Earned:        farm.TotalClaimableFeesUSD,
+		// 			})
+		// 			response.TotalFarmStaked += farm.LiquidityUSDFloat64
+		// 			response.FarmEarned += farm.TotalClaimableFeesUSDFloat64
+		// 		}
+		// 		response.FarmPools = pools
+		// 	}
+		// }
 
 		for _, position := range positions {
 			response.TotalPosition += position.Position
