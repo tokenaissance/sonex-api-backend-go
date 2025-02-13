@@ -10,6 +10,7 @@ import (
 	"sonex_api_backend_go/internal/types"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ahmetb/go-linq/v3"
@@ -26,6 +27,7 @@ type (
 		eventSonexPoolSwapModel
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
+		QueryTransactions(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexPoolSwapWithPool, int64, error)
 		QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error)
 		QueryMergeByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexMergePoolSwapWithExtra, error)
@@ -118,6 +120,13 @@ type (
 		ExtraToken1_1       sql.NullString `db:"extra_token1_1"`
 		ExtraFee_1          sql.NullInt64  `db:"extra_fee_1"`
 		ExtraTickSpacing_1  sql.NullString `db:"extra_tick_spacing_1"`
+	}
+
+	EventSonexPoolSwapWithPool struct {
+		EventSonexPoolSwap
+		ExtraToken0 string `db:"extra_token0"`
+		ExtraToken1 string `db:"extra_token1"`
+		ExtraFee    int64  `db:"extra_fee"`
 	}
 )
 
@@ -294,6 +303,121 @@ func (m *customEventSonexPoolSwapModel) New(ctx context.Context, id int64, chain
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)", m.table, eventSonexPoolSwapRows)
 	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, sender, recipient, amount0, amount1, sqrtPriceX96, tick, pool)
 	return err
+}
+
+func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexPoolSwapWithPool, int64, error) {
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	orderBy := "DESC"
+	options := ""
+	if opt != nil {
+		if opt.OrderBy != nil {
+			if linq.From([]string{"ASC", "DESC"}).Contains(*opt.OrderBy) {
+				orderBy = *opt.OrderBy
+			}
+		}
+		if opt.Wallet != nil {
+			options = fmt.Sprintf(`
+				%s AND (from_ = '%s')
+			`, options, *opt.Wallet)
+		}
+		if opt.Pool != nil {
+			options = fmt.Sprintf(`
+				%s AND (extra_pool = '%s')
+			`, options, *opt.Pool)
+		}
+		if opt.Tokens != nil {
+			linq.From(opt.Tokens).SelectT(func(item string) string { return fmt.Sprintf("'%s'", item) }).ToSlice(&opt.Tokens)
+			tokens := strings.Join(opt.Tokens, " ")
+			options = fmt.Sprintf(`
+				%s AND (extra_token0 IN (%s) OR extra_token1 IN (%s))
+			`, options, tokens, tokens)
+			if opt.IsETH {
+				// options = fmt.Sprintf(`
+				// 	%s AND (value::NUMERIC > 0 OR (CASE
+				// 		WHEN tx_index_1 IS NULL THEN event_sender_0 = event_recipient_0
+				// 		WHEN tx_index_1 IS NOT NULL THEN event_sender_1 = event_recipient_1
+				// 		ELSE FALSE
+				// 		END))
+				// `, options)
+			}
+		}
+		if opt.PageSize != nil && opt.PageIndex != nil {
+			orderBy = fmt.Sprintf(`%s OFFSET %d LIMIT %d`, orderBy, *opt.PageSize*(*opt.PageIndex-1), *opt.PageSize)
+		}
+	}
+
+	var wg sync.WaitGroup
+	results := make(chan struct {
+		Err error
+	}, 2)
+
+	var resp []EventSonexPoolSwapWithPool
+	wg.Add(1)
+	go func(ch chan struct {
+		Err error
+	}) {
+		defer wg.Done()
+
+		latestTxQuery := fmt.Sprintf(`
+			WITH latest_tx_hash AS (
+				SELECT * FROM %s
+				WHERE tx_hash = ANY(
+					SELECT tx_hash 
+					FROM (
+						SELECT DISTINCT ON (tx_hash) tx_hash, tx_at
+						FROM %s
+						WHERE 1 = 1 %s
+					)
+					ORDER BY tx_at %s
+				)
+			)
+			SELECT 
+				H.*, 
+				C.event_token0 AS extra_token0, 
+				C.event_token1 AS extra_token1, 
+				C.event_fee AS extra_fee 
+			FROM latest_tx_hash H
+			LEFT JOIN %s C ON C.event_pool = H.extra_pool
+		`, m.table, m.table, options, orderBy, eventSonexFactoryPoolCreatedModel.table)
+		err := m.conn.QueryRowsCtx(ctx, &resp, latestTxQuery)
+		if err != nil {
+			ch <- struct{ Err error }{Err: err}
+			return
+		}
+	}(results)
+
+	var total int64 = 0
+	wg.Add(1)
+	go func(ch chan struct {
+		Err error
+	}) {
+		defer wg.Done()
+
+		totalQuery := fmt.Sprintf(`
+			SELECT COUNT(*) 
+			FROM (
+				SELECT DISTINCT ON (tx_hash) tx_hash, tx_at
+				FROM %s
+				WHERE 1 = 1 %s
+			)
+		`, m.table, options)
+		err := m.conn.QueryRowCtx(ctx, &total, totalQuery)
+		if err != nil {
+			ch <- struct{ Err error }{Err: err}
+			return
+		}
+	}(results)
+
+	wg.Wait()
+	close(results)
+
+	for result := range results {
+		if result.Err != nil {
+			return nil, 0, result.Err
+		}
+	}
+
+	return resp, total, nil
 }
 
 func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error) {
