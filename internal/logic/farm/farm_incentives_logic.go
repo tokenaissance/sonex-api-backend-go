@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
-	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/farm"
 	"sonex_api_backend_go/internal/module/sonex"
@@ -321,10 +321,15 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 				return item.JoinNum
 			}).ToSlice(&resp.List)
 		case "apr":
-			linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) lib_common.CompareableBigInt {
-				apr, _ := new(big.Int).SetString(item.APR, 10)
-				return lib_common.CompareableBigInt{Value: apr}
-			}).ToSlice(&resp.List)
+			// linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) lib_common.CompareableBigInt {
+			// 	apr, _ := new(big.Int).SetString(item.APR, 10)
+			// 	return lib_common.CompareableBigInt{Value: apr}
+			// }).ToSlice(&resp.List)
+			sort.SliceStable(resp.List, func(i, j int) bool {
+				apr_i, _ := big.NewFloat(0).SetString(resp.List[i].APR)
+				apr_j, _ := big.NewFloat(0).SetString(resp.List[j].APR)
+				return apr_i.Cmp(apr_j) > 0
+			})
 		}
 	}
 
