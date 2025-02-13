@@ -34,6 +34,10 @@ func FarmIncentivesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				httpx.ErrorCtx(r.Context(), w, err)
 			}
 		}
+
+		for i, v := range positions {
+			logx.Infof("SonexPositionsSonexPositions i:%v ,v:%v ", i, v)
+		}
 		resp, err := l.FarmIncentives(&req, positions)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
