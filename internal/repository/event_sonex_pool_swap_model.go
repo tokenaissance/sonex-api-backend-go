@@ -399,10 +399,13 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, c
 		totalQuery := fmt.Sprintf(`
 			SELECT COUNT(*) FROM (
 				SELECT 1 
-				FROM %s S
-				LEFT JOIN %s C ON C.event_pool = S.extra_pool 
-				WHERE S.chain_id = $1 %s 
-				GROUP BY S.tx_hash
+				FROM (
+					SELECT DISTINCT ON (S.tx_hash, S.tx_at) S.tx_hash, S.tx_at
+					FROM %s S
+					LEFT JOIN %s C ON C.event_pool = S.extra_pool
+					WHERE S.chain_id = $1 %s
+					ORDER BY S.tx_at DESC
+				)
 			)
 		`, m.table, eventSonexFactoryPoolCreatedModel.table, options)
 		err := m.conn.QueryRowCtx(ctx, &total, totalQuery, chainId)
