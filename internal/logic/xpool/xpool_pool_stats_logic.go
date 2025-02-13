@@ -93,7 +93,6 @@ func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (
 			return nil, err
 		}
 		tvlValue = stakingTokenValue.Value()
-
 	}
 
 	// reward token
@@ -119,10 +118,10 @@ func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (
 	var profitString string
 	// roi, profit
 	{
-		apr := new(big.Float).Quo(rewardPerYearValue, tvlValue)
-		if tvlValue.Cmp(big.NewFloat(0)) == 0 {
-			apr = big.NewFloat(0)
+		if tvlValue.Cmp(big.NewFloat(1)) <= 0 {
+			tvlValue = big.NewFloat(1)
 		}
+		apr := new(big.Float).Quo(rewardPerYearValue, tvlValue)
 		durationRatio := new(big.Float).Quo(big.NewFloat(float64(duration)), big.NewFloat(365))
 		roi := new(big.Float).Mul(apr, durationRatio)
 		roiPercentageFloat, _ := new(big.Float).Mul(roi, big.NewFloat(100)).Float64()
