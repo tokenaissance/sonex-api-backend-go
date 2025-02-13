@@ -406,25 +406,31 @@ type PortfolioFarm struct {
 	Earned        string `json:"earned"`        // 用户未提取的质押奖励美元价值
 }
 
+type PortfolioPosition struct {
+	Type              string          `json:"type,options=liquidity|farm|xpool"` // liquidity, farm, xpool
+	LiquidityPosition *Position       `json:"liquidityPosition,omitempty"`       // liquidity position list
+	FarmPool          *PortfolioFarm  `json:"farmPool,omitempty"`                // farm pool list
+	Xpool             *PortfolioXpool `json:"xpool,omitempty"`                   // xpool list
+}
+
 type PortfolioRequest struct {
 	ChainRequest
 	Type    string `form:"type,options=all|liquidity|farm|xpool,default=all"`
 	Address string `form:"address"`
+	PageRequest
 }
 
 type PortfolioResponse struct {
-	TotalAssets            float64           `json:"totalAssets"`            // 所有资产净值
-	TotalAssetsRate        string            `json:"totalAssetsRate"`        // 所有资产净值相比前一天的变化率
-	ClaimableFees          float64           `json:"claimableFees"`          // 所有可提资产净值
-	TotalPosition          float64           `json:"totalPosition"`          // liquidity position 净值总和
-	LiquidityClaimableFees float64           `json:"liquidityClaimableFees"` // liquidity 可提收益
-	Positions              []*Position       `json:"positions"`              // liquidity position list
-	TotalFarmStaked        float64           `json:"totalFarmStaked"`        // farm pool 净值总和
-	FarmEarned             float64           `json:"farmEarned"`             // farm 可提 earn 净值总和
-	FarmPools              []*PortfolioFarm  `json:"farmPools"`              // farm pool list
-	TotalXpoolStaked       float64           `json:"totalXpoolStaked"`       // xpool stake 净值总和
-	XpoolEarned            float64           `json:"xpoolEarned"`            // xpool 可提 earn 净值总和
-	Xpools                 []*PortfolioXpool `json:"xpools"`                 // farm pool list
+	TotalAssets            float64              `json:"totalAssets"`            // 所有资产净值
+	TotalAssetsRate        string               `json:"totalAssetsRate"`        // 所有资产净值相比前一天的变化率
+	ClaimableFees          float64              `json:"claimableFees"`          // 所有可提资产净值
+	TotalPosition          float64              `json:"totalPosition"`          // liquidity position 净值总和
+	LiquidityClaimableFees float64              `json:"liquidityClaimableFees"` // liquidity 可提收益
+	TotalFarmStaked        float64              `json:"totalFarmStaked"`        // farm pool 净值总和
+	FarmEarned             float64              `json:"farmEarned"`             // farm 可提 earn 净值总和
+	TotalXpoolStaked       float64              `json:"totalXpoolStaked"`       // xpool stake 净值总和
+	XpoolEarned            float64              `json:"xpoolEarned"`            // xpool 可提 earn 净值总和
+	Positions              []*PortfolioPosition `json:"positions"`              // portfolio position list, include liquidity, farm, xpool
 }
 
 type PortfolioXpool struct {

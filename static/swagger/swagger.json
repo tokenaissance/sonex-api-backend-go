@@ -878,6 +878,22 @@
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "20"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
           }
         ],
         "tags": [
@@ -3002,6 +3018,36 @@
         "earned"
       ]
     },
+    "PortfolioPosition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "liquidity",
+            "farm",
+            "xpool"
+          ],
+          "description": " liquidity, farm, xpool"
+        },
+        "liquidityPosition": {
+          "$ref": "#/definitions/Position",
+          "description": " liquidity position list"
+        },
+        "farmPool": {
+          "$ref": "#/definitions/PortfolioFarm",
+          "description": " farm pool list"
+        },
+        "xpool": {
+          "$ref": "#/definitions/PortfolioXpool",
+          "description": " xpool list"
+        }
+      },
+      "title": "PortfolioPosition",
+      "required": [
+        "type"
+      ]
+    },
     "PortfolioRequest": {
       "type": "object",
       "properties": {
@@ -3017,6 +3063,16 @@
         },
         "address": {
           "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
         }
       },
       "title": "PortfolioRequest",
@@ -3052,13 +3108,6 @@
           "format": "double",
           "description": " liquidity 可提收益"
         },
-        "positions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Position"
-          },
-          "description": " liquidity position list"
-        },
         "totalFarmStaked": {
           "type": "number",
           "format": "double",
@@ -3068,13 +3117,6 @@
           "type": "number",
           "format": "double",
           "description": " farm 可提 earn 净值总和"
-        },
-        "farmPools": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PortfolioFarm"
-          },
-          "description": " farm pool list"
         },
         "totalXpoolStaked": {
           "type": "number",
@@ -3086,12 +3128,12 @@
           "format": "double",
           "description": " xpool 可提 earn 净值总和"
         },
-        "xpools": {
+        "positions": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PortfolioXpool"
+            "$ref": "#/definitions/PortfolioPosition"
           },
-          "description": " farm pool list"
+          "description": " portfolio position list, include liquidity, farm, xpool"
         }
       },
       "title": "PortfolioResponse",
@@ -3101,13 +3143,11 @@
         "claimableFees",
         "totalPosition",
         "liquidityClaimableFees",
-        "positions",
         "totalFarmStaked",
         "farmEarned",
-        "farmPools",
         "totalXpoolStaked",
         "xpoolEarned",
-        "xpools"
+        "positions"
       ]
     },
     "PortfolioXpool": {
