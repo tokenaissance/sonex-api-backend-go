@@ -195,6 +195,9 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 							resp.List[i].Positions = append(resp.List[i].Positions, vv)
 						}
 					}
+					// 可用余额
+					resp.List[i].Balance = int64(len(resp.List[i].Positions))
+					logx.Infof("RRRRRRRRRRRRRRRR:%v IncentiveId:%v ", len(resp.List[i].Positions), resp.List[i].IncentiveId)
 				}
 			}
 		}
@@ -253,7 +256,8 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
 
-				resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
+				// resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
+				// resp.List[i].Balance = int64(len(resp.List[i].Positions))
 				rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, item.IncentiveId, *chain)
 				if err != nil {
 					return resp, err
@@ -270,7 +274,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 				resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
 			} else {
 				// unstaked
-				resp.List[i].Balance = int64(len(resp.List[i].Positions))
+				// resp.List[i].Balance = int64(len(resp.List[i].Positions))
 			}
 
 			logx.Infof("SSSSA:%v B:%v c:%v", farmConf.Staker, req.UserAddress, item.IncentiveId)

@@ -34,7 +34,6 @@ func FarmIncentivesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				httpx.ErrorCtx(r.Context(), w, err)
 			}
 		}
-
 		resp, err := l.FarmIncentives(&req, positions)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
