@@ -174,21 +174,29 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 				price1I, _ = new(big.Int).SetString(price.Price, 10)
 			}
 			price1, _ := global.PriceToUSD(req.ChainId, price1I)
+			accuracy0 := new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil)
+			fdv0, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(token0.TotalSupply, price0I), accuracy0))
+			accuracy1 := new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil)
+			fdv1, _ := global.PriceToUSD(req.ChainId, new(big.Int).Div(new(big.Int).Mul(token1.TotalSupply, price1I), accuracy1))
 			pool = types.Pool{
 				Address: poolAddress,
 				Token0: types.Token{
-					Address:  token0.Address,
-					Name:     token0.Name,
-					Symbol:   token0.Symbol,
-					Decimals: token0.Decimals,
-					PriceUSD: fmt.Sprintf("%f", price0),
+					Address:     token0.Address,
+					Name:        token0.Name,
+					Symbol:      token0.Symbol,
+					Decimals:    token0.Decimals,
+					TotalSupply: token0.TotalSupply.String(),
+					FdvUSD:      fmt.Sprintf("%f", fdv0),
+					PriceUSD:    fmt.Sprintf("%f", price0),
 				},
 				Token1: types.Token{
-					Address:  token1.Address,
-					Name:     token1.Name,
-					Symbol:   token1.Symbol,
-					Decimals: token1.Decimals,
-					PriceUSD: fmt.Sprintf("%f", price1),
+					Address:     token1.Address,
+					Name:        token1.Name,
+					Symbol:      token1.Symbol,
+					Decimals:    token1.Decimals,
+					TotalSupply: token1.TotalSupply.String(),
+					FdvUSD:      fmt.Sprintf("%f", fdv1),
+					PriceUSD:    fmt.Sprintf("%f", price1),
 				},
 				Fee: fee,
 			}
