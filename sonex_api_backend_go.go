@@ -70,6 +70,7 @@ func main() {
 
 	opts := []rest.RunOption{}
 	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders("x-chain-id"))
+	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders("x-time-zone"))
 	if c.Debug {
 		opts = append(opts, rest.WithFileServer("/swagger", http.Dir("./static/swagger")))
 	}

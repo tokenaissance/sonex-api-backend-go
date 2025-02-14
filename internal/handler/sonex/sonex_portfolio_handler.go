@@ -36,9 +36,13 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		pageIndex := *req.PageIndex
 		pageSize := *req.PageSize
 
+		// 用户选中的 portfolio 类型，支持单选/复选
 		liquiditySelected := req.LiquiditySelected
 		farmSelected := req.FarmSelected
 		xpoolSelected := req.XpoolSelected
+
+		// 用户所在时区，用于计算 assets rate
+		timeZone := req.TimeZone
 
 		// 计算用户选中的 portfolio 数量
 		selectedCnt := 0
@@ -66,8 +70,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		farmEarns := 0.0
 		xpoolEarns := 0.0
 
-		// UTC + 0, 当日 00:00
-		todayBegin := time.Now().UTC().AddDate(0, 0, -1)
+		// 用户所在时区的当日 00:00
+		todayBegin := getUserTimeZoneDayStart(timeZone)
 		var previousDayTotalAssets float64
 
 		// 获取用户有效 positions 列表
@@ -275,6 +279,24 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	}
 }
 
+// getUserTimeZoneDayStart 获取用户所在时区的当日开始时间
+func getUserTimeZoneDayStart(timeZone string) time.Time {
+	// Parse timeZone
+	loc, err := time.LoadLocation(timeZone)
+	// if timeZone is invalid, fallback to UTC + 0
+	if err != nil {
+		logx.Errorf("[SonexPortfolioHandler]:getUserTimeZoneDayStart time.LoadLocation error: %s, timeZone: %s, fallback to UTC + 0", err.Error(), timeZone)
+		loc = time.UTC
+	}
+
+	// get current time in user's time zone
+	locNow := time.Now().In(loc)
+	// get the start of the day in user's time zone
+	localDayStart := time.Date(locNow.Year(), locNow.Month(), locNow.Day(), 0, 0, 0, 0, loc)
+
+	return localDayStart
+}
+
 // getPagination 获取分页数据
 func getPagination(list []*types.PortfolioPosition, pageIndex int64, pageSize int64) []*types.PortfolioPosition {
 	start := (pageIndex - 1) * pageSize
@@ -298,7 +320,7 @@ func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 	l := sonex.NewSonexPositionsLogic(ctx, svcCtx)
 	positions, err := l.SonexPositions(ctx, req.ChainId, req.Address)
 	if err != nil {
-		logx.Errorf("[getPositions]: SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
+		logx.Errorf("[SonexPortfolioHandler]:getPositions SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 		return nil, err
 	}
 
@@ -321,13 +343,13 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 		},
 	})
 	if err != nil {
-		logx.Errorf("[getXPools]: XpoolPoolList error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
+		logx.Errorf("[SonexPortfolioHandler]:getXPools XpoolPoolList error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 		return nil, err
 	}
 
 	list, ok := pools.Data.([]types.XpoolPoolListResponse_Pool)
 	if !ok {
-		logx.Errorf("[getXPools]: XpoolPoolList data type error, chainId: %d, address: %s", req.ChainId, req.Address)
+		logx.Errorf("[SonexPortfolioHandler]:getXPools XpoolPoolList data type error, chainId: %d, address: %s", req.ChainId, req.Address)
 		return nil, errors.New("XpoolPoolList data type error")
 	}
 
@@ -347,7 +369,7 @@ func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 		StakedOnly:  true,
 	}, positions)
 	if err != nil {
-		logx.Errorf("[getFarmPools]: FarmIncentives error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
+		logx.Errorf("[SonexPortfolioHandler]:getFarmPools FarmIncentives error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 		return nil, err
 	}
 

@@ -4,6 +4,10 @@ type ChainRequest {
 	ChainId int64 `header:"x-chain-id"`
 }
 
+type TimeZoneRequest {
+	TimeZone string `header:"x-time-zone"`
+}
+
 type PageRequest {
 	PageSize  *int64 `form:"pageSize,optional,default=20"`
 	PageIndex *int64 `form:"pageIndex,optional,default=1"`

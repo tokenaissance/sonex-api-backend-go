@@ -861,6 +861,12 @@
             "format": "int64"
           },
           {
+            "name": "x-time-zone",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "liquiditySelected",
             "in": "query",
             "required": true,
@@ -4066,6 +4072,10 @@
       "required": [
         "volumes"
       ]
+    },
+    "TimeZoneRequest": {
+      "type": "object",
+      "title": "TimeZoneRequest"
     },
     "Token": {
       "type": "object",
