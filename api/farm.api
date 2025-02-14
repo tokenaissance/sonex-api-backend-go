@@ -89,6 +89,7 @@ type FarmUserAssetDetailResponse {
 	LPStakedNum           int64  `json:"lpStakedNum"`            // 用户质押的LP token ID 数量
 	LPBalance             string  `json:"lpBalance"`              // 用户的LP token ID的余额, LiquidityUSD,USD 计价
 	Balance               int64  `json:"balance"`                // 用户的LP token ID的个数余额
+	LiquidityUSD         string `json:"liquidityUSD"`   // 池子的流动性价值（USD）
 	APR                   string    `json:"apr"`                   // 年化收益率
 }
 
