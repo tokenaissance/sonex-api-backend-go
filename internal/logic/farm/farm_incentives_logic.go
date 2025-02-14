@@ -47,7 +47,7 @@ func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fa
 	}
 }
 
-func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, positions []*types.Position) (resp *types.FarmIncentivesResponse, err error) {
+func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, positions ...[]*types.Position) (resp *types.FarmIncentivesResponse, err error) {
 	if req.ChainId <= 0 {
 		return nil, fmt.Errorf("invalid parameter")
 	}
@@ -187,20 +187,21 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 		// loop assgin
 		// TODO 优化
-		if len(positions) > 0 {
-			if len(resp.List) > 0 {
-				for i, item := range resp.List {
-					for _, vv := range positions {
-						if strings.EqualFold(vv.Pool.Address, item.PoolAddress) {
-							resp.List[i].Positions = append(resp.List[i].Positions, vv)
-						}
-					}
-					// 可用余额
-					resp.List[i].Balance = int64(len(resp.List[i].Positions))
-					logx.Infof("RRRRRRRRRRRRRRRR:%v IncentiveId:%v ", len(resp.List[i].Positions), resp.List[i].IncentiveId)
-				}
+		// if len(positions) > 0 {
+		if len(resp.List) > 0 {
+			for i, item := range resp.List {
+				// for _, vv := range positions {
+				// 	if strings.EqualFold(vv.Pool.Address, item.PoolAddress) {
+				// 		resp.List[i].Positions = append(resp.List[i].Positions, vv)
+				// 	}
+				// }
+				// 可用余额
+				bal, _, _, _, _ := getBalance(req.ChainId, item.IncentiveId, req.UserAddress, farmConf.Staker, conn)
+				resp.List[i].Balance = bal
+				logx.Infof("RRRRRRRRRRRRRRRR:%v IncentiveId:%v ", len(resp.List[i].Positions), resp.List[i].IncentiveId)
 			}
 		}
+		// }
 
 		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
 

@@ -133,6 +133,7 @@ func getBalance(chainId, incentiveIdint int64, userAddress, stakerAddress string
 	return int64(len(notburtPositions)), event_weight, token0Address, token1Address, nil
 }
 
+// get totaliquiduty in usd
 func getTotalLiquidity(stakerAddress, token0Address, token1Address, positionManagerAddress string, chainId, incentiveId int64, config config.Config, chain config.ChainConfig, conn sqlx.SqlConn) (*big.Float, error) {
 	tokenIds, err := getIncentiveInfoTokenIds(stakerAddress, incentiveId, chain)
 	if err != nil {
