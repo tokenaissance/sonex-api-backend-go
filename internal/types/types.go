@@ -69,7 +69,7 @@ type FarmIncentivesResponse_Data struct {
 	Token1Price                  string      `json:"token1Price"`    // token1价格
 	Liquidity                    string      `json:"liquidity"`      // 池子的流动性
 	LiquidityUSD                 string      `json:"liquidityUsd"`   // 池子的流动性价值（USD）
-	APR                          string      `json:"APR"`            // 年化收益率
+	APR                          string      `json:"apr"`            // 年化收益率
 	JoinNum                      int64       `json:"joinNum"`        // 参与人数
 	Status                       string      `json:"status"`         // 运行状态（active or closed）
 	StartAt                      int64       `json:"startAt"`        // position 开始的时间
@@ -117,7 +117,7 @@ type FarmPoolRoiRequest struct {
 }
 
 type FarmPoolRoiResponse struct {
-	APR                 string `json:"APR"`                 // 年化收益率
+	APR                 string `json:"apr"`                 // 年化收益率
 	ROI                 string `json:"ROI"`                 // 投资回报率
 	Profit              string `json:"profit"`              // 投资回报金额（USD）
 	PoolAddress         string `json:"poolAddress"`         // 流动性池合约地址
@@ -184,7 +184,7 @@ type FarmUserAssetDetailResponse struct {
 	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户质押的LP token ID 数量
 	LPBalance             string `json:"lpBalance"`             // 用户的LP token ID的余额, LiquidityUSD,USD 计价
 	Balance               int64  `json:"balance"`               // 用户的LP token ID的个数余额
-	APR                   string `json:"APR"`                   // 年化收益率
+	APR                   string `json:"apr"`                   // 年化收益率
 }
 
 type Fees struct {
@@ -904,7 +904,7 @@ type UserAssetData struct {
 	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户质押的LP token ID数量
 	LPBalance             int64  `json:"lpBalance"`             // 用户的LP token ID的余额, LiquidityUSD
 	Balance               int64  `json:"balance"`               // 用户的LP token ID的个数余额
-	APR                   string `json:"APR"`                   // 年化收益率
+	APR                   string `json:"apr"`                   // 年化收益率
 }
 
 type VolumeDetailsRecord struct {
