@@ -25,6 +25,8 @@ type (
 		PageQueryByChainIdStaker(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreated, int64, error)
 		PageQueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithExtra, int64, error)
 		PageQueryByChainIdStakerPoolsWithExtra(ctx context.Context, chainId int64, staker string, pools []string, pageSize int64, pageIndex int64) ([]EventFarmIncentiveCreatedWithExtra, int64, error)
+
+		GetExtraTokenAndExtraPoolByIncentiveId(ctx context.Context, chainId int64, incentiveId int64) (*EventFarmIncentiveCreated, error)
 	}
 
 	customEventFarmIncentiveCreatedModel struct {
@@ -52,6 +54,23 @@ func NewEventFarmIncentiveCreatedModel(conn sqlx.SqlConn) EventFarmIncentiveCrea
 
 func (m *customEventFarmIncentiveCreatedModel) withSession(session sqlx.Session) EventFarmIncentiveCreatedModel {
 	return NewEventFarmIncentiveCreatedModel(sqlx.NewSqlConnFromSession(session))
+}
+
+func (m *customEventFarmIncentiveCreatedModel) GetExtraTokenAndExtraPoolByIncentiveId(ctx context.Context, chainId int64, incentiveId int64) (*EventFarmIncentiveCreated, error) {
+	query := `
+	SELECT * FROM  event_farm_incentive_created WHERE   chain_id=$1  AND event_incentive_id = $2  ORDER BY tx_at DESC LIMIT 1 
+	`
+
+	var resp EventFarmIncentiveCreated
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, incentiveId)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
 
 func (m *customEventFarmIncentiveCreatedModel) New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, rewardToken string, pool string, incentiveId int64, startTime int64, weight int64, timestamp int64) error {

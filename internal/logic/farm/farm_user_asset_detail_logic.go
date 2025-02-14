@@ -185,6 +185,23 @@ func getTotalLiquidity(stakerAddress, token0Address, token1Address, positionMana
 	return totalLiquidityUSD, nil
 
 }
+
+func getRewardTokenAndExtraPool(chainId, incentiveId int64, conn sqlx.SqlConn) (string, string) {
+
+	rewardToken := ""
+	eventPool := ""
+
+	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+	incentiveInfo, err := eventFarmIncentiveCreatedModel.GetExtraTokenAndExtraPoolByIncentiveId(context.Background(), chainId, incentiveId)
+
+	if err != nil {
+		return rewardToken, eventPool
+	}
+	rewardToken = incentiveInfo.EventRewardToken
+	eventPool = incentiveInfo.EventPool
+	logx.Infof("getRewardTokenAndExtraPool rewardToken:%v , eventPool:%v  ", rewardToken, eventPool)
+	return rewardToken, eventPool
+}
 func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetDetailRequest) (resp *types.FarmUserAssetDetailResponse, err error) {
 	// todo: add your logic here and delete this line
 	// get user claimed info
@@ -218,6 +235,9 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 		return resp, err
 	}
 
+	if strings.EqualFold(rewardToken, "") || strings.EqualFold(eventPool, "") {
+		rewardToken, eventPool = getRewardTokenAndExtraPool(req.ChainId, int64(incentiveIdint), conn)
+	}
 	// 获取可用的postion 个数
 	balanceNum, event_weight, token0Address, token1Address, err := getBalance(req.ChainId, int64(incentiveIdint), req.UserAddress, farmConf.Staker, conn)
 	logx.Infof("useraddress:%v IncentiveId:%v ewardToken:%v , eventPool:%v ", userAddres, req.IncentiveId, rewardToken, eventPool)
@@ -236,7 +256,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 
 	logx.Infof("totalRewardUSDString:%v", totalRewardUSDString)
 	totalRewardUSDBigFloat, _ := new(big.Float).SetString(totalRewardUSDString)
-	apr := getApr(eventPool, int64(incentiveIdint), totalRewardUSDBigFloat, getTotalLiquidityUSD, event_weight, farmConf.Staker, rewardToken, *chain, cacher)
+	apr := getApr("FarmUserAssetDetail", eventPool, int64(incentiveIdint), totalRewardUSDBigFloat, getTotalLiquidityUSD, event_weight, farmConf.Staker, rewardToken, *chain, cacher)
 
 	logx.Infof("lpBalance:%v ", lpBalance)
 	resp = &types.FarmUserAssetDetailResponse{
@@ -343,6 +363,7 @@ func getValueOfAmountToken(rewards *big.Int, incentiveId, chainId int64, chain *
 	return totalClaimableFeesUSD, tokenInfo.TokenDecimals, nil
 }
 
+// get 已经领取的奖励 amount
 func getClainedAmount(userAddress string, chainId, incentiveId int64, conn sqlx.SqlConn) (*big.Int, error) {
 	newEventFarmRewardClaimedModel := repository.NewEventFarmRewardClaimedModel(conn)
 	claimedRewardAmount, err := newEventFarmRewardClaimedModel.SummarizeTotalClaimedByChainIdIncentiveIdUser(context.Background(), chainId, incentiveId, userAddress)
@@ -462,8 +483,8 @@ func SetRewardPoolInfo(staker string, rewardToken string, chain config.ChainConf
 }
 
 // 已经做了 APR 缓存
-func getApr(poolAddress string, incentiveId int64, tatalReward365 *big.Float, totalLiquidityUsd *big.Float, incentiveWeight int64, staker string, rewardToken string, chain config.ChainConfig, cacher cache.ICache) string {
-	logx.Infof("poolAddress:%v incentiveId:%v  tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", poolAddress, incentiveId, tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
+func getApr(caller, poolAddress string, incentiveId int64, tatalReward365 *big.Float, totalLiquidityUsd *big.Float, incentiveWeight int64, staker string, rewardToken string, chain config.ChainConfig, cacher cache.ICache) string {
+	logx.Infof("caller :%v poolAddress:%v incentiveId:%v  tatalReward365:%v totalLiquidityUsd:%v incentiveWeight:%v rewardToken:%v  ", caller, poolAddress, incentiveId, tatalReward365, totalLiquidityUsd, incentiveWeight, rewardToken)
 	aprBigFloat := calucateFarmApr(tatalReward365, totalLiquidityUsd, incentiveWeight, staker, rewardToken, chain, cacher)
 	return aprBigFloat.String()
 	// aprString, err := global.GetFarmApr(cacher, global.FarmAPRKey, poolAddress, incentiveId)
