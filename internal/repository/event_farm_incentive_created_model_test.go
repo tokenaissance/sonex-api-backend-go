@@ -35,6 +35,20 @@ func Test_PageQueryByChainIdStakerWithExtra(t *testing.T) {
 	_ = records
 }
 
+func Test_GetExtraTokenAndExtraPoolByIncentiveId(t *testing.T) {
+
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	records, err := model.GetExtraTokenAndExtraPoolByIncentiveId(context.Background(), 1946, 2)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+	}
+	logx.Infof("records:%v   ", records)
+	_ = records
+}
+
 func Test_FindRewardTokenInfoByIncentiveId(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
