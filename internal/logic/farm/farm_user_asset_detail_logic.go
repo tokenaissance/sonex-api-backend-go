@@ -113,8 +113,7 @@ func getBalance(chainId, incentiveIdint int64, userAddress, stakerAddress string
 	event_weight := int64(1)
 	token0Address := ""
 	token1Address := ""
-	for i, v := range useablePositions {
-		logx.Infof("useablePositions i:%v v:%v ", i, v)
+	for _, v := range useablePositions {
 		if v.IsBurnt {
 			continue
 		}
@@ -124,10 +123,6 @@ func getBalance(chainId, incentiveIdint int64, userAddress, stakerAddress string
 			token0Address = v.Token0address
 			token1Address = v.Token1address
 		}
-	}
-	// TODO : 删除
-	for i, v := range notburtPositions {
-		logx.Infof("notburtPositions i:%v v:%v ", i, v)
 	}
 	logx.Infof("event_weight:%v ", event_weight)
 	return int64(len(notburtPositions)), event_weight, token0Address, token1Address, nil

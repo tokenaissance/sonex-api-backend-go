@@ -213,3 +213,20 @@ func Test_CalucateVolume24HBridgePool(t *testing.T) {
 	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
 
 }
+
+func Test_SummarizePoolVolumesUsdByPoolAddress(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	// records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
+
+	volume24H, err := model.SummarizePoolVolumesUsdByPoolAddress(context.Background(), 1946, "0x0b20A358bB37e1cfA317152E1C186a2A08100bB3")
+	if err != nil {
+		t.Error(err)
+	}
+
+	logx.Infof("volume24H:%v ", volume24H)
+	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
+
+}

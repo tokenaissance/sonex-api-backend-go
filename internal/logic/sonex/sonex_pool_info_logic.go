@@ -54,7 +54,6 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
-	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	ctx := context.Background()
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	pool, err := eventSonexFactoryPoolCreatedModel.GetPoolInfo(ctx, req.ChainId, _poolAddressWithCheckSum)
@@ -136,10 +135,7 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	_amountPrice0, _ := balance0QuoDecimal.Float64()
 	_amountPrice1, _ := balance1QuoDecimal.Float64()
 
-	// _volume24HString := getVolume24HOfPoolAddress(conn, req.ChainId, cacher, _poolAddressWithCheckSum)
-
-	_volume24HString, _ := poolSwapModel.CalucateVolume24HBridgePool(context.Background(), req.ChainId, _poolAddressWithCheckSum)
-
+	_volume24HString := getVolumeTotal(req.ChainId, _poolAddressWithCheckSum, conn)
 	_fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
 
 	if strings.EqualFold(_volume24HString, "") {
@@ -167,6 +163,32 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 		IsVol24hNegative: false,
 		Fee24h:           _fee24H,
 	}, nil
+}
+
+func getVolumeTotal(chainId int64, poolAddress string, conn sqlx.SqlConn) string {
+	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	// 跨池子的volume
+	_volume24HStringBridgePool, err1 := poolSwapModel.CalucateVolume24HBridgePool(context.Background(), chainId, poolAddress)
+	if err1 != nil {
+		logx.Errorf("CalucateVolume24HBridgePool ERR:%v ", err1)
+		_volume24HStringBridgePool = "0"
+	}
+
+	// 没有跨池子的 volume
+	poolVolumeUsd, err2 := poolSwapModel.SummarizePoolVolumesUsdByPoolAddress(context.Background(), chainId, poolAddress)
+
+	if err2 != nil {
+		logx.Errorf("SummarizePoolVolumesUsdByPoolAddress ERR:%v ", err2)
+		poolVolumeUsd.Value = "0"
+	}
+
+	// 没有跨池子的 volume
+	notVolume24HOfBridgePool, _ := new(big.Float).SetString(poolVolumeUsd.Value)
+	//  跨池子的 volume
+	volume24HOfBridgePool, _ := new(big.Float).SetString(_volume24HStringBridgePool)
+
+	totalVolue := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
+	return totalVolue.String()
 }
 
 type Call struct {
