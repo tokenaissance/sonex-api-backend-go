@@ -288,8 +288,11 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			}
 		}(item, results)
 	}
-	wg.Wait()
-	close(results)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	// Handle results
 	dataResult = []types.TokensResponse_Token{}
