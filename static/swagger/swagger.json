@@ -1689,7 +1689,7 @@
           "type": "string",
           "description": " 池子的流动性价值（USD）"
         },
-        "APR": {
+        "apr": {
           "type": "string",
           "description": " 年化收益率"
         },
@@ -1762,7 +1762,7 @@
         "token1Price",
         "liquidity",
         "liquidityUsd",
-        "APR",
+        "apr",
         "joinNum",
         "status",
         "startAt",
@@ -1911,7 +1911,7 @@
     "FarmPoolRoiResponse": {
       "type": "object",
       "properties": {
-        "APR": {
+        "apr": {
           "type": "string",
           "description": " 年化收益率"
         },
@@ -1951,7 +1951,7 @@
       },
       "title": "FarmPoolRoiResponse",
       "required": [
-        "APR",
+        "apr",
         "ROI",
         "profit",
         "poolAddress",
@@ -2186,7 +2186,7 @@
           "format": "int64",
           "description": " 用户的LP token ID的个数余额"
         },
-        "APR": {
+        "apr": {
           "type": "string",
           "description": " 年化收益率"
         }
@@ -2200,7 +2200,7 @@
         "lpStakedNum",
         "lpBalance",
         "balance",
-        "APR"
+        "apr"
       ]
     },
     "Fees": {
@@ -4772,7 +4772,7 @@
           "format": "int64",
           "description": " 用户的LP token ID的个数余额"
         },
-        "APR": {
+        "apr": {
           "type": "string",
           "description": " 年化收益率"
         }
@@ -4786,7 +4786,7 @@
         "lpStakedNum",
         "lpBalance",
         "balance",
-        "APR"
+        "apr"
       ]
     },
     "VolumeDetailsRecord": {
