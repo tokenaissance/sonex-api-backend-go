@@ -407,12 +407,9 @@ SELECT
 	err := m.conn.QueryRowsCtx(ctx, &items, query, chainId, userAddress, stakerAddress)
 	switch err {
 	case sqlx.ErrNotFound:
-		logx.Error("NIL ")
+		logx.Error("NIL ", err)
 		return nil, nil
 	case nil:
-		for i, v := range items {
-			logx.Infof("XXXXX i :%v v :%v  ", i, v)
-		}
 		return items, nil
 	default:
 		logx.Errorf("ERR:%v ", err)

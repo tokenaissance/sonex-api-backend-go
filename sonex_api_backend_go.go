@@ -124,6 +124,7 @@ func main() {
 	// })
 
 	// every 6 hours,calcuate the vol and Tvl for pool
+	go task.HandleRecordVol24hTvl24h(&c)
 	global.AddCronJob("@every 6h", func() {
 		task.HandleRecordVol24hTvl24h(&c)
 	})

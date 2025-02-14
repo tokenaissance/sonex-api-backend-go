@@ -44,12 +44,17 @@ type (
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 
 		SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error)
-		CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string) (string, error)
 
 		SummarizePoolVolumesUsdForSevenDaysForYield(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
-		// SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error)
+		// 通过poolAddress,只计算跨链
+		CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string) (string, error)
+		// 计算所有的的计算正常的swap 交易
+		SummarizePoolVolumesUsd(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error)
+
+		// 通过poolAddress,只计算正常的swap 交易
+		SummarizePoolVolumesUsdByPoolAddress(ctx context.Context, chainId int64, poolAddress string) (*PoolVolumeUsd, error)
 	}
 
 	customEventSonexPoolSwapModel struct {
@@ -1421,7 +1426,7 @@ where
 )
 
 select
-    amount.token_amount  / 1000000000000000000 * priceRecord.price / 1000000  AS value
+    amount.token_amount  / 1000000000000000000 * priceRecord.price / 1000000   AS value
 from  amount , priceRecord
 
 `
@@ -1440,25 +1445,47 @@ from  amount , priceRecord
 	}
 }
 
-// TODO DELETE
-// func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error) {
+func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error) {
 
-// 	volumeQuery := `
-// SELECT CAST
-// 	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
-// 	t1.extra_pool
-// FROM
-// 	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
-// 	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
-// 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
-// `
+	volumeQuery := `
+SELECT CAST
+	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+	t1.extra_pool
+FROM
+	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
+	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
+	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
+`
 
-// 	// Execute the query and scan results into poolVolumes slice
-// 	var poolVolumesUsd []*PoolVolumeUsd
-// 	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, chainId)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to execute volume query: %w", err)
-// 	}
+	// Execute the query and scan results into poolVolumes slice
+	var poolVolumesUsd []*PoolVolumeUsd
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, chainId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+	}
 
-// 	return poolVolumesUsd, nil
-// }
+	return poolVolumesUsd, nil
+}
+
+func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsdByPoolAddress(ctx context.Context, chainId int64, poolAddress string) (*PoolVolumeUsd, error) {
+
+	volumeQuery := `
+SELECT CAST
+	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+	t1.extra_pool
+FROM
+	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 AND extra_pool = $2 GROUP BY extra_pool) AS t1
+	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
+	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
+	`
+
+	// Execute the query and scan results into poolVolumes slice
+	var poolVolumesUsd *PoolVolumeUsd
+	err := m.conn.QueryRowCtx(ctx, &poolVolumesUsd, volumeQuery, chainId, poolAddress)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return nil, err
+	}
+
+	return poolVolumesUsd, nil
+}

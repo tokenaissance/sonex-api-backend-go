@@ -33,26 +33,62 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 	tokenModel := repository.NewTokenModel(conn)
 	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	sonexFactoryPoolCreatedMode := repository.NewEventSonexFactoryPoolCreatedModel(conn)
-
 	if len(config.Chains) > 0 {
 		for _, v := range config.Chains {
-			sonexConf := config.GetSonexConfig(v.ChainId)
 
-			// 跨池子计算
+			// 多条记录，没有跨池子的所有的pool的 Swap的Volume
+			notBridgePoolSwapRecords, err := poolSwapModel.SummarizePoolVolumesUsd(context.Background(), v.ChainId)
+			if err != nil {
+				logx.Errorf("SummarizePoolVolumesUsd: in not volume ,0   :%v", err)
+			}
+
+			sonexConf := config.GetSonexConfig(v.ChainId)
 			poolList, err := sonexFactoryPoolCreatedMode.QueryByChainIdPositionManager(ctx, v.ChainId, sonexConf.PositionManager)
+			// 跨池子计算
 			if err != nil {
 				logx.Errorf("HandleRecordVol24hTvl24h: in  QueryByChainIdPositionManager :%v", err)
 			} else {
 				if len(poolList) > 0 {
 					for _, pool := range poolList {
-						// poolSwapModel.CalucateVolume24HBridgePool(ctx , v.ChainId, poolAddres ) (string, error)
-						volume24HofPool, err := poolSwapModel.CalucateVolume24HBridgePool(ctx, v.ChainId, pool.EventPool)
+						// 单条的记录
+						volume24HOfBridgePool, err := poolSwapModel.CalucateVolume24HBridgePool(ctx, v.ChainId, pool.EventPool)
+
 						if err != nil {
-							err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, volume24HofPool)
+							// 获取单条跨池子失败,那就只搞正常的交易
+							for _, vNotBridgePoolSwapRecords := range notBridgePoolSwapRecords {
+								logx.Errorf(" CalucateVolume24HBridgePool :%v", err)
+								err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, vNotBridgePoolSwapRecords.Value)
+								if err != nil {
+									logx.Errorf("notVolume24HOfBridgePool  SetVolume24HValue :%v", err)
+								} else {
+									logx.Infof("totalVolume:%v notVolume24HOfBridgePool:%v   ", pool.EventPool, vNotBridgePoolSwapRecords)
+								}
+							}
+						} else {
+							notVolume24HOfBridgePoolItemValue := "0"
+							if len(notBridgePoolSwapRecords) > 0 {
+								for _, notVolume24HOfBridgePoolItem := range notBridgePoolSwapRecords {
+									// 有不是跨池子的交易volume
+									if strings.EqualFold(pool.EventPool, notVolume24HOfBridgePoolItem.ExtraPool) {
+										notVolume24HOfBridgePoolItemValue = notVolume24HOfBridgePoolItem.Value
+									}
+								}
+							}
+
+							// 没有跨池子的 volume
+							notVolume24HOfBridgePool, _ := new(big.Float).SetString(notVolume24HOfBridgePoolItemValue)
+							//  跨池子的 volume
+							volume24HOfBridgePool, _ := new(big.Float).SetString(volume24HOfBridgePool)
+
+							totalVolume := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
+							err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, totalVolume.String())
 							if err != nil {
 								logx.Errorf("HandleRecordVol24hTvl24h: in  SetVolume24HValue :%v", err)
+							} else {
+								logx.Infof("HandleRecordVol24hTvl24h Set:%v totalVolume:%v notVolume24HOfBridgePool:%v  volume24HOfBridgePool:%v   ", pool.EventPool, totalVolume, notVolume24HOfBridgePool, volume24HOfBridgePool)
 							}
 						}
+
 					}
 				}
 			}
