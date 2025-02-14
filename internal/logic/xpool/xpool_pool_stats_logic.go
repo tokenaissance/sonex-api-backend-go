@@ -142,7 +142,7 @@ func (l *XpoolPoolStatsLogic) XpoolPoolStats(req *types.XpoolPoolStatsRequest) (
 		Profit:      profitString,
 	}
 
-	return
+	return resp, nil
 }
 
 // getCurrentPrices 获取当前价格
