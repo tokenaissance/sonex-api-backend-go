@@ -322,9 +322,16 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	if !strings.EqualFold(req.OrderBy, "") {
 		switch req.OrderBy {
 		case "hot":
-			linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) int64 {
-				return item.JoinNum
-			}).ToSlice(&resp.List)
+			// linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) int64 {
+			// 	return item.JoinNum
+			// }).ToSlice(&resp.List)
+
+			sort.SliceStable(resp.List, func(i, j int) bool {
+				// apr_i, _ := big.NewFloat(0).SetString(resp.List[i].JoinNum)
+				// apr_j, _ := big.NewFloat(0).SetString(resp.List[j].JoinNum)
+				return resp.List[i].JoinNum >= resp.List[j].JoinNum
+			})
+
 		case "apr":
 			// linq.From(resp.List).OrderByDescendingT(func(item types.FarmIncentivesResponse_Data) lib_common.CompareableBigInt {
 			// 	apr, _ := new(big.Int).SetString(item.APR, 10)
@@ -333,7 +340,14 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			sort.SliceStable(resp.List, func(i, j int) bool {
 				apr_i, _ := big.NewFloat(0).SetString(resp.List[i].APR)
 				apr_j, _ := big.NewFloat(0).SetString(resp.List[j].APR)
-				return apr_i.Cmp(apr_j) > 0
+				return apr_i.Cmp(apr_j) >= 0
+			})
+
+		default:
+			sort.SliceStable(resp.List, func(i, j int) bool {
+				// apr_i, _ := big.NewFloat(0).SetString(resp.List[i].JoinNum)
+				// apr_j, _ := big.NewFloat(0).SetString(resp.List[j].JoinNum)
+				return resp.List[i].JoinNum >= resp.List[j].JoinNum
 			})
 		}
 	}
