@@ -17,6 +17,12 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+/*
+volume24H 统计跨池子volume的值
+tvl的值，方便获得tvl 的值
+// TODO 优化
+// tvl 的值进行写入,为了计算变化率
+*/
 func HandleRecordVol24hTvl24h(config *config.Config) {
 	// 记录下所有池子的VOL和TVL
 	logx.Info("HandleRecordVol24hTvl24h start")
@@ -25,17 +31,28 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 	ctx := context.Background()
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
+	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	sonexFactoryPoolCreatedMode := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 
 	if len(config.Chains) > 0 {
 		for _, v := range config.Chains {
-			_swapAmoutEthAndUsdMap, _, err := sonex.CalucatedVolume24H(conn, v.ChainId)
+			sonexConf := config.GetSonexConfig(v.ChainId)
+
+			// 跨池子计算
+			poolList, err := sonexFactoryPoolCreatedMode.QueryByChainIdPositionManager(ctx, v.ChainId, sonexConf.PositionManager)
 			if err != nil {
-				logx.Errorf("HandleRecordVol24hTvl24h: in  CalucatedVolume24H :%v", err)
+				logx.Errorf("HandleRecordVol24hTvl24h: in  QueryByChainIdPositionManager :%v", err)
 			} else {
-				for _, v := range _swapAmoutEthAndUsdMap {
-					err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, v.ExtraPool, v.Value)
-					if err != nil {
-						logx.Errorf("HandleRecordVol24hTvl24h: in  SetVolume24HValue :%v", err)
+				if len(poolList) > 0 {
+					for _, pool := range poolList {
+						// poolSwapModel.CalucateVolume24HBridgePool(ctx , v.ChainId, poolAddres ) (string, error)
+						volume24HofPool, err := poolSwapModel.CalucateVolume24HBridgePool(ctx, v.ChainId, pool.EventPool)
+						if err != nil {
+							err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, volume24HofPool)
+							if err != nil {
+								logx.Errorf("HandleRecordVol24hTvl24h: in  SetVolume24HValue :%v", err)
+							}
+						}
 					}
 				}
 			}
@@ -43,8 +60,6 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 	}
 
 	// get and set tvl
-
-	// func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error) {
 	if len(config.Chains) > 0 {
 		for _, pool := range config.Chains {
 			_chainId := pool.ChainId
@@ -99,7 +114,6 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 								price0, _ = new(big.Int).SetString(v.Price, 10)
 								price0Decimal = int64(v.UsdDecimals)
 							}
-
 						}
 
 						for _, v := range prices {
