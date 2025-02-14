@@ -396,15 +396,16 @@ type PoolsResponse_Volume struct {
 }
 
 type PortfolioFarm struct {
-	PoolAddress   string `json:"poolAddress"`   // v3 流动性池合约地址
-	FeeRatio      string `json:"feeRatio"`      // 池子手续费率
-	Token0Symbol  string `json:"token0Symbol"`  // token0 代币符号
-	Token0Address string `json:"token0Address"` // token0 代币合约地址
-	Token1Symbol  string `json:"token1Symbol"`  // token1 代币符号
-	Token1Address string `json:"token1Address"` // token1 代币合约地址
-	PositionValue string `json:"positionValue"` // pool position 美元净值
-	FeeRevenue    string `json:"feeRevenue"`    // 用户提取的质押奖励美元价值
-	Earned        string `json:"earned"`        // 用户未提取的质押奖励美元价值
+	PoolAddress          string  `json:"poolAddress"`   // v3 流动性池合约地址
+	FeeRatio             string  `json:"feeRatio"`      // 池子手续费率
+	Token0Symbol         string  `json:"token0Symbol"`  // token0 代币符号
+	Token0Address        string  `json:"token0Address"` // token0 代币合约地址
+	Token1Symbol         string  `json:"token1Symbol"`  // token1 代币符号
+	Token1Address        string  `json:"token1Address"` // token1 代币合约地址
+	PositionValue        string  `json:"positionValue"` // pool position 美元净值
+	FeeRevenue           string  `json:"feeRevenue"`    // 用户提取的质押奖励美元价值
+	Earned               string  `json:"earned"`        // 用户未提取的质押奖励美元价值
+	PositionValueFloat64 float64 `json:"-"`             // pool position 美元净值 用于排序
 }
 
 type PortfolioFarmFrame struct {
@@ -463,15 +464,16 @@ type PortfolioStats struct {
 }
 
 type PortfolioXpool struct {
-	PoolAddress         string `json:"poolAddress"`         // 质押池合约地址
-	StakingTokenName    string `json:"stakingTokenName"`    // 质押的代币名称
-	StakingTokenSymbol  string `json:"stakingTokenSymbol"`  // 质押的代币符号
-	StakingTokenAddress string `json:"stakingTokenAddress"` // 质押的代币合约地址
-	APR                 string `json:"apr"`                 // 年化收益率
-	Staked              string `json:"staked"`              // 用户已经质押的美元价值
-	FeeRevenue          string `json:"feeRevenue"`          // 用户提取的质押奖励美元价值
-	Earned              string `json:"earned"`              // 用户未提取的质押奖励美元价值
-	Status              string `json:"status"`              // 运行状态{Staking}
+	PoolAddress         string  `json:"poolAddress"`         // 质押池合约地址
+	StakingTokenName    string  `json:"stakingTokenName"`    // 质押的代币名称
+	StakingTokenSymbol  string  `json:"stakingTokenSymbol"`  // 质押的代币符号
+	StakingTokenAddress string  `json:"stakingTokenAddress"` // 质押的代币合约地址
+	APR                 string  `json:"apr"`                 // 年化收益率
+	Staked              string  `json:"staked"`              // 用户已经质押的美元价值
+	FeeRevenue          string  `json:"feeRevenue"`          // 用户提取的质押奖励美元价值
+	Earned              string  `json:"earned"`              // 用户未提取的质押奖励美元价值
+	Status              string  `json:"status"`              // 运行状态{Staking}
+	StakedFloat64       float64 `json:"-"`                   // 用户已经质押的美元价值 用于排序
 }
 
 type PortfolioXpoolFrame struct {

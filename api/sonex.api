@@ -500,6 +500,8 @@ type PortfolioXpool {
 	FeeRevenue           string `json:"feeRevenue"`           // 用户提取的质押奖励美元价值
 	Earned               string `json:"earned"`               // 用户未提取的质押奖励美元价值
 	Status               string `json:"status"`               // 运行状态{Staking}
+
+	StakedFloat64 		 float64 `json:"-"` // 用户已经质押的美元价值 用于排序
 }
 
 // Farm Pool 在 portfolio 内的展示用数据结构
@@ -513,6 +515,8 @@ type PortfolioFarm {
 	PositionValue     string `json:"positionValue"`         // pool position 美元净值
 	FeeRevenue        string `json:"feeRevenue"`            // 用户提取的质押奖励美元价值
 	Earned            string `json:"earned"`                // 用户未提取的质押奖励美元价值
+
+	PositionValueFloat64 float64 `json:"-"` // pool position 美元净值 用于排序
 }
 
 // portfolio 页面展示的 position 数据结构
