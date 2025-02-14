@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func TestEventSonexPoolMintModelPageQueryWithExtra(t *testing.T) {
@@ -147,18 +148,18 @@ func TestEventSonexPoolBurnModelPageQueryWithExtra(t *testing.T) {
 	_ = total
 }
 
-func Test_volumesUsd(t *testing.T) {
-	var c config.Config
-	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+// func Test_volumesUsd(t *testing.T) {
+// 	var c config.Config
+// 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
-	records, err := model.SummarizePoolVolumesUsd(context.Background(), 1946, true)
-	if err != nil {
-		t.Error(err)
-	}
-	_ = records
+// 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+// 	records, err := model.SummarizePoolVolumesUsd(context.Background(), 1946, true)
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// 	_ = records
 
-}
+// }
 
 func Test_GetTransactionByPoolAddress(t *testing.T) {
 	var c config.Config
@@ -192,6 +193,23 @@ func Test_SummarizePoolInfoKineData(t *testing.T) {
 	for i, v := range records {
 		t.Logf("i:%v v is %#v", i, v)
 	}
+	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
+
+}
+
+func Test_CalucateVolume24HBridgePool(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	// records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
+
+	volume24H, err := model.CalucateVolume24HBridgePool(context.Background(), 1946, "0x0b20A358bB37e1cfA317152E1C186a2A08100bB3")
+	if err != nil {
+		t.Error(err)
+	}
+
+	logx.Infof("volume24H:%v ", volume24H)
 	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
 
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -43,11 +44,12 @@ type (
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 
 		SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error)
+		CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string) (string, error)
 
-		SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error)
 		SummarizePoolVolumesUsdForSevenDaysForYield(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
+		// SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error)
 	}
 
 	customEventSonexPoolSwapModel struct {
@@ -985,28 +987,6 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context
 	return poolVolumesMap, nil
 }
 
-func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error) {
-
-	volumeQuery := `
-SELECT CAST
-	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
-	t1.extra_pool 
-FROM
-	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
-	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
-	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
-`
-
-	// Execute the query and scan results into poolVolumes slice
-	var poolVolumesUsd []*PoolVolumeUsd
-	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, chainId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute volume query: %w", err)
-	}
-
-	return poolVolumesUsd, nil
-}
-
 func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsdForSevenDaysForYield(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error) {
 
 	volumeQuery := `
@@ -1391,3 +1371,94 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy24Hour(swaps []*types.Sw
 
 	return result
 }
+
+func (m *customEventSonexPoolSwapModel) CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string) (string, error) {
+	type valueTmpStruct struct {
+		Value sql.NullString `db:"value"`
+	}
+	query := `
+with pool AS (
+    select
+        event_token0 AS token0,
+        event_token1 AS token1
+    from event_sonex_factory_pool_created
+    where event_pool = $2
+), tx_first_event AS (
+    -- 每个交易的第一个 swap 事件
+    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id=$1 AND tx_at >= NOW() - INTERVAL '24 HOURS' order by tx_hash, tx_index
+), tx_last_event AS (
+    -- 每个交易的最后一个 swap 事件
+    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id=$1 AND tx_at >= NOW() - INTERVAL '24 HOURS'  order by tx_hash, tx_index DESC
+), events AS (
+    -- join tx_first_event & tx_last_event
+    select
+        (case when t1.event_amount0::numeric < 0 then t3.event_token0 else t3.event_token1 end) AS token_in,
+        (case when t2.event_amount0::numeric > 0 then t4.event_token0 else t4.event_token1 end) AS token_out,
+        (case when t1.event_amount0::numeric < 0 then t1.event_amount0 else t1.event_amount1 end) AS amount_in,
+        (case when t2.event_amount0::numeric > 0 then t2.event_amount0 else t2.event_amount1 end) AS amount_out
+    from tx_first_event AS t1
+    left join tx_last_event AS t2 ON t2.tx_hash=t1.tx_hash
+    left join event_sonex_factory_pool_created AS t3 ON t3.event_pool=t1.extra_pool
+    left join event_sonex_factory_pool_created AS t4 ON t4.event_pool=t2.extra_pool
+), priceRecord AS (
+    SELECT price :: NUMERIC 
+		FROM sonex_token_price_record  t5 , pool
+		WHERE t5.token_address = pool.token0  
+		ORDER BY token_address, created_at DESC limit 1 
+		
+), amount  AS (
+select
+    -- 统计 token0 的 amount
+    sum(abs(
+            (case when events.token_in=pool.token0 then events.amount_in else events.amount_out end)::numeric
+    ))  AS  token_amount
+from events, pool
+where
+    -- 条件：交易的入金/出金币种和 pool 相同
+    (events.token_in=pool.token0 and events.token_out=pool.token1) or
+    (events.token_in=pool.token1 and events.token_out=pool.token0)
+		
+)
+
+select
+    amount.token_amount  / 1000000000000000000 * priceRecord.price / 1000000  AS value
+from  amount , priceRecord
+
+`
+	var value valueTmpStruct
+	err := m.conn.QueryRowCtx(ctx, &value, query, chainId, poolAddres)
+	if err != nil {
+		logx.Errorf("XXXXXvolue24H:%v ", err)
+		return "0", err
+	}
+
+	logx.Infof("poolAddress:%v volue24H:%v ", poolAddres, value.Value)
+	if value.Value.Valid {
+		return value.Value.String, nil
+	} else {
+		return "0", nil
+	}
+}
+
+// TODO DELETE
+// func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64, last24Hours bool) ([]*PoolVolumeUsd, error) {
+
+// 	volumeQuery := `
+// SELECT CAST
+// 	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+// 	t1.extra_pool
+// FROM
+// 	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
+// 	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
+// 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
+// `
+
+// 	// Execute the query and scan results into poolVolumes slice
+// 	var poolVolumesUsd []*PoolVolumeUsd
+// 	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, chainId)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to execute volume query: %w", err)
+// 	}
+
+// 	return poolVolumesUsd, nil
+// }
