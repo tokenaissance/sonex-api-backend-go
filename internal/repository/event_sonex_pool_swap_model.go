@@ -1480,11 +1480,16 @@ FROM
 	`
 
 	// Execute the query and scan results into poolVolumes slice
-	var poolVolumesUsd *PoolVolumeUsd
+	poolVolumesUsd := &PoolVolumeUsd{
+		ExtraPool: poolAddress,
+		Value:     "0",
+	}
 	err := m.conn.QueryRowCtx(ctx, &poolVolumesUsd, volumeQuery, chainId, poolAddress)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
-		return nil, err
+		poolVolumesUsd.ExtraPool = poolAddress
+		poolVolumesUsd.Value = "0"
+		return poolVolumesUsd, err
 	}
 
 	return poolVolumesUsd, nil
