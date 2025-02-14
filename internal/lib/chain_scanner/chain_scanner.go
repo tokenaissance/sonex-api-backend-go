@@ -94,10 +94,10 @@ func (chainScanner *ChainScanner) Start() {
 			}
 
 			var startTime time.Time
-			err := func(ctx context.Context) (result error) {
+			err := func(ctx context.Context) (err error) {
 				defer func() {
 					if err := recover(); err != nil {
-						result = fmt.Errorf("%s(panic)", err)
+						err = fmt.Errorf("%s(panic)", err)
 					}
 				}()
 
@@ -248,8 +248,11 @@ func (chainScanner *ChainScanner) Start() {
 						}
 					}(handler, client, opt, isReplay, results)
 				}
-				wg.Wait()
-				close(results)
+
+				go func() {
+					wg.Wait()
+					close(results)
+				}()
 
 				// Handle results
 				for result := range results {
