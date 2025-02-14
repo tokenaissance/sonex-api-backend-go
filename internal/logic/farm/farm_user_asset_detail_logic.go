@@ -63,6 +63,7 @@ func getRewardsDetailInfo(stakerAddress, userAddress string, incentiveIdint, cha
 	return totalClaimableFees, totalClaimableFeesUSD, tokenDecials, nil
 }
 
+// 获取staked 质押 的个数
 func getStakedNum(conn sqlx.SqlConn, cacher cache.ICache, chainId, incentiveIdint int64, userAddress string) (*big.Float, int64, string, string, error) {
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
@@ -98,6 +99,7 @@ func getStakedNum(conn sqlx.SqlConn, cacher cache.ICache, chainId, incentiveIdin
 	return lpBalance, stakedNum, rewardToken, eventPool, nil
 }
 
+// 获取自己可用的balance 个数
 func getBalance(chainId, incentiveIdint int64, userAddress, stakerAddress string, conn sqlx.SqlConn) (int64, int64, string, string, error) {
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	useablePositions, err := model.GetAllUseablePositions(context.Background(), chainId, userAddress, stakerAddress)
@@ -267,6 +269,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 		LPStakedNum:           stakedNum,
 		LPBalance:             lpBalance.String(),
 		Balance:               balanceNum,
+		LiquidityUSD:          getTotalLiquidityUSD.String(),
 		APR:                   apr,
 	}
 	return
