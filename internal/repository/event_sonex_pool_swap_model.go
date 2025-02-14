@@ -1484,7 +1484,7 @@ FROM
 		ExtraPool: poolAddress,
 		Value:     "0",
 	}
-	err := m.conn.QueryRowCtx(ctx, &poolVolumesUsd, volumeQuery, chainId, poolAddress)
+	err := m.conn.QueryRowCtx(ctx, poolVolumesUsd, volumeQuery, chainId, poolAddress)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
 		poolVolumesUsd.ExtraPool = poolAddress
