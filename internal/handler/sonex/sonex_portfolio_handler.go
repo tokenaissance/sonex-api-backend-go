@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"net/http"
+	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/logic/farm"
 	"sonex_api_backend_go/internal/logic/sonex"
 	"sonex_api_backend_go/internal/logic/xpool"
@@ -14,6 +16,7 @@ import (
 	"sonex_api_backend_go/internal/types"
 	"time"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -161,6 +164,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						continue
 					}
 
+					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
+
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: portfolioTypeXpool,
 						Xpool: &types.PortfolioXpool{
@@ -170,13 +175,13 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
 							APR:                 xpool.APR,                       // 年化收益率
 							Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
+							StakedFloat64:       xpoolStaked,                     // 用户已经质押的美元价值
 							FeeRevenue:          claimedRewardTokenValue.ValueString(),
 							Status:              xpool.Status,
 							Earned:              rewardTokenValue.ValueString(),
 						},
 					})
 
-					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
 					portfolioStats.TotalXpoolStaked += xpoolStaked
 					createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
 					if err != nil {
@@ -221,15 +226,16 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: portfolioTypeFarm,
 						FarmPool: &types.PortfolioFarm{
-							PoolAddress:   farm.PoolAddress,
-							FeeRatio:      farm.FeeRatio,
-							Token0Symbol:  farm.Token0Symbol,
-							Token0Address: farm.Token0Address,
-							Token1Symbol:  farm.Token1Symbol,
-							Token1Address: farm.Token1Address,
-							PositionValue: farm.LiquidityUSD,
-							FeeRevenue:    farm.TotalClaimedFeesUSD,
-							Earned:        farm.TotalClaimableFeesUSD,
+							PoolAddress:          farm.PoolAddress,
+							FeeRatio:             farm.FeeRatio,
+							Token0Symbol:         farm.Token0Symbol,
+							Token0Address:        farm.Token0Address,
+							Token1Symbol:         farm.Token1Symbol,
+							Token1Address:        farm.Token1Address,
+							PositionValue:        farm.LiquidityUSD,
+							PositionValueFloat64: farm.LiquidityUSDFloat64,
+							FeeRevenue:           farm.TotalClaimedFeesUSD,
+							Earned:               farm.TotalClaimableFeesUSD,
 						},
 					})
 
@@ -266,6 +272,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
 		response.Stats = portfolioStats
 
+		// sort portfolio positions
+		sort(portfolioPositions)
+
 		// pagination
 		list := getPagination(portfolioPositions, pageIndex, pageSize)
 		response.Positions = list
@@ -277,6 +286,25 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}
+}
+
+// sort descending 排序 portfolio positions
+func sort(portfolioPositions []*types.PortfolioPosition) {
+	// sort
+	linq.From(portfolioPositions).OrderByDescendingT(func(item *types.PortfolioPosition) lib_common.CompareableFloat {
+
+		positionValue := float64(0)
+		switch item.Type {
+		case portfolioTypeLiquidity:
+			positionValue = item.LiquidityPosition.Position
+		case portfolioTypeFarm:
+			positionValue = item.FarmPool.PositionValueFloat64
+		case portfolioTypeXpool:
+			positionValue = item.Xpool.StakedFloat64
+		}
+
+		return lib_common.CompareableFloat{Value: new(big.Float).SetFloat64(positionValue)}
+	}).ToSlice(&portfolioPositions)
 }
 
 // getUserTimeZoneDayStart 获取用户所在时区的当日开始时间

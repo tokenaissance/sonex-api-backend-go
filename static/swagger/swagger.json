@@ -3026,6 +3026,11 @@
         "earned": {
           "type": "string",
           "description": " 用户未提取的质押奖励美元价值"
+        },
+        "positionValueFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " pool position 美元净值 用于排序"
         }
       },
       "title": "PortfolioFarm",
@@ -3038,7 +3043,8 @@
         "token1Address",
         "positionValue",
         "feeRevenue",
-        "earned"
+        "earned",
+        "-"
       ]
     },
     "PortfolioFarmFrame": {
@@ -3327,6 +3333,11 @@
         "status": {
           "type": "string",
           "description": " 运行状态{Staking}"
+        },
+        "stakedFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 用户已经质押的美元价值 用于排序"
         }
       },
       "title": "PortfolioXpool",
@@ -3339,7 +3350,8 @@
         "staked",
         "feeRevenue",
         "earned",
-        "status"
+        "status",
+        "-"
       ]
     },
     "PortfolioXpoolFrame": {
