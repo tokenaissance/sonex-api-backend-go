@@ -9,13 +9,13 @@ import (
 	lib_common "sonex_api_backend_go/internal/lib/common"
 	contract_common "sonex_api_backend_go/internal/lib/contract/common"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
+	ethclientcache "sonex_api_backend_go/internal/lib/eth_client_cache"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // Implements adapter of the "Quoter" contract.
@@ -118,7 +118,7 @@ func (quoter *Quoter) QuoteExactInput(ctx context.Context, path []byte, amountIn
 		To:   &quoterAddress,
 		Data: data,
 	}
-	client, err := ethclient.DialContext(ctx, quoter.chainConf.GetNode())
+	client, err := ethclientcache.GetEthClient(quoter.chainConf.GetNode())
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (quoter *Quoter) QuoteExactOutput(ctx context.Context, path []byte, amountO
 		To:   &quoterAddress,
 		Data: data,
 	}
-	client, err := ethclient.DialContext(ctx, quoter.chainConf.GetNode())
+	client, err := ethclientcache.GetEthClient(quoter.chainConf.GetNode())
 	if err != nil {
 		return nil, err
 	}

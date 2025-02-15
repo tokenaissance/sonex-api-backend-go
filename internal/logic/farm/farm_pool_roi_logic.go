@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sonex_api_backend_go/internal/lib/cache"
+	ethclientcache "sonex_api_backend_go/internal/lib/eth_client_cache"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -50,7 +51,7 @@ func (l *FarmPoolRoiLogic) FarmPoolRoi(req *types.FarmPoolRoiRequest) (resp *typ
 
 	resp = new(types.FarmPoolRoiResponse)
 
-	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	client, err := ethclientcache.GetEthClient(l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
 	if err != nil {
 		return nil, err
 	}
