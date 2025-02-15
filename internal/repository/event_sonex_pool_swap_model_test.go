@@ -204,7 +204,7 @@ func Test_CalucateVolume24HBridgePool(t *testing.T) {
 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
 	// records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
 
-	volume24H, err := model.CalucateVolume24HBridgePool(context.Background(), 1946, "0x0b20A358bB37e1cfA317152E1C186a2A08100bB3")
+	volume24H, err := model.CalucateVolume24HBridgePool(context.Background(), 1946, "0x324Bbefef6350cbcE6079a88aCe0D69e99354Dd8")
 	if err != nil {
 		t.Error(err)
 	}

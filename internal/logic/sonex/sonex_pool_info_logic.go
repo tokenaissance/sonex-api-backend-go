@@ -175,10 +175,11 @@ func getVolumeTotal(chainId int64, poolAddress string, conn sqlx.SqlConn) string
 	}
 
 	// 没有跨池子的 volume
+	// 计算的时候，要排除已经统计过的跨池子的volume24H 的计算
 	poolVolumeUsd, err2 := poolSwapModel.SummarizePoolVolumesUsdByPoolAddress(context.Background(), chainId, poolAddress)
 
 	if err2 != nil {
-		logx.Errorf("SummarizePoolVolumesUsdByPoolAddress ERR:%v ", err2)
+		logx.Infof("SummarizePoolVolumesUsdByPoolAddress ERR:%v ", err2)
 		poolVolumeUsd.Value = "0"
 	}
 
