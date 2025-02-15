@@ -275,13 +275,14 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// sort portfolio positions
 		sort(portfolioPositions)
 
+		total := len(portfolioPositions)
 		// pagination
 		list := getPagination(portfolioPositions, pageIndex, pageSize)
 		response.Positions = list
 		response.Meta = types.PageResponse{
 			PageSize:  pageSize,
 			PageIndex: pageIndex,
-			Total:     int64(len(list)),
+			Total:     int64(total),
 		}
 
 		httpx.OkJsonCtx(r.Context(), w, response)
