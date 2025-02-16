@@ -291,6 +291,8 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 				return resp, err
 			}
 			resp.List[i].TotalClaimedFeesUSD = totalClaimedFeesUSD_bigFloat.String()
+			totalClaimedFeesUSDFloat64, _ := totalClaimedFeesUSD_bigFloat.Float64()
+			resp.List[i].TotalClaimedFeesUSDFloat64 = totalClaimedFeesUSDFloat64
 			_ = unclaimeds
 			// if val, ok := unclaimeds[item.IncentiveId]; ok {
 			// rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
