@@ -246,6 +246,12 @@ IdDesc，按照池子创建时间进行降序
 
 var PoolsOrderTvlAsc = "ASC"   // 按照TVL进行排序
 var PoolsOrderTvlDesc = "DESC" // 按照TVL进行降序
+
+var PoolsOrderYieldAsc = "YieldASC"     // 按照Yield进行排序
+var PoolsOrderYieldDesc = "YieldDESC"   // 按照Yield进行降序
+var PoolsOrderVolumeAsc = "VolumeASC"   // 按照Volume进行排序
+var PoolsOrderVolumeDesc = "VolumeDESC" // 按照Yield进行降序
+
 // todo
 var PoolsOrderIdAsc = "IdASC"   // 按照时间先后顺序
 var PoolsOrderIdDesc = "IdDesc" // // 按照时间先后顺序
