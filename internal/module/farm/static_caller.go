@@ -39,7 +39,7 @@ func (staticCaller *StaticCaller) BatchGetUnclaimeds(ctx context.Context, chainI
 		return nil, fmt.Errorf("%s", "Miss farm configure")
 	}
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chainConf)
+	nodeCaller, err := node_caller.NewNodeCaller(*chainConf, nil)
 	if err != nil {
 		return nil, err
 	}

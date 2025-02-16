@@ -48,7 +48,7 @@ func (handler *PreDepositHandler) OnRewardClaimed(callback func(chainId int64, t
 }
 
 func (handler *PreDepositHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
-	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain, client)
 	if err != nil {
 		return err, false
 	}

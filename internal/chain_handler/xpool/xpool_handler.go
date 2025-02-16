@@ -85,7 +85,7 @@ func (handler *XpoolHandler) OnPoolWithdrawed(callback func(chainId int64, pool 
 }
 
 func (handler *XpoolHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
-	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain, client)
 	if err != nil {
 		return err, false
 	}

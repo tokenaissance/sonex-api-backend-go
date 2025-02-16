@@ -36,7 +36,7 @@ func (staticCaller *StaticCaller) BatchBalanceOf(ctx context.Context, chainId in
 		return nil, fmt.Errorf("%s", "Invalid multicall contract")
 	}
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (staticCaller *StaticCaller) BatchGetPools(ctx context.Context, chainId int
 		return nil, fmt.Errorf("%s", "Invalid multicall contract")
 	}
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func (staticCaller *StaticCaller) BatchGetPositions(ctx context.Context, chainId
 		return nil, fmt.Errorf("%s", "Invalid multicall contract")
 	}
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ func (staticCaller *StaticCaller) BatchGetPositionMap(ctx context.Context, chain
 		return nil, fmt.Errorf("%s", "Invalid multicall contract")
 	}
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 	if err != nil {
 		return nil, err
 	}

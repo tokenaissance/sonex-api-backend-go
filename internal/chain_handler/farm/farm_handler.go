@@ -86,7 +86,7 @@ func (handler *FarmHandler) OnUnpaused(callback func(chainId int64, tx *node_cal
 }
 
 func (handler *FarmHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
-	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*handler.chain, client)
 	if err != nil {
 		return err, false
 	}
