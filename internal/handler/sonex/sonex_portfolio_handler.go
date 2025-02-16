@@ -165,6 +165,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					}
 
 					xpoolStaked, _ := stakingTokenValue.ValueFloat64()
+					claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
+					earnedValueFloat64, _ := rewardTokenValue.ValueFloat64()
+					feeRevenue := fmt.Sprintf("%.2f", earnedValueFloat64+claimedRewardTokenValueFloat64)
 
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: portfolioTypeXpool,
@@ -176,9 +179,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							APR:                 xpool.APR,                       // 年化收益率
 							Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
 							StakedFloat64:       xpoolStaked,                     // 用户已经质押的美元价值
-							FeeRevenue:          claimedRewardTokenValue.ValueString(),
+							FeeRevenue:          feeRevenue,                      // 用户已经领取的收益 + 用户可以领取的收益
 							Status:              xpool.Status,
-							Earned:              rewardTokenValue.ValueString(),
+							Earned:              rewardTokenValue.ValueString(), // 用户可以领取的收益
 						},
 					})
 
@@ -221,8 +224,11 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
+
 				farmFrames := make([]*types.PortfolioFarmFrame, 0)
 				for _, farm := range farmPools {
+					feeRevenue := farm.TotalClaimedFeesUSDFloat64 + farm.TotalClaimableFeesUSDFloat64
+
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: portfolioTypeFarm,
 						FarmPool: &types.PortfolioFarm{
@@ -234,7 +240,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							Token1Address:        farm.Token1Address,
 							PositionValue:        farm.LiquidityUSD,
 							PositionValueFloat64: farm.LiquidityUSDFloat64,
-							FeeRevenue:           farm.TotalClaimedFeesUSD,
+							FeeRevenue:           fmt.Sprintf("%.2f", feeRevenue),
 							Earned:               farm.TotalClaimableFeesUSD,
 						},
 					})
@@ -269,7 +275,12 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		portfolioStats.TotalAssets = portfolioStats.LiquidityPosition + portfolioStats.TotalXpoolStaked + portfolioStats.TotalFarmStaked
 		portfolioStats.ClaimableFees = liquidityClaimableFees + farmEarns + xpoolEarns
 
-		portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
+		// Calculate total assets rate, handling division by zero
+		if previousDayTotalAssets > 0 {
+			portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
+		} else {
+			portfolioStats.TotalAssetsRate = "0.00%"
+		}
 		response.Stats = portfolioStats
 
 		// sort portfolio positions
