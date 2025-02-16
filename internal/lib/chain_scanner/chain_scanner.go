@@ -231,21 +231,21 @@ func (chainScanner *ChainScanner) Start() {
 						}
 
 						// Delay handle
-						if !isReplay {
-							delayOpt := *opt
-							delayOpt.Start = opt.Start - 50
-							delayOpt.End = &opt.Start
-							err, skip = handler.Execute(client, &delayOpt, false)
-							ch <- struct {
-								Err     error
-								Skip    bool
-								Handler IHandler
-							}{
-								Err:     err,
-								Skip:    skip,
-								Handler: handler,
-							}
-						}
+						// if !isReplay {
+						// 	delayOpt := *opt
+						// 	delayOpt.Start = opt.Start - 50
+						// 	delayOpt.End = &opt.Start
+						// 	err, skip = handler.Execute(client, &delayOpt, false)
+						// 	ch <- struct {
+						// 		Err     error
+						// 		Skip    bool
+						// 		Handler IHandler
+						// 	}{
+						// 		Err:     err,
+						// 		Skip:    skip,
+						// 		Handler: handler,
+						// 	}
+						// }
 					}(handler, client, opt, isReplay, results)
 				}
 

@@ -123,7 +123,7 @@ func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, m
 	if err != nil {
 		return nil, err
 	}
-	nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf)
+	nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 		if cacher.chainConf.Multicall == "" || !common.IsHexAddress(cacher.chainConf.Multicall) {
 			return nil, fmt.Errorf("%s", "Invalid multicall contract")
 		}
-		nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf)
+		nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -665,7 +665,7 @@ func (cacher *TokenCacher) GetPrices(ctx context.Context, pools []quoter.Pool, a
 
 // Batch query tokens' total supplies
 func (cacher *TokenCacher) BatchGetTotalSupplies(ctx context.Context, tokens []common.Address) (map[common.Address]*big.Int, error) {
-	nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf)
+	nodeCaller, err := node_caller.NewNodeCaller(cacher.chainConf, nil)
 	if err != nil {
 		return nil, err
 	}

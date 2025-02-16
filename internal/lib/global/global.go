@@ -272,7 +272,7 @@ func GetPrices(ctx context.Context, pools []quoter.Pool, chainId int64, token st
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		nodeCaller, err := node_caller.NewNodeCaller(*chain)
+		nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -411,7 +411,7 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 		if err != nil {
 			return nil, nil, err
 		}
-		nodeCaller, err := node_caller.NewNodeCaller(*chain)
+		nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -685,7 +685,7 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 		if err != nil {
 			return nil, nil, err
 		}
-		nodeCaller, err := node_caller.NewNodeCaller(*chain)
+		nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 		if err != nil {
 			return nil, nil, err
 		}

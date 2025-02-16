@@ -218,7 +218,7 @@ func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) err
 		return err
 	}
 
-	caller, err := node_caller.NewNodeCaller(chain)
+	caller, err := node_caller.NewNodeCaller(chain, nil)
 	if err != nil {
 		return err
 	}

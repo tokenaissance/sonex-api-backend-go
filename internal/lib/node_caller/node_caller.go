@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
-	ethclientcache "sonex_api_backend_go/internal/lib/eth_client_cache"
 	"sync"
 	"time"
 
@@ -16,16 +15,26 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
 type NodeCaller struct {
-	chain config.ChainConfig
+	chain  config.ChainConfig
+	client *ethclient.Client
 }
 
-func NewNodeCaller(chain config.ChainConfig) (*NodeCaller, error) {
+func NewNodeCaller(chain config.ChainConfig, client *ethclient.Client) (*NodeCaller, error) {
+	var err error
+	if client == nil {
+		client, err = ethclient.DialContext(context.Background(), chain.GetNode())
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &NodeCaller{
-		chain: chain,
+		chain:  chain,
+		client: client,
 	}, nil
 }
 
@@ -59,11 +68,7 @@ func (nodeCaller *NodeCaller) BatchHeaderByNumber(ctx context.Context, numbers [
 			Result: &headers[i],
 		}
 	}
-	client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
-	if err != nil {
-		return nil, err
-	}
-	err = client.Client().BatchCallContext(ctx, requests)
+	err := nodeCaller.client.Client().BatchCallContext(ctx, requests)
 	if err != nil {
 		return nil, err
 	}
@@ -93,11 +98,7 @@ func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers
 				Result: &rawMessages[i],
 			}
 		}
-		client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
-		if err != nil {
-			return nil, err
-		}
-		err = client.Client().BatchCallContext(ctx, requests)
+		err := nodeCaller.client.Client().BatchCallContext(ctx, requests)
 		if err != nil {
 			return nil, err
 		}
@@ -147,11 +148,7 @@ func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers
 						Result: &uncles[i],
 					}
 				}
-				client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
-				if err != nil {
-					return nil, err
-				}
-				err = client.Client().BatchCallContext(ctx, reqs)
+				err := nodeCaller.client.Client().BatchCallContext(ctx, reqs)
 				if err != nil {
 					return nil, err
 				}
@@ -287,16 +284,12 @@ func (nodeCaller *NodeCaller) BatchGetTranscationsByNumber(ctx context.Context, 
 
 // Convenience function to call contract and parse result
 func (nodeCaller *NodeCaller) StaticCall(ctx context.Context, abi abi.ABI, contract common.Address, name string, data []byte, result any) error {
-	client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
-	if err != nil {
-		return err
-	}
 	msg := ethereum.CallMsg{
 		To:   &contract,
 		Data: data,
 		Gas:  uint64(18446744073709551615),
 	}
-	response, err := client.CallContract(ctx, msg, nil)
+	response, err := nodeCaller.client.CallContract(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
