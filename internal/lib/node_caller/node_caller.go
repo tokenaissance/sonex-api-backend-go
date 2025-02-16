@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
+	ethclientcache "sonex_api_backend_go/internal/lib/eth_client_cache"
 	"sync"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -59,7 +59,7 @@ func (nodeCaller *NodeCaller) BatchHeaderByNumber(ctx context.Context, numbers [
 			Result: &headers[i],
 		}
 	}
-	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+	client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers
 				Result: &rawMessages[i],
 			}
 		}
-		client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+		client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +147,7 @@ func (nodeCaller *NodeCaller) BatchGetBlockByNumber(ctx context.Context, numbers
 						Result: &uncles[i],
 					}
 				}
-				client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+				client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
 				if err != nil {
 					return nil, err
 				}
@@ -287,7 +287,7 @@ func (nodeCaller *NodeCaller) BatchGetTranscationsByNumber(ctx context.Context, 
 
 // Convenience function to call contract and parse result
 func (nodeCaller *NodeCaller) StaticCall(ctx context.Context, abi abi.ABI, contract common.Address, name string, data []byte, result any) error {
-	client, err := ethclient.DialContext(ctx, nodeCaller.chain.GetNode())
+	client, err := ethclientcache.GetEthClient(nodeCaller.chain.GetNode())
 	if err != nil {
 		return err
 	}
