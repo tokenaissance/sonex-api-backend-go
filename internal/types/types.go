@@ -76,6 +76,8 @@ type FarmIncentivesResponse_Data struct {
 	Balance                      int64       `json:"balance"`
 	Staked                       int64       `json:"staked"`
 	Earned                       string      `json:"earned"`
+	Weight                       string      `json:"weight"`      // 该 incentiveid 的 Weight
+	TotalWeight                  string      `json:"totalWeight"` // 所有incentiveid池子的总权重，TotalWeight
 	Positions                    []*Position `json:"-"`
 	TotalClaimableFeesUSD        string      `json:"totalClaimableFeesUsd"` // 用户未领取的手续费的价值
 	TotalClaimedFeesUSD          string      `json:"totalClaimedFeesUSD"`   // 用户已经领取的手续的价值
@@ -610,8 +612,24 @@ type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
 }
 
+type SonexTvlKlineRequest struct {
+	ChainRequest
+}
+
+type SonexTvlKlineResponse struct {
+	Records []UsdCreatedRecord `json:"records"`
+}
+
+type SonexVolumeKlineRequest struct {
+	ChainRequest
+}
+
+type SonexVolumeKlineResponse struct {
+	Records []UsdCreatedRecord `json:"records"`
+}
+
 type StakePositionsInfoResponse_Data struct {
-	PositionId     int64  `json:"positionId"`
+	PositionId     int64  `json:"positionId"` // position的tokenid
 	Token0Amount   string `json:"token0Amount"`
 	Token1Amount   string `json:"token1Amount"`
 	TokenUsd       string `json:"tokenUsd"`
@@ -903,6 +921,11 @@ type UnstakePositionsInfoResponse_Data struct {
 	Token0Amount string `json:"token0Amount"`
 	Token1Amount string `json:"token1Amount"`
 	TokenUsd     string `json:"tokenUsd"`
+}
+
+type UsdCreatedRecord struct {
+	VolumeUsd float64 `json:"volumeusd"`
+	CreatedAt int64   `json:"createdat"`
 }
 
 type UserAssetData struct {

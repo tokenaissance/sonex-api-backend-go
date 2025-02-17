@@ -1336,6 +1336,56 @@
         ]
       }
     },
+    "/sonex/tvlkline": {
+      "get": {
+        "operationId": "SonexTvlKlineHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SonexTvlKlineResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ]
+      }
+    },
+    "/sonex/volumekline": {
+      "get": {
+        "operationId": "SonexVolumeKlineHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SonexVolumeKlineResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ]
+      }
+    },
     "/xpool/pool/list": {
       "get": {
         "summary": "Xpool list",
@@ -1736,6 +1786,14 @@
         "earned": {
           "type": "string"
         },
+        "weight": {
+          "type": "string",
+          "description": " 该 incentiveid 的 Weight"
+        },
+        "totalWeight": {
+          "type": "string",
+          "description": " 所有incentiveid池子的总权重，TotalWeight"
+        },
         "positions": {
           "type": "array",
           "items": {
@@ -1792,6 +1850,8 @@
         "balance",
         "staked",
         "earned",
+        "weight",
+        "totalWeight",
         "-",
         "totalClaimableFeesUsd",
         "totalClaimedFeesUSD"
@@ -3797,12 +3857,51 @@
         "message"
       ]
     },
+    "SonexTvlKlineRequest": {
+      "type": "object",
+      "title": "SonexTvlKlineRequest"
+    },
+    "SonexTvlKlineResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UsdCreatedRecord"
+          }
+        }
+      },
+      "title": "SonexTvlKlineResponse",
+      "required": [
+        "records"
+      ]
+    },
+    "SonexVolumeKlineRequest": {
+      "type": "object",
+      "title": "SonexVolumeKlineRequest"
+    },
+    "SonexVolumeKlineResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UsdCreatedRecord"
+          }
+        }
+      },
+      "title": "SonexVolumeKlineResponse",
+      "required": [
+        "records"
+      ]
+    },
     "StakePositionsInfoResponse_Data": {
       "type": "object",
       "properties": {
         "positionId": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "description": " position的tokenid"
         },
         "token0Amount": {
           "type": "string"
@@ -4915,6 +5014,24 @@
         "token0Amount",
         "token1Amount",
         "tokenUsd"
+      ]
+    },
+    "UsdCreatedRecord": {
+      "type": "object",
+      "properties": {
+        "volumeusd": {
+          "type": "number",
+          "format": "double"
+        },
+        "createdat": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "UsdCreatedRecord",
+      "required": [
+        "volumeusd",
+        "createdat"
       ]
     },
     "UserAssetData": {
