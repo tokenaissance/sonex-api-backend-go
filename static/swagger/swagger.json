@@ -625,6 +625,7 @@
           },
           {
             "name": "order",
+            "description": " ASC ,DESC , YieldASC ,YieldDESC,  VolumeDESC, VolumeDESC",
             "in": "query",
             "required": true,
             "type": "string",
@@ -2732,7 +2733,8 @@
       "properties": {
         "order": {
           "type": "string",
-          "default": "ASC"
+          "default": "ASC",
+          "description": " ASC ,DESC , YieldASC ,YieldDESC,  VolumeDESC, VolumeDESC"
         },
         "keywords": {
           "type": "string"
