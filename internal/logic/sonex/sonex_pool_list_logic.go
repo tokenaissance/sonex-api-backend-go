@@ -277,6 +277,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			pool.Stablecoin = stablecoinToken.Address
 			pool.StablecoinDecimals = stablecoinToken.Decimals
 			pool.Yield24h = _yield
+			pool.Volume = "0" // 给个默认的值
 
 			// 从redis 获 volume24H 值
 			volume24HofPool, err := global.GetVolume24HTvlValue(cacher, global.Volume24HKey, pool.Address)
