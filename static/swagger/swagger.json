@@ -873,7 +873,7 @@
             "required": true,
             "type": "boolean",
             "format": "boolean",
-            "default": "true"
+            "default": "false"
           },
           {
             "name": "farmSelected",
@@ -881,7 +881,7 @@
             "required": true,
             "type": "boolean",
             "format": "boolean",
-            "default": "true"
+            "default": "false"
           },
           {
             "name": "xpoolSelected",
@@ -889,7 +889,7 @@
             "required": true,
             "type": "boolean",
             "format": "boolean",
-            "default": "true"
+            "default": "false"
           },
           {
             "name": "address",
@@ -3238,17 +3238,17 @@
         "liquiditySelected": {
           "type": "boolean",
           "format": "boolean",
-          "default": "true"
+          "default": "false"
         },
         "farmSelected": {
           "type": "boolean",
           "format": "boolean",
-          "default": "true"
+          "default": "false"
         },
         "xpoolSelected": {
           "type": "boolean",
           "format": "boolean",
-          "default": "true"
+          "default": "false"
         },
         "address": {
           "type": "string"
@@ -5250,6 +5250,12 @@
           "type": "string",
           "description": " 运行状态"
         },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
         "stakingTokenPriceWithDecimals": {
           "type": "string",
           "description": " 质押的代币价格(包含精度)"
@@ -5271,12 +5277,6 @@
         "claimed": {
           "type": "string",
           "description": " 用户已领取的奖励代币数量"
-        },
-        "createdAt": {
-          "type": "string"
-        },
-        "updatedAt": {
-          "type": "string"
         }
       },
       "title": "XpoolPoolListResponse_Pool",

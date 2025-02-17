@@ -489,9 +489,9 @@ type SonexTokenKlineResponse {
 type PortfolioRequest {
 	ChainRequest
 	TimeZoneRequest
-	LiquiditySelected bool   `form:"liquiditySelected,default=true"`
-	FarmSelected 	  bool   `form:"farmSelected,default=true"`
-	XpoolSelected 	  bool 	 `form:"xpoolSelected,default=true"`
+	LiquiditySelected bool   `form:"liquiditySelected,default=false"`
+	FarmSelected 	  bool   `form:"farmSelected,default=false"`
+	XpoolSelected 	  bool 	 `form:"xpoolSelected,default=false"`
 	Address 		  string `form:"address"`
 	PageRequest
 }
