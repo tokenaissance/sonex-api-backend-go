@@ -135,14 +135,18 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	_amountPrice0, _ := balance0QuoDecimal.Float64()
 	_amountPrice1, _ := balance1QuoDecimal.Float64()
 
-	_volume24HString := getVolumeTotal(req.ChainId, _poolAddressWithCheckSum, conn)
-	_fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
+	// return the type of big float64
+	volume24HBigFloat64, volume24HString, volume24HFloat64 := getVolumeTotal(req.ChainId, _poolAddressWithCheckSum, conn)
 
-	if strings.EqualFold(_volume24HString, "") {
-		_volume24HString = "0"
+	// update volue24HbridgeToPoolAndSumOfPool to redis db
+	err = global.SetVolume24HTvlValue(cacher, global.Volume24HKey, _poolAddress, volume24HString)
+	if err != nil {
+		logx.Infof("API: poolinfo SetVolume24HValue:%v ERR :%v", _poolAddress, err)
+	} else {
+		logx.Infof("API: poolinfo SetVolume24HValue:%v value:%v", _poolAddress, volume24HString)
 	}
-	_volume24HBigFloat64, _ := new(big.Float).SetString(_volume24HString)
-	_volume24HFloat64, _ := _volume24HBigFloat64.Float64()
+
+	fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
 
 	return &types.PoolInfoResponse{
 		StatusCode:       200,
@@ -158,14 +162,14 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 		TvlUSD:           _tvlUSD.String(),
 		TvlRatio:         returnVol24HOrTvl24H(cacher, _tvlUSD, global.Tvl24HKey, pool.Address),
 		IsTvlNegative:    false,
-		Vol24h:           _volume24HFloat64,
-		Vol24hRatio:      returnVol24HOrTvl24H(cacher, _volume24HBigFloat64, global.Volume24HKey, pool.Address),
+		Vol24h:           volume24HFloat64,
+		Vol24hRatio:      returnVol24HOrTvl24H(cacher, volume24HBigFloat64, global.Volume24HKey, pool.Address),
 		IsVol24hNegative: false,
-		Fee24h:           _fee24H,
+		Fee24h:           fee24H,
 	}, nil
 }
 
-func getVolumeTotal(chainId int64, poolAddress string, conn sqlx.SqlConn) string {
+func getVolumeTotal(chainId int64, poolAddress string, conn sqlx.SqlConn) (*big.Float, string, float64) {
 	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	// 跨池子的volume
 	_volume24HStringBridgePool, err1 := poolSwapModel.CalucateVolume24HBridgePool(context.Background(), chainId, poolAddress)
@@ -188,8 +192,16 @@ func getVolumeTotal(chainId int64, poolAddress string, conn sqlx.SqlConn) string
 	//  跨池子的 volume
 	volume24HOfBridgePool, _ := new(big.Float).SetString(_volume24HStringBridgePool)
 
-	totalVolue := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
-	return totalVolue.String()
+	sumOfBridegeAndNormalOfVolume24H := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
+
+	sumOfBridegeAndNormalOfVolume24HString := sumOfBridegeAndNormalOfVolume24H.String()
+
+	if strings.EqualFold(sumOfBridegeAndNormalOfVolume24HString, "") {
+		sumOfBridegeAndNormalOfVolume24HString = "0"
+	}
+
+	sumOfBridegeAndNormalOfVolume24HFloat64, _ := sumOfBridegeAndNormalOfVolume24H.Float64()
+	return sumOfBridegeAndNormalOfVolume24H, sumOfBridegeAndNormalOfVolume24HString, sumOfBridegeAndNormalOfVolume24HFloat64
 }
 
 type Call struct {

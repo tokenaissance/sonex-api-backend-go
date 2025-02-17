@@ -609,6 +609,22 @@ type SonexTokenPricesResponse struct {
 	Message string `json:"message"`
 }
 
+type SonexTvlKlineRequest struct {
+	ChainRequest
+}
+
+type SonexTvlKlineResponse struct {
+	Records []UsdCreatedRecord `json:"records"`
+}
+
+type SonexVolumeKlineRequest struct {
+	ChainRequest
+}
+
+type SonexVolumeKlineResponse struct {
+	Records []UsdCreatedRecord `json:"records"`
+}
+
 type StakePositionsInfoResponse_Data struct {
 	PositionId     int64  `json:"positionId"`
 	Token0Amount   string `json:"token0Amount"`
@@ -902,6 +918,11 @@ type UnstakePositionsInfoResponse_Data struct {
 	Token0Amount string `json:"token0Amount"`
 	Token1Amount string `json:"token1Amount"`
 	TokenUsd     string `json:"tokenUsd"`
+}
+
+type UsdCreatedRecord struct {
+	VolumeUsd float64 `json:"volumeusd"`
+	CreatedAt int64   `json:"createdat"`
 }
 
 type UserAssetData struct {

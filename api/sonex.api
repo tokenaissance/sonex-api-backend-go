@@ -657,7 +657,7 @@ type SonexPoolInfoKlineResponse {
 
 // 前端拿到这个值,加 % 后显示
 type VolumeDetailsRecord {
-	VolumeRatio     float64  `json:"volumeratio"` // 跟过去一天的volume最后一组24H的相比，相比的,是增加还是减弱 ,保留两位精度
+	VolumeRatio     float64 `json:"volumeratio"` // 跟过去一天的volume最后一组24H的相比，相比的,是增加还是减弱 ,保留两位精度
 	VolumeUsd     	float64 `json:"volumeusd"` 
 	CreatedAt       int64   `json:"createdat"`
 }
@@ -668,6 +668,32 @@ type GalxeAddLiquidityRequest {
 
 type GalxeAddLiquidityResponse {
 	IsAddLiquidityOrNot    bool                `json:"isAddLiquidityOrNot"`
+}
+
+
+//  sonex volumetotal request
+type SonexVolumeKlineRequest {
+	ChainRequest
+}
+
+// sonex volumetotal response  
+type SonexVolumeKlineResponse {
+	Records []UsdCreatedRecord `json:"records"`
+}
+
+//  sonex tvl kline request 
+type SonexTvlKlineRequest {
+	ChainRequest
+}
+
+//  sonex tvl kline response 
+type SonexTvlKlineResponse {
+	Records []UsdCreatedRecord `json:"records"`
+}
+
+type UsdCreatedRecord {
+	VolumeUsd     	float64 `json:"volumeusd"` 
+	CreatedAt       int64   `json:"createdat"`
 }
 
 @server (
@@ -728,4 +754,10 @@ service sonex_api_backend_go {
 
 	@handler SonexGalxeAddliquidityHandler
 	get /galxeaddliquidity (GalxeAddLiquidityRequest) returns (GalxeAddLiquidityResponse)
+
+	@handler SonexVolumeKlineHandler
+	get /volumekline (SonexVolumeKlineRequest) returns (SonexVolumeKlineResponse)
+
+	@handler SonexTvlKlineHandler
+	get /tvlkline (SonexTvlKlineRequest) returns (SonexTvlKlineResponse)
 }

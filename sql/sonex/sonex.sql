@@ -593,3 +593,41 @@ MINVALUE  1
 MAXVALUE 9223372036854775807
 START 1
 CACHE 1;
+
+
+
+-- ----------------------------
+-- Table structure for sonex_vol_tvl_record
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."sonex_vol_tvl_record";
+CREATE TABLE "public"."sonex_vol_tvl_record" (
+  "id" int8 NOT NULL DEFAULT nextval('sonex_vol_tvl_record_id_seq'::regclass),
+  "usdt_value" varchar COLLATE "pg_catalog"."default" NOT NULL,
+  "created" timestamptz(6) NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "typeo_of_value" int8 NOT NULL
+)
+;
+ALTER TABLE "public"."sonex_vol_tvl_record" OWNER TO "apibackendgo";
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."typeo_of_value" IS '1: volume value; 2:tvl value';
+
+-- ----------------------------
+-- Records of sonex_vol_tvl_record
+-- ----------------------------
+BEGIN;
+COMMIT;
+
+-- ----------------------------
+-- Primary Key structure for table sonex_vol_tvl_record
+-- ----------------------------
+ALTER TABLE "public"."sonex_vol_tvl_record" ADD CONSTRAINT "sonex_pool_tvl_record_copy1_pkey" PRIMARY KEY ("id");
+
+SELECT setval('"sonex_vol_tvl_record_id_seq"', 1, true);
+
+DROP SEQUENCE IF EXISTS "sonex_vol_tvl_record_id_seq";
+CREATE SEQUENCE "sonex_vol_tvl_record_id_seq"
+INCREMENT 1
+MINVALUE  1
+MAXVALUE 9223372036854775807
+START 1
+CACHE 1;
