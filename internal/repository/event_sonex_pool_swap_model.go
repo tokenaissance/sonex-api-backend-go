@@ -1444,7 +1444,7 @@ from  amount , priceRecord
 	var value valueTmpStruct
 	err := m.conn.QueryRowCtx(ctx, &value, query, chainId, poolAddres)
 	if err != nil {
-		logx.Errorf("XXXXXvolue24H:%v ", err)
+		logx.Infof("NODATA volue24H:%v ", err)
 		return "0", err
 	}
 

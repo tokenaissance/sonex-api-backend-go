@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -37,11 +36,12 @@ type (
 	}
 
 	SonexVolTvlRecord struct {
-		Id           int64     `db:"id"`
-		UsdtValue    string    `db:"usdt_value"`
-		Created      time.Time `db:"created"`
-		ChainId      int64     `db:"chain_id"`
-		TypeoOfValue int64     `db:"typeo_of_value"` // 1: volume value; 2:tvl value
+		Id            int64  `db:"id"`
+		UsdtValue     string `db:"usdt_value"`
+		ChainId       int64  `db:"chain_id"`
+		TypeOfValue   int64  `db:"type_of_value"`   // 1: volume value; 2:tvl value
+		Createtime    int64  `db:"createtime"`      // 创建时间，需要拿着创建时间后续做更新的key
+		TypeOfUniswap int64  `db:"type_of_uniswap"` // 1: v3, 2: v2
 	}
 )
 
@@ -73,14 +73,14 @@ func (m *defaultSonexVolTvlRecordModel) FindOne(ctx context.Context, id int64) (
 }
 
 func (m *defaultSonexVolTvlRecordModel) Insert(ctx context.Context, data *SonexVolTvlRecord) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4)", m.table, sonexVolTvlRecordRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.UsdtValue, data.Created, data.ChainId, data.TypeoOfValue)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5)", m.table, sonexVolTvlRecordRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.UsdtValue, data.ChainId, data.TypeOfValue, data.Createtime, data.TypeOfUniswap)
 	return ret, err
 }
 
 func (m *defaultSonexVolTvlRecordModel) Update(ctx context.Context, data *SonexVolTvlRecord) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, sonexVolTvlRecordRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.UsdtValue, data.Created, data.ChainId, data.TypeoOfValue)
+	_, err := m.conn.ExecCtx(ctx, query, data.Id, data.UsdtValue, data.ChainId, data.TypeOfValue, data.Createtime, data.TypeOfUniswap)
 	return err
 }
 

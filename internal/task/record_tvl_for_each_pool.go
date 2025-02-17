@@ -29,15 +29,8 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 	logx.Infof("HandleRecordVol24hTvl24h start Time : %v", startTime)
 
 	zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
-	zeroTimeFlag := false
-	// 零点开始后的一分钟内
-	if startTime.Unix()-zeroTime.Unix() < 60 {
-		zeroTimeFlag = true
-	} else {
-		zeroTimeFlag = false
-	}
-
-	logx.Infof("zeroTime:%v zeroTimeFlag:%v ", zeroTime, zeroTimeFlag)
+	
+	logx.Infof("zeroTime:%v  ", zeroTime)
 	conn := repository.NewConn(config.PostgreSQL.DateSource())
 	ctx := context.Background()
 	poolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
@@ -126,10 +119,8 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 
 					}
 					wg.Wait()
-
 					///// calucate the total TVL record
-					writeToPGForTvlValue(tvlvolRecordModel, zeroTimeFlag, tvlTotalForAll.String(), zeroTime, chain.ChainId, repository.TVLTypeoOfValue)
-
+					writeToPGForTvlValue(tvlvolRecordModel, tvlTotalForAll.String(), zeroTime, chain.ChainId, repository.TVLTypeoOfValue, repository.V3OfUniswap)
 				}
 			}
 		}
@@ -137,28 +128,12 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 }
 
 // calucate the total TVL record
-func writeToPGForTvlValue(tvlvolRecordModel repository.SonexVolTvlRecordModel, zeroTimeFlag bool, tvlTotalForAllInGoroutineString string, zeroTime time.Time, chainId, typeoOfValue int64) {
-	logx.Infof("before writeToPGForTvlValue:%v zeroTimeFlag:%v  zeroTime:%v chainId:%v , typeoOfValue:%v", tvlTotalForAllInGoroutineString, zeroTimeFlag, zeroTime, chainId, typeoOfValue)
-	if zeroTimeFlag {
-		tvlRecordTotal := &repository.SonexVolTvlRecord{
-			UsdtValue:    tvlTotalForAllInGoroutineString,
-			Created:      zeroTime,
-			ChainId:      chainId,
-			TypeoOfValue: typeoOfValue,
-		}
-		ctx := context.Background()
-		// 写入 pg 数据库
-		ret, err := tvlvolRecordModel.Insert(ctx, tvlRecordTotal)
-		if err != nil {
-			logx.Infof("Insert tvlRecordTotal error:%v ", err)
-		} else {
-			lasetInserted, err := ret.LastInsertId()
-			if err != nil {
-				logx.Infof("Insert tvlRecordTotal LastInsertId error:%v ", err)
-			} else {
-				logx.Infof("Insert tvlRecordTotal LastInsertId success:%v result :%#v  ", lasetInserted, tvlRecordTotal)
-			}
-		}
+func writeToPGForTvlValue(tvlvolRecordModel repository.SonexVolTvlRecordModel, tvlTotalForAllInGoroutineString string, zeroTime time.Time, chainId, typeoOfValue, typeOfUniswap int64) {
+	logx.Infof(" writeToPGForTvlValue:%v   zeroTime:%v chainId:%v , typeoOfValue:%v", tvlTotalForAllInGoroutineString, zeroTime, chainId, typeoOfValue)
+	// 写入 pg 数据库
+	_, err := tvlvolRecordModel.UpdateOrInsertTvlByTimeStamp(tvlTotalForAllInGoroutineString, zeroTime.Unix(), typeOfUniswap, chainId, typeoOfValue)
+	if err != nil {
+		logx.Infof("Insert tvlRecordTotal error:%v ", err)
 	}
 }
 

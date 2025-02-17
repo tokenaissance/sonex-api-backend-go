@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -24,7 +25,16 @@ func NewSonexTvlKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Son
 }
 
 func (l *SonexTvlKlineLogic) SonexTvlKline(req *types.SonexTvlKlineRequest) (resp *types.SonexTvlKlineResponse, err error) {
-	// todo: add your logic here and delete this line
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	tvlVolModel := repository.NewSonexVolTvlRecordModel(conn)
 
+	records, err := tvlVolModel.GetBytypeOfValueAndChainId(req.ChainId, repository.V3OfUniswap, repository.TVLTypeoOfValue, 30)
+	if err != nil {
+		logx.Errorf("ERR:%v", err)
+		return &types.SonexTvlKlineResponse{}, err
+	}
+	resp = &types.SonexTvlKlineResponse{
+		Records: records,
+	}
 	return
 }

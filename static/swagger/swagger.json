@@ -5019,19 +5019,18 @@
     "UsdCreatedRecord": {
       "type": "object",
       "properties": {
-        "volumeusd": {
-          "type": "number",
-          "format": "double"
+        "usdt_value": {
+          "type": "string"
         },
-        "createdat": {
+        "createtime": {
           "type": "integer",
           "format": "int64"
         }
       },
       "title": "UsdCreatedRecord",
       "required": [
-        "volumeusd",
-        "createdat"
+        "usdt_value",
+        "createtime"
       ]
     },
     "UserAssetData": {
