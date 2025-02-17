@@ -281,6 +281,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// Calculate total assets rate, handling division by zero
 		if previousDayTotalAssets > 0 {
 			portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
+		} else if (previousDayTotalAssets == 0) && (portfolioStats.TotalAssets > 0) {
+			portfolioStats.TotalAssetsRate = "100.00%"
 		} else {
 			portfolioStats.TotalAssetsRate = "0.00%"
 		}
