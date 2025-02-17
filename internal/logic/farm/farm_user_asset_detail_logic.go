@@ -42,11 +42,11 @@ func NewFarmUserAssetDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func getRewardsDetailInfo(stakerAddress, userAddress string, incentiveIdint, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (string, *big.Float, int64, error) {
+func getRewardsDetailInfo(stakerAddress, userAddress string, incentiveIdint, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (string, *big.Float, int64, float64, error) {
 	rewards, err := getRewardsAmount(stakerAddress, userAddress, incentiveIdint, *chain)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
-		return "0", big.NewFloat(0), 18, err
+		return "0", big.NewFloat(0), 18, 0.0, err
 	}
 	logx.Infof("rewards :%v ", rewards.String())
 	totalClaimableFees := rewards.String()
@@ -56,11 +56,13 @@ func getRewardsDetailInfo(stakerAddress, userAddress string, incentiveIdint, cha
 
 	totalClaimableFeesUSD, tokenDecials, err := getValueOfAmountToken(rewards, int64(incentiveIdint), chainId, chain, conn)
 	if err != nil {
-		return "0", big.NewFloat(0), 18, err
+		return "0", big.NewFloat(0), 18, 0.0, err
 	}
 
+	totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
+
 	logx.Infof("totalClaimableFees:%v, totalClaimableFeesUSD:%v , tokenDecials:%v  ", totalClaimableFees, totalClaimableFeesUSD, tokenDecials)
-	return totalClaimableFees, totalClaimableFeesUSD, tokenDecials, nil
+	return totalClaimableFees, totalClaimableFeesUSD, tokenDecials, totalClaimableFeesUSDFloat64, nil
 }
 
 // 获取staked 质押 的个数
@@ -221,7 +223,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	// 获取 totalClaimableFeesUSD，  tokenDecials,
-	totalClaimableFees, totalClaimableFeesUSD, tokenDecials, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(incentiveIdint), req.ChainId, chain, conn)
+	totalClaimableFees, totalClaimableFeesUSD, tokenDecials, _, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(incentiveIdint), req.ChainId, chain, conn)
 
 	if err != nil {
 		return resp, err

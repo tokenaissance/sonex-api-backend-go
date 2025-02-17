@@ -62,6 +62,8 @@ type FarmIncentivesResponse_Data {
 	LiquidityUSDFloat64        	 float64 `json:"-"`   // 池子的流动性价值（USD）
 	TotalClaimableFeesUSDFloat64 float64 `json:"-"` // 用户未领取的手续费的价值
 	TotalClaimedFeesUSDFloat64 	 float64 `json:"-"`     // 用户已经领取的手续的价值
+
+	ListStakedPosition []StakePositionsInfoResponse_Data     `json:"-"`
 }
 
 // 不再使用
@@ -73,7 +75,8 @@ type UserAssetData {
 	LPStakedNum           int64  `json:"lpStakedNum"`            // 用户质押的LP token ID数量
 	LPBalance             int64  `json:"lpBalance"`              // 用户的LP token ID的余额, LiquidityUSD
 	Balance               int64  `json:"balance"`                // 用户的LP token ID的个数余额
-	APR                   string    `json:"apr"`                   // 年化收益率
+	APR                   string `json:"apr"`                   // 年化收益率
+
 }
 
 type FarmUserAssetDetailRequest {
