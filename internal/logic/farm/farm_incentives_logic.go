@@ -198,7 +198,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 				// 可用余额
 				bal, _, _, _, _ := getBalance(req.ChainId, item.IncentiveId, req.UserAddress, farmConf.Staker, conn)
 				resp.List[i].Balance = bal
-				logx.Infof("RRRRRRRRRRRRRRRR:%v IncentiveId:%v ", len(resp.List[i].Positions), resp.List[i].IncentiveId)
+				logx.Infof("len:%v IncentiveId:%v ", len(resp.List[i].Positions), resp.List[i].IncentiveId)
 			}
 		}
 		// }
@@ -498,6 +498,14 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
 			logx.Infof("record.EventIncentiveId:%v totalClaimableFeesUSD:%v  rewards :%v ", record.EventIncentiveId, totalClaimableFeesUSDFloat64, rewards.String())
 
+			eventWeightString := big.NewInt(record.EventWeight).String()
+			totalWeightString, err := SetRewardPoolInfo(farmConf.Staker, record.EventRewardToken, *chainConf, cacher)
+			if err != nil {
+				logx.Errorf("Err:%v ", err)
+			}
+			if strings.EqualFold(totalWeightString, "0") {
+				totalWeightString = "1000"
+			}
 			if ok {
 				tokenIds := []*big.Int{}
 				userAddressesMap := map[string]struct{}{}
@@ -538,6 +546,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 
 				totalLiquidityUSDValue, _ := totalLiquidityUSD.Float64()
+
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:                  record.EventIncentiveId,
 					PoolAddress:                  record.EventPool,
@@ -558,6 +567,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					LiquidityUSD:                 totalLiquidityUSD.String(),
 					LiquidityUSDFloat64:          totalLiquidityUSDValue,
 					TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
+					Weight:                       eventWeightString,
+					TotalWeight:                  totalWeightString,
 					APR:                          apr,
 					JoinNum:                      int64(len(userAddressesMap)),
 					Status:                       status,
@@ -592,6 +603,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					LiquidityUSD:                 big.NewInt(0).String(),
 					TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
 					TotalClaimableFeesUSD:        totalClaimableFeesUSD.String(),
+					Weight:                       eventWeightString,
+					TotalWeight:                  totalWeightString,
 					APR:                          apr,
 					JoinNum:                      0,
 					Status:                       status,

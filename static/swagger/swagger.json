@@ -1786,6 +1786,14 @@
         "earned": {
           "type": "string"
         },
+        "weight": {
+          "type": "string",
+          "description": " 该 incentiveid 的 Weight"
+        },
+        "totalWeight": {
+          "type": "string",
+          "description": " 所有incentiveid池子的总权重，TotalWeight"
+        },
         "positions": {
           "type": "array",
           "items": {
@@ -1837,6 +1845,8 @@
         "balance",
         "staked",
         "earned",
+        "weight",
+        "totalWeight",
         "-",
         "totalClaimableFeesUsd",
         "totalClaimedFeesUSD"
@@ -3885,7 +3895,8 @@
       "properties": {
         "positionId": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "description": " position的tokenid"
         },
         "token0Amount": {
           "type": "string"

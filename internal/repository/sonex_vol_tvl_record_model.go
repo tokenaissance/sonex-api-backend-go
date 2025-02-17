@@ -17,6 +17,10 @@ type (
 	}
 )
 
+// TypeoOfValue int64     `db:"typeo_of_value"` // 1: volume value; 2:tvl value
+var VolumeOfTypeoOfValue = int64(1) //
+var TVLTypeoOfValue = int64(2)
+
 // NewSonexVolTvlRecordModel returns a model for the database table.
 func NewSonexVolTvlRecordModel(conn sqlx.SqlConn) SonexVolTvlRecordModel {
 	return &customSonexVolTvlRecordModel{

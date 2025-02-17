@@ -25,7 +25,7 @@ func NewSonexVolumeKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 
 func (l *SonexVolumeKlineLogic) SonexVolumeKline(req *types.SonexVolumeKlineRequest) (resp *types.SonexVolumeKlineResponse, err error) {
 	// get volume vol
-
 	
+
 	return
 }
