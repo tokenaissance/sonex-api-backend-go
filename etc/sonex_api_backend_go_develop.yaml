@@ -77,3 +77,9 @@ Xpools:
   - ChainId: 1946
     Factory: 0xB1E6ef99cB82ae685b8289DE3251b5427Dc72148
     BlockTime: 2000
+ACS:
+  Tokens:
+    - "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"
+    - "0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"
+  Points: 100
+  SubTitle: ACS
