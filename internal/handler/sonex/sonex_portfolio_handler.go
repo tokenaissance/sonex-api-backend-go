@@ -2,7 +2,6 @@ package sonex
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -129,14 +128,27 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 获取用户有效 xpool 列表
 		{
 			if xpoolSelected {
-				xpools, err := getXPools(r.Context(), svcCtx, req)
+				xpoolList, err := getXPools(r.Context(), svcCtx, req)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: getXPools error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
+
+				// count in total xpool staked before today begin
+				for _, events := range xpoolList.depositedEvents {
+					for _, event := range events {
+						// deposited event transaction time
+						createdAt := event.TxAt
+						// count in total xpool staked before today begin
+						if createdAt.Before(todayBegin) {
+							previousDayTotalAssets += event.EventValue
+						}
+					}
+				}
+
 				xpoolFrames := make([]*types.PortfolioXpoolFrame, 0)
-				for _, xpool := range xpools {
+				for _, xpool := range xpoolList.pools {
 					stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
 					if err != nil {
 						logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
@@ -186,15 +198,6 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					})
 
 					portfolioStats.TotalXpoolStaked += xpoolStaked
-					createdAt, err := time.Parse(time.RFC3339, xpool.CreatedAt)
-					if err != nil {
-						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
-						continue
-					}
-					// count in total xpool staked before today begin
-					if createdAt.Before(todayBegin) {
-						previousDayTotalAssets += xpoolStaked
-					}
 
 					// 计算用户可领取的奖励代币价值
 					claimableRewardTokenValueFloat64, _ := rewardTokenValue.ValueFloat64()
@@ -367,33 +370,77 @@ func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 	return positions, nil
 }
 
+// xpoolsList 获取用户有效 xpool 列表 & 质押事件列表
+type xpoolList struct {
+	pools           []types.XpoolPoolListResponse_Pool      // 质押池列表
+	depositedEvents map[string][]*xpool.XpoolDepositedEvent // 质押事件列表
+}
+
 // getXPools 获取用户有效 xpool 列表
-func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) ([]types.XpoolPoolListResponse_Pool, error) {
+func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*xpoolList, error) {
 	l := xpool.NewXpoolPoolListLogic(ctx, svcCtx)
-	pageIndex := int64(1)
-	pageSize := int64(math.MaxInt64)
-	pools, err := l.XpoolPoolList(&types.XpoolPoolListRequest{
-		ChainRequest: types.ChainRequest{
-			ChainId: req.ChainId,
-		},
-		UserAddress: req.Address,
-		PageRequest: types.PageRequest{
-			PageIndex: &pageIndex,
-			PageSize:  &pageSize,
-		},
-	})
-	if err != nil {
-		logx.Errorf("[SonexPortfolioHandler]:getXPools XpoolPoolList error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
-		return nil, err
+
+	type poolsResult struct {
+		pools []types.XpoolPoolListResponse_Pool
+		err   error
+	}
+	type depositedEventsResult struct {
+		depositedEvents map[string][]*xpool.XpoolDepositedEvent
+		err             error
 	}
 
-	list, ok := pools.Data.([]types.XpoolPoolListResponse_Pool)
-	if !ok {
-		logx.Errorf("[SonexPortfolioHandler]:getXPools XpoolPoolList data type error, chainId: %d, address: %s", req.ChainId, req.Address)
-		return nil, errors.New("XpoolPoolList data type error")
+	poolsChan := make(chan poolsResult, 1)
+	depositedEventsChan := make(chan depositedEventsResult, 1)
+
+	go func() {
+		pageIndex := int64(1)
+		pageSize := int64(math.MaxInt64)
+		pools, err := l.XpoolPoolList(&types.XpoolPoolListRequest{
+			ChainRequest: types.ChainRequest{
+				ChainId: req.ChainId,
+			},
+			UserAddress: req.Address,
+			PageRequest: types.PageRequest{
+				PageIndex: &pageIndex,
+				PageSize:  &pageSize,
+			},
+		})
+		if err != nil {
+			poolsChan <- poolsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getXPools XpoolPoolList error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
+			return
+		}
+
+		list, ok := pools.Data.([]types.XpoolPoolListResponse_Pool)
+		if !ok {
+			poolsChan <- poolsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getXPools XpoolPoolList data type error, chainId: %d, address: %s", req.ChainId, req.Address)}
+			return
+		}
+		poolsChan <- poolsResult{pools: list}
+	}()
+
+	go func() {
+		depositedEvents, err := l.GetUserDepositedEvents(req.ChainId, req.Address)
+		if err != nil {
+			depositedEventsChan <- depositedEventsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getXPools GetUserDepositedEvents error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
+			return
+		}
+		depositedEventsChan <- depositedEventsResult{depositedEvents: depositedEvents}
+	}()
+
+	pools := <-poolsChan
+	depositedEvents := <-depositedEventsChan
+
+	if pools.err != nil {
+		return nil, pools.err
+	}
+	if depositedEvents.err != nil {
+		return nil, depositedEvents.err
 	}
 
-	return list, nil
+	return &xpoolList{
+		pools:           pools.pools,
+		depositedEvents: depositedEvents.depositedEvents,
+	}, nil
 }
 
 // getFarmPools 获取用户有效 farm 列表

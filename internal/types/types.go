@@ -441,9 +441,9 @@ type PortfolioPosition struct {
 type PortfolioRequest struct {
 	ChainRequest
 	TimeZoneRequest
-	LiquiditySelected bool   `form:"liquiditySelected,default=true"`
-	FarmSelected      bool   `form:"farmSelected,default=true"`
-	XpoolSelected     bool   `form:"xpoolSelected,default=true"`
+	LiquiditySelected bool   `form:"liquiditySelected,default=false"`
+	FarmSelected      bool   `form:"farmSelected,default=false"`
+	XpoolSelected     bool   `form:"xpoolSelected,default=false"`
 	Address           string `form:"address"`
 	PageRequest
 }
@@ -980,13 +980,13 @@ type XpoolPoolListResponse_Pool struct {
 	Earned                        string  `json:"earned"`               // 用户可获得未领取奖励代币数量
 	JoinNum                       int64   `json:"joinNum"`              // 参与人数
 	Status                        string  `json:"status"`               // 运行状态
-	StakingTokenPriceWithDecimals string  `json:"-"`                    // 质押的代币价格(包含精度)
-	StakingTokenPriceDecimals     int64   `json:"-"`                    // 质押的代币价格精度
-	RewardTokenPriceWithDecimals  string  `json:"-"`                    // 奖励的代币价格(包含精度)
-	RewardTokenPriceDecimals      int64   `json:"-"`                    // 奖励的代币价格精度
-	Claimed                       string  `json:"-"`                    // 用户已领取的奖励代币数量
 	CreatedAt                     string  `json:"createdAt"`
 	UpdatedAt                     string  `json:"updatedAt"`
+	StakingTokenPriceWithDecimals string  `json:"-"` // 质押的代币价格(包含精度)
+	StakingTokenPriceDecimals     int64   `json:"-"` // 质押的代币价格精度
+	RewardTokenPriceWithDecimals  string  `json:"-"` // 奖励的代币价格(包含精度)
+	RewardTokenPriceDecimals      int64   `json:"-"` // 奖励的代币价格精度
+	Claimed                       string  `json:"-"` // 用户已领取的奖励代币数量
 }
 
 type XpoolPoolStatsRequest struct {
