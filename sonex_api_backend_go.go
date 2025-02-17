@@ -124,8 +124,9 @@ func main() {
 	// })
 
 	// every 6 hours,calcuate the vol and Tvl for pool
+	// 计算tvl的增长速度
 	go task.HandleRecordVol24hTvl24h(&c)
-	global.AddCronJob("@every 6h", func() {
+	global.AddCronJob("@every 1h", func() {
 		task.HandleRecordVol24hTvl24h(&c)
 	})
 
