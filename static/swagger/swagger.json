@@ -3310,6 +3310,11 @@
           "type": "string",
           "description": " 所有资产净值相比前一天的变化率"
         },
+        "totalAssetsChange": {
+          "type": "number",
+          "format": "double",
+          "description": " 所有资产净值相比前一天的变化量（绝对值）"
+        },
         "claimableFees": {
           "type": "number",
           "format": "double",
@@ -3356,6 +3361,7 @@
       "required": [
         "totalAssets",
         "totalAssetsRate",
+        "totalAssetsChange",
         "claimableFees",
         "liquidityPosition",
         "totalFarmStaked",

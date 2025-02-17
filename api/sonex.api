@@ -566,9 +566,10 @@ type PortfolioFarmFrame {
 
 // portfolio 页面展示的 stats 数据结构
 type PortfolioStats {
-	TotalAssets   	float64 `json:"totalAssets"`   	 // 所有资产净值
-	TotalAssetsRate string 	`json:"totalAssetsRate"` // 所有资产净值相比前一天的变化率
-	ClaimableFees 	float64 `json:"claimableFees"` 	 // 所有可提资产净值
+	TotalAssets   		float64 `json:"totalAssets"`   	 // 所有资产净值
+	TotalAssetsRate 	string 	`json:"totalAssetsRate"` // 所有资产净值相比前一天的变化率
+	TotalAssetsChange 	float64 `json:"totalAssetsChange"` // 所有资产净值相比前一天的变化量（绝对值）
+	ClaimableFees 		float64 `json:"claimableFees"` 	 // 所有可提资产净值
 
 	// liquidity
 	LiquidityPosition 	   float64 `json:"liquidityPosition"`      // liquidity position 净值总和
