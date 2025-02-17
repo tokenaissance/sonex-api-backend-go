@@ -23,6 +23,7 @@ type (
 		eventSonexPositionManagerTransferModel
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
+		FindByChainIdTokenIdWithPool(ctx context.Context, chainId int64, tokenId int64) (*EventSonexPositionManagerTransferWithPool, error)
 		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetValidTransferEventsForGalxeAddLiquidity(ctx context.Context, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
@@ -36,6 +37,15 @@ type (
 		*defaultEventSonexPositionManagerTransferModel
 	}
 )
+
+type EventSonexPositionManagerTransferWithPool struct {
+	*EventSonexPositionManagerTransfer
+	ExtraPool        string `db:"extra_pool"`
+	ExtraToken0      string `db:"extra_token0"`
+	ExtraToken1      string `db:"extra_token1"`
+	ExtraFee         string `db:"extra_fee"`
+	ExtraTickSpacing string `db:"extra_tick_spacing"`
+}
 
 // NewEventSonexPositionManagerTransferModel returns a model for the database table.
 func NewEventSonexPositionManagerTransferModel(conn sqlx.SqlConn) EventSonexPositionManagerTransferModel {
@@ -52,6 +62,35 @@ func (m *customEventSonexPositionManagerTransferModel) New(ctx context.Context, 
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventSonexPositionManagerTransferRows)
 	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
 	return err
+}
+
+func (m *customEventSonexPositionManagerTransferModel) FindByChainIdTokenIdWithPool(ctx context.Context, chainId int64, tokenId int64) (*EventSonexPositionManagerTransferWithPool, error) {
+	eventSonexPoolMintModel := newEventSonexPoolMintModel(m.conn)
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+			T.*,
+			S.extra_pool,
+			C.event_token0 AS extra_token0,
+			C.event_token1 AS extra_token1,
+			C.event_fee AS extra_fee,
+			C.event_tick_spacing AS extra_tick_spacing
+		FROM %s T 
+		LEFT JOIN %s S ON S.tx_hash = T.tx_hash 
+		LEFT JOIN %s C ON S.extra_pool = C.event_pool 
+		WHERE T.chain_id = $1 AND T.event_token_id = $2 AND T.event_from = $3
+		LIMIT 1
+	`, m.table, eventSonexPoolMintModel.tableName(), eventSonexFactoryPoolCreatedModel.tableName())
+	var resp EventSonexPositionManagerTransferWithPool
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, tokenId, (common.Address{}).Hex())
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
 
 type transferData struct {

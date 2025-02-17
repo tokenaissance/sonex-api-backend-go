@@ -3,13 +3,11 @@ package sonex
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
 	"sonex_api_backend_go/internal/module/points"
-	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"strconv"
 	"time"
@@ -109,25 +107,23 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 			func() error {
 				conn := repository.NewConn(conf.PostgreSQL.DateSource())
 				err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
-					staticCaller, err := sonex.NewStaticCaller(conf)
-					if err != nil {
+					eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(sqlx.NewSqlConnFromSession(s))
+					acsIncreaseLiquidityPointsRecordModel := repository.NewAcsIncreaseLiquidityPointsRecordModel(sqlx.NewSqlConnFromSession(s))
+
+					position, err := eventSonexPositionManagerTransferModel.FindByChainIdTokenIdWithPool(ctx, chainId, event.TokenId.Int64())
+					switch err {
+					case repository.ErrNotFound:
+						logx.Errorf("position[%d] not found", event.TokenId.Int64())
+						return nil
+					case nil:
+					default:
 						return err
 					}
-					positions, err := staticCaller.BatchGetPositions(ctx, chainId, common.HexToAddress(sonexConf.PositionManager), []*big.Int{event.TokenId})
-					if err != nil {
-						return fmt.Errorf("get position[%d] error: %s", event.TokenId.Int64(), err)
-					}
-					if len(positions) < 1 {
-						return fmt.Errorf("not found position[%d]", event.TokenId.Int64())
-					}
-					position := positions[0]
 
 					// If token0/token1 not in token list, ignore
-					if !linq.From(acsConf.Tokens).Contains(position.Token0.Hex()) || !linq.From(acsConf.Tokens).Contains(position.Token1.Hex()) {
+					if !linq.From(acsConf.Tokens).Contains(position.ExtraToken0) || !linq.From(acsConf.Tokens).Contains(position.ExtraToken1) {
 						return nil
 					}
-
-					acsIncreaseLiquidityPointsRecordModel := repository.NewAcsIncreaseLiquidityPointsRecordModel(sqlx.NewSqlConnFromSession(s))
 
 					// If handled, ignore
 					_, err = acsIncreaseLiquidityPointsRecordModel.FindOneByChainIdTxHashTxIndex(ctx, chainId, event.Raw.TxHash.Hex(), int64(event.Raw.Index))
@@ -146,7 +142,7 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 					err = acsIncreaseLiquidityPointsRecordModel.New(
 						ctx,
 						id, chainId, tx.From.Hex(), acsConf.Points, event.Raw.TxHash.Hex(), int64(event.Raw.Index), tx.TxAt,
-						event.TokenId.Int64(), position.Pool.Address.Hex(), position.Token0.Hex(), position.Token1.Hex(), event.Amount0, event.Amount1,
+						event.TokenId.Int64(), position.ExtraPool, position.ExtraToken0, position.ExtraToken1, event.Amount0, event.Amount1,
 					)
 					if err != nil {
 						return err
@@ -168,9 +164,9 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 							"amount0":   event.Amount0.String(),
 							"amount1":   event.Amount1.String(),
 							"timestamp": strconv.FormatInt(tx.TxAt.Unix(), 10),
-							"pool":      position.Pool.Address.Hex(),
-							"token0":    position.Token0.Hex(),
-							"token1":    position.Token1.Hex(),
+							"pool":      position.ExtraPool,
+							"token0":    position.ExtraToken0,
+							"token1":    position.ExtraToken1,
 						},
 					)
 					if err != nil {
