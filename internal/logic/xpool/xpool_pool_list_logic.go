@@ -25,6 +25,7 @@ type XpoolPoolListLogic struct {
 	svcCtx                            *svc.ServiceContext
 	eventXpoolFactoryPoolCreatedModel repository.EventXpoolFactoryPoolCreatedModel
 	eventXpoolPoolDepositedModel      repository.EventXpoolPoolDepositedModel
+	eventXpoolPoolWithdrawedModel     repository.EventXpoolPoolWithdrawedModel
 	tokenPriceModel                   repository.SonexTokenPriceRecordModel
 }
 
@@ -42,9 +43,18 @@ func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Xpo
 		svcCtx:                            svcCtx,
 		eventXpoolFactoryPoolCreatedModel: repository.NewEventXpoolFactoryPoolCreatedModel(conn),
 		eventXpoolPoolDepositedModel:      repository.NewEventXpoolPoolDepositedModel(conn),
+		eventXpoolPoolWithdrawedModel:     repository.NewEventXpoolPoolWithdrawedModel(conn),
 		tokenPriceModel:                   repository.NewSonexTokenPriceRecordModel(conn),
 	}
 }
+
+// XpoolUserEventType 用户操作事件类型
+type XpoolUserEventType int64
+
+const (
+	XpoolUserEventTypeDeposited XpoolUserEventType = iota
+	XpoolUserEventTypeWithdrawed
+)
 
 type XpoolDepositedEvent struct {
 	Id          int64     // 主键
@@ -64,8 +74,34 @@ type XpoolDepositedEvent struct {
 	EventValue  float64   // deposited amount token 的美元价值
 }
 
-// GetUserDepositedEvents 获取用户存款事件
-func (l *XpoolPoolListLogic) GetUserDepositedEvents(chainId int64, userAddress string) (m map[string][]*XpoolDepositedEvent, err error) {
+type XpoolWithdrawedEvent struct {
+	Id             int64     // 主键
+	CreatedAt      time.Time // 创建时间
+	UpdatedAt      time.Time // 更新时间
+	ChainId        int64     // 链ID
+	BlockNumber    int64     // 区块高度
+	TxIndex        int64     // 交易索引
+	TxHash         string    // 交易哈希
+	TxAt           time.Time // 交易时间
+	From           string    // 交易发送者
+	To             string    // 交易接收者
+	Value          string    // 事件交易发生的 ETH amount，如果交易不包含 ETH，则该值为 0
+	EventUser      string    // 事件发送者
+	EventWithdrawn string    // 事件提款数量
+	EventClaimed   string    // 事件已领取数量
+	EventHeight    int64     // 事件发生时的区块高度
+	EventValue     float64   // 事件提款金额的美元价值
+}
+
+// XpoolUserOperationEvent 用户操作事件，根据 type 类型，返回不同的 event 类型
+type XpoolUserOperationEvent struct {
+	XpoolUserEventType XpoolUserEventType
+	DepositedEvent     *XpoolDepositedEvent
+	WithdrawedEvent    *XpoolWithdrawedEvent
+}
+
+// GetUserOperationEvents 获取用户存款事件
+func (l *XpoolPoolListLogic) GetUserOperationEvents(chainId int64, userAddress string) (m map[string][]*XpoolUserOperationEvent, err error) {
 	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
@@ -86,10 +122,30 @@ func (l *XpoolPoolListLogic) GetUserDepositedEvents(chainId int64, userAddress s
 		return nil, err
 	}
 
-	// get pool addresses
+	withdrawedEvents, err := l.eventXpoolPoolWithdrawedModel.GetWithdrawedEvents(l.ctx, chainId, userAddress)
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get user withdrawed events error: %s", err)
+		return nil, err
+	}
+
+	// Use a map to track unique addresses
+	seenAddresses := make(map[string]bool)
 	poolAddresses := make([]common.Address, 0)
-	for address, _ := range depositedEvents {
-		poolAddresses = append(poolAddresses, common.HexToAddress(address))
+
+	// Add addresses from deposited events
+	for address := range depositedEvents {
+		if !seenAddresses[address] {
+			seenAddresses[address] = true
+			poolAddresses = append(poolAddresses, common.HexToAddress(address))
+		}
+	}
+
+	// Add addresses from withdrawn events
+	for address := range withdrawedEvents {
+		if !seenAddresses[address] {
+			seenAddresses[address] = true
+			poolAddresses = append(poolAddresses, common.HexToAddress(address))
+		}
 	}
 
 	// get pool infos
@@ -133,7 +189,7 @@ func (l *XpoolPoolListLogic) GetUserDepositedEvents(chainId int64, userAddress s
 		return nil, err
 	}
 
-	m = make(map[string][]*XpoolDepositedEvent, 0)
+	m = make(map[string][]*XpoolUserOperationEvent, 0)
 	// enumerate pool address and deposited events
 	for address, events := range depositedEvents {
 		info, ok := poolInfos[common.HexToAddress(address).Hex()]
@@ -149,7 +205,7 @@ func (l *XpoolPoolListLogic) GetUserDepositedEvents(chainId int64, userAddress s
 			continue
 		}
 
-		depositedEvents := make([]*XpoolDepositedEvent, 0)
+		operationEvents := make([]*XpoolUserOperationEvent, 0)
 		// count deposited(stakeed) amount
 		for _, event := range events {
 			stakingTokenValue, err := sonex.NewTokenValue(event.EventAmount, int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
@@ -159,7 +215,7 @@ func (l *XpoolPoolListLogic) GetUserDepositedEvents(chainId int64, userAddress s
 			}
 
 			eventValue, _ := stakingTokenValue.ValueFloat64()
-			depositedEvents = append(depositedEvents, &XpoolDepositedEvent{
+			depositedEvent := &XpoolDepositedEvent{
 				Id:          event.Id,
 				CreatedAt:   event.CreatedAt,
 				UpdatedAt:   event.UpdatedAt,
@@ -175,10 +231,68 @@ func (l *XpoolPoolListLogic) GetUserDepositedEvents(chainId int64, userAddress s
 				EventAmount: event.EventAmount,
 				EventHeight: event.EventHeight,
 				EventValue:  eventValue,
-			})
+			}
+			operationEvent := &XpoolUserOperationEvent{
+				XpoolUserEventType: XpoolUserEventTypeDeposited,
+				DepositedEvent:     depositedEvent,
+			}
+			operationEvents = append(operationEvents, operationEvent)
 		}
 		// deposited events map
-		m[address] = depositedEvents
+		m[address] = operationEvents
+	}
+
+	// enumerate pool address and deposited events
+	for address, events := range withdrawedEvents {
+		info, ok := poolInfos[common.HexToAddress(address).Hex()]
+		if !ok {
+			logx.Errorf("[XpoolPoolList]: Pool info not found: %s, pools: %v", common.HexToAddress(address).Hex(), poolInfos)
+			continue
+		}
+
+		// get staking token price
+		stakingTokenPrice, exists := prices[info.StakingToken.Hex()]
+		if !exists {
+			logx.Errorf("[XpoolPoolList]: Staking token price not found: %s", info.StakingToken.Hex())
+			continue
+		}
+
+		operationEvents := make([]*XpoolUserOperationEvent, 0)
+		// count deposited(stakeed) amount
+		for _, event := range events {
+			stakingTokenValue, err := sonex.NewTokenValue(event.EventWithdrawn, int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
+			if err != nil {
+				logx.Errorf("[XpoolPoolList]: Invalid staking token value: %s", err)
+				continue
+			}
+
+			eventValue, _ := stakingTokenValue.ValueFloat64()
+			withdrawedEvent := &XpoolWithdrawedEvent{
+				Id:             event.Id,
+				CreatedAt:      event.CreatedAt,
+				UpdatedAt:      event.UpdatedAt,
+				ChainId:        event.ChainId,
+				BlockNumber:    event.BlockNumber,
+				TxIndex:        event.TxIndex,
+				TxHash:         event.TxHash,
+				TxAt:           event.TxAt,
+				From:           event.From,
+				To:             event.To,
+				Value:          event.Value,
+				EventUser:      event.EventUser,
+				EventWithdrawn: event.EventWithdrawn,
+				EventClaimed:   event.EventClaimed,
+				EventHeight:    event.EventHeight,
+				EventValue:     eventValue,
+			}
+			operationEvent := &XpoolUserOperationEvent{
+				XpoolUserEventType: XpoolUserEventTypeWithdrawed,
+				WithdrawedEvent:    withdrawedEvent,
+			}
+			operationEvents = append(operationEvents, operationEvent)
+		}
+		// deposited events map
+		m[address] = operationEvents
 	}
 
 	return m, nil
