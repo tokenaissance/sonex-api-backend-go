@@ -286,6 +286,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		} else {
 			portfolioStats.TotalAssetsRate = "0.00%"
 		}
+		// Calculate total assets change
+		portfolioStats.TotalAssetsChange = math.Abs(portfolioStats.TotalAssets - previousDayTotalAssets)
 		response.Stats = portfolioStats
 
 		// sort portfolio positions
