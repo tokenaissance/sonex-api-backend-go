@@ -278,7 +278,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			pool.Stablecoin = stablecoinToken.Address
 			pool.StablecoinDecimals = stablecoinToken.Decimals
 			pool.Yield24h = _yield //
-
+			pool.Volume = "0"      // 给个默认的值
 			mu.Unlock()
 
 			poolChan <- pool
@@ -296,38 +296,110 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		pools = append(pools, pool)
 	}
 
-	// TODO 后期的优化处理
+	switch req.Order {
+	case repository.PoolsOrderTvlDesc:
+		sort.SliceStable(pools, func(i, j int) bool {
+			tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+			tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+			if tvlUsd_i.Cmp(tvlUsd_j) == 0 {
+				// 按照volume 排序序列
+				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
+				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
+				return volume24HUsd_i.Cmp(volume24HUsd_j) > 0
+			} else {
+				return tvlUsd_i.Cmp(tvlUsd_j) > 0
+			}
+		})
+	case repository.PoolsOrderTvlAsc:
+		sort.SliceStable(pools, func(i, j int) bool {
+			tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+			tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+			if tvlUsd_i.Cmp(tvlUsd_j) == 0 {
+				// 按照volume 排序序列
+				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
+				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
+				return volume24HUsd_i.Cmp(volume24HUsd_j) < 0
+			} else {
+				return tvlUsd_i.Cmp(tvlUsd_j) < 0
+			}
+		})
+	case repository.PoolsOrderYieldDesc:
+		sort.SliceStable(pools, func(i, j int) bool {
+			yieldUsd_i, _ := big.NewFloat(0).SetString(pools[i].Yield24h)
+			yieldUsd_j, _ := big.NewFloat(0).SetString(pools[j].Yield24h)
+			if yieldUsd_i.Cmp(yieldUsd_j) == 0 {
+				// 按照volume 排序序列
+				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
+				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
+				return volume24HUsd_i.Cmp(volume24HUsd_j) > 0
+			} else {
+				return yieldUsd_i.Cmp(yieldUsd_j) > 0
+			}
+		})
 
-	// 该处代码后期需要再打开
-	/*
-		switch req.Order {
-		case repository.PoolsOrderTvlDesc:
-			sort.SliceStable(pools, func(i, j int) bool {
+	case repository.PoolsOrderYieldAsc:
+		sort.SliceStable(pools, func(i, j int) bool {
+			yieldUsd_i, _ := big.NewFloat(0).SetString(pools[i].Yield24h)
+			yieldUsd_j, _ := big.NewFloat(0).SetString(pools[j].Yield24h)
+			if yieldUsd_i.Cmp(yieldUsd_j) == 0 {
+				// 按照volume 排序序列
+				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
+				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
+				return volume24HUsd_i.Cmp(volume24HUsd_j) < 0
+			} else {
+				return yieldUsd_i.Cmp(yieldUsd_j) < 0
+			}
+		})
+
+	case repository.PoolsOrderVolumeDesc:
+		sort.SliceStable(pools, func(i, j int) bool {
+			volumeUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
+			volumeUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
+			if volumeUsd_i.Cmp(volumeUsd_j) == 0 {
+				// 按照volume 排序序列
 				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
 				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
 				return tvlUsd_i.Cmp(tvlUsd_j) > 0
-			})
-		case repository.PoolsOrderTvlAsc:
-			sort.SliceStable(pools, func(i, j int) bool {
+			} else {
+				return volumeUsd_i.Cmp(volumeUsd_j) > 0
+			}
+		})
+
+	case repository.PoolsOrderVolumeAsc:
+		sort.SliceStable(pools, func(i, j int) bool {
+			volumeUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
+			volumeUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
+			if volumeUsd_i.Cmp(volumeUsd_j) == 0 {
+				// 按照volume 排序序列
 				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
 				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
 				return tvlUsd_i.Cmp(tvlUsd_j) < 0
-			})
-		default:
-			sort.SliceStable(pools, func(i, j int) bool {
-				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
-				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
-				return tvlUsd_i.Cmp(tvlUsd_j) > 0
-			})
-		}
-	*/
+			} else {
+				return volumeUsd_i.Cmp(volumeUsd_j) < 0
+			}
+		})
 
-	// sort pool tvl
-	sort.SliceStable(pools, func(i, j int) bool {
-		tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
-		tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
-		return tvlUsd_i.Cmp(tvlUsd_j) > 0
-	})
+	default:
+		sort.SliceStable(pools, func(i, j int) bool {
+			tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+			tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+			if tvlUsd_i.Cmp(tvlUsd_j) == 0 {
+				// 按照volume 排序序列
+				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
+				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
+				return volume24HUsd_i.Cmp(volume24HUsd_j) > 0
+			} else {
+				return tvlUsd_i.Cmp(tvlUsd_j) > 0
+			}
+		})
+	}
+
+	// // sort pool tvl
+	// sort.SliceStable(pools, func(i, j int) bool {
+	// 	tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+	// 	tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+	// 	return tvlUsd_i.Cmp(tvlUsd_j) > 0
+	// })
 
 	// calculate volume
 	_swapAmoutEthAndUsdMap, _, err := CalucatedVolume24H(conn, req.ChainId)

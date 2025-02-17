@@ -121,9 +121,15 @@ type SonexTokenPricesResponse {
 	Message string `json:"message"`
 }
 
+//  var PoolsOrderTvlAsc = "ASC"   // 按照TVL进行升序
+//  var PoolsOrderTvlDesc = "DESC" // 按照TVL进行降序
+//  var PoolsOrderYieldAsc = "YieldASC"     // 按照Yield进行升序
+//  var PoolsOrderYieldDesc = "YieldDESC"   // 按照Yield进行降序
+//  var PoolsOrderVolumeAsc = "VolumeASC"   // 按照Volume进行升序
+//  var PoolsOrderVolumeDesc = "VolumeDESC" // 按照Volume进行降序
 type PoolsRequest {
 	ChainRequest
-	Order         string `form:"order,default=ASC"`
+	Order         string `form:"order,default=ASC"`  // ASC ,DESC , YieldASC ,YieldDESC,  VolumeDESC, VolumeDESC
 	Keywords      string `form:"keywords,optional"`
 	Token0Address string `form:"token0Address,optional"`
 	Token1Address string `form:"token1Address,optional"`
