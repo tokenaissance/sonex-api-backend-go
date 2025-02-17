@@ -126,7 +126,7 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 		}).
 		ToSlice(&stakedRecords)
 	for _, item := range stakedRecords {
-		_, err := farmPointsRecordModel.FindOneByChianIdUserAddressIncentiveId(ctx, chainConf.ChainId, item.EventUser, item.EventIncentiveId)
+		_, err := farmPointsRecordModel.FindOneByChainIdUserAddressIncentiveId(ctx, chainConf.ChainId, item.EventUser, item.EventIncentiveId)
 		switch err {
 		case repository.ErrNotFound:
 		case nil:

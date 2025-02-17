@@ -9,7 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func PoolSwapCallback(conf config.Config, chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap) {
-	conn := repository.NewConn(conf.PostgreSQL.DateSource())
-	_ = conn
+func PoolSwapCallback(conf config.Config) func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap) {
+	return func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap) {
+		conn := repository.NewConn(conf.PostgreSQL.DateSource())
+		_ = conn
+	}
 }

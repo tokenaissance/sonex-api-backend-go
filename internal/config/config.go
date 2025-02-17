@@ -17,6 +17,7 @@ type Config struct {
 	PreDeposits   []PreDepositConfig   `json:",optional"`
 	Xpools        []XpoolConfig        `json:",optional"`
 	Farms         []FarmConfig         `json:",optional"`
+	ACS           *ACSConfig           `json:",optional"`
 }
 
 // Get general configuration of a blockchain of `chainId`.
