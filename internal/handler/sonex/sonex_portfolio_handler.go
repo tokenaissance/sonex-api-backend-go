@@ -136,13 +136,25 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				}
 
 				// count in total xpool staked before today begin
-				for _, events := range xpoolList.depositedEvents {
+				for _, events := range xpoolList.operationEvents {
 					for _, event := range events {
-						// deposited event transaction time
-						createdAt := event.TxAt
-						// count in total xpool staked before today begin
-						if createdAt.Before(todayBegin) {
-							previousDayTotalAssets += event.EventValue
+						// 质押事件
+						if event.XpoolUserEventType == xpool.XpoolUserEventTypeDeposited {
+							// deposited event transaction time
+							createdAt := event.DepositedEvent.TxAt
+							// count in total xpool staked before today begin
+							if createdAt.Before(todayBegin) {
+								previousDayTotalAssets += event.DepositedEvent.EventValue
+							}
+						}
+						// 提取事件
+						if event.XpoolUserEventType == xpool.XpoolUserEventTypeWithdrawed {
+							// withdrawn event transaction time
+							createdAt := event.WithdrawedEvent.TxAt
+							// count in total xpool staked before today begin
+							if createdAt.Before(todayBegin) {
+								previousDayTotalAssets -= event.WithdrawedEvent.EventValue
+							}
 						}
 					}
 				}
@@ -376,8 +388,8 @@ func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 
 // xpoolsList 获取用户有效 xpool 列表 & 质押事件列表
 type xpoolList struct {
-	pools           []types.XpoolPoolListResponse_Pool      // 质押池列表
-	depositedEvents map[string][]*xpool.XpoolDepositedEvent // 质押事件列表
+	pools           []types.XpoolPoolListResponse_Pool          // 质押池列表
+	operationEvents map[string][]*xpool.XpoolUserOperationEvent // 质押 & 提取事件列表
 }
 
 // getXPools 获取用户有效 xpool 列表
@@ -388,13 +400,13 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 		pools []types.XpoolPoolListResponse_Pool
 		err   error
 	}
-	type depositedEventsResult struct {
-		depositedEvents map[string][]*xpool.XpoolDepositedEvent
+	type operationEventsResult struct {
+		operationEvents map[string][]*xpool.XpoolUserOperationEvent
 		err             error
 	}
 
 	poolsChan := make(chan poolsResult, 1)
-	depositedEventsChan := make(chan depositedEventsResult, 1)
+	operationEventsChan := make(chan operationEventsResult, 1)
 
 	go func() {
 		pageIndex := int64(1)
@@ -423,27 +435,27 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 	}()
 
 	go func() {
-		depositedEvents, err := l.GetUserDepositedEvents(req.ChainId, req.Address)
+		operationEvents, err := l.GetUserOperationEvents(req.ChainId, req.Address)
 		if err != nil {
-			depositedEventsChan <- depositedEventsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getXPools GetUserDepositedEvents error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
+			operationEventsChan <- operationEventsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getXPools GetUserOperationEvents error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
 			return
 		}
-		depositedEventsChan <- depositedEventsResult{depositedEvents: depositedEvents}
+		operationEventsChan <- operationEventsResult{operationEvents: operationEvents}
 	}()
 
 	pools := <-poolsChan
-	depositedEvents := <-depositedEventsChan
+	operationEvents := <-operationEventsChan
 
 	if pools.err != nil {
 		return nil, pools.err
 	}
-	if depositedEvents.err != nil {
-		return nil, depositedEvents.err
+	if operationEvents.err != nil {
+		return nil, operationEvents.err
 	}
 
 	return &xpoolList{
 		pools:           pools.pools,
-		depositedEvents: depositedEvents.depositedEvents,
+		operationEvents: operationEvents.operationEvents,
 	}, nil
 }
 
