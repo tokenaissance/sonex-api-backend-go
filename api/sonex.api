@@ -692,8 +692,8 @@ type SonexTvlKlineResponse {
 }
 
 type UsdCreatedRecord {
-	VolumeUsd     	float64 `json:"volumeusd"` 
-	CreatedAt       int64   `json:"createdat"`
+	UsdtValue     	 string `json:"usdt_value"` 
+	Createtime       int64   `json:"createtime"`
 }
 
 @server (

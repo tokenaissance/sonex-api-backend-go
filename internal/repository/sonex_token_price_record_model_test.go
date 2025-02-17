@@ -107,3 +107,31 @@ func Test_GetCurrentPricesAndTokenDecimals(t *testing.T) {
 		}
 	*/
 }
+
+func Test_UpdateOrInsertTvlByTimeStamp(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+	model := NewSonexVolTvlRecordModel(NewConn(c.PostgreSQL.DateSource()))
+
+	n, err := model.UpdateOrInsertTvlByTimeStamp("valueUSD66666666", 1111, V3OfUniswap, 1946, TVLTypeoOfValue)
+	if err != nil {
+		logx.Errorf("err%v", err)
+		return
+	} else {
+		logx.Infof("n   %v", n)
+	}
+}
+
+func Test_GetBytypeOfValueAndChainId(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+	model := NewSonexVolTvlRecordModel(NewConn(c.PostgreSQL.DateSource()))
+
+	records, err := model.GetBytypeOfValueAndChainId(1946, V3OfUniswap, TVLTypeoOfValue, 30)
+	if err != nil {
+		logx.Errorf("err%v", err)
+		return
+	} else {
+		logx.Infof("n   %v", records)
+	}
+}

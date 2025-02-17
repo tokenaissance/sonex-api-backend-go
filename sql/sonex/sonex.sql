@@ -594,8 +594,6 @@ MAXVALUE 9223372036854775807
 START 1
 CACHE 1;
 
-
-
 -- ----------------------------
 -- Table structure for sonex_vol_tvl_record
 -- ----------------------------
@@ -603,19 +601,16 @@ DROP TABLE IF EXISTS "public"."sonex_vol_tvl_record";
 CREATE TABLE "public"."sonex_vol_tvl_record" (
   "id" int8 NOT NULL DEFAULT nextval('sonex_vol_tvl_record_id_seq'::regclass),
   "usdt_value" varchar COLLATE "pg_catalog"."default" NOT NULL,
-  "created" timestamptz(6) NOT NULL,
   "chain_id" int8 NOT NULL,
-  "typeo_of_value" int8 NOT NULL
+  "type_of_value" int8 NOT NULL,
+  "createtime" int8 NOT NULL,
+  "type_of_uniswap" int8 NOT NULL
 )
 ;
 ALTER TABLE "public"."sonex_vol_tvl_record" OWNER TO "apibackendgo";
-COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."typeo_of_value" IS '1: volume value; 2:tvl value';
-
--- ----------------------------
--- Records of sonex_vol_tvl_record
--- ----------------------------
-BEGIN;
-COMMIT;
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."type_of_value" IS '1: volume value; 2:tvl value';
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."created_at" IS '创建时间，需要拿着创建时间后续做更新的key';
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."type_of_uniswap" IS '1: v3, 2: v2  ';
 
 -- ----------------------------
 -- Primary Key structure for table sonex_vol_tvl_record

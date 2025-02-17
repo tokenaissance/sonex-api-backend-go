@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
@@ -24,8 +25,16 @@ func NewSonexVolumeKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *SonexVolumeKlineLogic) SonexVolumeKline(req *types.SonexVolumeKlineRequest) (resp *types.SonexVolumeKlineResponse, err error) {
-	// get volume vol
-	
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	tvlVolModel := repository.NewSonexVolTvlRecordModel(conn)
 
+	records, err := tvlVolModel.GetBytypeOfValueAndChainId(req.ChainId, repository.V3OfUniswap, repository.VolumeOfTypeoOfValue, 30)
+	if err != nil {
+		logx.Errorf("ERR:%v", err)
+		return &types.SonexVolumeKlineResponse{}, err
+	}
+	resp = &types.SonexVolumeKlineResponse{
+		Records: records,
+	}
 	return
 }

@@ -12,6 +12,7 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -25,7 +26,10 @@ tvl的值，方便获得tvl 的值
 */
 func HandleRecordVol24hTvl24h(config *config.Config) {
 	// 记录下所有池子的VOL和TVL
-	logx.Info("HandleRecordVol24hTvl24h start")
+	startTime := time.Now()
+	// start calucate the tvl for each pool
+	logx.Infof("HandleRecordVol24hTvl24h start Time : %v", startTime)
+
 	conn := repository.NewConn(config.PostgreSQL.DateSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port), config.Redis.Password, config.Redis.DB)
 	ctx := context.Background()
@@ -33,6 +37,12 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 	tokenModel := repository.NewTokenModel(conn)
 	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	sonexFactoryPoolCreatedMode := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+
+	tvlvolRecordModel := repository.NewSonexVolTvlRecordModel(conn)
+	zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
+
+	logx.Infof("zeroTime:%v  ", zeroTime)
+
 	if len(config.Chains) > 0 {
 		for _, v := range config.Chains {
 
@@ -49,6 +59,7 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 				logx.Errorf("HandleRecordVol24hTvl24h: in  QueryByChainIdPositionManager :%v", err)
 			} else {
 				if len(poolList) > 0 {
+					volTotalForAll := big.NewFloat(0)
 					for _, pool := range poolList {
 						// 单条的记录
 						volume24HOfBridgePool, err := poolSwapModel.CalucateVolume24HBridgePool(ctx, v.ChainId, pool.EventPool)
@@ -81,6 +92,10 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 							volume24HOfBridgePool, _ := new(big.Float).SetString(volume24HOfBridgePool)
 
 							totalVolume := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
+
+							// 计算VOL for all
+							volTotalForAll = new(big.Float).Add(volTotalForAll, totalVolume)
+
 							err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, totalVolume.String())
 							if err != nil {
 								logx.Errorf("HandleRecordVol24hTvl24h: in  SetVolume24HValue :%v", err)
@@ -88,8 +103,9 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 								logx.Infof("HandleRecordVol24hTvl24h Set:%v totalVolume:%v notVolume24HOfBridgePool:%v  volume24HOfBridgePool:%v   ", pool.EventPool, totalVolume, notVolume24HOfBridgePool, volume24HOfBridgePool)
 							}
 						}
-
 					}
+
+					writeToPGForTvlValue(tvlvolRecordModel, volTotalForAll.String(), zeroTime, v.ChainId, repository.VolumeOfTypeoOfValue, repository.V3OfUniswap)
 				}
 			}
 		}
@@ -217,9 +233,8 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 				for pool := range poolChan {
 					pools = append(pools, pool)
 				}
-				for _, v := range pools {
-					logx.Infof("pools :%v ", v)
-				}
+				_ = pools
+
 			}
 		}
 	}
