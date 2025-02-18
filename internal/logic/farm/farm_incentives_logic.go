@@ -256,27 +256,16 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
-
-				// resp.List[i].Balance = int64(len(userTokenIds[item.IncentiveId])) - val
-				// resp.List[i].Balance = int64(len(resp.List[i].Positions)) - val
-				rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, item.IncentiveId, *chain)
-				if err != nil {
-					return resp, err
-				}
-
-				logx.Infof("rewards :%v ", rewards.String())
-				totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, item.IncentiveId, req.ChainId, chain, conn)
-				if err != nil {
-					return resp, err
-				}
-				resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
-
-				totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
-				resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
 			} else {
-				// unstaked
-				// resp.List[i].Balance = int64(len(resp.List[i].Positions))
+				resp.List[i].Staked = val
 			}
+			totalClaimableFeesString, _, _, totalClaimableFeesUSDFloat64, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(item.IncentiveId), req.ChainId, chain, conn)
+
+			if err != nil {
+				return resp, err
+			}
+			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesString
+			resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
 
 			logx.Infof("SSSSA:%v B:%v c:%v", farmConf.Staker, req.UserAddress, item.IncentiveId)
 
