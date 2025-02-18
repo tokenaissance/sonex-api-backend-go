@@ -6,11 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"sort"
-	"strings"
-	"sync"
-	"time"
-
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
@@ -19,6 +14,10 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"sort"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
@@ -28,8 +27,10 @@ import (
 
 type FarmIncentivesLogic struct {
 	logx.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx                         context.Context
+	svcCtx                      *svc.ServiceContext
+	eventFarmTokenStakedModel   repository.EventFarmTokenStakedModel
+	eventFarmTokenUnstakedModel repository.EventFarmTokenUnstakedModel
 }
 
 type CacheWarpper struct {
@@ -40,10 +41,13 @@ type CacheWarpper struct {
 
 // Farm incentive list
 func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmIncentivesLogic {
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
 	return &FarmIncentivesLogic{
-		Logger: logx.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
+		Logger:                      logx.WithContext(ctx),
+		ctx:                         ctx,
+		svcCtx:                      svcCtx,
+		eventFarmTokenStakedModel:   repository.NewEventFarmTokenStakedModel(conn),
+		eventFarmTokenUnstakedModel: repository.NewEventFarmTokenUnstakedModel(conn),
 	}
 }
 
@@ -628,4 +632,78 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 		},
 		List: list,
 	}, tokenIds, nil
+}
+
+type FarmIncentivesOperationEventType int64
+
+const (
+	FarmIncentivesOperationEventTypeStaked FarmIncentivesOperationEventType = iota
+	FarmIncentivesOperationEventTypeUnstaked
+)
+
+type FarmIncentivesOperationEvent struct {
+	FarmIncentivesOperationEventType FarmIncentivesOperationEventType
+	StakedEvent                      *repository.EventFarmTokenStaked
+	UnstakedEvent                    *repository.EventFarmTokenUnstaked
+}
+
+// GetFarmIncentivesOperationEvents 获取 user address 质押/解质押事件, key 为 incentive id
+func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, userAddress string) (m map[int64][]*FarmIncentivesOperationEvent, err error) {
+	type stakedResult struct {
+		events []*repository.EventFarmTokenStaked
+		err    error
+	}
+	type unstakedResult struct {
+		events []*repository.EventFarmTokenUnstaked
+		err    error
+	}
+
+	stakedChan := make(chan stakedResult, 1)
+	unstakedChan := make(chan unstakedResult, 1)
+
+	// Concurrent fetching using channels
+	go func() {
+		events, err := l.eventFarmTokenStakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+		stakedChan <- stakedResult{events: events, err: err}
+	}()
+
+	go func() {
+		events, err := l.eventFarmTokenUnstakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+		unstakedChan <- unstakedResult{events: events, err: err}
+	}()
+
+	// Receive results from channels
+	stakedRes := <-stakedChan
+	unstakedRes := <-unstakedChan
+
+	if stakedRes.err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: GetStakedEvents error: %v", stakedRes.err)
+		return nil, stakedRes.err
+	}
+
+	if unstakedRes.err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: GetUnstakedEvents error: %v", unstakedRes.err)
+		return nil, unstakedRes.err
+	}
+
+	// Initialize the map
+	m = make(map[int64][]*FarmIncentivesOperationEvent)
+
+	// Process staked events
+	for _, stakedEvent := range stakedRes.events {
+		m[stakedEvent.EventIncentiveId] = append(m[stakedEvent.EventIncentiveId], &FarmIncentivesOperationEvent{
+			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeStaked,
+			StakedEvent:                      stakedEvent,
+		})
+	}
+
+	// Process unstaked events
+	for _, unstakedEvent := range unstakedRes.events {
+		m[unstakedEvent.EventIncentiveId] = append(m[unstakedEvent.EventIncentiveId], &FarmIncentivesOperationEvent{
+			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeUnstaked,
+			UnstakedEvent:                    unstakedEvent,
+		})
+	}
+
+	return m, nil
 }

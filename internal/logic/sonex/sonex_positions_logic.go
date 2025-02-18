@@ -26,23 +26,21 @@ type SonexPositionsLogic struct {
 	transferModel          repository.EventSonexPositionManagerTransferModel
 	collectModel           repository.EventSonexPositionManagerCollectModel
 	decreaseLiquidityModel repository.EventSonexPositionManagerDecreaseLiquidityModel
+	increaseLiquidityModel repository.EventSonexPositionManagerIncreaseLiquidityModel
 	tokenPriceModel        repository.SonexTokenPriceRecordModel
 }
 
 func NewSonexPositionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPositionsLogic {
 	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
-	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
-	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
-	decreaseLiquidityModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn)
-	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	return &SonexPositionsLogic{
 		Logger:                 logx.WithContext(ctx),
 		ctx:                    ctx,
 		svcCtx:                 svcCtx,
-		transferModel:          transferModel,
-		collectModel:           collectModel,
-		decreaseLiquidityModel: decreaseLiquidityModel,
-		tokenPriceModel:        tokenPriceModel,
+		transferModel:          repository.NewEventSonexPositionManagerTransferModel(conn),
+		collectModel:           repository.NewEventSonexPositionManagerCollectModel(conn),
+		decreaseLiquidityModel: repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn),
+		increaseLiquidityModel: repository.NewEventSonexPositionManagerIncreaseLiquidityModel(conn),
+		tokenPriceModel:        repository.NewSonexTokenPriceRecordModel(conn),
 	}
 }
 
@@ -459,4 +457,215 @@ func (l *SonexPositionsLogic) fillPosition(ctx context.Context,
 	// 6. fill tick
 	position.Pool.Tick = innnerPosition.Pool.Slot0.Tick.String()
 	return position, nil
+}
+
+type LiquidityOperationEventType int64
+
+const (
+	LiquidityOperationEventTypeIncrease LiquidityOperationEventType = iota
+	LiquidityOperationEventTypeDecrease
+)
+
+// EventSonexPositionManagerIncreaseLiquidity 增加流动性事件
+type EventSonexPositionManagerIncreaseLiquidity struct {
+	repository.EventSonexPositionManagerIncreaseLiquidity
+	EventValue *big.Float // token0 + token1 usd value
+}
+
+// EventSonexPositionManagerDecreaseLiquidity 减少流动性事件
+type EventSonexPositionManagerDecreaseLiquidity struct {
+	repository.EventSonexPositionManagerDecreaseLiquidity
+	EventValue *big.Float // token0 + token1 usd value
+}
+
+// LiquidityOperationEvent 流动性操作事件
+type LiquidityOperationEvent struct {
+	TokenId                     int64
+	LiquidityOperationEventType LiquidityOperationEventType
+	IncreaseEvent               *EventSonexPositionManagerIncreaseLiquidity
+	DecreaseEvent               *EventSonexPositionManagerDecreaseLiquidity
+}
+
+// GetLiquidityOperationEvents 获取 liquidity operation events, by user address, 没有计算出 token0 + token1 usd value
+func (l *SonexPositionsLogic) GetLiquidityOperationEvents(ctx context.Context, chainId int64, address string) (m map[int64][]*LiquidityOperationEvent, err error) {
+	type increaseLiquidityEventsResult struct {
+		events map[int64][]*repository.EventSonexPositionManagerIncreaseLiquidity
+		err    error
+	}
+	type decreaseLiquidityEventsResult struct {
+		events map[int64][]*repository.EventSonexPositionManagerDecreaseLiquidity
+		err    error
+	}
+
+	increaseLiquidityEventsChan := make(chan increaseLiquidityEventsResult, 1)
+	decreaseLiquidityEventsChan := make(chan decreaseLiquidityEventsResult, 1)
+
+	go func() {
+		increaseLiquidityEvents, err := l.increaseLiquidityModel.GetIncreaseLiquidityEventsByAddress(ctx, chainId, address)
+		increaseLiquidityEventsChan <- increaseLiquidityEventsResult{events: increaseLiquidityEvents, err: err}
+	}()
+
+	go func() {
+		decreaseLiquidityEvents, err := l.decreaseLiquidityModel.GetDecreaseLiquidityEventsByAddress(ctx, chainId, address)
+		decreaseLiquidityEventsChan <- decreaseLiquidityEventsResult{events: decreaseLiquidityEvents, err: err}
+	}()
+
+	increaseLiquidityEvents := <-increaseLiquidityEventsChan
+	decreaseLiquidityEvents := <-decreaseLiquidityEventsChan
+
+	if increaseLiquidityEvents.err != nil {
+		logx.Errorf("[SonexPositions]:GetLiquidityOperationEvents error: %s", increaseLiquidityEvents.err.Error())
+		return nil, increaseLiquidityEvents.err
+	}
+	if decreaseLiquidityEvents.err != nil {
+		logx.Errorf("[SonexPositions]:GetLiquidityOperationEvents error: %s", decreaseLiquidityEvents.err.Error())
+		return nil, decreaseLiquidityEvents.err
+	}
+
+	m = make(map[int64][]*LiquidityOperationEvent)
+
+	for tokenId, events := range increaseLiquidityEvents.events {
+		for _, event := range events {
+			m[tokenId] = append(m[tokenId], &LiquidityOperationEvent{
+				TokenId:                     tokenId,
+				LiquidityOperationEventType: LiquidityOperationEventTypeIncrease,
+				IncreaseEvent: &EventSonexPositionManagerIncreaseLiquidity{
+					EventSonexPositionManagerIncreaseLiquidity: *event,
+				},
+			})
+		}
+	}
+
+	for tokenId, events := range decreaseLiquidityEvents.events {
+		for _, event := range events {
+			m[tokenId] = append(m[tokenId], &LiquidityOperationEvent{
+				TokenId:                     tokenId,
+				LiquidityOperationEventType: LiquidityOperationEventTypeDecrease,
+				DecreaseEvent: &EventSonexPositionManagerDecreaseLiquidity{
+					EventSonexPositionManagerDecreaseLiquidity: *event,
+				},
+			})
+		}
+	}
+
+	return m, nil
+}
+
+// GetLiquidityOperationEventsWithTokenValue 获取 liquidity operation events, by user address, 计算出 token0 + token1 usd value
+func (l *SonexPositionsLogic) GetLiquidityOperationEventsWithTokenValue(ctx context.Context, chainId int64, address string) (m map[int64][]*LiquidityOperationEvent, err error) {
+	sonexConf := l.svcCtx.Config.GetSonexConfig(chainId)
+	if sonexConf == nil {
+		logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue Miss sonex configure")
+		return nil, fmt.Errorf("Miss sonex configure")
+	}
+
+	events, err := l.GetLiquidityOperationEvents(ctx, chainId, address)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenIds := make([]*big.Int, 0)
+	for tokenId := range events {
+		tokenIds = append(tokenIds, big.NewInt(tokenId))
+	}
+
+	staticCaller, err := sonex.NewStaticCaller(l.svcCtx.Config)
+	if err != nil {
+		logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue NewStaticCaller error: %s", err.Error())
+		return nil, err
+	}
+	pm, err := staticCaller.BatchGetPositionMap(l.ctx, chainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
+	if err != nil {
+		logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue BatchGetPositionMap error: %s", err.Error())
+		return nil, err
+	}
+
+	tokenAddresses := make([]string, 0)
+	for _, position := range pm {
+		tokenAddresses = append(tokenAddresses, position.Token0.Hex())
+		tokenAddresses = append(tokenAddresses, position.Token1.Hex())
+	}
+
+	tokenPricesRecords, err := l.getCurrentPrices(ctx, tokenAddresses)
+	if err != nil {
+		return nil, err
+	}
+
+	for tokenId, list := range events {
+		for _, event := range list {
+			// increase liquidity event
+			if event.LiquidityOperationEventType == LiquidityOperationEventTypeIncrease {
+				event.IncreaseEvent.EventValue = new(big.Float)
+			}
+			// decrease liquidity event
+			if event.LiquidityOperationEventType == LiquidityOperationEventTypeDecrease {
+				event.DecreaseEvent.EventValue = new(big.Float)
+			}
+
+			// todo: 被 burn 掉的 token 无法参与计算，后期需要优化，从 db 中直接 join 出 token 信息，不直接从链上取
+			position, ok := pm[tokenId]
+			if !ok {
+				continue
+			}
+
+			token0Price, ok0 := tokenPricesRecords[position.Token0.Hex()]
+			if !ok0 {
+				continue
+			}
+			token1Price, ok1 := tokenPricesRecords[position.Token1.Hex()]
+			if !ok1 {
+				continue
+			}
+			token0, err := global.GetToken(chainId, position.Token0.Hex())
+			if err != nil {
+				continue
+			}
+			token1, err := global.GetToken(chainId, position.Token1.Hex())
+			if err != nil {
+				continue
+			}
+
+			token0Value, err := sonex.NewTokenValue(event.IncreaseEvent.EventAmount0, int(token0.Decimals), sonex.WithTokenPrice(token0Price))
+			if err != nil {
+				continue
+			}
+			token1Value, err := sonex.NewTokenValue(event.IncreaseEvent.EventAmount1, int(token1.Decimals), sonex.WithTokenPrice(token1Price))
+			if err != nil {
+				continue
+			}
+			tokenPair := sonex.NewTokenPair(token0Value, token1Value)
+
+			// increase liquidity event
+			if event.LiquidityOperationEventType == LiquidityOperationEventTypeIncrease {
+				event.IncreaseEvent.EventValue = tokenPair.Value()
+			}
+			// decrease liquidity event
+			if event.LiquidityOperationEventType == LiquidityOperationEventTypeDecrease {
+				event.DecreaseEvent.EventValue = tokenPair.Value()
+			}
+		}
+	}
+
+	return events, nil
+}
+
+// getCurrentPrices 获取当前价格
+func (l *SonexPositionsLogic) getCurrentPrices(ctx context.Context, addressList []string) (prices map[string]*sonex.TokenPrice, err error) {
+	records, err := l.tokenPriceModel.GetCurrentPrices(ctx, addressList)
+	if err != nil {
+		logx.Errorf("[SonexPositions]:getCurrentPrices Get current prices error: %s", err)
+		return nil, err
+	}
+	prices = make(map[string]*sonex.TokenPrice, 0)
+	for _, record := range records {
+		tp, err := sonex.NewTokenPrice(record.Price, record.UsdDecimals)
+		if err != nil {
+			logx.Errorf("[SonexPositions]:getCurrentPrices Invalid token price: %s", err)
+			return nil, err
+		}
+		prices[record.TokenAddress] = tp
+	}
+
+	// todo db 获取不到的话，从链上获取价格
+	return prices, nil
 }

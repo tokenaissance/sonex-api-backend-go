@@ -507,6 +507,7 @@ type Position struct {
 	TotalInvested  TokenValuePair   `json:"totalInvested,omitempty"`
 	TotalWithdrawn TokenValuePair   `json:"totalWithdrawn,omitempty"`
 	TotalCollected TokenValuePair   `json:"totalCollected,omitempty"`
+	TxAt           string           `json:"txAt"`
 	CreatedAt      string           `json:"createdAt"`
 	UpdatedAt      string           `json:"updatedAt"`
 }

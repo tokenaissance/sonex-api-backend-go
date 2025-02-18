@@ -3528,6 +3528,9 @@
         "totalCollected": {
           "$ref": "#/definitions/TokenValuePair"
         },
+        "txAt": {
+          "type": "string"
+        },
         "createdAt": {
           "type": "string"
         },
@@ -3552,6 +3555,7 @@
         "tokenValue0",
         "tokenValue1",
         "isHolding",
+        "txAt",
         "createdAt",
         "updatedAt"
       ]

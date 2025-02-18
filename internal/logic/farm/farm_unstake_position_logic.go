@@ -83,7 +83,7 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
 
-	_, tokenIds, err := eventFarmTokenUnstakedModel.QueryValidByChainIdUserWithExtra(context.Background(), req.ChainId, req.UserAddress, int64(incentiveIdint))
+	_, tokenIds, err := eventFarmTokenUnstakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), req.ChainId, req.UserAddress, int64(incentiveIdint))
 
 	if err != nil {
 		logx.Errorf(" FindByChainId:%v  ", err)
