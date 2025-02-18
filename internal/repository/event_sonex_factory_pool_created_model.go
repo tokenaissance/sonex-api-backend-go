@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -272,7 +273,9 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	var totalCount int
 
 	valueOfType := ValueOfTypeVolume
-	if !strings.EqualFold(params.Order, "") {
+	orderString := params.Order
+	logx.Infof("orderString:%v params.Order:%v ", orderString, params.Order)
+	if !strings.EqualFold(orderString, "") {
 		valueOfType = getTvlTypeInSonexPoolTVLRecord(params.Order)
 	}
 
@@ -337,24 +340,25 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		token1.additional AS token1_additional,
 		token1.decimals AS token1_decimals %s `, baseQuery)
 
-	switch params.Order {
-	case PoolsOrderIdAsc:
-		dataQuery += " ORDER BY pool.id ASC"
-	case PoolsOrderIdDesc:
-		dataQuery += " ORDER BY pool.id DESC"
-	case PoolsOrderTvlAsc: //因为 t4.tvl 分别代表着  tvl  yield   和  voulme 等值
-	case PoolsOrderYieldAsc:
-	case PoolsOrderVolumeAsc:
-		dataQuery += " ORDER BY t4.tvl ::NUMERIC  ASC "
-	case PoolsOrderTvlDesc:
-	case PoolsOrderYieldDesc:
-	case PoolsOrderVolumeDesc:
-		dataQuery += " ORDER BY t4.tvl ::NUMERIC DESC"
-	default:
-		dataQuery += " ORDER BY t4.tvl ::NUMERIC DESC"
+	if strings.EqualFold(params.Order, PoolsOrderIdAsc) {
+		dataQuery += `ORDER BY pool.id ASC`
+	} else if strings.EqualFold(params.Order, PoolsOrderIdDesc) {
+		dataQuery += `ORDER BY pool.id DESC`
+	} else if strings.EqualFold(params.Order, PoolsOrderTvlAsc) ||
+		strings.EqualFold(params.Order, PoolsOrderYieldAsc) ||
+		strings.EqualFold(params.Order, PoolsOrderVolumeAsc) {
+		dataQuery += `ORDER BY t4.tvl ::NUMERIC  ASC`
+	} else if strings.EqualFold(params.Order, PoolsOrderTvlDesc) ||
+		strings.EqualFold(params.Order, PoolsOrderYieldDesc) ||
+		strings.EqualFold(params.Order, PoolsOrderVolumeDesc) {
+		dataQuery += `ORDER BY t4.tvl ::NUMERIC DESC`
+	} else {
+		dataQuery += `ORDER BY t4.tvl ::NUMERIC DESC`
 	}
+
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
+	logx.Infof("dataQuery :%v ", dataQuery)
 	err = m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
 	if err != nil {
 		return nil, nil, err
