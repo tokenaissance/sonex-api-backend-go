@@ -354,13 +354,13 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	case PoolsOrderTvlAsc: //因为 t4.tvl 分别代表着  tvl  yield   和  voulme 等值
 	case PoolsOrderYieldAsc:
 	case PoolsOrderVolumeAsc:
-		dataQuery += " ORDER BY t4.tvl ::FLOAT ASC "
+		dataQuery += " ORDER BY t4.tvl::NUMERIC  ASC "
 	case PoolsOrderTvlDesc:
 	case PoolsOrderYieldDesc:
 	case PoolsOrderVolumeDesc:
-		dataQuery += " ORDER BY t4.tvl ::FLOAT DESC"
+		dataQuery += " ORDER BY t4.tvl::NUMERIC DESC"
 	default:
-		dataQuery += " ORDER BY t4.tvl ::FLOAT ASC"
+		dataQuery += " ORDER BY t4.tvl::NUMERIC ASC"
 	}
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
