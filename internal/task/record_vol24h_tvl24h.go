@@ -67,6 +67,7 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 						// 单条的记录
 						volume24HOfBridgePool, err := poolSwapModel.CalucateVolume24HBridgePool(ctx, v.ChainId, pool.EventPool)
 
+						volumeFinalString := "0"
 						if err != nil {
 							// 获取单条跨池子失败,那就只搞正常的交易
 							for _, vNotBridgePoolSwapRecords := range notBridgePoolSwapRecords {
@@ -96,6 +97,7 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 
 							totalVolume := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
 
+							volumeFinalString = totalVolume.String()
 							// 计算VOL for all
 							volTotalForAll = new(big.Float).Add(volTotalForAll, totalVolume)
 
@@ -105,14 +107,14 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 							} else {
 								logx.Infof("HandleRecordVol24hTvl24h Set:%v totalVolume:%v notVolume24HOfBridgePool:%v  volume24HOfBridgePool:%v   ", pool.EventPool, totalVolume, notVolume24HOfBridgePool, volume24HOfBridgePool)
 							}
+						}
 
-							//  更新 VOLUME，用于排序
-							_, err = volRecordModel.UpdateOrInsertTvlByPoolAddress(totalVolume.String(), pool.EventPool, 6, v.ChainId, repository.ValueOfTypeVolume)
-							if err != nil {
-								logx.Errorf("err:%v", err)
-							} else {
-								logx.Debug("TVL:poolAddress:", pool.EventPool, " volume:", totalVolume.String())
-							}
+						//  更新 VOLUME，用于排序
+						_, err = volRecordModel.UpdateOrInsertTvlByPoolAddress(volumeFinalString, pool.EventPool, 6, v.ChainId, repository.ValueOfTypeVolume)
+						if err != nil {
+							logx.Errorf("err:%v", err)
+						} else {
+							logx.Debug("Volume:poolAddress:", pool.EventPool, " volume:", volumeFinalString)
 						}
 					}
 
