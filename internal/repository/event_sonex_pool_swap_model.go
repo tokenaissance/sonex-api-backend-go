@@ -29,6 +29,8 @@ type (
 		withSession(session sqlx.Session) EventSonexPoolSwapModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, sender string, recipient string, amount0 string, amount1 string, sqrtPriceX96 string, tick string, pool string) error
 		QueryTransactions(ctx context.Context, chainId int64, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexPoolSwapWithPool, int64, error)
+		QueryByChainIdDatePool(ctx context.Context, chainId int64, date string, pools []string) ([]EventSonexPoolSwapWithPool, error)
+		QueryByChainIdTimeToken(ctx context.Context, chainId int64, from time.Time, to time.Time, tokens []string) ([]EventSonexPoolSwapWithPool, error)
 		QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error)
 		QueryMergeByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexMergePoolSwapWithExtra, error)
@@ -438,6 +440,56 @@ func (m *customEventSonexPoolSwapModel) QueryTransactions(ctx context.Context, c
 	}
 
 	return resp, total, nil
+}
+
+func (m *customEventSonexPoolSwapModel) QueryByChainIdDatePool(ctx context.Context, chainId int64, date string, pools []string) ([]EventSonexPoolSwapWithPool, error) {
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+    		S.*, 
+    		C.event_token0 AS extra_token0, 
+    		C.event_token1 AS extra_token1, 
+    		C.event_fee AS extra_fee, 
+    		C.event_tick_spacing AS extra_tick_spacing 
+		FROM %s S
+		JOIN %s C ON S.extra_pool = C.event_pool 
+		WHERE 
+			S.chain_id = $1
+  			AND (S.tx_at >= ($2::DATE - INTERVAL '1 day') AND S.tx_at < $3::DATE)
+  			AND S.extra_pool = ANY($4)
+		ORDER BY S.tx_at ASC
+	`, m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	var resp []EventSonexPoolSwapWithPool
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, date, date, pools)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+func (m *customEventSonexPoolSwapModel) QueryByChainIdTimeToken(ctx context.Context, chainId int64, from time.Time, to time.Time, tokens []string) ([]EventSonexPoolSwapWithPool, error) {
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+    		S.*, 
+    		C.event_token0 AS extra_token0, 
+    		C.event_token1 AS extra_token1, 
+    		C.event_fee AS extra_fee, 
+    		C.event_tick_spacing AS extra_tick_spacing 
+		FROM %s S
+		JOIN %s C ON S.extra_pool = C.event_pool 
+		WHERE 
+			S.chain_id = $1
+  			AND (S.tx_at >= $2 AND S.tx_at < $3)
+  			AND (C.event_token0 = ANY($4) OR C.event_token1 = ANY($4))
+		ORDER BY S.tx_at ASC
+	`, m.table, eventSonexFactoryPoolCreatedModel.tableName())
+	var resp []EventSonexPoolSwapWithPool
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, from, to, tokens)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
 }
 
 func (m *customEventSonexPoolSwapModel) QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error) {

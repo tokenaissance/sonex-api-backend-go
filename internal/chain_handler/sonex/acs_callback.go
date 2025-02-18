@@ -36,38 +36,9 @@ func ACSSwapCallback(conf config.Config) func(chainId int64, pool common.Address
 			logx.Errorf("ACSSwapCallback error: %s", "Miss acs configure")
 			return
 		}
-		// pointsServiceConf := conf.PointsService
 
 		err := retry.Do(
 			func() error {
-				// // If token0/token1 not in token list, ignore
-				// if !linq.From(acsConf.Tokens).Contains(position.Token0.Hex()) || !linq.From(acsConf.Tokens).Contains(position.Token1.Hex()) {
-				// 	return nil
-				// }
-
-				// // Sonex points
-				// err = points.IncreasePoints(
-				// 	*pointsServiceConf,
-				// 	tx.From.Hex(),
-				// 	acsConf.Points,
-				// 	acsConf.SubTitle,
-				// 	fmt.Sprintf("acs-%s-%d", event.Raw.TxHash.Hex(), int64(event.Raw.Index)),
-				// 	map[string]string{
-				// 		"txHash":    event.Raw.TxHash.Hex(),
-				// 		"txIndex":   strconv.FormatUint(uint64(event.Raw.Index), 10),
-				// 		"user":      tx.From.Hex(),
-				// 		"pool":      position.Pool.Address.Hex(),
-				// 		"token0":    position.Token0.Hex(),
-				// 		"token1":    position.Token1.Hex(),
-				// 		"tokenId":   event.TokenId.String(),
-				// 		"amount0":   event.Amount0.String(),
-				// 		"amount1":   event.Amount1.String(),
-				// 		"timestamp": strconv.FormatInt(tx.TxAt.Unix(), 10),
-				// 	},
-				// )
-				// if err != nil {
-				// 	return err
-				// }
 
 				return nil
 			},
@@ -121,7 +92,7 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 					}
 
 					// If token0/token1 not in token list, ignore
-					if !linq.From(acsConf.Tokens).Contains(position.ExtraToken0) || !linq.From(acsConf.Tokens).Contains(position.ExtraToken1) {
+					if !linq.From(acsConf.Tokens).Contains(position.ExtraToken0) && !linq.From(acsConf.Tokens).Contains(position.ExtraToken1) {
 						return nil
 					}
 

@@ -4,10 +4,28 @@ import (
 	"context"
 	"sonex_api_backend_go/internal/config"
 	"testing"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 )
+
+func TestEventSonexPoolSwapModelQueryByChainIdTimeToken(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	start, _ := time.ParseInLocation(time.DateTime, "2025-02-17 00:00:00", time.UTC)
+	end, _ := time.ParseInLocation(time.DateTime, "2025-02-18 00:00:00", time.UTC)
+	records, err := model.QueryByChainIdTimeToken(context.Background(), 1946, start, end, []string{
+		"0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655",
+		"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	_ = records
+}
 
 func TestEventSonexPoolMintModelPageQueryWithExtra(t *testing.T) {
 	var c config.Config
