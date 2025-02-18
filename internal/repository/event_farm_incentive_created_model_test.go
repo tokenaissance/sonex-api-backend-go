@@ -9,14 +9,17 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-func TestEventFarmIncentiveCreatedModelQueryByChainIdStakerWithExtra(t *testing.T) {
+func Test_EventFarmIncentiveCreatedModelQueryByChainIdStakerWithExtra(t *testing.T) {
 	var c config.Config
-	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
-	records, err := model.QueryByChainIdStakerWithExtra(context.Background(), 1946, "0xd68b59E80209260CAc5174EaA2d49b0C84D54C16")
+	records, err := model.QueryByChainIdStakerWithExtra(context.Background(), 1946, "0xeC8BcA27444bA6360EfF22365b42012d029D6324")
 	if err != nil {
 		t.Error(err)
+	}
+	for i, v := range records {
+		logx.Infof("i:%v incentiveid:%v  status :%v ", i, v.EventIncentiveId, v.ExtraEnded)
 	}
 	_ = records
 }

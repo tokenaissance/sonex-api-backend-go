@@ -125,8 +125,12 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 		id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
       	event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp, extra_token0, extra_token1, extra_fee, extra_tick_spacing,
       	extra_reward_token, extra_rate,
-      	CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 
+		CASE WHEN ( 
+			SELECT COUNT(*) FROM event_farm_incentive_ended E 
+			WHERE E.event_incentive_id = SelectTemp.event_incentive_id 
+		) > 0 
 		THEN TRUE ELSE FALSE END AS extra_ended
+
 		FROM SelectTemp
 		WHERE rn = 1
 	`, m.table, eventSonexFactoryPoolCreatedModel.table, eventFarmRewardRateUpdatedModel.table)
@@ -177,7 +181,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithExtra
 			event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp
 			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
 			extra_reward_token, extra_rate,
-			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
+			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = SelectTemp.event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
 		FROM SelectTemp
 		WHERE rn = 1
 		ORDER BY tx_at DESC OFFSET $3 LIMIT $4
@@ -220,7 +224,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerPoolsWith
 			event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp
 			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
 			extra_reward_token, extra_rate,
-			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
+			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = SelectTemp.event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
 		FROM SelectTemp
 		WHERE rn = 1
 		ORDER BY tx_at DESC OFFSET $4 LIMIT $5
