@@ -3094,7 +3094,7 @@
         },
         "feeRevenue": {
           "type": "string",
-          "description": " 用户提取的质押奖励美元价值"
+          "description": " 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值"
         },
         "earned": {
           "type": "string",
@@ -3231,6 +3231,11 @@
         "xpool": {
           "$ref": "#/definitions/PortfolioXpool",
           "description": " xpool list"
+        },
+        "liquidityStakeable": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " liquidity position 是否支持 farm stake，当不支持或者type不为liquidity时，该值为false，且隐藏liquidityPosition"
         }
       },
       "title": "PortfolioPosition",
@@ -3403,7 +3408,7 @@
         },
         "feeRevenue": {
           "type": "string",
-          "description": " 用户提取的质押奖励美元价值"
+          "description": " 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值"
         },
         "earned": {
           "type": "string",
