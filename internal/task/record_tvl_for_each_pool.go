@@ -21,21 +21,21 @@ import (
 // 方便tvl 在pools 界面的排序
 // 一分钟记录一次,把之前的TVL记录删掉
 // 数据库里面永远只有和 poolcreated 同样条数的TVL记录
-
-// 在午夜的时候更新一次记录
+// 记录的时候，存sonex_vol_tvl_record
 func HandleRecordTvlForeEachPool(config *config.Config) {
 	startTime := time.Now()
 	// start calucate the tvl for each pool
 	logx.Infof("HandleRecordVol24hTvl24h start Time : %v", startTime)
 
 	zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
-	
+
 	logx.Infof("zeroTime:%v  ", zeroTime)
 	conn := repository.NewConn(config.PostgreSQL.DateSource())
 	ctx := context.Background()
 	poolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	tokenPrice := repository.NewSonexTokenPriceRecordModel(conn)
 	tvlRecordModel := repository.NewSonexPoolTvlRecordModel(conn)
+	/// 记录volume 和 total 总量的表
 	tvlvolRecordModel := repository.NewSonexVolTvlRecordModel(conn)
 
 	if len(config.Chains) > 0 {
@@ -105,8 +105,8 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 									// 计算TVL的值
 									tvlTotalForAll = new(big.Float).Add(tvlTotalForAll, _tvlUSD)
 									_tvlString := _tvlUSD.String()
-									//  更新TVL
-									_, err := tvlRecordModel.UpdateOrInsertTvlByPoolAddress(_tvlString, pRecord.EventPool, 6, chain.ChainId)
+									//  更新TVL，用于排序
+									_, err := tvlRecordModel.UpdateOrInsertTvlByPoolAddress(_tvlString, pRecord.EventPool, 6, chain.ChainId, repository.ValueOfTypeTVL)
 									if err != nil {
 										logx.Errorf("err:%v", err)
 									} else {

@@ -25,6 +25,9 @@ func Hander_CalcuateYiledForPool(config *config.Config) error {
 	ctx := context.Background()
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 
+	// 把各个 yield 存入 sonex_vol_tvl_record ,做poollist的排序比较
+	yieldRecordModel := repository.NewSonexPoolTvlRecordModel(conn)
+
 	if len(config.Chains) > 0 {
 		for _, vConfig := range config.Chains {
 			usedPools := []common.Address{}
@@ -110,6 +113,13 @@ func Hander_CalcuateYiledForPool(config *config.Config) error {
 					yield_100 := new(big.Float).Mul(yield, new(big.Float).SetFloat64(100))
 
 					yield_String := yield_100.String()
+					//  更新  yield 用于排序
+					_, err = yieldRecordModel.UpdateOrInsertTvlByPoolAddress(yield_String, vPool.poolAddress, 6, vConfig.ChainId, repository.ValueOfTypeYield)
+					if err != nil {
+						logx.Errorf("err:%v", err)
+					} else {
+						logx.Debug("TVL:poolAddress:", vPool.poolAddress, " yield:", yield_String)
+					}
 					logx.Infof("yield:%v vpool:%v  yield_100:%v  ", yield_String, vPool.poolAddress, yield_100)
 					err = global.SetVolume24HTvlValue(cacher, global.YiedlRateKey, vPool.poolAddress, yield_String)
 					if err != nil {

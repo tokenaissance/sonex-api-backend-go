@@ -8,6 +8,7 @@ import (
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/types"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -256,18 +257,42 @@ var PoolsOrderVolumeDesc = "VolumeDESC" // 按照Volume进行降序
 var PoolsOrderIdAsc = "IdASC"   // 按照时间先后顺序
 var PoolsOrderIdDesc = "IdDesc" // // 按照时间先后顺序
 
+func getTvlTypeInSonexPoolTVLRecord(order string) int64 {
+	switch order {
+	case PoolsOrderTvlAsc:
+	case PoolsOrderTvlDesc:
+		return ValueOfTypeTVL
+
+	case PoolsOrderYieldAsc:
+	case PoolsOrderYieldDesc:
+		return ValueOfTypeYield
+	case PoolsOrderVolumeAsc:
+	case PoolsOrderVolumeDesc:
+		return ValueOfTypeVolume
+	default:
+		return ValueOfTypeVolume
+	}
+	return ValueOfTypeVolume
+}
+
 // GetPoolList returns a map of pool data and pagination meta
 func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error) {
 	var poolData []PoolData
 	var totalCount int
+
+	valueOfType := ValueOfTypeVolume
+	if !strings.EqualFold(params.Order, "") {
+		valueOfType = getTvlTypeInSonexPoolTVLRecord(params.Order)
+	}
+
 	// sonex_pool_tvl_record ,一开始就调用一次
 	baseQuery := fmt.Sprintf(`
 		FROM %s AS pool
 		INNER JOIN sonex_token AS token0 ON pool.event_token0 = token0.address AND token0."isHidden" = false
 		INNER JOIN sonex_token AS token1 ON pool.event_token1 = token1.address AND token1."isHidden" = false
-		INNER JOIN sonex_pool_tvl_record AS t4 ON pool.event_pool = t4.pool_address
+		INNER JOIN sonex_pool_tvl_record AS t4 ON pool.event_pool = t4.pool_address AND t4.value_of_type = $3
 		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
-	args := []interface{}{params.ChainId, params.PositionManager}
+	args := []interface{}{params.ChainId, params.PositionManager, valueOfType}
 
 	paramIndex := 3
 
@@ -320,14 +345,19 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		token1.logo AS token1_logo,
 		token1.additional AS token1_additional,
 		token1.decimals AS token1_decimals %s `, baseQuery)
+
 	switch params.Order {
 	case PoolsOrderIdAsc:
 		dataQuery += " ORDER BY pool.id ASC"
 	case PoolsOrderIdDesc:
 		dataQuery += " ORDER BY pool.id DESC"
-	case PoolsOrderTvlAsc:
-		dataQuery += " ORDER BY t4.tvl ::FLOAT  ASC "
+	case PoolsOrderTvlAsc: //因为 t4.tvl 分别代表着  tvl  yield   和  voulme 等值
+	case PoolsOrderYieldAsc:
+	case PoolsOrderVolumeAsc:
+		dataQuery += " ORDER BY t4.tvl ::FLOAT ASC "
 	case PoolsOrderTvlDesc:
+	case PoolsOrderYieldDesc:
+	case PoolsOrderVolumeDesc:
 		dataQuery += " ORDER BY t4.tvl ::FLOAT DESC"
 	default:
 		dataQuery += " ORDER BY t4.tvl ::FLOAT ASC"
