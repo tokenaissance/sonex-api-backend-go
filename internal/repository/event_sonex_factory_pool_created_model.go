@@ -355,7 +355,6 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
-	logx.Infof("dataQuery :%v ", dataQuery)
 	err = m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
 	if err != nil {
 		return nil, nil, err
