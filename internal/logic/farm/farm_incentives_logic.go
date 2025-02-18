@@ -170,16 +170,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			logx.Errorf("ERR from GetResponse:%v", err)
 			return nil, err
 		}
-		// Set cache
-		// TODO  not in cache
-		// respBytes, err := json.Marshal(CacheWarpper{List: resp.List, TokenIds: tokenIds, LastUpdate: time.Now().UTC()})
-		// if err != nil {
-		// 	logx.Errorf("Marshal response error: %v", err)
-		// }
-		// err = redisCache.Set(cacheKey, respBytes, time.Hour*24)
-		// if err != nil {
-		// 	logx.Errorf("Set cache error: %v", err)
-		// }
 	}
 
 	// Filter
@@ -259,15 +249,15 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			} else {
 				resp.List[i].Staked = val
 			}
-			totalClaimableFeesString, _, _, totalClaimableFeesUSDFloat64, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(item.IncentiveId), req.ChainId, chain, conn)
+			totalClaimableFeesString, totalClaimableFeesUSD, _, totalClaimableFeesUSDFloat64, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(item.IncentiveId), req.ChainId, chain, conn)
 
 			if err != nil {
 				return resp, err
 			}
-			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesString
+			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
 			resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
 
-			logx.Infof("SSSSA:%v B:%v c:%v", farmConf.Staker, req.UserAddress, item.IncentiveId)
+			logx.Infof("SSSSA:%v B:%v c:%v totalClaimableFeesString:%v ", farmConf.Staker, req.UserAddress, item.IncentiveId, totalClaimableFeesString)
 
 			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
 			if err != nil {
@@ -283,12 +273,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			totalClaimedFeesUSDFloat64, _ := totalClaimedFeesUSD_bigFloat.Float64()
 			resp.List[i].TotalClaimedFeesUSDFloat64 = totalClaimedFeesUSDFloat64
 			_ = unclaimeds
-			// if val, ok := unclaimeds[item.IncentiveId]; ok {
-			// rewardTokenPrice, _ := new(big.Float).SetString(item.RewardToken.Price)
-			// rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(item.RewardToken.Decimals), nil))
-			// unclaimedUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(val), rewardTokenPrice), rewardTokenAccuracy), usdAccuracy)
-			// resp.List[i].EarnedUSD, _ = unclaimedUSD.Float64()
-			// }
 		}
 
 	}
@@ -485,6 +469,10 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			}
 
 			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
+
+			if err != nil {
+				logx.Errorf("getValueOfAmountToken:%v ", err)
+			}
 
 			totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
 			logx.Infof("record.EventIncentiveId:%v totalClaimableFeesUSD:%v  rewards :%v ", record.EventIncentiveId, totalClaimableFeesUSDFloat64, rewards.String())
