@@ -595,6 +595,7 @@ START 1
 CACHE 1;
 
 -- ----------------------------
+-- 需要执行的
 -- Table structure for sonex_vol_tvl_record
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."sonex_vol_tvl_record";
@@ -626,3 +627,6 @@ MINVALUE  1
 MAXVALUE 9223372036854775807
 START 1
 CACHE 1;
+
+ALTER TABLE  "public"."sonex_pool_tvl_record"  ADD value_of_type  int8
+COMMENT ON COLUMN "public"."sonex_pool_tvl_record"."value_of_type" IS '1000: 是TVL；1001:yield 的值 ,1002：volume的值';

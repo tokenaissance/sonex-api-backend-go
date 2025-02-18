@@ -250,21 +250,20 @@ var PoolsOrderIdAsc = "IdASC"   // 按照时间先后顺序
 var PoolsOrderIdDesc = "IdDesc" // // 按照时间先后顺序
 
 func getTvlTypeInSonexPoolTVLRecord(order string) int64 {
-	switch order {
-	case PoolsOrderTvlAsc:
-	case PoolsOrderTvlDesc:
+	if strings.EqualFold(order, PoolsOrderTvlAsc) ||
+		strings.EqualFold(order, PoolsOrderTvlDesc) {
 		return ValueOfTypeTVL
 
-	case PoolsOrderYieldAsc:
-	case PoolsOrderYieldDesc:
+	} else if strings.EqualFold(order, PoolsOrderYieldAsc) ||
+		strings.EqualFold(order, PoolsOrderYieldDesc) {
 		return ValueOfTypeYield
-	case PoolsOrderVolumeAsc:
-	case PoolsOrderVolumeDesc:
+
+	} else if strings.EqualFold(order, PoolsOrderVolumeAsc) ||
+		strings.EqualFold(order, PoolsOrderVolumeDesc) {
 		return ValueOfTypeVolume
-	default:
+	} else {
 		return ValueOfTypeTVL
 	}
-	return ValueOfTypeTVL
 }
 
 // GetPoolList returns a map of pool data and pagination meta
@@ -272,12 +271,10 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	var poolData []PoolData
 	var totalCount int
 
-	valueOfType := ValueOfTypeVolume
-	orderString := params.Order
-	logx.Infof("orderString:%v params.Order:%v ", orderString, params.Order)
-	if !strings.EqualFold(orderString, "") {
-		valueOfType = getTvlTypeInSonexPoolTVLRecord(params.Order)
-	}
+	valueOfType := getTvlTypeInSonexPoolTVLRecord(params.Order)
+
+	// orderString := params.Order
+	logx.Infof("valueOfType:%v params.Order:%v ", valueOfType, params.Order)
 
 	// sonex_pool_tvl_record ,一开始就调用一次
 	baseQuery := fmt.Sprintf(`
@@ -347,13 +344,13 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	} else if strings.EqualFold(params.Order, PoolsOrderTvlAsc) ||
 		strings.EqualFold(params.Order, PoolsOrderYieldAsc) ||
 		strings.EqualFold(params.Order, PoolsOrderVolumeAsc) {
-		dataQuery += `ORDER BY t4.tvl ::NUMERIC  ASC`
+		dataQuery += `ORDER BY t4.tvl :: NUMERIC  ASC`
 	} else if strings.EqualFold(params.Order, PoolsOrderTvlDesc) ||
 		strings.EqualFold(params.Order, PoolsOrderYieldDesc) ||
 		strings.EqualFold(params.Order, PoolsOrderVolumeDesc) {
-		dataQuery += `ORDER BY t4.tvl ::NUMERIC DESC`
+		dataQuery += `ORDER BY t4.tvl :: NUMERIC DESC`
 	} else {
-		dataQuery += `ORDER BY t4.tvl ::NUMERIC DESC`
+		dataQuery += `ORDER BY t4.tvl :: NUMERIC DESC`
 	}
 
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
