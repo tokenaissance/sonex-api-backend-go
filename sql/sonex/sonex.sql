@@ -597,6 +597,7 @@ CACHE 1;
 -- ----------------------------
 -- 需要执行的
 -- Table structure for sonex_vol_tvl_record
+-- explorer 页面，vol 和 tvl 总值图表对应的数据库
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."sonex_vol_tvl_record";
 CREATE TABLE "public"."sonex_vol_tvl_record" (
@@ -610,7 +611,7 @@ CREATE TABLE "public"."sonex_vol_tvl_record" (
 ;
 ALTER TABLE "public"."sonex_vol_tvl_record" OWNER TO "apibackendgo";
 COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."type_of_value" IS '1: volume value; 2:tvl value';
-COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."created_at" IS '创建时间，需要拿着创建时间后续做更新的key';
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."createtime" IS 'createtime ';
 COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."type_of_uniswap" IS '1: v3, 2: v2  ';
 
 -- ----------------------------
@@ -628,5 +629,6 @@ MAXVALUE 9223372036854775807
 START 1
 CACHE 1;
 
-ALTER TABLE  "public"."sonex_pool_tvl_record"  ADD value_of_type  int8
-COMMENT ON COLUMN "public"."sonex_pool_tvl_record"."value_of_type" IS '1000: 是TVL；1001:yield 的值 ,1002：volume的值';
+-- sonex_pool_tvl_record 用来给 vol 和  tvl  和  yield 排序 
+ALTER TABLE  "public"."sonex_pool_tvl_record"  ADD value_of_type  int8 DEFAULT  1000
+COMMENT ON COLUMN "public"."sonex_pool_tvl_record"."value_of_type" IS '1000: TVL ,1001:yield ,1002:volume';
