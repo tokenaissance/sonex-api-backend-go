@@ -226,7 +226,7 @@ func HandleACSSwapReward(conf *config.Config) {
 							Acs:         acs,
 							TxHash:      swap.TxHash,
 							TxIndex:     swap.TxIndex,
-							TxAt:        time.Now().UTC(),
+							TxAt:        swap.TxAt,
 							Pool:        swap.ExtraPool,
 							Token0:      swap.ExtraToken0,
 							Token1:      swap.ExtraToken1,
