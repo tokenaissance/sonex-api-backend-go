@@ -49,7 +49,7 @@ func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fa
 
 func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, positions ...[]*types.Position) (resp *types.FarmIncentivesResponse, err error) {
 	if req.ChainId <= 0 {
-		return nil, fmt.Errorf("invalid parameter")
+		return resp, fmt.Errorf("invalid parameter")
 	}
 
 	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
@@ -164,11 +164,11 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 		if len(tokenIds) == 0 {
 			logx.Info("no tokenid founds")
-			return nil, nil
+			return resp, nil
 		}
 		if err != nil {
 			logx.Errorf("ERR from GetResponse:%v", err)
-			return nil, err
+			return resp, err
 		}
 	}
 
@@ -201,7 +201,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserWithExtra(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
 		if err != nil {
 			logx.Errorf("ERR:%v", err)
-			return nil, err
+			return resp, err
 		}
 
 		userTokenIds := map[int64][]int64{}
@@ -236,12 +236,12 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		statcCaller, err := farm.NewStaticCaller(l.svcCtx.Config)
 		if err != nil {
 			logx.Errorf("ERR:%v", err)
-			return nil, err
+			return resp, err
 		}
 		unclaimeds, err := statcCaller.BatchGetUnclaimeds(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress), incentiveIds)
 		if err != nil {
 			logx.Errorf("ERR:%v", err)
-			return nil, err
+			return resp, err
 		}
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
@@ -337,7 +337,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
-		return nil, nil, err
+		return resp, nil, err
 	}
 	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
 
@@ -348,13 +348,13 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, req.ChainId, common.HexToAddress(farmConf.Staker).Hex())
 	if err != nil {
 		logx.Errorf("ERR1:%v ", err)
-		return nil, nil, err
+		return resp, nil, err
 	}
 	logx.Infof("incentiveCreatedRecords:%v len :%v  ", incentiveCreatedRecords, len(incentiveCreatedRecords))
 	validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(l.ctx, req.ChainId)
 	if err != nil {
 		logx.Errorf("ERR2:%v ", err)
-		return nil, nil, err
+		return resp, nil, err
 	}
 	validStakeRecordMap := map[int64][]repository.EventFarmTokenStaked{}
 	logx.Infof("validStakeRecords:%v ", validStakeRecords)
@@ -379,7 +379,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
 	if err != nil {
 		logx.Errorf("ERR3:%v ", err)
-		return nil, nil, err
+		return resp, nil, err
 	}
 
 	logx.Infof("prices:%#v ", prices)
@@ -611,7 +611,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	for result := range results {
 		if result.Err != nil {
 			logx.Errorf("result error:%v", err)
-			return nil, nil, result.Err
+			return resp, nil, result.Err
 		}
 		list = append(list, result.Data)
 		tokenIds[result.Data.IncentiveId] = result.TokenIds
