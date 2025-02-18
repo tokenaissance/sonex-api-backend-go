@@ -28,8 +28,11 @@ import (
 
 type FarmIncentivesLogic struct {
 	logx.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx                         context.Context
+	svcCtx                      *svc.ServiceContext
+	eventFarmTokenStakedModel   repository.EventFarmTokenStakedModel
+	eventFarmTokenUnstakedModel repository.EventFarmTokenUnstakedModel
+	tokenPriceModel             repository.SonexTokenPriceRecordModel
 }
 
 type CacheWarpper struct {
@@ -40,10 +43,14 @@ type CacheWarpper struct {
 
 // Farm incentive list
 func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmIncentivesLogic {
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
 	return &FarmIncentivesLogic{
-		Logger: logx.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
+		Logger:                      logx.WithContext(ctx),
+		ctx:                         ctx,
+		svcCtx:                      svcCtx,
+		eventFarmTokenStakedModel:   repository.NewEventFarmTokenStakedModel(conn),
+		eventFarmTokenUnstakedModel: repository.NewEventFarmTokenUnstakedModel(conn),
+		tokenPriceModel:             repository.NewSonexTokenPriceRecordModel(conn),
 	}
 }
 
@@ -628,4 +635,285 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 		},
 		List: list,
 	}, tokenIds, nil
+}
+
+type FarmIncentivesOperationEventType int64
+
+const (
+	FarmIncentivesOperationEventTypeStaked FarmIncentivesOperationEventType = iota
+	FarmIncentivesOperationEventTypeUnstaked
+)
+
+// FarmIncentivesStakedEvent 质押事件
+type FarmIncentivesStakedEvent struct {
+	Id                  int64     // 主键
+	CreatedAt           time.Time // 创建时间
+	UpdatedAt           time.Time // 更新时间
+	ChainId             int64     // 链ID
+	BlockNumber         int64     // 区块高度
+	TxIndex             int64     // 交易索引
+	TxHash              string    // 交易哈希
+	TxAt                time.Time // 交易时间
+	From                string    // 质押用户
+	To                  string    // 质押合约
+	Value               string    // ETH 质押数量, 如果交易不包含 ETH，则该值为 0
+	EventUser           string    // 质押用户
+	EventTokenId        int64     // 质押token id
+	EventIncentiveId    int64     // 质押激励 pool id
+	EventTotalLiquidity string    // 质押总流动性
+	EventPositionValue  float64   // 质押 position 美元价值
+}
+
+// FarmIncentivesUnstakedEvent 解质押事件
+type FarmIncentivesUnstakedEvent struct {
+	Id                  int64     // 主键
+	CreatedAt           time.Time // 创建时间
+	UpdatedAt           time.Time // 更新时间
+	ChainId             int64     // 链ID
+	BlockNumber         int64     // 区块高度
+	TxIndex             int64     // 交易索引
+	TxHash              string    // 交易哈希
+	TxAt                time.Time // 交易时间
+	From                string    // 解质押池合约地址
+	To                  string    // 解质押用户
+	Value               string    // ETH 交易数量, 如果交易不包含 ETH，则该值为 0
+	EventUser           string    // 解质押用户
+	EventTokenId        int64     // 解质押token id
+	EventIncentiveId    int64     // 解质押激励 pool id
+	EventTotalLiquidity string    // 解质押总流动性
+	EventPositionValue  float64   // 解质押 position 美元价值
+}
+
+// FarmIncentivesOperationEvent 质押/解质押事件
+type FarmIncentivesOperationEvent struct {
+	FarmIncentivesOperationEventType FarmIncentivesOperationEventType
+	StakedEvent                      *FarmIncentivesStakedEvent
+	UnstakedEvent                    *FarmIncentivesUnstakedEvent
+}
+
+// GetFarmIncentivesOperationEvents 获取 user address 质押/解质押事件, key 为 incentive id
+func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, userAddress string) (m map[int64][]*FarmIncentivesOperationEvent, err error) {
+	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+	sonexConf := l.svcCtx.Config.GetSonexConfig(chainId)
+	if sonexConf == nil {
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
+	}
+
+	// 获取用户在链上的质押事件
+	stakedEvents, err := l.eventFarmTokenStakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+	if err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: GetStakedEvents error: %v", err)
+		return nil, err
+	}
+
+	// 获取用户在链上的解质押事件
+	unstakedEvents, err := l.eventFarmTokenUnstakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+	if err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: GetUnstakedEvents error: %v", err)
+		return nil, err
+	}
+	// get token ids with deduplication
+	tokenIdMap := make(map[int64]bool)
+	for _, stakedEvent := range stakedEvents {
+		tokenIdMap[stakedEvent.EventTokenId] = true
+	}
+	for _, unstakedEvent := range unstakedEvents {
+		tokenIdMap[unstakedEvent.EventTokenId] = true
+	}
+
+	tokenIds := make([]*big.Int, 0, len(tokenIdMap))
+	for tokenId := range tokenIdMap {
+		tokenIds = append(tokenIds, big.NewInt(tokenId))
+	}
+
+	staticCaller, err := sonex.NewStaticCaller(l.svcCtx.Config)
+	if err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: NewStaticCaller error: %v", err)
+		return nil, err
+	}
+
+	// 获取 event token id 对应的 position
+	positions, err := staticCaller.BatchGetPositions(l.ctx, chainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
+	if err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: BatchGetPositions error: %v", err)
+		return nil, err
+	}
+	positionsMap := make(map[int64]*sonex.Position)
+	tokenAddresses := make([]string, 0)
+	for _, position := range positions {
+		positionsMap[position.TokenId.Int64()] = position
+		tokenAddresses = append(tokenAddresses, position.Token0.Hex())
+		tokenAddresses = append(tokenAddresses, position.Token1.Hex())
+	}
+	// 获取 token 价格
+	prices, err := l.getCurrentPrices(l.ctx, tokenAddresses)
+	if err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: GetCurrentPrices error: %v", err)
+		return nil, err
+	}
+
+	// 将质押事件和解质押事件转换为 map
+	m = make(map[int64][]*FarmIncentivesOperationEvent)
+
+	for _, stakedEvent := range stakedEvents {
+		operationEvents, ok := m[stakedEvent.EventIncentiveId]
+		if !ok {
+			operationEvents = make([]*FarmIncentivesOperationEvent, 0)
+		}
+		// event postion value
+		position, ok := positionsMap[stakedEvent.EventTokenId]
+		if !ok {
+			logx.Errorf("GetFarmIncentivesOperationEvents: Position not found: %d", stakedEvent.EventTokenId)
+			continue
+		}
+		token0, err := global.GetToken(chainId, position.Token0.Hex())
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
+			continue
+		}
+		token1, err := global.GetToken(chainId, position.Token1.Hex())
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
+			continue
+		}
+		token0Price, ok := prices[token0.Address]
+		if !ok {
+			logx.Errorf("GetFarmIncentivesOperationEvents: Token0 price not found: %s", token0.Address)
+			continue
+		}
+		token1Price, ok := prices[token1.Address]
+		if !ok {
+			logx.Errorf("GetFarmIncentivesOperationEvents: Token1 price not found: %s", token1.Address)
+			continue
+		}
+		token0Amount, token1Amount := position.Amounts()
+		token0Value, err := sonex.NewTokenValue(token0Amount.String(), int(token0.Decimals), sonex.WithTokenPrice(token0Price))
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: token0 NewTokenValue error: %v", err)
+			continue
+		}
+		token1Value, err := sonex.NewTokenValue(token1Amount.String(), int(token1.Decimals), sonex.WithTokenPrice(token1Price))
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: token1 NewTokenValue error: %v", err)
+			continue
+		}
+		tokenPair := sonex.NewTokenPair(token0Value, token1Value)
+		tokenPairValue, _ := tokenPair.ValueFloat64()
+
+		operationEvents = append(operationEvents, &FarmIncentivesOperationEvent{
+			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeStaked,
+			StakedEvent: &FarmIncentivesStakedEvent{
+				Id:                  stakedEvent.Id,
+				CreatedAt:           stakedEvent.CreatedAt,
+				UpdatedAt:           stakedEvent.UpdatedAt,
+				ChainId:             stakedEvent.ChainId,
+				BlockNumber:         stakedEvent.BlockNumber,
+				TxIndex:             stakedEvent.TxIndex,
+				TxHash:              stakedEvent.TxHash,
+				TxAt:                stakedEvent.TxAt,
+				From:                stakedEvent.From,
+				To:                  stakedEvent.To,
+				Value:               stakedEvent.Value,
+				EventUser:           stakedEvent.EventUser,
+				EventTokenId:        stakedEvent.EventTokenId,
+				EventIncentiveId:    stakedEvent.EventIncentiveId,
+				EventTotalLiquidity: stakedEvent.EventTotalLiquidity,
+				EventPositionValue:  tokenPairValue,
+			},
+		})
+		m[stakedEvent.EventIncentiveId] = operationEvents
+	}
+
+	for _, unstakedEvent := range unstakedEvents {
+		operationEvents, ok := m[unstakedEvent.EventIncentiveId]
+		if !ok {
+			operationEvents = make([]*FarmIncentivesOperationEvent, 0)
+		}
+		position, ok := positionsMap[unstakedEvent.EventTokenId]
+		if !ok {
+			logx.Errorf("GetFarmIncentivesOperationEvents: Position not found: %d", unstakedEvent.EventTokenId)
+			continue
+		}
+		token0, err := global.GetToken(chainId, position.Token0.Hex())
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
+			continue
+		}
+		token1, err := global.GetToken(chainId, position.Token1.Hex())
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
+			continue
+		}
+		token0Price, ok := prices[token0.Address]
+		if !ok {
+			logx.Errorf("GetFarmIncentivesOperationEvents: Token0 price not found: %s", token0.Address)
+			continue
+		}
+		token1Price, ok := prices[token1.Address]
+		if !ok {
+			logx.Errorf("GetFarmIncentivesOperationEvents: Token1 price not found: %s", token1.Address)
+			continue
+		}
+		token0Amount, token1Amount := position.Amounts()
+		token0Value, err := sonex.NewTokenValue(token0Amount.String(), int(token0.Decimals), sonex.WithTokenPrice(token0Price))
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: token0 NewTokenValue error: %v", err)
+			continue
+		}
+		token1Value, err := sonex.NewTokenValue(token1Amount.String(), int(token1.Decimals), sonex.WithTokenPrice(token1Price))
+		if err != nil {
+			logx.Errorf("GetFarmIncentivesOperationEvents: token1 NewTokenValue error: %v", err)
+			continue
+		}
+		tokenPair := sonex.NewTokenPair(token0Value, token1Value)
+		tokenPairValue, _ := tokenPair.ValueFloat64()
+		operationEvents = append(operationEvents, &FarmIncentivesOperationEvent{
+			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeUnstaked,
+			UnstakedEvent: &FarmIncentivesUnstakedEvent{
+				Id:                  unstakedEvent.Id,
+				CreatedAt:           unstakedEvent.CreatedAt,
+				UpdatedAt:           unstakedEvent.UpdatedAt,
+				ChainId:             unstakedEvent.ChainId,
+				BlockNumber:         unstakedEvent.BlockNumber,
+				TxIndex:             unstakedEvent.TxIndex,
+				TxHash:              unstakedEvent.TxHash,
+				TxAt:                unstakedEvent.TxAt,
+				From:                unstakedEvent.From,
+				To:                  unstakedEvent.To,
+				Value:               unstakedEvent.Value,
+				EventUser:           unstakedEvent.EventUser,
+				EventTokenId:        unstakedEvent.EventTokenId,
+				EventIncentiveId:    unstakedEvent.EventIncentiveId,
+				EventTotalLiquidity: unstakedEvent.EventLiquidity,
+				EventPositionValue:  tokenPairValue,
+			},
+		})
+		m[unstakedEvent.EventIncentiveId] = operationEvents
+	}
+
+	return m, nil
+}
+
+// getCurrentPrices 获取当前价格
+func (l *FarmIncentivesLogic) getCurrentPrices(ctx context.Context, addressList []string) (prices map[string]*sonex.TokenPrice, err error) {
+	records, err := l.tokenPriceModel.GetCurrentPrices(ctx, addressList)
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
+		return nil, err
+	}
+	prices = make(map[string]*sonex.TokenPrice, 0)
+	for _, record := range records {
+		tp, err := sonex.NewTokenPrice(record.Price, record.UsdDecimals)
+		if err != nil {
+			logx.Errorf("[XpoolPoolList]: Invalid token price: %s", err)
+			return nil, err
+		}
+		prices[record.TokenAddress] = tp
+	}
+
+	// todo db 获取不到的话，从链上获取价格
+	return prices, nil
 }

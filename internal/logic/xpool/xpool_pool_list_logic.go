@@ -205,7 +205,10 @@ func (l *XpoolPoolListLogic) GetUserOperationEvents(chainId int64, userAddress s
 			continue
 		}
 
-		operationEvents := make([]*XpoolUserOperationEvent, 0)
+		operationEvents, ok := m[address]
+		if !ok {
+			operationEvents = make([]*XpoolUserOperationEvent, 0)
+		}
 		// count deposited(stakeed) amount
 		for _, event := range events {
 			stakingTokenValue, err := sonex.NewTokenValue(event.EventAmount, int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
@@ -257,7 +260,10 @@ func (l *XpoolPoolListLogic) GetUserOperationEvents(chainId int64, userAddress s
 			continue
 		}
 
-		operationEvents := make([]*XpoolUserOperationEvent, 0)
+		operationEvents, ok := m[address]
+		if !ok {
+			operationEvents = make([]*XpoolUserOperationEvent, 0)
+		}
 		// count deposited(stakeed) amount
 		for _, event := range events {
 			stakingTokenValue, err := sonex.NewTokenValue(event.EventWithdrawn, int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))

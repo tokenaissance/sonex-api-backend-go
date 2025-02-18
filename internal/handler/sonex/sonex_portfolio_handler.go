@@ -78,7 +78,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 获取用户有效 positions 列表
 		{
-			if liquiditySelected {
+			if liquiditySelected || farmSelected {
 				positions, err := getPositions(r.Context(), svcCtx, req)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
@@ -86,9 +86,12 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					return
 				}
 				liquidityPositions = positions
+			}
+
+			if liquiditySelected {
 				liquidityFrames := make([]*types.PortfolioLiquidityFrame, 0)
 				// count in total position & liquidity claimable fees
-				for _, position := range positions {
+				for _, position := range liquidityPositions {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type:              portfolioTypeLiquidity,
 						LiquidityPosition: position,
@@ -240,8 +243,28 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					return
 				}
 
+				// count in total farm staked before today begin
+				for _, events := range farmPools.operationEvents {
+					for _, event := range events {
+						// 质押事件
+						if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeStaked {
+							createdAt := event.StakedEvent.TxAt
+							if createdAt.Before(todayBegin) {
+								previousDayTotalAssets += event.StakedEvent.EventPositionValue
+							}
+						}
+						// 解质押事件
+						if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeUnstaked {
+							createdAt := event.UnstakedEvent.TxAt
+							if createdAt.Before(todayBegin) {
+								previousDayTotalAssets -= event.UnstakedEvent.EventPositionValue
+							}
+						}
+					}
+				}
+
 				farmFrames := make([]*types.PortfolioFarmFrame, 0)
-				for _, farm := range farmPools {
+				for _, farm := range farmPools.pools {
 					feeRevenue := farm.TotalClaimedFeesUSDFloat64 + farm.TotalClaimableFeesUSDFloat64
 
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
@@ -392,6 +415,12 @@ type xpoolList struct {
 	operationEvents map[string][]*xpool.XpoolUserOperationEvent // 质押 & 提取事件列表
 }
 
+// FarmIncentiveList 获取用户有效 farm 列表 & 质押事件列表
+type FarmIncentiveList struct {
+	pools           []types.FarmIncentivesResponse_Data            // 质押池列表
+	operationEvents map[int64][]*farm.FarmIncentivesOperationEvent // 质押 & 提取事件列表
+}
+
 // getXPools 获取用户有效 xpool 列表
 func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*xpoolList, error) {
 	l := xpool.NewXpoolPoolListLogic(ctx, svcCtx)
@@ -460,21 +489,60 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 }
 
 // getFarmPools 获取用户有效 farm 列表
-func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest, positions []*types.Position) ([]types.FarmIncentivesResponse_Data, error) {
+func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest, positions []*types.Position) (*FarmIncentiveList, error) {
 	l := farm.NewFarmIncentivesLogic(ctx, svcCtx)
 
-	pools, err := l.FarmIncentives(&types.FarmIncentivesRequest{
-		ChainRequest: types.ChainRequest{
-			ChainId: req.ChainId,
-		},
-		Status:      "active",
-		UserAddress: req.Address,
-		StakedOnly:  true,
-	}, positions)
-	if err != nil {
-		logx.Errorf("[SonexPortfolioHandler]:getFarmPools FarmIncentives error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
-		return nil, err
+	type farmIncentivesResult struct {
+		pools []types.FarmIncentivesResponse_Data
+		err   error
 	}
 
-	return pools.List, nil
+	type farmIncentivesOperationEventsResult struct {
+		operationEvents map[int64][]*farm.FarmIncentivesOperationEvent
+		err             error
+	}
+
+	poolsChan := make(chan farmIncentivesResult, 1)
+	operationEventsChan := make(chan farmIncentivesOperationEventsResult, 1)
+
+	go func() {
+		pools, err := l.FarmIncentives(&types.FarmIncentivesRequest{
+			ChainRequest: types.ChainRequest{
+				ChainId: req.ChainId,
+			},
+			Status:      "active",
+			UserAddress: req.Address,
+			StakedOnly:  true,
+		}, positions)
+		if err != nil {
+			poolsChan <- farmIncentivesResult{err: fmt.Errorf("[SonexPortfolioHandler]:getFarmPools FarmIncentives error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
+			return
+		}
+		poolsChan <- farmIncentivesResult{pools: pools.List}
+	}()
+
+	go func() {
+		// 用户质押&解质押事件
+		operationEvents, err := l.GetFarmIncentivesOperationEvents(req.ChainId, req.Address)
+		if err != nil {
+			operationEventsChan <- farmIncentivesOperationEventsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getFarmPools GetFarmIncentivesOperationEvents error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
+			return
+		}
+		operationEventsChan <- farmIncentivesOperationEventsResult{operationEvents: operationEvents}
+	}()
+
+	pools := <-poolsChan
+	operationEvents := <-operationEventsChan
+
+	if pools.err != nil {
+		return nil, pools.err
+	}
+	if operationEvents.err != nil {
+		return nil, operationEvents.err
+	}
+
+	return &FarmIncentiveList{
+		pools:           pools.pools,
+		operationEvents: operationEvents.operationEvents,
+	}, nil
 }
