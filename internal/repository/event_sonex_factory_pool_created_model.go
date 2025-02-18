@@ -24,6 +24,7 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventSonexFactoryPoolCreated, error)
 		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
+		QueryByChainIdInTokens(ctx context.Context, chainId int64, tokens []string) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
 		GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error)
 		FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error)
@@ -74,6 +75,20 @@ func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainId(ctx context.Con
 	var resp []EventSonexFactoryPoolCreated
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1", eventSonexFactoryPoolCreatedRows, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdInTokens(ctx context.Context, chainId int64, tokens []string) ([]EventSonexFactoryPoolCreated, error) {
+	var resp []EventSonexFactoryPoolCreated
+	query := fmt.Sprintf(`
+		SELECT %s 
+		FROM %s 
+		WHERE chain_id = $1 AND (event_token0 = ANY($2) OR event_token1 = ANY($2))
+	`, eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, tokens)
 	if err != nil {
 		return nil, err
 	}
