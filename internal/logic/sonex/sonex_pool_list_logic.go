@@ -336,24 +336,25 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			yieldUsd_i, _ := big.NewFloat(0).SetString(pools[i].Yield24h)
 			yieldUsd_j, _ := big.NewFloat(0).SetString(pools[j].Yield24h)
 			if yieldUsd_i.Cmp(yieldUsd_j) == 0 {
-				// 按照volume 排序序列
-				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
-				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
-				return volume24HUsd_i.Cmp(volume24HUsd_j) > 0
+				// 按照 TVL 排序序列
+				tvl24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvl24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvl24HUsd_i.Cmp(tvl24HUsd_j) > 0
 			} else {
 				return yieldUsd_i.Cmp(yieldUsd_j) > 0
 			}
 		})
 
 	case repository.PoolsOrderYieldAsc:
+
 		sort.SliceStable(pools, func(i, j int) bool {
 			yieldUsd_i, _ := big.NewFloat(0).SetString(pools[i].Yield24h)
 			yieldUsd_j, _ := big.NewFloat(0).SetString(pools[j].Yield24h)
 			if yieldUsd_i.Cmp(yieldUsd_j) == 0 {
-				// 按照volume 排序序列
-				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
-				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
-				return volume24HUsd_i.Cmp(volume24HUsd_j) < 0
+				// 按照 TVL 排序序列
+				tvl24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvl24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvl24HUsd_i.Cmp(tvl24HUsd_j) < 0
 			} else {
 				return yieldUsd_i.Cmp(yieldUsd_j) < 0
 			}
@@ -364,7 +365,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			volumeUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
 			volumeUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
 			if volumeUsd_i.Cmp(volumeUsd_j) == 0 {
-				// 按照volume 排序序列
+				// 按照 TVL  排序序列
 				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
 				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
 				return tvlUsd_i.Cmp(tvlUsd_j) > 0
@@ -392,7 +393,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
 			tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
 			if tvlUsd_i.Cmp(tvlUsd_j) == 0 {
-				// 按照volume 排序序列
+				// 按照 volume 排序序列
 				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
 				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
 				return volume24HUsd_i.Cmp(volume24HUsd_j) > 0

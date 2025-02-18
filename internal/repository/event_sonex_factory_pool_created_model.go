@@ -270,9 +270,9 @@ func getTvlTypeInSonexPoolTVLRecord(order string) int64 {
 	case PoolsOrderVolumeDesc:
 		return ValueOfTypeVolume
 	default:
-		return ValueOfTypeVolume
+		return ValueOfTypeTVL
 	}
-	return ValueOfTypeVolume
+	return ValueOfTypeTVL
 }
 
 // GetPoolList returns a map of pool data and pagination meta
@@ -360,7 +360,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	case PoolsOrderVolumeDesc:
 		dataQuery += " ORDER BY t4.tvl::NUMERIC DESC"
 	default:
-		dataQuery += " ORDER BY t4.tvl::NUMERIC ASC"
+		dataQuery += " ORDER BY t4.tvl::NUMERIC DESC"
 	}
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
