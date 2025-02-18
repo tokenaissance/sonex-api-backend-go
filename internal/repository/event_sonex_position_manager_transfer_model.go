@@ -266,6 +266,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 					Volume:      "0",
 				},
 				IsBurnt:   item.IsBurnt.Bool,
+				TxAt:      item.TxAt.Time.UTC().Format(time.RFC3339),
 				CreatedAt: item.CreatedAt.String,
 				UpdatedAt: item.UpdatedAt.String,
 			}
@@ -383,6 +384,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			Volume:      "0",
 		},
 		IsBurnt:   item.IsBurnt.Bool,
+		TxAt:      item.TxAt.Time.UTC().Format(time.RFC3339),
 		CreatedAt: item.CreatedAt.String,
 		UpdatedAt: item.UpdatedAt.String,
 	}

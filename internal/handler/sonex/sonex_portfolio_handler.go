@@ -26,6 +26,23 @@ const (
 	portfolioTypeXpool     string = "xpool"
 )
 
+type LiquidityList struct {
+	Positions       []*types.Position                          // 流动性持仓列表
+	OperationEvents map[int64][]*sonex.LiquidityOperationEvent // 流动性持仓操作事件列表
+}
+
+// xpoolsList 获取用户有效 xpool 列表 & 质押事件列表
+type xpoolList struct {
+	Pools           []types.XpoolPoolListResponse_Pool          // 质押池列表
+	OperationEvents map[string][]*xpool.XpoolUserOperationEvent // 质押 & 提取事件列表
+}
+
+// FarmIncentiveList 获取用户有效 farm 列表 & 质押事件列表
+type FarmIncentiveList struct {
+	Pools           []types.FarmIncentivesResponse_Data            // 质押池列表
+	OperationEvents map[int64][]*farm.FarmIncentivesOperationEvent // 质押 & 提取事件列表
+}
+
 func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.PortfolioRequest
@@ -63,7 +80,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 持仓列表
 		portfolioPositions := make([]*types.PortfolioPosition, 0)
 		// 流动性持仓列表
-		liquidityPositions := make([]*types.Position, 0)
+		var liquidityList *LiquidityList
 		// 持仓统计
 		portfolioStats := &types.PortfolioStats{}
 
@@ -75,23 +92,58 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 用户所在时区的当日 00:00
 		todayBegin := getUserTimeZoneDayStart(timeZone)
 		var previousDayTotalAssets float64
+		// 每个 LP position 在当地时间 00:00 时的净值
+		lpValueAtDayStart := make(map[int64]float64)
+		// 每个 LP position 的当前净值
+		lpCurrentValue := make(map[int64]float64)
 
 		// 获取用户有效 positions 列表
 		{
 			if liquiditySelected || farmSelected {
-				liquidityList, err := getPositions(r.Context(), svcCtx, req)
+				list, err := getLiquidity(r.Context(), svcCtx, req)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
-				liquidityPositions = liquidityList.positions
+				liquidityList = list
+
+				// 1. 首先计算每个 LP position 在当地时间 00:00 时的净值
+				// 计算每个 LP position 的当前净值
+
+				for tokenId, events := range liquidityList.OperationEvents {
+					var valueBeforeDayStart float64
+					var currentValue float64
+
+					for _, event := range events {
+						if event.LiquidityOperationEventType == sonex.LiquidityOperationEventTypeIncrease {
+							value, _ := event.IncreaseEvent.EventValue.Float64()
+							if event.IncreaseEvent.TxAt.Before(todayBegin) {
+								// 累计今天之前的净值变化
+								valueBeforeDayStart += value
+							}
+							// 累计所有净值变化得到当前值
+							currentValue += value
+						} else if event.LiquidityOperationEventType == sonex.LiquidityOperationEventTypeDecrease {
+							value, _ := event.DecreaseEvent.EventValue.Float64()
+							if event.DecreaseEvent.TxAt.Before(todayBegin) {
+								// 累计今天之前的净值变化
+								valueBeforeDayStart -= value
+							}
+							// 累计所有净值变化得到当前值
+							currentValue -= value
+						}
+					}
+
+					lpValueAtDayStart[tokenId] = valueBeforeDayStart
+					lpCurrentValue[tokenId] = currentValue
+				}
 			}
 
 			if liquiditySelected {
 				liquidityFrames := make([]*types.PortfolioLiquidityFrame, 0)
 				// count in total position & liquidity claimable fees
-				for _, position := range liquidityPositions {
+				for _, position := range liquidityList.Positions {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type:              portfolioTypeLiquidity,
 						LiquidityPosition: position,
@@ -99,14 +151,14 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					portfolioStats.LiquidityPosition += position.Position
 					liquidityClaimableFees += position.ClaimableFees
 
-					createdAt, err := time.Parse(time.RFC3339, position.CreatedAt)
+					txAt, err := time.Parse(time.RFC3339, position.TxAt)
 					if err != nil {
 						logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 						continue
 					}
 					// count in total position assets before today begin
-					if createdAt.UTC().Before(todayBegin) {
-						previousDayTotalAssets += position.Position
+					if txAt.UTC().Before(todayBegin) {
+						previousDayTotalAssets += lpValueAtDayStart[position.TokenID]
 					}
 
 					// 计算 liquidity position 的饼图 frame 数据
@@ -139,23 +191,23 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				}
 
 				// count in total xpool staked before today begin
-				for _, events := range xpoolList.operationEvents {
+				for _, events := range xpoolList.OperationEvents {
 					for _, event := range events {
 						// 质押事件
 						if event.XpoolUserEventType == xpool.XpoolUserEventTypeDeposited {
 							// deposited event transaction time
-							createdAt := event.DepositedEvent.TxAt
+							txAt := event.DepositedEvent.TxAt
 							// count in total xpool staked before today begin
-							if createdAt.Before(todayBegin) {
+							if txAt.Before(todayBegin) {
 								previousDayTotalAssets += event.DepositedEvent.EventValue
 							}
 						}
 						// 提取事件
 						if event.XpoolUserEventType == xpool.XpoolUserEventTypeWithdrawed {
 							// withdrawn event transaction time
-							createdAt := event.WithdrawedEvent.TxAt
+							txAt := event.WithdrawedEvent.TxAt
 							// count in total xpool staked before today begin
-							if createdAt.Before(todayBegin) {
+							if txAt.Before(todayBegin) {
 								previousDayTotalAssets -= event.WithdrawedEvent.EventValue
 							}
 						}
@@ -163,7 +215,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				}
 
 				xpoolFrames := make([]*types.PortfolioXpoolFrame, 0)
-				for _, xpool := range xpoolList.pools {
+				for _, xpool := range xpoolList.Pools {
 					stakingTokenPrice, err := sonex_module.NewTokenPrice(xpool.StakingTokenPriceWithDecimals, int(xpool.StakingTokenPriceDecimals))
 					if err != nil {
 						logx.Errorf("[SonexPortfolioHandler]: stakingTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
@@ -236,35 +288,41 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 获取用户有效 farm 列表
 		{
 			if farmSelected {
-				farmPools, err := getFarmPools(r.Context(), svcCtx, req, liquidityPositions)
+				farmPools, err := getFarmPools(r.Context(), svcCtx, req, liquidityList.Positions)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: getFarmPools error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
 
-				// // count in total farm staked before today begin
-				// for _, events := range farmPools.operationEvents {
-				// 	for _, event := range events {
-				// 		// 质押事件
-				// 		if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeStaked {
-				// 			createdAt := event.StakedEvent.TxAt
-				// 			if createdAt.Before(todayBegin) {
-				// 				previousDayTotalAssets += event.StakedEvent.EventPositionValue
-				// 			}
-				// 		}
-				// 		// 解质押事件
-				// 		if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeUnstaked {
-				// 			createdAt := event.UnstakedEvent.TxAt
-				// 			if createdAt.Before(todayBegin) {
-				// 				previousDayTotalAssets -= event.UnstakedEvent.EventPositionValue
-				// 			}
-				// 		}
-				// 	}
-				// }
+				// 2. 然后计算每个 Farm Staking 在当地时间 00:00 时的状态
+				// 对于今天 00:00 之前的质押事件，将对应 LP 在当时的净值加入 previousDayTotalAssets
+				// 对于今天 00:00 之前的解质押事件，将对应 LP 在当时的净值从 previousDayTotalAssets 中减去
+				for _, events := range farmPools.OperationEvents {
+					for _, event := range events {
+						positionId := int64(0)
+						if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeStaked {
+							positionId = event.StakedEvent.EventTokenId
+							if event.StakedEvent.TxAt.Before(todayBegin) {
+								// 如果是今天之前的质押，计入前一天总资产
+								if lpValue, exists := lpValueAtDayStart[positionId]; exists {
+									previousDayTotalAssets += lpValue
+								}
+							}
+						} else if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeUnstaked {
+							positionId = event.UnstakedEvent.EventTokenId
+							if event.UnstakedEvent.TxAt.Before(todayBegin) {
+								// 如果是今天之前的解质押，从前一天总资产中减去
+								if lpValue, exists := lpValueAtDayStart[positionId]; exists {
+									previousDayTotalAssets -= lpValue
+								}
+							}
+						}
+					}
+				}
 
 				farmFrames := make([]*types.PortfolioFarmFrame, 0)
-				for _, farm := range farmPools.pools {
+				for _, farm := range farmPools.Pools {
 					feeRevenue := farm.TotalClaimedFeesUSDFloat64 + farm.TotalClaimableFeesUSDFloat64
 
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
@@ -284,11 +342,6 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					})
 
 					portfolioStats.TotalFarmStaked += farm.LiquidityUSDFloat64
-					// count in total farm staked before today begin
-					createdAt := time.Unix(farm.StartAt, 0).UTC()
-					if createdAt.Before(todayBegin) {
-						previousDayTotalAssets += farm.LiquidityUSDFloat64
-					}
 
 					// 计算用户可领取的奖励代币价值
 					farmEarns += farm.TotalClaimableFeesUSDFloat64
@@ -397,13 +450,8 @@ func getPagination(list []*types.PortfolioPosition, pageIndex int64, pageSize in
 	return list
 }
 
-type LiquidityList struct {
-	positions       []*types.Position                          // 流动性持仓列表
-	operationEvents map[int64][]*sonex.LiquidityOperationEvent // 流动性持仓操作事件列表
-}
-
-// getPositions 获取用户有效 positions 列表
-func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*LiquidityList, error) {
+// getLiquidity 获取用户有效 positions 列表
+func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*LiquidityList, error) {
 	l := sonex.NewSonexPositionsLogic(ctx, svcCtx)
 
 	type positionsResult struct {
@@ -441,21 +489,9 @@ func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 	}
 
 	return &LiquidityList{
-		positions:       positions.positions,
-		operationEvents: operationEvents.operationEvents,
+		Positions:       positions.positions,
+		OperationEvents: operationEvents.operationEvents,
 	}, nil
-}
-
-// xpoolsList 获取用户有效 xpool 列表 & 质押事件列表
-type xpoolList struct {
-	pools           []types.XpoolPoolListResponse_Pool          // 质押池列表
-	operationEvents map[string][]*xpool.XpoolUserOperationEvent // 质押 & 提取事件列表
-}
-
-// FarmIncentiveList 获取用户有效 farm 列表 & 质押事件列表
-type FarmIncentiveList struct {
-	pools           []types.FarmIncentivesResponse_Data            // 质押池列表
-	operationEvents map[int64][]*farm.FarmIncentivesOperationEvent // 质押 & 提取事件列表
 }
 
 // getXPools 获取用户有效 xpool 列表
@@ -520,8 +556,8 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 	}
 
 	return &xpoolList{
-		pools:           pools.pools,
-		operationEvents: operationEvents.operationEvents,
+		Pools:           pools.pools,
+		OperationEvents: operationEvents.operationEvents,
 	}, nil
 }
 
@@ -579,7 +615,7 @@ func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 	}
 
 	return &FarmIncentiveList{
-		pools:           pools.pools,
-		operationEvents: operationEvents.operationEvents,
+		Pools:           pools.pools,
+		OperationEvents: operationEvents.operationEvents,
 	}, nil
 }

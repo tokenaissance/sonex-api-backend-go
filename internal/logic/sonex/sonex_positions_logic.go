@@ -593,6 +593,16 @@ func (l *SonexPositionsLogic) GetLiquidityOperationEventsWithTokenValue(ctx cont
 
 	for tokenId, list := range events {
 		for _, event := range list {
+			// increase liquidity event
+			if event.LiquidityOperationEventType == LiquidityOperationEventTypeIncrease {
+				event.IncreaseEvent.EventValue = new(big.Float)
+			}
+			// decrease liquidity event
+			if event.LiquidityOperationEventType == LiquidityOperationEventTypeDecrease {
+				event.DecreaseEvent.EventValue = new(big.Float)
+			}
+
+			// todo: 被 burn 掉的 token 无法参与计算，后期需要优化，从 db 中直接 join 出 token 信息，不直接从链上取
 			position, ok := pm[tokenId]
 			if !ok {
 				continue
