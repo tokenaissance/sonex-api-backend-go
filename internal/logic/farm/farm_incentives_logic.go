@@ -644,51 +644,10 @@ const (
 	FarmIncentivesOperationEventTypeUnstaked
 )
 
-// FarmIncentivesStakedEvent 质押事件
-type FarmIncentivesStakedEvent struct {
-	Id                  int64     // 主键
-	CreatedAt           time.Time // 创建时间
-	UpdatedAt           time.Time // 更新时间
-	ChainId             int64     // 链ID
-	BlockNumber         int64     // 区块高度
-	TxIndex             int64     // 交易索引
-	TxHash              string    // 交易哈希
-	TxAt                time.Time // 交易时间
-	From                string    // 质押用户
-	To                  string    // 质押合约
-	Value               string    // ETH 质押数量, 如果交易不包含 ETH，则该值为 0
-	EventUser           string    // 质押用户
-	EventTokenId        int64     // 质押token id
-	EventIncentiveId    int64     // 质押激励 pool id
-	EventTotalLiquidity string    // 质押总流动性
-	EventPositionValue  float64   // 质押 position 美元价值
-}
-
-// FarmIncentivesUnstakedEvent 解质押事件
-type FarmIncentivesUnstakedEvent struct {
-	Id                  int64     // 主键
-	CreatedAt           time.Time // 创建时间
-	UpdatedAt           time.Time // 更新时间
-	ChainId             int64     // 链ID
-	BlockNumber         int64     // 区块高度
-	TxIndex             int64     // 交易索引
-	TxHash              string    // 交易哈希
-	TxAt                time.Time // 交易时间
-	From                string    // 解质押池合约地址
-	To                  string    // 解质押用户
-	Value               string    // ETH 交易数量, 如果交易不包含 ETH，则该值为 0
-	EventUser           string    // 解质押用户
-	EventTokenId        int64     // 解质押token id
-	EventIncentiveId    int64     // 解质押激励 pool id
-	EventTotalLiquidity string    // 解质押总流动性
-	EventPositionValue  float64   // 解质押 position 美元价值
-}
-
-// FarmIncentivesOperationEvent 质押/解质押事件
 type FarmIncentivesOperationEvent struct {
 	FarmIncentivesOperationEventType FarmIncentivesOperationEventType
-	StakedEvent                      *FarmIncentivesStakedEvent
-	UnstakedEvent                    *FarmIncentivesUnstakedEvent
+	StakedEvent                      *repository.EventFarmTokenStaked
+	UnstakedEvent                    *repository.EventFarmTokenUnstaked
 }
 
 // GetFarmIncentivesOperationEvents 获取 user address 质押/解质押事件, key 为 incentive id
@@ -702,196 +661,70 @@ func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, us
 		return nil, fmt.Errorf("%s", "Miss sonex configure")
 	}
 
-	// 获取用户在链上的质押事件
-	stakedEvents, err := l.eventFarmTokenStakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
-	if err != nil {
-		logx.Errorf("GetFarmIncentivesOperationEvents: GetStakedEvents error: %v", err)
-		return nil, err
+	type stakedResult struct {
+		events []*repository.EventFarmTokenStaked
+		err    error
+	}
+	type unstakedResult struct {
+		events []*repository.EventFarmTokenUnstaked
+		err    error
 	}
 
-	// 获取用户在链上的解质押事件
-	unstakedEvents, err := l.eventFarmTokenUnstakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
-	if err != nil {
-		logx.Errorf("GetFarmIncentivesOperationEvents: GetUnstakedEvents error: %v", err)
-		return nil, err
-	}
-	// get token ids with deduplication
-	tokenIdMap := make(map[int64]bool)
-	for _, stakedEvent := range stakedEvents {
-		tokenIdMap[stakedEvent.EventTokenId] = true
-	}
-	for _, unstakedEvent := range unstakedEvents {
-		tokenIdMap[unstakedEvent.EventTokenId] = true
+	stakedChan := make(chan stakedResult, 1)
+	unstakedChan := make(chan unstakedResult, 1)
+
+	// Concurrent fetching using channels
+	go func() {
+		events, err := l.eventFarmTokenStakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+		stakedChan <- stakedResult{events: events, err: err}
+	}()
+
+	go func() {
+		events, err := l.eventFarmTokenUnstakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+		unstakedChan <- unstakedResult{events: events, err: err}
+	}()
+
+	// Receive results from channels
+	stakedRes := <-stakedChan
+	unstakedRes := <-unstakedChan
+
+	if stakedRes.err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: GetStakedEvents error: %v", stakedRes.err)
+		return nil, stakedRes.err
 	}
 
-	tokenIds := make([]*big.Int, 0, len(tokenIdMap))
-	for tokenId := range tokenIdMap {
-		tokenIds = append(tokenIds, big.NewInt(tokenId))
+	if unstakedRes.err != nil {
+		logx.Errorf("GetFarmIncentivesOperationEvents: GetUnstakedEvents error: %v", unstakedRes.err)
+		return nil, unstakedRes.err
 	}
 
-	staticCaller, err := sonex.NewStaticCaller(l.svcCtx.Config)
-	if err != nil {
-		logx.Errorf("GetFarmIncentivesOperationEvents: NewStaticCaller error: %v", err)
-		return nil, err
-	}
-
-	// 获取 event token id 对应的 position
-	positions, err := staticCaller.BatchGetPositions(l.ctx, chainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
-	if err != nil {
-		logx.Errorf("GetFarmIncentivesOperationEvents: BatchGetPositions error: %v", err)
-		return nil, err
-	}
-	positionsMap := make(map[int64]*sonex.Position)
-	tokenAddresses := make([]string, 0)
-	for _, position := range positions {
-		positionsMap[position.TokenId.Int64()] = position
-		tokenAddresses = append(tokenAddresses, position.Token0.Hex())
-		tokenAddresses = append(tokenAddresses, position.Token1.Hex())
-	}
-	// 获取 token 价格
-	prices, err := l.getCurrentPrices(l.ctx, tokenAddresses)
-	if err != nil {
-		logx.Errorf("GetFarmIncentivesOperationEvents: GetCurrentPrices error: %v", err)
-		return nil, err
-	}
-
-	// 将质押事件和解质押事件转换为 map
+	// Initialize the map
 	m = make(map[int64][]*FarmIncentivesOperationEvent)
 
-	for _, stakedEvent := range stakedEvents {
-		operationEvents, ok := m[stakedEvent.EventIncentiveId]
+	// Process staked events
+	for _, stakedEvent := range stakedRes.events {
+		events, ok := m[stakedEvent.EventIncentiveId]
 		if !ok {
-			operationEvents = make([]*FarmIncentivesOperationEvent, 0)
+			events = make([]*FarmIncentivesOperationEvent, 0)
 		}
-		// event postion value
-		position, ok := positionsMap[stakedEvent.EventTokenId]
-		if !ok {
-			logx.Errorf("GetFarmIncentivesOperationEvents: Position not found: %d", stakedEvent.EventTokenId)
-			continue
-		}
-		token0, err := global.GetToken(chainId, position.Token0.Hex())
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
-			continue
-		}
-		token1, err := global.GetToken(chainId, position.Token1.Hex())
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
-			continue
-		}
-		token0Price, ok := prices[token0.Address]
-		if !ok {
-			logx.Errorf("GetFarmIncentivesOperationEvents: Token0 price not found: %s", token0.Address)
-			continue
-		}
-		token1Price, ok := prices[token1.Address]
-		if !ok {
-			logx.Errorf("GetFarmIncentivesOperationEvents: Token1 price not found: %s", token1.Address)
-			continue
-		}
-		token0Amount, token1Amount := position.Amounts()
-		token0Value, err := sonex.NewTokenValue(token0Amount.String(), int(token0.Decimals), sonex.WithTokenPrice(token0Price))
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: token0 NewTokenValue error: %v", err)
-			continue
-		}
-		token1Value, err := sonex.NewTokenValue(token1Amount.String(), int(token1.Decimals), sonex.WithTokenPrice(token1Price))
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: token1 NewTokenValue error: %v", err)
-			continue
-		}
-		tokenPair := sonex.NewTokenPair(token0Value, token1Value)
-		tokenPairValue, _ := tokenPair.ValueFloat64()
-
-		operationEvents = append(operationEvents, &FarmIncentivesOperationEvent{
+		events = append(events, &FarmIncentivesOperationEvent{
 			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeStaked,
-			StakedEvent: &FarmIncentivesStakedEvent{
-				Id:                  stakedEvent.Id,
-				CreatedAt:           stakedEvent.CreatedAt,
-				UpdatedAt:           stakedEvent.UpdatedAt,
-				ChainId:             stakedEvent.ChainId,
-				BlockNumber:         stakedEvent.BlockNumber,
-				TxIndex:             stakedEvent.TxIndex,
-				TxHash:              stakedEvent.TxHash,
-				TxAt:                stakedEvent.TxAt,
-				From:                stakedEvent.From,
-				To:                  stakedEvent.To,
-				Value:               stakedEvent.Value,
-				EventUser:           stakedEvent.EventUser,
-				EventTokenId:        stakedEvent.EventTokenId,
-				EventIncentiveId:    stakedEvent.EventIncentiveId,
-				EventTotalLiquidity: stakedEvent.EventTotalLiquidity,
-				EventPositionValue:  tokenPairValue,
-			},
+			StakedEvent:                      stakedEvent,
 		})
-		m[stakedEvent.EventIncentiveId] = operationEvents
+		m[stakedEvent.EventIncentiveId] = events
 	}
 
-	for _, unstakedEvent := range unstakedEvents {
-		operationEvents, ok := m[unstakedEvent.EventIncentiveId]
+	// Process unstaked events
+	for _, unstakedEvent := range unstakedRes.events {
+		events, ok := m[unstakedEvent.EventIncentiveId]
 		if !ok {
-			operationEvents = make([]*FarmIncentivesOperationEvent, 0)
+			events = make([]*FarmIncentivesOperationEvent, 0)
 		}
-		position, ok := positionsMap[unstakedEvent.EventTokenId]
-		if !ok {
-			logx.Errorf("GetFarmIncentivesOperationEvents: Position not found: %d", unstakedEvent.EventTokenId)
-			continue
-		}
-		token0, err := global.GetToken(chainId, position.Token0.Hex())
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
-			continue
-		}
-		token1, err := global.GetToken(chainId, position.Token1.Hex())
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: GetToken error: %v", err)
-			continue
-		}
-		token0Price, ok := prices[token0.Address]
-		if !ok {
-			logx.Errorf("GetFarmIncentivesOperationEvents: Token0 price not found: %s", token0.Address)
-			continue
-		}
-		token1Price, ok := prices[token1.Address]
-		if !ok {
-			logx.Errorf("GetFarmIncentivesOperationEvents: Token1 price not found: %s", token1.Address)
-			continue
-		}
-		token0Amount, token1Amount := position.Amounts()
-		token0Value, err := sonex.NewTokenValue(token0Amount.String(), int(token0.Decimals), sonex.WithTokenPrice(token0Price))
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: token0 NewTokenValue error: %v", err)
-			continue
-		}
-		token1Value, err := sonex.NewTokenValue(token1Amount.String(), int(token1.Decimals), sonex.WithTokenPrice(token1Price))
-		if err != nil {
-			logx.Errorf("GetFarmIncentivesOperationEvents: token1 NewTokenValue error: %v", err)
-			continue
-		}
-		tokenPair := sonex.NewTokenPair(token0Value, token1Value)
-		tokenPairValue, _ := tokenPair.ValueFloat64()
-		operationEvents = append(operationEvents, &FarmIncentivesOperationEvent{
+		events = append(events, &FarmIncentivesOperationEvent{
 			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeUnstaked,
-			UnstakedEvent: &FarmIncentivesUnstakedEvent{
-				Id:                  unstakedEvent.Id,
-				CreatedAt:           unstakedEvent.CreatedAt,
-				UpdatedAt:           unstakedEvent.UpdatedAt,
-				ChainId:             unstakedEvent.ChainId,
-				BlockNumber:         unstakedEvent.BlockNumber,
-				TxIndex:             unstakedEvent.TxIndex,
-				TxHash:              unstakedEvent.TxHash,
-				TxAt:                unstakedEvent.TxAt,
-				From:                unstakedEvent.From,
-				To:                  unstakedEvent.To,
-				Value:               unstakedEvent.Value,
-				EventUser:           unstakedEvent.EventUser,
-				EventTokenId:        unstakedEvent.EventTokenId,
-				EventIncentiveId:    unstakedEvent.EventIncentiveId,
-				EventTotalLiquidity: unstakedEvent.EventLiquidity,
-				EventPositionValue:  tokenPairValue,
-			},
+			UnstakedEvent:                    unstakedEvent,
 		})
-		m[unstakedEvent.EventIncentiveId] = operationEvents
+		m[unstakedEvent.EventIncentiveId] = events
 	}
 
 	return m, nil

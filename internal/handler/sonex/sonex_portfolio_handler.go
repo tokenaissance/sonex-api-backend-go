@@ -243,25 +243,25 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					return
 				}
 
-				// count in total farm staked before today begin
-				for _, events := range farmPools.operationEvents {
-					for _, event := range events {
-						// 质押事件
-						if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeStaked {
-							createdAt := event.StakedEvent.TxAt
-							if createdAt.Before(todayBegin) {
-								previousDayTotalAssets += event.StakedEvent.EventPositionValue
-							}
-						}
-						// 解质押事件
-						if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeUnstaked {
-							createdAt := event.UnstakedEvent.TxAt
-							if createdAt.Before(todayBegin) {
-								previousDayTotalAssets -= event.UnstakedEvent.EventPositionValue
-							}
-						}
-					}
-				}
+				// // count in total farm staked before today begin
+				// for _, events := range farmPools.operationEvents {
+				// 	for _, event := range events {
+				// 		// 质押事件
+				// 		if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeStaked {
+				// 			createdAt := event.StakedEvent.TxAt
+				// 			if createdAt.Before(todayBegin) {
+				// 				previousDayTotalAssets += event.StakedEvent.EventPositionValue
+				// 			}
+				// 		}
+				// 		// 解质押事件
+				// 		if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeUnstaked {
+				// 			createdAt := event.UnstakedEvent.TxAt
+				// 			if createdAt.Before(todayBegin) {
+				// 				previousDayTotalAssets -= event.UnstakedEvent.EventPositionValue
+				// 			}
+				// 		}
+				// 	}
+				// }
 
 				farmFrames := make([]*types.PortfolioFarmFrame, 0)
 				for _, farm := range farmPools.pools {
