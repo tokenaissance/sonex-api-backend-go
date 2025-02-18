@@ -19,7 +19,7 @@ func Test_GetPoolList(t *testing.T) {
 	a := &module_sonex.GetPoolListParams{
 		ChainId:         1946,
 		PositionManager: "0x3231734Cb30f7B5dc42D6354Ea42b4BAE54618Ab",
-		Order:           "ASC",
+		Order:           "DESC",
 		Page:            1,
 		Take:            10,
 		Keywords:        "",
