@@ -41,6 +41,9 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 	tvlvolRecordModel := repository.NewSonexVolTvlRecordModel(conn)
 	zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
 
+	// 把各个volume 存入 sonex_vol_tvl_record ,做poollist的排序比较
+	volRecordModel := repository.NewSonexPoolTvlRecordModel(conn)
+
 	logx.Infof("zeroTime:%v  ", zeroTime)
 
 	if len(config.Chains) > 0 {
@@ -101,6 +104,14 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 								logx.Errorf("HandleRecordVol24hTvl24h: in  SetVolume24HValue :%v", err)
 							} else {
 								logx.Infof("HandleRecordVol24hTvl24h Set:%v totalVolume:%v notVolume24HOfBridgePool:%v  volume24HOfBridgePool:%v   ", pool.EventPool, totalVolume, notVolume24HOfBridgePool, volume24HOfBridgePool)
+							}
+
+							//  更新 VOLUME，用于排序
+							_, err = volRecordModel.UpdateOrInsertTvlByPoolAddress(totalVolume.String(), pool.EventPool, 6, v.ChainId, repository.ValueOfTypeVolume)
+							if err != nil {
+								logx.Errorf("err:%v", err)
+							} else {
+								logx.Debug("TVL:poolAddress:", pool.EventPool, " volume:", totalVolume.String())
 							}
 						}
 					}

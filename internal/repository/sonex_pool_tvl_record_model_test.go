@@ -15,7 +15,7 @@ func Test_UpdateOrInsertTvlByPoolAddress(t *testing.T) {
 	model := NewSonexPoolTvlRecordModel(NewConn(c.PostgreSQL.DateSource()))
 	// tokenAddresses := []string{"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"}
 
-	ret, err := model.UpdateOrInsertTvlByPoolAddress("eeee1ggggggggeee67", "0xdadsad999198d38483aD727ABC8b0B1e16B2d338CF0391", 6, 1946)
+	ret, err := model.UpdateOrInsertTvlByPoolAddress("eeee1ggggggggeee67", "0xdadsad999198d38483aD727ABC8b0B1e16B2d338CF0391", 6, 1946, TVLTypeoOfValue)
 	if err != nil {
 		t.Error(err)
 		return

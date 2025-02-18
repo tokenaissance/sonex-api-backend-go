@@ -264,19 +264,19 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			}
 
 			// 计算yield
-			_yield, err := global.GetVolume24HTvlValue(cacher, global.YiedlRateKey, pool.Address)
+			yield, err := global.GetVolume24HTvlValue(cacher, global.YiedlRateKey, pool.Address)
 			if errors.Is(err, redis.Nil) {
 				logx.Infof("Pool:%v NIL YIELD", pool.Address)
-				_yield = "0.0"
+				yield = "0.0"
 			}
 			if err != nil && !errors.Is(err, redis.Nil) {
 				logx.Infof("Pool:%v ERR  YIELD:%v", pool.Address, err)
-				_yield = "0.0"
+				yield = "0.0"
 			}
 
 			pool.Stablecoin = stablecoinToken.Address
 			pool.StablecoinDecimals = stablecoinToken.Decimals
-			pool.Yield24h = _yield
+			pool.Yield24h = yield
 			pool.Volume = "0" // 给个默认的值
 
 			// 从redis 获 volume24H 值

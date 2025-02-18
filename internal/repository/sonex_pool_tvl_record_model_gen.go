@@ -44,6 +44,7 @@ type (
 		UsdDecimals int64     `db:"usd_decimals"`
 		ChainId     int64     `db:"chain_id"`
 		Updated     time.Time `db:"updated"`
+		ValueOfType int64     `db:"value_of_type"`  
 	}
 )
 
@@ -75,8 +76,8 @@ func (m *defaultSonexPoolTvlRecordModel) FindOne(ctx context.Context, id int64) 
 }
 
 func (m *defaultSonexPoolTvlRecordModel) Insert(ctx context.Context, data *SonexPoolTvlRecord) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6)", m.table, sonexPoolTvlRecordRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.PoolAddress, data.Tvl, data.Created, data.UsdDecimals, data.ChainId, data.Updated)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6,$7)", m.table, sonexPoolTvlRecordRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.PoolAddress, data.Tvl, data.Created, data.UsdDecimals, data.ChainId, data.Updated,data.ValueOfType)
 	return ret, err
 }
 
