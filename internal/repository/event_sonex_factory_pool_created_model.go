@@ -236,15 +236,6 @@ func (m *customEventSonexFactoryPoolCreatedModel) FindByPoolAddress(ctx context.
 	}
 }
 
-/*
-/sonex/pools?order=DESC&pageIndex=1&pageSize=10
-order 字段,有以下赋值含义
-ASC，指的是按照TVL进行升序
-DESC，代表按照 TVL 进行降序排列
-IdASC, 按照池子创建时间进行升序
-IdDesc，按照池子创建时间进行降序
-*/
-
 var PoolsOrderTvlAsc = "ASC"   // 按照TVL进行排序
 var PoolsOrderTvlDesc = "DESC" // 按照TVL进行降序
 
@@ -354,13 +345,13 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	case PoolsOrderTvlAsc: //因为 t4.tvl 分别代表着  tvl  yield   和  voulme 等值
 	case PoolsOrderYieldAsc:
 	case PoolsOrderVolumeAsc:
-		dataQuery += " ORDER BY t4.tvl::NUMERIC  ASC "
+		dataQuery += " ORDER BY t4.tvl ::NUMERIC  ASC "
 	case PoolsOrderTvlDesc:
 	case PoolsOrderYieldDesc:
 	case PoolsOrderVolumeDesc:
-		dataQuery += " ORDER BY t4.tvl::NUMERIC DESC"
+		dataQuery += " ORDER BY t4.tvl ::NUMERIC DESC"
 	default:
-		dataQuery += " ORDER BY t4.tvl::NUMERIC DESC"
+		dataQuery += " ORDER BY t4.tvl ::NUMERIC DESC"
 	}
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
