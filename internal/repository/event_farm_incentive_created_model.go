@@ -167,24 +167,28 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithExtra
 	var resp []EventFarmIncentiveCreatedWithExtra
 	query := fmt.Sprintf(`
 		WITH SelectTemp AS (
-			SELECT
+			SELECT 
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
 				F.event_reward_token, F.event_pool, F.event_incentive_id, F.event_start_time, F.event_weight, F.event_timestamp,
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
 				U.event_reward_token AS extra_reward_token, U.event_new_rate_per_second AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
 			FROM %s F
-			JOIN %s P ON P.event_pool = F.event_pool
-			JOIN %s U ON U.to_ = F.to_
+			JOIN %s P ON P.event_pool = F.event_pool 
+			JOIN %s U ON U.to_ = F.to_ 
 			WHERE F.chain_id = $1 AND F.to_ = $2
 		)
 
-		SELECT
-			id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
-			event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp
-			extra_token0, extra_token1, extra_fee, extra_tick_spacing,
-			extra_reward_token, extra_rate,
-			CASE WHEN (SELECT COUNT(*) FROM event_farm_incentive_ended E WHERE E.event_incentive_id = SelectTemp.event_incentive_id) > 0 THEN TRUE ELSE FALSE END AS extra_ended
+		SELECT  
+		id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value,
+      	event_reward_token, event_pool, event_incentive_id, event_start_time, event_weight, event_timestamp, extra_token0, extra_token1, extra_fee, extra_tick_spacing,
+      	extra_reward_token, extra_rate,
+		CASE WHEN ( 
+			SELECT COUNT(*) FROM event_farm_incentive_ended E 
+			WHERE E.event_incentive_id = SelectTemp.event_incentive_id 
+		) > 0 
+		THEN TRUE ELSE FALSE END AS extra_ended
+
 		FROM SelectTemp
 		WHERE rn = 1
 		ORDER BY tx_at DESC OFFSET $3 LIMIT $4
