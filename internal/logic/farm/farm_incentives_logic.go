@@ -6,11 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"sort"
-	"strings"
-	"sync"
-	"time"
-
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
@@ -19,6 +14,10 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
+	"sort"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,7 +31,6 @@ type FarmIncentivesLogic struct {
 	svcCtx                      *svc.ServiceContext
 	eventFarmTokenStakedModel   repository.EventFarmTokenStakedModel
 	eventFarmTokenUnstakedModel repository.EventFarmTokenUnstakedModel
-	tokenPriceModel             repository.SonexTokenPriceRecordModel
 }
 
 type CacheWarpper struct {
@@ -50,7 +48,6 @@ func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fa
 		svcCtx:                      svcCtx,
 		eventFarmTokenStakedModel:   repository.NewEventFarmTokenStakedModel(conn),
 		eventFarmTokenUnstakedModel: repository.NewEventFarmTokenUnstakedModel(conn),
-		tokenPriceModel:             repository.NewSonexTokenPriceRecordModel(conn),
 	}
 }
 
@@ -652,15 +649,6 @@ type FarmIncentivesOperationEvent struct {
 
 // GetFarmIncentivesOperationEvents 获取 user address 质押/解质押事件, key 为 incentive id
 func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, userAddress string) (m map[int64][]*FarmIncentivesOperationEvent, err error) {
-	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
-	if chainConf == nil {
-		return nil, fmt.Errorf("%s", "Miss chain configure")
-	}
-	sonexConf := l.svcCtx.Config.GetSonexConfig(chainId)
-	if sonexConf == nil {
-		return nil, fmt.Errorf("%s", "Miss sonex configure")
-	}
-
 	type stakedResult struct {
 		events []*repository.EventFarmTokenStaked
 		err    error
@@ -703,50 +691,19 @@ func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, us
 
 	// Process staked events
 	for _, stakedEvent := range stakedRes.events {
-		events, ok := m[stakedEvent.EventIncentiveId]
-		if !ok {
-			events = make([]*FarmIncentivesOperationEvent, 0)
-		}
-		events = append(events, &FarmIncentivesOperationEvent{
+		m[stakedEvent.EventIncentiveId] = append(m[stakedEvent.EventIncentiveId], &FarmIncentivesOperationEvent{
 			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeStaked,
 			StakedEvent:                      stakedEvent,
 		})
-		m[stakedEvent.EventIncentiveId] = events
 	}
 
 	// Process unstaked events
 	for _, unstakedEvent := range unstakedRes.events {
-		events, ok := m[unstakedEvent.EventIncentiveId]
-		if !ok {
-			events = make([]*FarmIncentivesOperationEvent, 0)
-		}
-		events = append(events, &FarmIncentivesOperationEvent{
+		m[unstakedEvent.EventIncentiveId] = append(m[unstakedEvent.EventIncentiveId], &FarmIncentivesOperationEvent{
 			FarmIncentivesOperationEventType: FarmIncentivesOperationEventTypeUnstaked,
 			UnstakedEvent:                    unstakedEvent,
 		})
-		m[unstakedEvent.EventIncentiveId] = events
 	}
 
 	return m, nil
-}
-
-// getCurrentPrices 获取当前价格
-func (l *FarmIncentivesLogic) getCurrentPrices(ctx context.Context, addressList []string) (prices map[string]*sonex.TokenPrice, err error) {
-	records, err := l.tokenPriceModel.GetCurrentPrices(ctx, addressList)
-	if err != nil {
-		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
-		return nil, err
-	}
-	prices = make(map[string]*sonex.TokenPrice, 0)
-	for _, record := range records {
-		tp, err := sonex.NewTokenPrice(record.Price, record.UsdDecimals)
-		if err != nil {
-			logx.Errorf("[XpoolPoolList]: Invalid token price: %s", err)
-			return nil, err
-		}
-		prices[record.TokenAddress] = tp
-	}
-
-	// todo db 获取不到的话，从链上获取价格
-	return prices, nil
 }

@@ -79,13 +79,13 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 获取用户有效 positions 列表
 		{
 			if liquiditySelected || farmSelected {
-				positions, err := getPositions(r.Context(), svcCtx, req)
+				liquidityList, err := getPositions(r.Context(), svcCtx, req)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					httpx.ErrorCtx(r.Context(), w, err)
 					return
 				}
-				liquidityPositions = positions
+				liquidityPositions = liquidityList.positions
 			}
 
 			if liquiditySelected {
@@ -397,16 +397,53 @@ func getPagination(list []*types.PortfolioPosition, pageIndex int64, pageSize in
 	return list
 }
 
+type LiquidityList struct {
+	positions       []*types.Position                          // 流动性持仓列表
+	operationEvents map[int64][]*sonex.LiquidityOperationEvent // 流动性持仓操作事件列表
+}
+
 // getPositions 获取用户有效 positions 列表
-func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) ([]*types.Position, error) {
+func getPositions(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*LiquidityList, error) {
 	l := sonex.NewSonexPositionsLogic(ctx, svcCtx)
-	positions, err := l.SonexPositions(ctx, req.ChainId, req.Address)
-	if err != nil {
-		logx.Errorf("[SonexPortfolioHandler]:getPositions SonexPositions error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
-		return nil, err
+
+	type positionsResult struct {
+		positions []*types.Position
+		err       error
+	}
+	type operationEventsResult struct {
+		operationEvents map[int64][]*sonex.LiquidityOperationEvent
+		err             error
 	}
 
-	return positions, nil
+	positionsChan := make(chan positionsResult, 1)
+	operationEventsChan := make(chan operationEventsResult, 1)
+
+	go func() {
+		positions, err := l.SonexPositions(ctx, req.ChainId, req.Address)
+		positionsChan <- positionsResult{positions: positions, err: err}
+	}()
+
+	go func() {
+		operationEvents, err := l.GetLiquidityOperationEventsWithTokenValue(ctx, req.ChainId, req.Address)
+		operationEventsChan <- operationEventsResult{operationEvents: operationEvents, err: err}
+	}()
+
+	positions := <-positionsChan
+	operationEvents := <-operationEventsChan
+
+	if positions.err != nil {
+		logx.Errorf("[SonexPortfolioHandler]:getPositions SonexPositions error: %s, chainId: %d, address: %s", positions.err.Error(), req.ChainId, req.Address)
+		return nil, positions.err
+	}
+	if operationEvents.err != nil {
+		logx.Errorf("[SonexPortfolioHandler]:getPositions GetLiquidityOperationEvents error: %s, chainId: %d, address: %s", operationEvents.err.Error(), req.ChainId, req.Address)
+		return nil, operationEvents.err
+	}
+
+	return &LiquidityList{
+		positions:       positions.positions,
+		operationEvents: operationEvents.operationEvents,
+	}, nil
 }
 
 // xpoolsList 获取用户有效 xpool 列表 & 质押事件列表
