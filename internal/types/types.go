@@ -407,7 +407,7 @@ type PortfolioFarm struct {
 	Token1Symbol         string  `json:"token1Symbol"`  // token1 代币符号
 	Token1Address        string  `json:"token1Address"` // token1 代币合约地址
 	PositionValue        string  `json:"positionValue"` // pool position 美元净值
-	FeeRevenue           string  `json:"feeRevenue"`    // 用户提取的质押奖励美元价值
+	FeeRevenue           string  `json:"feeRevenue"`    // 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值
 	Earned               string  `json:"earned"`        // 用户未提取的质押奖励美元价值
 	PositionValueFloat64 float64 `json:"-"`             // pool position 美元净值 用于排序
 }
@@ -437,6 +437,7 @@ type PortfolioPosition struct {
 	LiquidityPosition *Position       `json:"liquidityPosition,omitempty"`       // liquidity position list
 	FarmPool          *PortfolioFarm  `json:"farmPool,omitempty"`                // farm pool list
 	Xpool             *PortfolioXpool `json:"xpool,omitempty"`                   // xpool list
+	LiquidityStakable bool            `json:"liquidityStakeable,omitempty"`      // liquidity position 是否支持 farm stake，当不支持或者type不为liquidity时，该值为false，且隐藏liquidityPosition
 }
 
 type PortfolioRequest struct {
@@ -475,7 +476,7 @@ type PortfolioXpool struct {
 	StakingTokenAddress string  `json:"stakingTokenAddress"` // 质押的代币合约地址
 	APR                 string  `json:"apr"`                 // 年化收益率
 	Staked              string  `json:"staked"`              // 用户已经质押的美元价值
-	FeeRevenue          string  `json:"feeRevenue"`          // 用户提取的质押奖励美元价值
+	FeeRevenue          string  `json:"feeRevenue"`          // 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值
 	Earned              string  `json:"earned"`              // 用户未提取的质押奖励美元价值
 	Status              string  `json:"status"`              // 运行状态{Staking}
 	StakedFloat64       float64 `json:"-"`                   // 用户已经质押的美元价值 用于排序

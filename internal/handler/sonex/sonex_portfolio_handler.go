@@ -11,11 +11,13 @@ import (
 	"sonex_api_backend_go/internal/logic/sonex"
 	"sonex_api_backend_go/internal/logic/xpool"
 	sonex_module "sonex_api_backend_go/internal/module/sonex"
+	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 	"time"
 
 	"github.com/ahmetb/go-linq/v3"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -27,8 +29,9 @@ const (
 )
 
 type LiquidityList struct {
-	Positions       []*types.Position                          // 流动性持仓列表
-	OperationEvents map[int64][]*sonex.LiquidityOperationEvent // 流动性持仓操作事件列表
+	Positions           []*types.Position                               // 流动性持仓列表
+	OperationEvents     map[int64][]*sonex.LiquidityOperationEvent      // 流动性持仓操作事件列表
+	FarmIncentivesPools []repository.EventFarmIncentiveCreatedWithExtra // 有效并且当前正属于开启状态的 farm incentive pool列表
 }
 
 // xpoolsList 获取用户有效 xpool 列表 & 质押事件列表
@@ -144,9 +147,19 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				liquidityFrames := make([]*types.PortfolioLiquidityFrame, 0)
 				// count in total position & liquidity claimable fees
 				for _, position := range liquidityList.Positions {
+
+					// 判断 liquidity position 是否支持 farm stake
+					liquidityStakeable := false
+					for _, farmIncentive := range liquidityList.FarmIncentivesPools {
+						if common.HexToAddress(farmIncentive.ExtraToken0) == common.HexToAddress(position.Pool.Token0.Address) && common.HexToAddress(farmIncentive.ExtraToken1) == common.HexToAddress(position.Pool.Token0.Address) {
+							liquidityStakeable = true
+							break
+						}
+					}
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type:              portfolioTypeLiquidity,
 						LiquidityPosition: position,
+						LiquidityStakable: liquidityStakeable,
 					})
 					portfolioStats.LiquidityPosition += position.Position
 					liquidityClaimableFees += position.ClaimableFees
@@ -453,6 +466,7 @@ func getPagination(list []*types.PortfolioPosition, pageIndex int64, pageSize in
 // getLiquidity 获取用户有效 positions 列表
 func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*LiquidityList, error) {
 	l := sonex.NewSonexPositionsLogic(ctx, svcCtx)
+	f := farm.NewFarmIncentivesLogic(ctx, svcCtx)
 
 	type positionsResult struct {
 		positions []*types.Position
@@ -462,9 +476,14 @@ func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 		operationEvents map[int64][]*sonex.LiquidityOperationEvent
 		err             error
 	}
+	type farmIncentivesPoolsResult struct {
+		pools []repository.EventFarmIncentiveCreatedWithExtra
+		err   error
+	}
 
 	positionsChan := make(chan positionsResult, 1)
 	operationEventsChan := make(chan operationEventsResult, 1)
+	farmIncentivesPoolsChan := make(chan farmIncentivesPoolsResult, 1)
 
 	go func() {
 		positions, err := l.SonexPositions(ctx, req.ChainId, req.Address)
@@ -476,8 +495,14 @@ func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 		operationEventsChan <- operationEventsResult{operationEvents: operationEvents, err: err}
 	}()
 
+	go func() {
+		pools, err := f.GetFarmIncentives(req.ChainId)
+		farmIncentivesPoolsChan <- farmIncentivesPoolsResult{pools: pools, err: err}
+	}()
+
 	positions := <-positionsChan
 	operationEvents := <-operationEventsChan
+	farmIncentivesPools := <-farmIncentivesPoolsChan
 
 	if positions.err != nil {
 		logx.Errorf("[SonexPortfolioHandler]:getPositions SonexPositions error: %s, chainId: %d, address: %s", positions.err.Error(), req.ChainId, req.Address)
@@ -487,10 +512,15 @@ func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 		logx.Errorf("[SonexPortfolioHandler]:getPositions GetLiquidityOperationEvents error: %s, chainId: %d, address: %s", operationEvents.err.Error(), req.ChainId, req.Address)
 		return nil, operationEvents.err
 	}
+	if farmIncentivesPools.err != nil {
+		logx.Errorf("[SonexPortfolioHandler]:getFarmPools GetFarmIncentives error: %s, chainId: %d, address: %s", farmIncentivesPools.err.Error(), req.ChainId, req.Address)
+		return nil, farmIncentivesPools.err
+	}
 
 	return &LiquidityList{
-		Positions:       positions.positions,
-		OperationEvents: operationEvents.operationEvents,
+		Positions:           positions.positions,
+		OperationEvents:     operationEvents.operationEvents,
+		FarmIncentivesPools: farmIncentivesPools.pools,
 	}, nil
 }
 
@@ -587,30 +617,24 @@ func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 			UserAddress: req.Address,
 			StakedOnly:  true,
 		}, positions)
-		if err != nil {
-			poolsChan <- farmIncentivesResult{err: fmt.Errorf("[SonexPortfolioHandler]:getFarmPools FarmIncentives error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
-			return
-		}
-		poolsChan <- farmIncentivesResult{pools: pools.List}
+		poolsChan <- farmIncentivesResult{pools: pools.List, err: err}
 	}()
 
 	go func() {
 		// 用户质押&解质押事件
 		operationEvents, err := l.GetFarmIncentivesOperationEvents(req.ChainId, req.Address)
-		if err != nil {
-			operationEventsChan <- farmIncentivesOperationEventsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getFarmPools GetFarmIncentivesOperationEvents error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
-			return
-		}
-		operationEventsChan <- farmIncentivesOperationEventsResult{operationEvents: operationEvents}
+		operationEventsChan <- farmIncentivesOperationEventsResult{operationEvents: operationEvents, err: err}
 	}()
 
 	pools := <-poolsChan
 	operationEvents := <-operationEventsChan
 
 	if pools.err != nil {
+		logx.Errorf("[SonexPortfolioHandler]:getFarmPools FarmIncentives error: %s, chainId: %d, address: %s", pools.err.Error(), req.ChainId, req.Address)
 		return nil, pools.err
 	}
 	if operationEvents.err != nil {
+		logx.Errorf("[SonexPortfolioHandler]:getFarmPools GetFarmIncentivesOperationEvents error: %s, chainId: %d, address: %s", operationEvents.err.Error(), req.ChainId, req.Address)
 		return nil, operationEvents.err
 	}
 

@@ -31,6 +31,7 @@ type FarmIncentivesLogic struct {
 	svcCtx                      *svc.ServiceContext
 	eventFarmTokenStakedModel   repository.EventFarmTokenStakedModel
 	eventFarmTokenUnstakedModel repository.EventFarmTokenUnstakedModel
+	eventIncentiveCreatedModel  repository.EventFarmIncentiveCreatedModel
 }
 
 type CacheWarpper struct {
@@ -48,6 +49,7 @@ func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fa
 		svcCtx:                      svcCtx,
 		eventFarmTokenStakedModel:   repository.NewEventFarmTokenStakedModel(conn),
 		eventFarmTokenUnstakedModel: repository.NewEventFarmTokenUnstakedModel(conn),
+		eventIncentiveCreatedModel:  repository.NewEventFarmIncentiveCreatedModel(conn),
 	}
 }
 
@@ -706,4 +708,19 @@ func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, us
 	}
 
 	return m, nil
+}
+
+// GetFarmIncentives 获取有效并且当前正属于开启状态的 farm incentive pool列表
+func (l *FarmIncentivesLogic) GetFarmIncentives(chainId int64) (m []repository.EventFarmIncentiveCreatedWithExtra, err error) {
+	farmConf := l.svcCtx.Config.GetFarmConfig(chainId)
+	if farmConf == nil {
+		return nil, fmt.Errorf("%s", "Miss farm configure")
+	}
+
+	records, err := l.eventIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, chainId, common.HexToAddress(farmConf.Staker).Hex())
+	if err != nil {
+		logx.Errorf("GetFarmIncentivesPools: QueryByChainIdStakerWithExtra error: %v", err)
+		return nil, err
+	}
+	return records, nil
 }
