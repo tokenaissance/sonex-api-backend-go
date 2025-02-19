@@ -17,8 +17,9 @@ type LeaderboardResponse_Item {
 }
 
 type LeaderboardResponse {
-	User  *LeaderboardResponse_Item   `json:"user,optional"`
-	Items []*LeaderboardResponse_Item `json:"items"`
+	User          *LeaderboardResponse_Item   `json:"user,optional"`
+	Items         []*LeaderboardResponse_Item `json:"items"`
+	LatestUpdated int64                       `json:"latestUpdated"`
 }
 
 @server (
