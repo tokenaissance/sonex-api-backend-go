@@ -47,7 +47,7 @@ func (l *TransactionsLogic) Transactions(req *types.TransactionsRequest) (resp *
 		return nil, fmt.Errorf("%s", "Miss sonex configure")
 	}
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 

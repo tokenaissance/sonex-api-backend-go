@@ -42,7 +42,7 @@ type CacheWarpper struct {
 
 // Farm incentive list
 func NewFarmIncentivesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FarmIncentivesLogic {
-	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DataSource())
 	return &FarmIncentivesLogic{
 		Logger:                      logx.WithContext(ctx),
 		ctx:                         ctx,
@@ -60,7 +60,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
 	cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)

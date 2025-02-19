@@ -52,7 +52,7 @@ func (l *SonexTokenTopLogic) SonexTokenTop() (resp *TokenTopResponseWrapper, err
 		}
 	}
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	model := repository.NewSonexTokenModel(conn)
 	result, err := model.GetTopTokenList(l.ctx, int(l.svcCtx.Config.Chains[0].ChainId), l.svcCtx.Config.Sonexes[0].PositionManager)
 

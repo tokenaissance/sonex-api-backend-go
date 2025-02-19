@@ -30,7 +30,7 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 	// start calucate the tvl for each pool
 	logx.Infof("HandleRecordVol24hTvl24h start Time : %v", startTime)
 
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port), config.Redis.Password, config.Redis.DB)
 	ctx := context.Background()
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)

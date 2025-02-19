@@ -51,7 +51,7 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	// checksum address
 	_poolAddressWithCheckSum := common.HexToAddress(_poolAddress).Hex()
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 	ctx := context.Background()

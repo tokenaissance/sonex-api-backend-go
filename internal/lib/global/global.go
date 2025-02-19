@@ -321,7 +321,7 @@ func QuoteExactInput(ctx context.Context, pools []quoter.Pool, chainId int64, fr
 	}
 
 	if pools == nil {
-		conn := repository.NewConn(c.PostgreSQL.DateSource())
+		conn := repository.NewConn(c.PostgreSQL.DataSource())
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
 		if err != nil {
@@ -595,7 +595,7 @@ func QuoteExactOutput(ctx context.Context, pools []quoter.Pool, chainId int64, f
 	}
 
 	if pools == nil {
-		conn := repository.NewConn(c.PostgreSQL.DateSource())
+		conn := repository.NewConn(c.PostgreSQL.DataSource())
 		eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 		records, err := eventSonexFactoryPoolCreatedModel.QueryByChainId(ctx, chainId)
 		if err != nil {
@@ -875,7 +875,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 		EarnedUSD  *big.Int
 		Err        error
 	}, len(positions))
-	conn := repository.NewConn(conf.PostgreSQL.DateSource())
+	conn := repository.NewConn(conf.PostgreSQL.DataSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 	for _, position := range positions {
@@ -993,7 +993,7 @@ func SummarizePositions(conf config.Config, ctx context.Context, chainId int64, 
 
 // Query current positions of an LP of `userAddress`, returns summary.
 func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, []*sonex.Position, error) {
-	conn := repository.NewConn(conf.PostgreSQL.DateSource())
+	conn := repository.NewConn(conf.PostgreSQL.DataSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), true)
 	if err != nil {
@@ -1050,7 +1050,7 @@ func SummarizeCurrentPositions(conf config.Config, ctx context.Context, chainId 
 
 // Query closed positions of an LP of `userAddress`, returns summary.
 func SummarizeClosedPositions(conf config.Config, ctx context.Context, chainId int64, userAddress common.Address, stablecoinAddress common.Address) (*SummarizePositionsResult, error) {
-	conn := repository.NewConn(conf.PostgreSQL.DateSource())
+	conn := repository.NewConn(conf.PostgreSQL.DataSource())
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	items, err := model.GetTransferEvents(ctx, chainId, userAddress.Hex(), false)
 	if err != nil {

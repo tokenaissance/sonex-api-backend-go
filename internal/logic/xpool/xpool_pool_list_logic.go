@@ -36,7 +36,7 @@ type CacheWarpper struct {
 
 // Xpool list
 func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolListLogic {
-	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DataSource())
 	return &XpoolPoolListLogic{
 		Logger:                            logx.WithContext(ctx),
 		ctx:                               ctx,

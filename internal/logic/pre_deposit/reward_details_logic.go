@@ -42,7 +42,7 @@ func (l *RewardDetailsLogic) RewardDetails(req *types.RewardDetailsRequest) (res
 	}
 	userAddress := common.HexToAddress(req.UserAddress)
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	preDepositRewardSnapshotModel := repository.NewPreDepositRewardSnapshotModel(conn)
 
 	records, total, err := preDepositRewardSnapshotModel.PageQueryByChainIdUser(l.ctx, req.ChainId, userAddress.Hex(), *req.PageSize, *req.PageIndex)

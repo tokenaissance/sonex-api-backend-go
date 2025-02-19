@@ -29,7 +29,7 @@ func HandlePreDepositSnapshotDaily(config *config.Config) {
 			if retrys > 0 {
 				logx.Infof("HandlePreDepositSnapshot retry %d times", retrys)
 			}
-			conn := repository.NewConn(config.PostgreSQL.DateSource())
+			conn := repository.NewConn(config.PostgreSQL.DataSource())
 			err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 				for _, chainConf := range config.Chains {
 					preDepositConf := config.GetPreDepositConfig(chainConf.ChainId)

@@ -20,7 +20,7 @@ type SonexPositionValuesLogic struct {
 }
 
 func NewSonexPositionValuesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPositionValuesLogic {
-	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DataSource())
 	transferModel := repository.NewEventSonexPositionManagerTransferModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
 	decreaseLiquidityModel := repository.NewEventSonexPositionManagerDecreaseLiquidityModel(conn)

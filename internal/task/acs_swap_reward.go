@@ -34,7 +34,7 @@ func HandleACSSwapReward(conf *config.Config, duration time.Duration) {
 
 	err := retry.Do(
 		func() error {
-			conn := repository.NewConn(conf.PostgreSQL.DateSource())
+			conn := repository.NewConn(conf.PostgreSQL.DataSource())
 			err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 				acsConf := conf.ACS
 				if acsConf == nil {

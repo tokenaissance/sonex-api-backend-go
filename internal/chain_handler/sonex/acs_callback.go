@@ -76,7 +76,7 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 
 		err := retry.Do(
 			func() error {
-				conn := repository.NewConn(conf.PostgreSQL.DateSource())
+				conn := repository.NewConn(conf.PostgreSQL.DataSource())
 				err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 					eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(sqlx.NewSqlConnFromSession(s))
 					acsIncreaseLiquidityPointsRecordModel := repository.NewAcsIncreaseLiquidityPointsRecordModel(sqlx.NewSqlConnFromSession(s))

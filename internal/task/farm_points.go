@@ -27,7 +27,7 @@ func HandleFarmPoints(config *config.Config) {
 	retrys := 0
 	err := retry.Do(
 		func() error {
-			conn := repository.NewConn(config.PostgreSQL.DateSource())
+			conn := repository.NewConn(config.PostgreSQL.DataSource())
 			err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 				for _, chainConf := range config.Chains {
 					farmConf := config.GetFarmConfig(chainConf.ChainId)

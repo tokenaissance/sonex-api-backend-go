@@ -25,7 +25,7 @@ func NewSonexVolumeKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *SonexVolumeKlineLogic) SonexVolumeKline(req *types.SonexVolumeKlineRequest) (resp *types.SonexVolumeKlineResponse, err error) {
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	tvlVolModel := repository.NewSonexVolTvlRecordModel(conn)
 
 	records, err := tvlVolModel.GetBytypeOfValueAndChainId(req.ChainId, repository.V3OfUniswap, repository.VolumeOfTypeoOfValue, 30)

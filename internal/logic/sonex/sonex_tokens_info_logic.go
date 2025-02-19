@@ -29,7 +29,7 @@ func NewSonexTokensInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *S
 
 func (l *SonexTokensInfoLogic) SonexTokensInfo(req *types.TokensInfoRequest) (resp *types.TokenInfoResponse, err error) {
 	_tokenAddress := req.Address
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	ctx := context.Background()
 	tokenModel := repository.NewSonexTokenModel(conn)
 	_tokenInfo, err := tokenModel.FindByOneAddress(ctx, _tokenAddress)

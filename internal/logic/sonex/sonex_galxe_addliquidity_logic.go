@@ -27,7 +27,7 @@ func NewSonexGalxeAddliquidityLogic(ctx context.Context, svcCtx *svc.ServiceCont
 }
 
 func (l *SonexGalxeAddliquidityLogic) SonexGalxeAddliquidity(req *types.GalxeAddLiquidityRequest) (resp *types.GalxeAddLiquidityResponse, err error) {
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	_user_address := req.Address
 
 	if !common.IsHexAddress(_user_address) {

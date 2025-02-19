@@ -22,7 +22,7 @@ func TestHandleACSSwapReward(t *testing.T) {
 	global.InitIdGenerater(0)
 
 	start := time.Now()
-	HandleACSSwapReward(&c, time.Hour)
+	HandleACSSwapReward(&c, time.Hour*24)
 	elapsed := time.Since(start)
 	fmt.Printf("Time token: %s\n", elapsed)
 }

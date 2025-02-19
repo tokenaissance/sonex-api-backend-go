@@ -30,7 +30,7 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 	zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
 
 	logx.Infof("zeroTime:%v  ", zeroTime)
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 	ctx := context.Background()
 	poolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	tokenPrice := repository.NewSonexTokenPriceRecordModel(conn)

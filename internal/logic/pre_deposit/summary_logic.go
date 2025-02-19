@@ -51,7 +51,7 @@ func (l *SummaryLogic) Summary(req *types.SummaryRequest) (resp *types.SummaryRe
 	rewardTokenAddress := common.HexToAddress(preDepositConf.RewardToken)
 	pointsServiceConf := l.svcCtx.Config.PointsService
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	eventPreDepositStakedModel := repository.NewEventPreDepositStakedModel(conn)
 	eventPreDepositWithdrawnModel := repository.NewEventPreDepositWithdrawnModel(conn)
 	preDepositRewardSnapshotModel := repository.NewPreDepositRewardSnapshotModel(conn)

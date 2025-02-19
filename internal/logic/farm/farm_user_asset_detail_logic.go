@@ -219,7 +219,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	configFig := l.svcCtx.Config
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	// 获取 totalClaimableFeesUSD，  tokenDecials,

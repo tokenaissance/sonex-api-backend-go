@@ -31,7 +31,7 @@ type SonexPositionsLogic struct {
 }
 
 func NewSonexPositionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SonexPositionsLogic {
-	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DataSource())
 	return &SonexPositionsLogic{
 		Logger:                 logx.WithContext(ctx),
 		ctx:                    ctx,

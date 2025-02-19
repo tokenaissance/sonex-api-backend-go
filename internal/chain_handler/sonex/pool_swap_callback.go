@@ -11,7 +11,7 @@ import (
 
 func PoolSwapCallback(conf config.Config) func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap) {
 	return func(chainId int64, pool common.Address, tx *node_caller.Transaction, event *uniswap_v3.UniswapV3PoolSwap) {
-		conn := repository.NewConn(conf.PostgreSQL.DateSource())
+		conn := repository.NewConn(conf.PostgreSQL.DataSource())
 		_ = conn
 	}
 }

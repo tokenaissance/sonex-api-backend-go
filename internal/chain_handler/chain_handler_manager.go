@@ -16,7 +16,7 @@ func NewChainHandlerManager(conf config.Config) (*ChainHandlerManager, error) {
 		chainScanners: map[int64]*chain_scanner.ChainScanner{},
 	}
 	for _, chain := range conf.Chains {
-		chainScanner, err := chain_scanner.NewChainScanner(conf.PostgreSQL.DateSource(), chain)
+		chainScanner, err := chain_scanner.NewChainScanner(conf.PostgreSQL.DataSource(), chain)
 		if err != nil {
 			return nil, err
 		}
