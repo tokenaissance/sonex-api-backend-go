@@ -92,7 +92,14 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 					}
 
 					// If token0/token1 not in token list, ignore
-					if !linq.From(acsConf.Tokens).Contains(position.ExtraToken0) && !linq.From(acsConf.Tokens).Contains(position.ExtraToken1) {
+					ok := false
+					for _, tokens := range acsConf.Pools {
+						if linq.From(tokens).Contains(position.ExtraToken0) && linq.From(tokens).Contains(position.ExtraToken1) {
+							ok = true
+							break
+						}
+					}
+					if !ok {
 						return nil
 					}
 
