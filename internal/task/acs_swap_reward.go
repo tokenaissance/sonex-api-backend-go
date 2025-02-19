@@ -229,6 +229,8 @@ func HandleACSSwapReward(conf *config.Config, duration time.Duration) {
 							Token1:      swap.ExtraToken1,
 							Amount0:     swap.EventAmount0,
 							Amount1:     swap.EventAmount1,
+							Token:       tokenAddress,
+							Amount:      count,
 						})
 
 						if sendTotal >= acsInfo.Data.GetDefiPointInfoByDefiId.RemainingPoints {

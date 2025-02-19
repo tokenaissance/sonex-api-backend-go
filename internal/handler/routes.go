@@ -6,6 +6,7 @@ package handler
 import (
 	"net/http"
 
+	acs "sonex_api_backend_go/internal/handler/acs"
 	farm "sonex_api_backend_go/internal/handler/farm"
 	pre_deposit "sonex_api_backend_go/internal/handler/pre_deposit"
 	sonex "sonex_api_backend_go/internal/handler/sonex"
@@ -29,6 +30,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: ReplayHandler(serverCtx),
 			},
 		},
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// Leaderboard
+				Method:  http.MethodGet,
+				Path:    "/leaderboard",
+				Handler: acs.LeaderboardHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/acs"),
 	)
 
 	server.AddRoutes(

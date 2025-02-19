@@ -7,4 +7,5 @@ type ACSConfig struct {
 	SubTitle  string     `json:","`
 	Host      string     `json:","`
 	ApiSecret string     `json:","`
+	ASTR      string     `json:","`
 }

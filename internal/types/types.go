@@ -231,6 +231,25 @@ type Kline struct {
 	TimeStamp int64  `json:"timeStamp"`
 }
 
+type LeaderboardRequest struct {
+	ChainRequest
+	User *string `form:"user,optional"`
+	PageRequest
+}
+
+type LeaderboardResponse struct {
+	User  *LeaderboardResponse_Item   `json:"user,optional"`
+	Items []*LeaderboardResponse_Item `json:"items"`
+}
+
+type LeaderboardResponse_Item struct {
+	User  string  `json:"user"`
+	ASTR  float64 `json:"astr"`
+	USD   float64 `json:"usd"`
+	ACS   int64   `json:"acs"`
+	SONEX int64   `json:"sonex"`
+}
+
 type MetaRequest struct {
 }
 

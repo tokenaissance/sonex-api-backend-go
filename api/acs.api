@@ -1,0 +1,32 @@
+syntax = "v1"
+
+import "./common.api"
+
+type LeaderboardRequest {
+	ChainRequest
+	User *string `form:"user,optional"`
+	PageRequest
+}
+
+type LeaderboardResponse_Item {
+	User  string  `json:"user"`
+	ASTR  float64 `json:"astr"`
+	USD   float64 `json:"usd"`
+	ACS   int64   `json:"acs"`
+	SONEX int64   `json:"sonex"`
+}
+
+type LeaderboardResponse {
+	User  *LeaderboardResponse_Item   `json:"user,optional"`
+	Items []*LeaderboardResponse_Item `json:"items"`
+}
+
+@server (
+	prefix: /acs
+	group:  acs
+)
+service sonex_api_backend_go {
+	@doc "Leaderboard"
+	@handler LeaderboardHandler
+	get /leaderboard (LeaderboardRequest) returns (LeaderboardResponse)
+}

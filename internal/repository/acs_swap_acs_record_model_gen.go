@@ -52,6 +52,8 @@ type (
 		Token1      string    `db:"token1"`
 		Amount0     string    `db:"amount0"`
 		Amount1     string    `db:"amount1"`
+		Token       string    `db:"token"`
+		Amount      float64   `db:"amount"`
 	}
 )
 
@@ -97,14 +99,14 @@ func (m *defaultAcsSwapAcsRecordModel) FindOneByChainIdTxHashTxIndex(ctx context
 }
 
 func (m *defaultAcsSwapAcsRecordModel) Insert(ctx context.Context, data *AcsSwapAcsRecord) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, acsSwapAcsRecordRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.Acs, data.TxHash, data.TxIndex, data.TxAt, data.Pool, data.Token0, data.Token1, data.Amount0, data.Amount1)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, acsSwapAcsRecordRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.Acs, data.TxHash, data.TxIndex, data.TxAt, data.Pool, data.Token0, data.Token1, data.Amount0, data.Amount1, data.Token, data.Amount)
 	return ret, err
 }
 
 func (m *defaultAcsSwapAcsRecordModel) Update(ctx context.Context, newData *AcsSwapAcsRecord) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, acsSwapAcsRecordRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.UserAddress, newData.Acs, newData.TxHash, newData.TxIndex, newData.TxAt, newData.Pool, newData.Token0, newData.Token1, newData.Amount0, newData.Amount1)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.UserAddress, newData.Acs, newData.TxHash, newData.TxIndex, newData.TxAt, newData.Pool, newData.Token0, newData.Token1, newData.Amount0, newData.Amount1, newData.Token, newData.Amount)
 	return err
 }
 

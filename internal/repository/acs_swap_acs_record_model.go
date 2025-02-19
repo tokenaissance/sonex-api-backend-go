@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -17,6 +18,16 @@ type (
 		acsSwapAcsRecordModel
 		withSession(session sqlx.Session) AcsSwapAcsRecordModel
 		BatchNew(ctx context.Context, data []AcsSwapAcsRecord) error
+		PageQueryTotalOrderByTotalACS(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]struct {
+			User string  `json:"user_address"`
+			ACS  int64   `json:"acs"`
+			ASTR float64 `json:"astr"`
+		}, int64, error)
+		FindTotalByUser(ctx context.Context, user string) (*struct {
+			User string  `json:"user_address"`
+			ACS  int64   `json:"acs"`
+			ASTR float64 `json:"astr"`
+		}, error)
 	}
 
 	customAcsSwapAcsRecordModel struct {
@@ -36,7 +47,7 @@ func (m *customAcsSwapAcsRecordModel) withSession(session sqlx.Session) AcsSwapA
 }
 
 func (m *customAcsSwapAcsRecordModel) BatchNew(ctx context.Context, data []AcsSwapAcsRecord) error {
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, acsSwapAcsRecordRows)
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, acsSwapAcsRecordRows)
 	blk, err := sqlx.NewBulkInserter(m.conn, query)
 	if err != nil {
 		return err
@@ -51,7 +62,9 @@ func (m *customAcsSwapAcsRecordModel) BatchNew(ctx context.Context, data []AcsSw
 	for _, item := range data {
 		err = blk.Insert(
 			item.Id, NowUTC().Format("2006-01-02 15:04:05+00"), NowUTC().Format("2006-01-02 15:04:05+00"),
-			item.ChainId, item.UserAddress, item.Acs, item.TxHash, item.TxIndex, item.TxAt.Format("2006-01-02 15:04:05+00"), item.Pool, item.Token0, item.Token1, item.Amount0, item.Amount1)
+			item.ChainId, item.UserAddress, item.Acs, item.TxHash, item.TxIndex, item.TxAt.Format("2006-01-02 15:04:05+00"),
+			item.Pool, item.Token0, item.Token1, item.Amount0, item.Amount1, item.Token, item.Amount,
+		)
 		if err != nil {
 			return err
 		}
@@ -62,4 +75,62 @@ func (m *customAcsSwapAcsRecordModel) BatchNew(ctx context.Context, data []AcsSw
 	}
 
 	return nil
+}
+
+func (m *customAcsSwapAcsRecordModel) PageQueryTotalOrderByTotalACS(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]struct {
+	User string  `json:"user_address"`
+	ACS  int64   `json:"acs"`
+	ASTR float64 `json:"astr"`
+}, int64, error) {
+	if !linq.From([]string{"ASC", "DESC"}).Contains(orderBy) {
+		orderBy = "DESC"
+	}
+	query := fmt.Sprintf(`
+		SELECT * 
+		FROM (SELECT user_address, SUM(acs) AS acs, SUM(amount) AS astr FROM %s GROUP BY user_address)
+		ORDER BY acs %s OFFSET $1 LIMIT $2
+	`, m.table, orderBy)
+	var resp []struct {
+		User string  `json:"user_address"`
+		ACS  int64   `json:"acs"`
+		ASTR float64 `json:"astr"`
+	}
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, pageSize*(pageIndex-1), pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	query = fmt.Sprintf(`
+		SELECT COUNT(0) 
+		FROM (SELECT user_address FROM %s GROUP BY user_address)
+	`, m.table)
+	var total int64
+	err = m.conn.QueryRowCtx(ctx, &total, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	return resp, total, nil
+}
+
+func (m *customAcsSwapAcsRecordModel) FindTotalByUser(ctx context.Context, user string) (*struct {
+	User string  `json:"user_address"`
+	ACS  int64   `json:"acs"`
+	ASTR float64 `json:"astr"`
+}, error) {
+	query := fmt.Sprintf(`
+		SELECT user_address, SUM(acs) AS acs, SUM(amount) AS astr FROM %s WHERE user_address = $1 GROUP BY user_address
+	`, m.table)
+	var resp struct {
+		User string  `json:"user_address"`
+		ACS  int64   `json:"acs"`
+		ASTR float64 `json:"astr"`
+	}
+	err := m.conn.QueryRowCtx(ctx, &resp, query, user)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }

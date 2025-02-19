@@ -15,6 +15,57 @@
     "application/json"
   ],
   "paths": {
+    "/acs/leaderboard": {
+      "get": {
+        "summary": "Leaderboard",
+        "operationId": "LeaderboardHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/LeaderboardResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "20"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          }
+        ],
+        "tags": [
+          "acs"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/farm/incentives": {
       "get": {
         "summary": "Farm incentive list",
@@ -2420,6 +2471,75 @@
       "required": [
         "price",
         "timeStamp"
+      ]
+    },
+    "LeaderboardRequest": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "LeaderboardRequest"
+    },
+    "LeaderboardResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/LeaderboardResponse_Item"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LeaderboardResponse_Item"
+          }
+        }
+      },
+      "title": "LeaderboardResponse",
+      "required": [
+        "items"
+      ]
+    },
+    "LeaderboardResponse_Item": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "astr": {
+          "type": "number",
+          "format": "double"
+        },
+        "usd": {
+          "type": "number",
+          "format": "double"
+        },
+        "acs": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sonex": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "LeaderboardResponse_Item",
+      "required": [
+        "user",
+        "astr",
+        "usd",
+        "acs",
+        "sonex"
       ]
     },
     "MetaRequest": {

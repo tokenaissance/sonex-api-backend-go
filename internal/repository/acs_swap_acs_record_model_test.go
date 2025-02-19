@@ -24,3 +24,30 @@ func TestAcsSwapAcsRecordModelBatchNew(t *testing.T) {
 		return
 	}
 }
+
+func TestAcsSwapAcsRecordModelPageQueryOrderByTotalACS(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
+
+	model := NewAcsSwapAcsRecordModel(NewConn(c.PostgreSQL.DataSource()))
+	res, total, err := model.PageQueryTotalOrderByTotalACS(context.Background(), "DESC", 10, 1)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = res
+	_ = total
+}
+
+func TestAcsSwapAcsRecordModelFindTotalACSByUser(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
+
+	model := NewAcsSwapAcsRecordModel(NewConn(c.PostgreSQL.DataSource()))
+	res, err := model.FindTotalByUser(context.Background(), "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = res
+}
