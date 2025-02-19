@@ -2,6 +2,7 @@ package sonex
 
 import (
 	"context"
+	"math/big"
 
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -28,13 +29,25 @@ func (l *SonexTvlKlineLogic) SonexTvlKline(req *types.SonexTvlKlineRequest) (res
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	tvlVolModel := repository.NewSonexVolTvlRecordModel(conn)
 
-	records, err := tvlVolModel.GetBytypeOfValueAndChainId(req.ChainId, repository.V3OfUniswap, repository.TVLTypeoOfValue, 200)
+	records, err := tvlVolModel.GetBytypeOfValueAndChainId(req.ChainId, repository.V3OfUniswap, repository.TVLTypeoOfValue, 30)
 	if err != nil {
 		logx.Errorf("ERR:%v", err)
 		return &types.SonexTvlKlineResponse{}, err
 	}
+
+	totalUsdOfValue := big.NewFloat(0)
+
+	if len(records) > 0 {
+		for _, v := range records {
+			tmp1, _ := new(big.Float).SetString(v.UsdtValue)
+			totalUsdOfValue = new(big.Float).Add(totalUsdOfValue, tmp1)
+		}
+	}
+
 	resp = &types.SonexTvlKlineResponse{
-		Records: records,
+		Records:          records,
+		NumberOfRecords:  int64(len(records)),
+		TotalUsdOfRecord: totalUsdOfValue.String(),
 	}
 	return
 }

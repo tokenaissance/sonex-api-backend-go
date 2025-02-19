@@ -4010,6 +4010,13 @@
     "SonexTvlKlineResponse": {
       "type": "object",
       "properties": {
+        "totalUsdOfRecord": {
+          "type": "string"
+        },
+        "numberOfRecords": {
+          "type": "integer",
+          "format": "int64"
+        },
         "records": {
           "type": "array",
           "items": {
@@ -4019,6 +4026,8 @@
       },
       "title": "SonexTvlKlineResponse",
       "required": [
+        "totalUsdOfRecord",
+        "numberOfRecords",
         "records"
       ]
     },
@@ -4029,6 +4038,13 @@
     "SonexVolumeKlineResponse": {
       "type": "object",
       "properties": {
+        "totalUsdOfRecord": {
+          "type": "string"
+        },
+        "numberOfRecords": {
+          "type": "integer",
+          "format": "int64"
+        },
         "records": {
           "type": "array",
           "items": {
@@ -4038,6 +4054,8 @@
       },
       "title": "SonexVolumeKlineResponse",
       "required": [
+        "totalUsdOfRecord",
+        "numberOfRecords",
         "records"
       ]
     },
