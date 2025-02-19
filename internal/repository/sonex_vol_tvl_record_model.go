@@ -103,7 +103,7 @@ func (m *customSonexVolTvlRecordModel) GetBytypeOfValueAndChainId(chainId int64,
 	records := []types.UsdCreatedRecord{}
 	ctx := context.Background()
 	query := `
-	SELECT usdt_value , createtime FROM  sonex_vol_tvl_record WHERE chain_id=$1 AND type_of_uniswap=$2 AND type_of_value = $3 ORDER BY id DESC limit $4 
+	SELECT usdt_value , createtime FROM  sonex_vol_tvl_record WHERE chain_id=$1 AND type_of_uniswap=$2 AND type_of_value = $3 ORDER BY createtime ASC limit $4 
 	`
 
 	err := m.conn.QueryRowsCtx(ctx, &records, query, chainId, typeOfUniswap, typeOfValue, numOfItems)
