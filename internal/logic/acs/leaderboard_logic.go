@@ -82,8 +82,10 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 	}
 
 	// User
-	var user *types.LeaderboardResponse_Item
+	user := &types.LeaderboardResponse_Item{User: *req.User}
 	if req.User != nil && common.IsHexAddress(*req.User) {
+		user.User = common.HexToAddress(*req.User).Hex()
+
 		wg.Add(1)
 		go func(ch chan struct {
 			Err error
@@ -98,17 +100,17 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 			}()
 
 			res, err := acsSwapAcsRecordModel.FindTotalByUser(l.ctx, common.HexToAddress(*req.User).Hex())
-			if err != nil {
+			switch err {
+			case repository.ErrNotFound:
+			case nil:
+				user.ACS = res.ACS
+				user.ASTR = res.ASTR
+				user.USD = res.ASTR * astrPrice
+			default:
 				ch <- struct {
 					Err error
 				}{Err: err}
 				return
-			}
-			user = &types.LeaderboardResponse_Item{
-				User: common.HexToAddress(*req.User).Hex(),
-				ACS:  res.ACS,
-				ASTR: res.ASTR,
-				USD:  res.ASTR * astrPrice,
 			}
 		}(results)
 	}
