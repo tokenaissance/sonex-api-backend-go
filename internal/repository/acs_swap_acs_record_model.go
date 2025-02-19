@@ -28,6 +28,7 @@ type (
 			ACS  int64   `json:"acs"`
 			ASTR float64 `json:"astr"`
 		}, error)
+		FindLatest(ctx context.Context) (*AcsSwapAcsRecord, error)
 	}
 
 	customAcsSwapAcsRecordModel struct {
@@ -125,6 +126,22 @@ func (m *customAcsSwapAcsRecordModel) FindTotalByUser(ctx context.Context, user 
 		ASTR float64 `json:"astr"`
 	}
 	err := m.conn.QueryRowCtx(ctx, &resp, query, user)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *customAcsSwapAcsRecordModel) FindLatest(ctx context.Context) (*AcsSwapAcsRecord, error) {
+	query := fmt.Sprintf(`
+		SELECT * FROM %s ORDER BY tx_at DESC LIMIT 1
+	`, m.table)
+	var resp AcsSwapAcsRecord
+	err := m.conn.QueryRowCtx(ctx, &resp, query)
 	switch err {
 	case nil:
 		return &resp, nil

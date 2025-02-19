@@ -116,6 +116,7 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 	// Top
 	items := []*types.LeaderboardResponse_Item{}
 	var total int64
+	var latestUpdated int64
 	wg.Add(1)
 	go func(ch chan struct {
 		Err error
@@ -145,6 +146,18 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 			})
 		}
 		total = t
+
+		latest, err := acsSwapAcsRecordModel.FindLatest(l.ctx)
+		switch err {
+		case repository.ErrNotFound:
+		case nil:
+			latestUpdated = latest.TxAt.Unix()
+		default:
+			ch <- struct {
+				Err error
+			}{Err: err}
+			return
+		}
 	}(results)
 
 	go func() {
@@ -184,8 +197,9 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 
 	return &response.ApiResponse{
 		Data: &types.LeaderboardResponse{
-			User:  user,
-			Items: items,
+			User:          user,
+			Items:         items,
+			LatestUpdated: latestUpdated,
 		},
 		Meta: types.PageResponse{
 			PageSize:  pageSize,

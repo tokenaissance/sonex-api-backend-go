@@ -238,8 +238,9 @@ type LeaderboardRequest struct {
 }
 
 type LeaderboardResponse struct {
-	User  *LeaderboardResponse_Item   `json:"user,optional"`
-	Items []*LeaderboardResponse_Item `json:"items"`
+	User          *LeaderboardResponse_Item   `json:"user,optional"`
+	Items         []*LeaderboardResponse_Item `json:"items"`
+	LatestUpdated int64                       `json:"latestUpdated"`
 }
 
 type LeaderboardResponse_Item struct {

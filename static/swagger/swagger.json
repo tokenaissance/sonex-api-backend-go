@@ -2503,11 +2503,16 @@
           "items": {
             "$ref": "#/definitions/LeaderboardResponse_Item"
           }
+        },
+        "latestUpdated": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "LeaderboardResponse",
       "required": [
-        "items"
+        "items",
+        "latestUpdated"
       ]
     },
     "LeaderboardResponse_Item": {
