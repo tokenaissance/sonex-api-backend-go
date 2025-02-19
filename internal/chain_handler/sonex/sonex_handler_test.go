@@ -40,6 +40,7 @@ func TestACSIncreaseLiquidityCallback(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_develop_local.yaml", &c)
 
+	global.Initialize(c)
 	global.InitIdGenerater(0)
 	handler, err := NewSonexHandler(c.PostgreSQL.DataSource(), *c.GetChainConfig(1946), *c.GetSonexConfig(1946))
 	if err != nil {
@@ -54,8 +55,8 @@ func TestACSIncreaseLiquidityCallback(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	var start uint64 = 8294198
-	var end uint64 = 8294198
+	var start uint64 = 8375925
+	var end uint64 = 8375925
 	err, _ = handler.Execute(client, &bind.FilterOpts{Context: context.Background(), Start: start, End: &end}, false)
 	if err != nil {
 		t.Error(err)

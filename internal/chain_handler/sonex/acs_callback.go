@@ -3,6 +3,7 @@ package sonex
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/contract/uniswap_v3"
 	"sonex_api_backend_go/internal/lib/global"
@@ -80,6 +81,7 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 				err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 					eventSonexPositionManagerTransferModel := repository.NewEventSonexPositionManagerTransferModel(sqlx.NewSqlConnFromSession(s))
 					acsIncreaseLiquidityPointsRecordModel := repository.NewAcsIncreaseLiquidityPointsRecordModel(sqlx.NewSqlConnFromSession(s))
+					sonexTokenPriceRecordModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 					position, err := eventSonexPositionManagerTransferModel.FindByChainIdTokenIdWithPool(ctx, chainId, event.TokenId.Int64())
 					switch err {
@@ -100,6 +102,46 @@ func ACSIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx *no
 						}
 					}
 					if !ok {
+						return nil
+					}
+
+					// Token
+					token0, err := global.GetToken(chainConf.ChainId, position.ExtraToken0)
+					if err != nil {
+						return err
+					}
+					accuracy0 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token0.Decimals), nil))
+					amount0, _ := new(big.Float).Quo(new(big.Float).Abs(new(big.Float).SetInt(event.Amount0)), accuracy0).Float64()
+					token1, err := global.GetToken(chainConf.ChainId, position.ExtraToken1)
+					if err != nil {
+						return err
+					}
+					accuracy1 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token1.Decimals), nil))
+					amount1, _ := new(big.Float).Quo(new(big.Float).Abs(new(big.Float).SetInt(event.Amount1)), accuracy1).Float64()
+
+					// Price
+					currentPriceRecords, err := sonexTokenPriceRecordModel.QueryLatestHistoryPricesByAddresses(ctx, []string{position.ExtraToken0, position.ExtraToken1})
+					if err != nil {
+						return err
+					}
+					price0I, ok := currentPriceRecords[position.ExtraToken0]
+					if !ok {
+						return fmt.Errorf("%s", "can not get token0 price")
+					}
+					price0, err := global.PriceToUSD(chainConf.ChainId, price0I)
+					if err != nil {
+						return err
+					}
+					price1I, ok := currentPriceRecords[position.ExtraToken1]
+					if !ok {
+						return fmt.Errorf("%s", "can not get token1 price")
+					}
+					price1, err := global.PriceToUSD(chainConf.ChainId, price1I)
+					if err != nil {
+						return err
+					}
+
+					if amount0*price0+amount1*price1 < acsConf.LiquidityUSDLimits {
 						return nil
 					}
 

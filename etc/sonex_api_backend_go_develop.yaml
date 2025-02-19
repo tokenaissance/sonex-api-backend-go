@@ -91,3 +91,4 @@ ACS:
   Host: https://test4.xzsean.eu.org
   ApiSecret: h5j8k3l6z9x2c5v8b1n4m7q2w5e8r1t4y7u2i5o8p
   ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
+  LiquidityUSDLimits: 10
