@@ -32,6 +32,11 @@ type CacheWarpper struct {
 	LastUpdate time.Time
 }
 
+type VolumeCacheWarpper struct {
+	Data       map[string]*big.Int
+	LastUpdate time.Time
+}
+
 func NewTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *TokensLogic {
 	return &TokensLogic{
 		Logger: logx.WithContext(ctx),
@@ -143,10 +148,37 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	go func() {
 		defer wg.Done()
 
-		volumes, err = eventSonexPoolSwapModel.SummarizeVolumesByChainId(l.ctx, req.ChainId)
-		if err != nil {
-			logx.Errorf("Summarize volumes error: %s", err)
-			return
+		volumeCacheKey := fmt.Sprintf("sonex:tokens_volume:%d", req.ChainId)
+		// Check cache
+		if !req.NoCache {
+			var cacheWarpper VolumeCacheWarpper
+			lastUpdate, err := redisCache.Get(volumeCacheKey)
+			if err == nil && lastUpdate != "" {
+				err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+				if err == nil {
+					volumes = cacheWarpper.Data
+					if time.Now().UTC().After(cacheWarpper.LastUpdate.Add(time.Hour)) {
+						volumes = nil
+					}
+				}
+			}
+		}
+
+		if volumes == nil {
+			volumes, err = eventSonexPoolSwapModel.SummarizeVolumesByChainId(l.ctx, req.ChainId)
+			if err != nil {
+				logx.Errorf("Summarize volumes error: %s", err)
+				return
+			}
+
+			respBytes, err := json.Marshal(VolumeCacheWarpper{Data: volumes, LastUpdate: time.Now().UTC()})
+			if err != nil {
+				logx.Errorf("Marshal response error: %v", err)
+			}
+			err = redisCache.Set(volumeCacheKey, respBytes, time.Hour*1)
+			if err != nil {
+				logx.Errorf("Set cache error: %v", err)
+			}
 		}
 	}()
 
@@ -288,8 +320,11 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			}
 		}(item, results)
 	}
-	wg.Wait()
-	close(results)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	// Handle results
 	dataResult = []types.TokensResponse_Token{}

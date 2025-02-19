@@ -147,7 +147,7 @@ func (quoter *Quoter) BatchQuoteExactInputs(ctx context.Context, paths [][]byte,
 	if err != nil {
 		return nil, err
 	}
-	nodeCaller, err := node_caller.NewNodeCaller(quoter.chainConf)
+	nodeCaller, err := node_caller.NewNodeCaller(quoter.chainConf, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func (quoter *Quoter) BatchQuoteExactOutputs(ctx context.Context, paths [][]byte
 	if err != nil {
 		return nil, err
 	}
-	nodeCaller, err := node_caller.NewNodeCaller(quoter.chainConf)
+	nodeCaller, err := node_caller.NewNodeCaller(quoter.chainConf, nil)
 	if err != nil {
 		return nil, err
 	}

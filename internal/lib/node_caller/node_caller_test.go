@@ -21,7 +21,7 @@ func TestBatchHeaderByNumber(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	nodeCaller, err := NewNodeCaller(c.Chains[0])
+	nodeCaller, err := NewNodeCaller(c.Chains[0], nil)
 	if err != nil {
 		t.Errorf("%s\n", err.Error())
 		return
@@ -40,7 +40,7 @@ func TestBatchGetBlockByNumber(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	nodeCaller, err := NewNodeCaller(c.Chains[0])
+	nodeCaller, err := NewNodeCaller(c.Chains[0], nil)
 	if err != nil {
 		t.Errorf("%s\n", err.Error())
 		return
@@ -61,7 +61,7 @@ func TestBatchGetTranscationsByNumber(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	nodeCaller, err := NewNodeCaller(c.Chains[0])
+	nodeCaller, err := NewNodeCaller(c.Chains[0], nil)
 	if err != nil {
 		t.Errorf("%s\n", err.Error())
 		return
@@ -80,7 +80,7 @@ func TestStaticCall(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	nodeCaller, err := NewNodeCaller(c.Chains[0])
+	nodeCaller, err := NewNodeCaller(c.Chains[0], nil)
 	if err != nil {
 		t.Error(err)
 		return

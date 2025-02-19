@@ -133,7 +133,7 @@ func TestCall(t *testing.T) {
 
 	chain := c.GetChainConfig(1946)
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chain)
+	nodeCaller, err := node_caller.NewNodeCaller(*chain, nil)
 	if err != nil {
 		t.Error(err)
 		return

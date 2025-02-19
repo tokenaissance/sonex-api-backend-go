@@ -37,7 +37,7 @@ func (staticCaller *StaticCaller) BatchGetAddressPoolInfos(ctx context.Context, 
 		return nil, fmt.Errorf("%s", "Miss xpool configure")
 	}
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chainConf)
+	nodeCaller, err := node_caller.NewNodeCaller(*chainConf, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (staticCaller *StaticCaller) BatchGetPoolInfos(ctx context.Context, chainId
 		return nil, fmt.Errorf("%s", "Miss xpool configure")
 	}
 
-	nodeCaller, err := node_caller.NewNodeCaller(*chainConf)
+	nodeCaller, err := node_caller.NewNodeCaller(*chainConf, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -85,7 +85,7 @@ func (handler *SonexHandler) OnPositionManagerCollect(callback func(chainId int6
 }
 
 func (handler *SonexHandler) Execute(client *ethclient.Client, opt *bind.FilterOpts, isReplay bool) (error, bool) {
-	nodeCaller, err := node_caller.NewNodeCaller(handler.chain)
+	nodeCaller, err := node_caller.NewNodeCaller(handler.chain, client)
 	if err != nil {
 		return err, false
 	}

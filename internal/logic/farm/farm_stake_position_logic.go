@@ -242,7 +242,7 @@ func MulticallForGetApproved(ctx context.Context, chain config.ChainConfig, call
 		return err
 	}
 
-	caller, err := node_caller.NewNodeCaller(chain)
+	caller, err := node_caller.NewNodeCaller(chain, nil)
 	if err != nil {
 		return err
 	}
