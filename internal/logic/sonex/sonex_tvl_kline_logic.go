@@ -28,7 +28,7 @@ func (l *SonexTvlKlineLogic) SonexTvlKline(req *types.SonexTvlKlineRequest) (res
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
 	tvlVolModel := repository.NewSonexVolTvlRecordModel(conn)
 
-	records, err := tvlVolModel.GetBytypeOfValueAndChainId(req.ChainId, repository.V3OfUniswap, repository.TVLTypeoOfValue, 100)
+	records, err := tvlVolModel.GetBytypeOfValueAndChainId(req.ChainId, repository.V3OfUniswap, repository.TVLTypeoOfValue, 200)
 	if err != nil {
 		logx.Errorf("ERR:%v", err)
 		return &types.SonexTvlKlineResponse{}, err

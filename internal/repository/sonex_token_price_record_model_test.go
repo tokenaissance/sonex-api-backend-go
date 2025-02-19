@@ -115,13 +115,13 @@ func Test_UpdateOrInsertTvlByTimeStamp(t *testing.T) {
 	model := NewSonexVolTvlRecordModel(NewConn(c.PostgreSQL.DateSource()))
 
 	for i := 0; i <= 20; i++ {
-		startTimeUnix := time.Now().Unix() - int64((i+30)*86400)
+		startTimeUnix := time.Now().Unix() - int64((i+80)*86400)
 		startTime := time.Unix(startTimeUnix, 0)
 		zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
 
 		f := 2354321.65 + float64((i+1)*1001)
 		a := big.NewFloat(f)
-		n, err := model.UpdateOrInsertTvlByTimeStamp(a.String(), zeroTime.Unix(), V3OfUniswap, 1946, TVLTypeoOfValue)
+		n, err := model.UpdateOrInsertTvlByTimeStamp(a.String(), zeroTime.Unix(), V3OfUniswap, 1946, VolumeOfTypeoOfValue)
 		if err != nil {
 			logx.Errorf("err%v", err)
 			return
