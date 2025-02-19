@@ -37,6 +37,11 @@ jobs:
           sed -i "s/PG_DBNAME/${{vars.PG_DBNAME}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/PG_HOST/${{vars.PG_HOST}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/PG_PORT/${{vars.PG_PORT}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/PG_READ_USER/${{secrets.PG_READ_USER}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/PG_READ_PWD/${{secrets.PG_READ_PWD}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/PG_READ_DBNAME/${{vars.PG_READ_DBNAME}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/PG_READ_HOST/${{vars.PG_READ_HOST}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/PG_READ_PORT/${{vars.PG_READ_PORT}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/REDIS_HOST/${{vars.REDIS_HOST}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/REDIS_PORT/${{vars.REDIS_PORT}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/POINTPRIVATEKEY/${{secrets.POINTPRIVATEKEY}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
