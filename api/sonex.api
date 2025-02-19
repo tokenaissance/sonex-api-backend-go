@@ -687,6 +687,8 @@ type SonexVolumeKlineRequest {
 
 // sonex volumetotal response  
 type SonexVolumeKlineResponse {
+	TotalUsdOfRecord  string `json:"totalUsdOfRecord"`
+	NumberOfRecords  int64 `json:"numberOfRecords"`
 	Records []UsdCreatedRecord `json:"records"`
 }
 
@@ -697,6 +699,8 @@ type SonexTvlKlineRequest {
 
 //  sonex tvl kline response 
 type SonexTvlKlineResponse {
+	TotalUsdOfRecord  string `json:"totalUsdOfRecord"` 
+	NumberOfRecords  int64 `json:"numberOfRecords"`
 	Records []UsdCreatedRecord `json:"records"`
 }
 
