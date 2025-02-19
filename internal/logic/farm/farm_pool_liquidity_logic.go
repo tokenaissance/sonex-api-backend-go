@@ -70,7 +70,7 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 	l.ethClient = client
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	l.cacher = redisCache
-	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 
 	farmPoolModel := repository.NewFarmPoolsModel(l.conn)
 	pool, err := farmPoolModel.FindByIncentiveId(context.Background(), l.chainId, req.IncentiveId)

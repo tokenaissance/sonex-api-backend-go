@@ -151,7 +151,7 @@ func main() {
 		{
 			config := c.GetSonexConfig(chain.ChainId)
 			if config != nil {
-				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
@@ -168,7 +168,7 @@ func main() {
 		{
 			config := c.GetPreDepositConfig(chain.ChainId)
 			if config != nil {
-				handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
@@ -186,7 +186,7 @@ func main() {
 		{
 			config := c.GetFarmConfig(chain.ChainId)
 			if config != nil {
-				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := farm.NewFarmHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
@@ -198,7 +198,7 @@ func main() {
 		{
 			config := c.GetXpoolConfig(chain.ChainId)
 			if config != nil {
-				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}

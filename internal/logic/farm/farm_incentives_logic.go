@@ -54,7 +54,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
 	cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)

@@ -13,7 +13,7 @@ func TestEventSonexPoolSwapModelQueryByChainIdTimeToken(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	start, _ := time.ParseInLocation(time.DateTime, "2025-02-17 00:00:00", time.UTC)
 	end, _ := time.ParseInLocation(time.DateTime, "2025-02-18 00:00:00", time.UTC)
 	records, err := model.QueryByChainIdTimeToken(context.Background(), 1946, start, end, []string{
@@ -30,7 +30,7 @@ func TestEventSonexPoolMintModelPageQueryWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolMintModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolMintModel(NewConn(c.PostgreSQL.DataSource()))
 	records, total, err := model.PageQueryWithExtra(context.Background(), 1, 1)
 	if err != nil {
 		t.Error(err)
@@ -43,7 +43,7 @@ func TestEventSonexPoolSwapModelQueryTransactions(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	// wallet := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
 	// pool := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
 	// tokens := []string{"0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369"}
@@ -68,7 +68,7 @@ func TestEventSonexPoolSwapModelQueryMergeWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	// wallet := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
 	// pool := "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"
 	// tokens := []string{"0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369"}
@@ -93,7 +93,7 @@ func TestEventSonexPoolSwapModelPageQueryWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	records, total, err := model.PageQueryOrderByTxAtWithExtra(context.Background(), "DESC", 1, 1)
 	if err != nil {
 		t.Error(err)
@@ -106,7 +106,7 @@ func TestEventSonexPoolSwapModelPageQueryMergeOrderByTxAtWithExtra(t *testing.T)
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	records, total, err := model.PageQueryMergeOrderByTxAtWithExtra(context.Background(), "DESC", 20, 1)
 	if err != nil {
 		t.Error(err)
@@ -119,7 +119,7 @@ func TestEventSonexPoolSwapModelQueryByPoolWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.QueryMergeByPoolWithExtra(context.Background(), "0xb80252975faDD59d342fFF146F939208B60C7C27")
 	if err != nil {
 		t.Error(err)
@@ -131,7 +131,7 @@ func TestEventSonexPoolSwapModelQueryMergeByTokensWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.QueryMergeByTokensWithExtra(context.Background(), []string{"0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C", "0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"})
 	if err != nil {
 		t.Error(err)
@@ -143,7 +143,7 @@ func TestEventSonexPoolSwapModelPageQueryMergeByWalletWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	records, total, err := model.PageQueryMergeByWalletWithExtra(context.Background(), "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E", 20, 1)
 	if err != nil {
 		t.Error(err)
@@ -156,7 +156,7 @@ func TestEventSonexPoolBurnModelPageQueryWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
-	model := NewEventSonexPoolBurnModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolBurnModel(NewConn(c.PostgreSQL.DataSource()))
 	records, total, err := model.PageQueryWithExtra(context.Background(), 1, 1)
 	if err != nil {
 		t.Error(err)
@@ -169,7 +169,7 @@ func Test_volumesUsd(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.SummarizePoolVolumesUsd(context.Background(), 1946, true)
 	if err != nil {
 		t.Error(err)
@@ -182,7 +182,7 @@ func Test_GetTransactionByPoolAddress(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	// records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
 
 	records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x324Bbefef6350cbcE6079a88aCe0D69e99354Dd8", true)
@@ -200,7 +200,7 @@ func Test_SummarizePoolInfoKineData(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 	// records, err := model.GetTransactionByPoolAddress(context.Background(), 1946, "0x6BEd5307E11d16afD233f5702Dc4A7a51407ea64", true)
 
 	records, err := model.SummarizePoolInfoKineData(context.Background(), 1946, "0x1da5AA5a75932FcD2c44517C46CCF936f20Cb8D0", 10)

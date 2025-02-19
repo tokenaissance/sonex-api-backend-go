@@ -15,7 +15,7 @@ func TestSonexTokenPriceRecordModelKline(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
 	ctx := context.Background()
-	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.Kline(ctx, "0x8879309d4002b8C98163Ece3f58653F774de8416", "1h")
 	if err != nil {
 		t.Error(err)
@@ -29,7 +29,7 @@ func TestSonexTokenPriceRecordModelQueryLatestHistoryPricesByAddressesInterval(t
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 	ctx := context.Background()
 
-	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DataSource()))
 	currentPriceRecords, err := model.QueryLatestHistoryPricesByAddresses(ctx, []string{"0x4200000000000000000000000000000000000006"})
 	if err != nil {
 		t.Error(err)
@@ -54,7 +54,7 @@ func Test_GetCurrentPricesAndTokenDecimals(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 	ctx := context.Background()
-	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewSonexTokenPriceRecordModel(NewConn(c.PostgreSQL.DataSource()))
 	// tokenAddresses := []string{"0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391", "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"}
 	token0 := "0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"
 	token1 := "0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"

@@ -22,7 +22,7 @@ import (
 // 数据库里面永远只有和 poolcreated 同样条数的TVL记录
 func HandleRecordTvlForeEachPool(config *config.Config) {
 	// start calucate the tvl for each pool
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 	ctx := context.Background()
 	poolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	tokenPrice := repository.NewSonexTokenPriceRecordModel(conn)

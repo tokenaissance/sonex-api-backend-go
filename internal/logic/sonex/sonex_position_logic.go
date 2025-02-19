@@ -75,7 +75,7 @@ func (l *SonexPositionLogic) refreshCache(ctx context.Context, req *types.Positi
 		PositionResponse: &types.PositionResponse{},
 	}
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	collectModel := repository.NewEventSonexPositionManagerCollectModel(conn)
 	increaseLiquidityModel := repository.NewEventSonexPositionManagerIncreaseLiquidityModel(conn)

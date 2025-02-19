@@ -36,7 +36,7 @@ func (l *SonexPoolInfoKlineRequestLogic) SonexPoolInfoKlineRequest(req *types.So
 
 	// checksum address
 	_poolAddressWithCheckSum := common.HexToAddress(_poolAddress).Hex()
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	ctx := context.Background()
 	//  默认10天

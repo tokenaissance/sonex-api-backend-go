@@ -27,7 +27,7 @@ func Test_GetPoolList(t *testing.T) {
 		Token1Address:   "",
 	}
 
-	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DataSource()))
 	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(context.Background(), a)
 	if err != nil {
 		logx.Debug(err)
@@ -45,7 +45,7 @@ func Test_GetAllPoolInfo(t *testing.T) {
 
 	logx.MustSetup(c.Log)
 
-	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DataSource()))
 	data, err := eventSonexFactoryPoolCreatedModel.GetAllPoolInfo(context.Background(), 1946)
 	if err != nil {
 		logx.Debug(err)

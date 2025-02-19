@@ -13,7 +13,7 @@ func TestEventFarmIncentiveCreatedModelQueryByChainIdStakerWithExtra(t *testing.
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.QueryByChainIdStakerWithExtra(context.Background(), 1946, "0xd68b59E80209260CAc5174EaA2d49b0C84D54C16")
 	if err != nil {
 		t.Error(err)
@@ -26,7 +26,7 @@ func Test_PageQueryByChainIdStakerWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
 	records, n, err := model.PageQueryByChainIdStakerWithExtra(context.Background(), 1946, "0xBf3F505B232c8e6E87F2C5aE8fd19D4c637b2768", 10, 1)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
@@ -39,7 +39,7 @@ func Test_FindRewardTokenInfoByIncentiveId(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.FindRewardTokenInfoByIncentiveId(context.Background(), 1946, 0)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)

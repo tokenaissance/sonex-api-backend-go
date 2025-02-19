@@ -21,7 +21,7 @@ import (
 
 func HandleRecordTokenPrice(config *config.Config) {
 	logx.Info("Token history price updating")
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 
 	for _, chainConf := range config.Chains {
 		err := RecordTokenPrice(chainConf, conn)

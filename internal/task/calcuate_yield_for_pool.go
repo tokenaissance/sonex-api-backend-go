@@ -20,7 +20,7 @@ import (
 // https://medium.com/@alexeuler/navigating-uniswap-v3-a-comprehensive-guide-to-apr-estimation-and-pool-risk-analysis-22cdab21e2db
 func Hander_CalcuateYiledForPool(config *config.Config) error {
 
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port), config.Redis.Password, config.Redis.DB)
 	ctx := context.Background()
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)

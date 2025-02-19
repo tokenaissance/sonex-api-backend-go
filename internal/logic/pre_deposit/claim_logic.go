@@ -47,7 +47,7 @@ func (l *ClaimLogic) Claim(req *types.ClaimRequest) (resp *types.ClaimResponse, 
 	rewardTokenAddress := common.HexToAddress(preDepositConfig.RewardToken)
 	rewardClaimerAddress := common.HexToAddress(preDepositConfig.RewardClaimer)
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	preDepositRewardClaimRecordModel := repository.NewPreDepositRewardClaimRecordModel(conn)
 	preDepositRewardSnapshotModel := repository.NewPreDepositRewardSnapshotModel(conn)
 	eventPreDepositClaimerRewardClaimedModel := repository.NewEventPreDepositClaimerRewardClaimedModel(conn)

@@ -64,7 +64,7 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 	poolAddress := common.HexToAddress(req.PoolAddress)
 	logx.Infof("userAddress:%v,poolAddress:%v  ", userAddress, poolAddress)
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 
 	// farmToAddress := l.svcCtx.Config.Farms[0].Staker
 

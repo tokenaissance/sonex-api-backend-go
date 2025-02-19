@@ -66,7 +66,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	if rewards.Cmp(big.NewInt(0)) == 0 {
 		totalClaimableFees = "0"
 	}
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 
 	totalClaimableFeesUSD, tokenDecials, err := getValueOfAmountToken(rewards, int64(incentiveIdint), req.ChainId, chain, conn)
 	if err != nil {

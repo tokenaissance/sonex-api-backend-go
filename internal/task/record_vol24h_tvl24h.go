@@ -20,7 +20,7 @@ import (
 func HandleRecordVol24hTvl24h(config *config.Config) {
 	// 记录下所有池子的VOL和TVL
 	logx.Info("HandleRecordVol24hTvl24h start")
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port), config.Redis.Password, config.Redis.DB)
 	ctx := context.Background()
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)

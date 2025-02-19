@@ -22,7 +22,7 @@ type XpoolPoolStatsLogic struct {
 }
 
 func NewXpoolPoolStatsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolStatsLogic {
-	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DataSource())
 	return &XpoolPoolStatsLogic{
 		Logger:          logx.WithContext(ctx),
 		ctx:             ctx,

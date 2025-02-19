@@ -13,7 +13,7 @@ func Test_EventFarmTokenStakedModelQueryValidByChainId(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
 
-	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.QueryValidByChainId(context.Background(), 1946)
 	if err != nil {
 		t.Error(err)
@@ -25,7 +25,7 @@ func TestEventFarmTokenStakedModelQueryValidByChainIdUser(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.QueryValidByChainIdUser(context.Background(), 1946, "0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D")
 	if err != nil {
 		t.Error(err)
@@ -37,7 +37,7 @@ func TestEventFarmTokenStakedModelQueryValidByChainIdUserWithExtra(t *testing.T)
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.QueryValidByChainIdUserWithExtra(context.Background(), 1946, "0x2A32B1623a7F6431697F7d7643d629aa41dB5181")
 	if err != nil {
 		t.Error(err)
