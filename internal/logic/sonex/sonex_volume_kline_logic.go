@@ -2,6 +2,7 @@ package sonex
 
 import (
 	"context"
+	"math/big"
 
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -33,8 +34,19 @@ func (l *SonexVolumeKlineLogic) SonexVolumeKline(req *types.SonexVolumeKlineRequ
 		logx.Errorf("ERR:%v", err)
 		return &types.SonexVolumeKlineResponse{}, err
 	}
+
+	totalUsdOfValue := big.NewFloat(0)
+
+	if len(records) > 0 {
+		for _, v := range records {
+			tmp1, _ := new(big.Float).SetString(v.UsdtValue)
+			totalUsdOfValue = new(big.Float).Add(totalUsdOfValue, tmp1)
+		}
+	}
 	resp = &types.SonexVolumeKlineResponse{
-		Records: records,
+		TotalUsdOfRecord: totalUsdOfValue.String(),
+		NumberOfRecords:  int64(len(records)),
+		Records:          records,
 	}
 	return
 }
