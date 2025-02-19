@@ -300,7 +300,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
 	args := []interface{}{params.ChainId, params.PositionManager, valueOfType}
 
-	paramIndex := 3
+	paramIndex := 4
 
 	if params.Token0Address != "" {
 		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
@@ -330,6 +330,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 	countQuery := "SELECT COUNT(*) " + baseQuery
 	err := m.conn.QueryRowCtx(ctx, &totalCount, countQuery, args...)
 	if err != nil {
+		logx.Errorf("ERR:%v", err)
 		return nil, nil, err
 	}
 	/*t4.tvl 只参与排序，不参与准确的数据展示,数据展示直接获取最新的额度*/
@@ -372,6 +373,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 
 	err = m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)
 	if err != nil {
+		logx.Errorf("ERR:%v", err)
 		return nil, nil, err
 	}
 
