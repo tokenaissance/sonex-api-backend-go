@@ -46,6 +46,7 @@ jobs:
           sed -i "s/REDIS_PORT/${{vars.REDIS_PORT}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/POINTPRIVATEKEY/${{secrets.POINTPRIVATEKEY}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           sed -i "s/SIGNERPRIVATEKEY/${{secrets.SIGNERPRIVATEKEY}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
+          sed -i "s/ACS_API_SECRECT/${{secrets.ACS_API_SECRECT}}/g" etc/sonex_api_backend_go_${BRANCH}.yaml
           cp etc/sonex_api_backend_go_${BRANCH}.yaml etc/sonex_api_backend_go.yaml
           cat etc/sonex_api_backend_go.yaml
 
