@@ -489,7 +489,7 @@ type SonexTokenKlineResponse {
 
 type PortfolioRequest {
 	ChainRequest
-	TimeZoneRequest
+	// TimeZoneRequest
 	LiquiditySelected bool   `form:"liquiditySelected,default=false"`
 	FarmSelected 	  bool   `form:"farmSelected,default=false"`
 	XpoolSelected 	  bool 	 `form:"xpoolSelected,default=false"`
