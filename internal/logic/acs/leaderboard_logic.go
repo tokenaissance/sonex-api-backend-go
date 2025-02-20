@@ -7,10 +7,12 @@ import (
 
 	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/global"
+	"sonex_api_backend_go/internal/module/points"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -64,7 +66,6 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(conn)
-	acsIncreaseLiquidityPointsRecordModel := repository.NewAcsIncreaseLiquidityPointsRecordModel(conn)
 	sonexTokenPriceRecordModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 	// Astr price
@@ -182,18 +183,40 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 	}
 
 	// Sonex points
-	points, err := acsIncreaseLiquidityPointsRecordModel.QueryPointsByUser(l.ctx, users)
+	pointsRecords, err := points.UserList(l.ctx, *l.svcCtx.Config.PointsService, users)
 	if err != nil {
 		return nil, err
 	}
 	if user != nil {
-		if point, ok := points[user.User]; ok {
-			user.SONEX = point
+		recordA := linq.From(pointsRecords).FirstWithT(func(item struct {
+			Address   string `json:"address"`
+			Points    int64  `json:"points"`
+			UpdatedAt int64  `json:"updated_at"`
+		}) bool {
+			return item.Address == user.User
+		})
+		if recordA != nil {
+			user.SONEX = recordA.(struct {
+				Address   string `json:"address"`
+				Points    int64  `json:"points"`
+				UpdatedAt int64  `json:"updated_at"`
+			}).Points
 		}
 	}
 	for _, item := range items {
-		if point, ok := points[item.User]; ok {
-			item.SONEX = point
+		recordA := linq.From(pointsRecords).FirstWithT(func(it struct {
+			Address   string `json:"address"`
+			Points    int64  `json:"points"`
+			UpdatedAt int64  `json:"updated_at"`
+		}) bool {
+			return it.Address == item.User
+		})
+		if recordA != nil {
+			item.SONEX = recordA.(struct {
+				Address   string `json:"address"`
+				Points    int64  `json:"points"`
+				UpdatedAt int64  `json:"updated_at"`
+			}).Points
 		}
 	}
 

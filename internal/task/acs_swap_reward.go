@@ -110,11 +110,11 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 			Variables: struct {
 				DefiId int64 `json:"defiId"`
 			}{
-				DefiId: 3,
+				DefiId: acsConf.DefiId,
 			},
 		}
 
-		resp, err := httpc.Do(context.Background(), http.MethodPost, fmt.Sprintf("%s/graphql", strings.TrimRight(acsConf.Host, "/")), req)
+		resp, err := httpc.Do(context.Background(), http.MethodPost, fmt.Sprintf("%s/graphql", strings.TrimRight(acsConf.Graphql, "/")), req)
 		if err != nil {
 			return
 		}
@@ -231,7 +231,7 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 
 		item := reqItem{
 			UserAddress: swap.From,
-			DefiId:      3,
+			DefiId:      acsConf.DefiId,
 			AcsAmount:   acs,
 			Description: fmt.Sprintf("Type:SWAP,TxHash:%s,TxIndex:%d,Token:%s,Amount:%f", swap.TxHash, swap.TxIndex, tokenAddress, count),
 		}

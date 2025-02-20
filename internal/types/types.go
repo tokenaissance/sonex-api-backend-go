@@ -471,9 +471,11 @@ type PortfolioRequest struct {
 }
 
 type PortfolioResponse struct {
-	Stats     *PortfolioStats      `json:"stats"`     // portfolio 统计数据，所有资产净值，所有资产净值相比前一天的变化率，所有可提资产净值
-	Positions []*PortfolioPosition `json:"positions"` // portfolio position list, include liquidity, farm, xpool
-	Meta      PageResponse         `json:"meta"`      // pagination meta
+	Stats         *PortfolioStats      `json:"stats"`         // portfolio 统计数据，所有资产净值，所有资产净值相比前一天的变化率，所有可提资产净值
+	Positions     []*PortfolioPosition `json:"positions"`     // portfolio position list, include liquidity, farm, xpool
+	Meta          PageResponse         `json:"meta"`          // pagination meta
+	TotalPosition float64              `json:"totalPosition"` // 所有资产净值
+	ClaimableFees float64              `json:"claimableFees"` // 所有可提资产净值
 }
 
 type PortfolioStats struct {
