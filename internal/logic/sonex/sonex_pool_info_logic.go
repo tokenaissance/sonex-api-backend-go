@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
@@ -172,7 +173,7 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 func getVolumeTotal(chainId int64, poolAddress string, conn sqlx.SqlConn) (*big.Float, string, float64) {
 	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	// 跨池子的volume
-	_volume24HStringBridgePool, err1 := poolSwapModel.CalucateVolume24HBridgePool(context.Background(), chainId, poolAddress)
+	_volume24HStringBridgePool, err1 := poolSwapModel.CalucateVolume24HBridgePool(context.Background(), chainId, poolAddress, time.Now())
 	if err1 != nil {
 		logx.Errorf("CalucateVolume24HBridgePool ERR:%v ", err1)
 		_volume24HStringBridgePool = "0"
