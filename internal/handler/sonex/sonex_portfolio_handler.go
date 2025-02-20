@@ -59,7 +59,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		pageSize := *req.PageSize
 
 		// 用户选中的 portfolio 类型，支持单选/复选
-		liquiditySelected := req.LiquiditySelected
+		liquiditySelected := true
 		farmSelected := req.FarmSelected
 		xpoolSelected := req.XpoolSelected
 
