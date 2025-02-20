@@ -300,7 +300,7 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
 	args := []interface{}{params.ChainId, params.PositionManager, valueOfType}
 
-	paramIndex := 3
+	paramIndex := 4
 
 	if params.Token0Address != "" {
 		baseQuery += fmt.Sprintf(" AND (pool.event_token0 = $%d OR pool.event_token1 = $%d)", paramIndex, paramIndex)
