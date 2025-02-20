@@ -18,6 +18,7 @@ type (
 		withSession(session sqlx.Session) EventFarmTokenStakedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64, liquidity string) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenStaked, error)
+		FindByChainIdUser(ctx context.Context, chainId int64, event_user string) ([]*EventFarmTokenStaked, error)
 		QueryValidByChainId(ctx context.Context, chainId int64) ([]EventFarmTokenStaked, error)
 		QueryValidByChainIdUser(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStaked, error)
 		QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStakedWithExtra, error)
@@ -59,6 +60,21 @@ func (m *customEventFarmTokenStakedModel) FindLatestByChainId(ctx context.Contex
 	switch err {
 	case nil:
 		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+// 获取用户在链上的质押事件
+func (m *customEventFarmTokenStakedModel) FindByChainIdUser(ctx context.Context, chainId int64, event_user string) ([]*EventFarmTokenStaked, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 and event_user = $2", eventFarmTokenStakedRows, m.table)
+	var resp []*EventFarmTokenStaked
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, event_user)
+	switch err {
+	case nil:
+		return resp, nil
 	case sqlx.ErrNotFound:
 		return nil, ErrNotFound
 	default:
@@ -157,6 +173,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserWithExtra(ctx c
 	return resp, nil
 }
 
+// 获取用户的正在质押的代币的个数
 func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenStakedWithExtra, error) {
 	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
 	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)

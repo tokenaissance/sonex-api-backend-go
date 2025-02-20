@@ -9,6 +9,7 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -20,13 +21,22 @@ import (
 // 方便tvl 在pools 界面的排序
 // 一分钟记录一次,把之前的TVL记录删掉
 // 数据库里面永远只有和 poolcreated 同样条数的TVL记录
+// 记录的时候，存sonex_vol_tvl_record
 func HandleRecordTvlForeEachPool(config *config.Config) {
+	startTime := time.Now()
 	// start calucate the tvl for each pool
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	logx.Infof("HandleRecordVol24hTvl24h start Time : %v", startTime)
+
+	zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
+
+	logx.Infof("zeroTime:%v  ", zeroTime)
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 	ctx := context.Background()
 	poolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	tokenPrice := repository.NewSonexTokenPriceRecordModel(conn)
 	tvlRecordModel := repository.NewSonexPoolTvlRecordModel(conn)
+	/// 记录volume 和 total 总量的表
+	tvlvolRecordModel := repository.NewSonexVolTvlRecordModel(conn)
 
 	if len(config.Chains) > 0 {
 		for _, chain := range config.Chains {
@@ -38,7 +48,9 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 				var wg sync.WaitGroup
 				if len(poolRecords) > 0 {
 					// TODO 后期优化
+					tvlTotalForAll := big.NewFloat(0)
 
+					// 计算TVL的值
 					for _, pRecord2 := range poolRecords {
 						wg.Add(1)
 						go func(pRecord *repository.EventSonexFactoryPoolCreated) {
@@ -90,25 +102,39 @@ func HandleRecordTvlForeEachPool(config *config.Config) {
 									}
 									_tvlUSD := new(big.Float).Add(_token0Volume, _token1Volume)
 
+									// 计算TVL的值
+									tvlTotalForAll = new(big.Float).Add(tvlTotalForAll, _tvlUSD)
 									_tvlString := _tvlUSD.String()
-									//  更新TVL
-									_, err := tvlRecordModel.UpdateOrInsertTvlByPoolAddress(_tvlString, pRecord.EventPool, 6, chain.ChainId)
+									//  更新TVL，用于排序
+									_, err := tvlRecordModel.UpdateOrInsertTvlByPoolAddress(_tvlString, pRecord.EventPool, 6, chain.ChainId, repository.ValueOfTypeTVL)
 									if err != nil {
 										logx.Errorf("err:%v", err)
 									} else {
 										logx.Debug("TVL:poolAddress:", pRecord.EventPool, " tvl:", _tvlString)
 									}
 								}
+
 							}
 						}(&pRecord2)
 
 					}
 					wg.Wait()
+					///// calucate the total TVL record
+					writeToPGForTvlValue(tvlvolRecordModel, tvlTotalForAll.String(), zeroTime, chain.ChainId, repository.TVLTypeoOfValue, repository.V3OfUniswap)
 				}
 			}
 		}
 	}
+}
 
+// calucate the total TVL record
+func writeToPGForTvlValue(tvlvolRecordModel repository.SonexVolTvlRecordModel, tvlTotalForAllInGoroutineString string, zeroTime time.Time, chainId, typeoOfValue, typeOfUniswap int64) {
+	logx.Infof(" writeToPGForTvlValue:%v   zeroTime:%v chainId:%v , typeoOfValue:%v", tvlTotalForAllInGoroutineString, zeroTime, chainId, typeoOfValue)
+	// 写入 pg 数据库
+	_, err := tvlvolRecordModel.UpdateOrInsertTvlByTimeStamp(tvlTotalForAllInGoroutineString, zeroTime.Unix(), typeOfUniswap, chainId, typeoOfValue)
+	if err != nil {
+		logx.Infof("Insert tvlRecordTotal error:%v ", err)
+	}
 }
 
 // CalucateOneTokenUsdInPool(balance0,oneItems.Price, oneItems.UsdDecimals,oneItems.TokenDecimals)

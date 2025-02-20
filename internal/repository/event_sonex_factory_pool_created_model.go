@@ -8,8 +8,10 @@ import (
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/types"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -24,6 +26,7 @@ type (
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, token0 string, token1 string, fee string, tickSpacing string, pool string) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventSonexFactoryPoolCreated, error)
 		QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error)
+		QueryByChainIdInTokens(ctx context.Context, chainId int64, tokens []string) ([]EventSonexFactoryPoolCreated, error)
 		QueryByChainIdPositionManager(ctx context.Context, chainId int64, positionManager string) ([]EventSonexFactoryPoolCreated, error)
 		GetPoolVolumes(ctx context.Context, chainId int64, last24Hours bool) ([]types.PoolVolume, error)
 		FindAll(ctx context.Context) ([]EventSonexFactoryPoolCreated, error)
@@ -74,6 +77,20 @@ func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainId(ctx context.Con
 	var resp []EventSonexFactoryPoolCreated
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1", eventSonexFactoryPoolCreatedRows, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainIdInTokens(ctx context.Context, chainId int64, tokens []string) ([]EventSonexFactoryPoolCreated, error) {
+	var resp []EventSonexFactoryPoolCreated
+	query := fmt.Sprintf(`
+		SELECT %s 
+		FROM %s 
+		WHERE chain_id = $1 AND (event_token0 = ANY($2) OR event_token1 = ANY($2))
+	`, eventSonexFactoryPoolCreatedRows, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, tokens)
 	if err != nil {
 		return nil, err
 	}
@@ -235,39 +252,53 @@ func (m *customEventSonexFactoryPoolCreatedModel) FindByPoolAddress(ctx context.
 	}
 }
 
-/*
-/sonex/pools?order=DESC&pageIndex=1&pageSize=10
-order 字段,有以下赋值含义
-ASC，指的是按照TVL进行升序
-DESC，代表按照 TVL 进行降序排列
-IdASC, 按照池子创建时间进行升序
-IdDesc，按照池子创建时间进行降序
-*/
-
 var PoolsOrderTvlAsc = "ASC"   // 按照TVL进行排序
 var PoolsOrderTvlDesc = "DESC" // 按照TVL进行降序
 
 var PoolsOrderYieldAsc = "YieldASC"     // 按照Yield进行排序
 var PoolsOrderYieldDesc = "YieldDESC"   // 按照Yield进行降序
 var PoolsOrderVolumeAsc = "VolumeASC"   // 按照Volume进行排序
-var PoolsOrderVolumeDesc = "VolumeDESC" // 按照Yield进行降序
+var PoolsOrderVolumeDesc = "VolumeDESC" // 按照Volume进行降序
 
 // todo
 var PoolsOrderIdAsc = "IdASC"   // 按照时间先后顺序
 var PoolsOrderIdDesc = "IdDesc" // // 按照时间先后顺序
 
+func getTvlTypeInSonexPoolTVLRecord(order string) int64 {
+	if strings.EqualFold(order, PoolsOrderTvlAsc) ||
+		strings.EqualFold(order, PoolsOrderTvlDesc) {
+		return ValueOfTypeTVL
+
+	} else if strings.EqualFold(order, PoolsOrderYieldAsc) ||
+		strings.EqualFold(order, PoolsOrderYieldDesc) {
+		return ValueOfTypeYield
+
+	} else if strings.EqualFold(order, PoolsOrderVolumeAsc) ||
+		strings.EqualFold(order, PoolsOrderVolumeDesc) {
+		return ValueOfTypeVolume
+	} else {
+		return ValueOfTypeTVL
+	}
+}
+
 // GetPoolList returns a map of pool data and pagination meta
 func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Context, params *sonex.GetPoolListParams) (map[string]*sonex.PoolFromDB, *types.PaginationMeta, error) {
 	var poolData []PoolData
 	var totalCount int
+
+	valueOfType := getTvlTypeInSonexPoolTVLRecord(params.Order)
+
+	// orderString := params.Order
+	logx.Infof("valueOfType:%v params.Order:%v ", valueOfType, params.Order)
+
 	// sonex_pool_tvl_record ,一开始就调用一次
 	baseQuery := fmt.Sprintf(`
 		FROM %s AS pool
 		INNER JOIN sonex_token AS token0 ON pool.event_token0 = token0.address AND token0."isHidden" = false
 		INNER JOIN sonex_token AS token1 ON pool.event_token1 = token1.address AND token1."isHidden" = false
-		INNER JOIN sonex_pool_tvl_record AS t4 ON pool.event_pool = t4.pool_address
+		INNER JOIN sonex_pool_tvl_record AS t4 ON pool.event_pool = t4.pool_address AND t4.value_of_type = $3
 		WHERE pool.chain_id = $1 AND pool.to_ = $2`, m.table)
-	args := []interface{}{params.ChainId, params.PositionManager}
+	args := []interface{}{params.ChainId, params.PositionManager, valueOfType}
 
 	paramIndex := 3
 
@@ -320,18 +351,23 @@ func (m *customEventSonexFactoryPoolCreatedModel) GetPoolList(ctx context.Contex
 		token1.logo AS token1_logo,
 		token1.additional AS token1_additional,
 		token1.decimals AS token1_decimals %s `, baseQuery)
-	switch params.Order {
-	case PoolsOrderIdAsc:
-		dataQuery += " ORDER BY pool.id ASC"
-	case PoolsOrderIdDesc:
-		dataQuery += " ORDER BY pool.id DESC"
-	case PoolsOrderTvlAsc:
-		dataQuery += " ORDER BY t4.tvl ::FLOAT  ASC "
-	case PoolsOrderTvlDesc:
-		dataQuery += " ORDER BY t4.tvl ::FLOAT DESC"
-	default:
-		dataQuery += " ORDER BY t4.tvl ::FLOAT ASC"
+
+	if strings.EqualFold(params.Order, PoolsOrderIdAsc) {
+		dataQuery += `ORDER BY pool.id ASC`
+	} else if strings.EqualFold(params.Order, PoolsOrderIdDesc) {
+		dataQuery += `ORDER BY pool.id DESC`
+	} else if strings.EqualFold(params.Order, PoolsOrderTvlAsc) ||
+		strings.EqualFold(params.Order, PoolsOrderYieldAsc) ||
+		strings.EqualFold(params.Order, PoolsOrderVolumeAsc) {
+		dataQuery += `ORDER BY t4.tvl :: NUMERIC  ASC`
+	} else if strings.EqualFold(params.Order, PoolsOrderTvlDesc) ||
+		strings.EqualFold(params.Order, PoolsOrderYieldDesc) ||
+		strings.EqualFold(params.Order, PoolsOrderVolumeDesc) {
+		dataQuery += `ORDER BY t4.tvl :: NUMERIC DESC`
+	} else {
+		dataQuery += `ORDER BY t4.tvl :: NUMERIC DESC`
 	}
+
 	dataQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Take, (params.Page-1)*params.Take)
 
 	err = m.conn.QueryRowsCtx(ctx, &poolData, dataQuery, args...)

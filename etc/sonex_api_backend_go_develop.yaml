@@ -68,7 +68,7 @@ PreDeposits:
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1946
-    Staker: 0x330104ea738276971a6A7BCbAB60A56e2BF558f3
+    Staker: 0xeC8BcA27444bA6360EfF22365b42012d029D6324
     PointsHoldTimeLimits: 300
     PointsUSDLimits: 10
     Points: 5000
@@ -77,3 +77,20 @@ Xpools:
   - ChainId: 1946
     Factory: 0xB1E6ef99cB82ae685b8289DE3251b5427Dc72148
     BlockTime: 2000
+ACS:
+  Pools:
+    - [
+        0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655,
+        0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391,
+      ]
+  Tokens:
+    - 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
+    - 0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C
+  Points: 100
+  SubTitle: ACS
+  Graphql: https://test4.xzsean.eu.org
+  Host: https://test4.xzsean.eu.org
+  DefiId: 3
+  ApiSecret: h5j8k3l6z9x2c5v8b1n4m7q2w5e8r1t4y7u2i5o8p
+  ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
+  LiquidityUSDLimits: 10

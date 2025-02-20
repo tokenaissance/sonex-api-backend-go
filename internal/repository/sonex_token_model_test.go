@@ -12,7 +12,7 @@ func TestSonexTokenModelFindAllToMap(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	model := NewSonexTokenModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewSonexTokenModel(NewConn(c.PostgreSQL.DataSource()))
 	res, err := model.FindAllToMap(context.Background())
 	if err != nil {
 		t.Error(err)
@@ -25,7 +25,7 @@ func TestSonexTokenModelQueryLogo(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	model := NewSonexTokenModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewSonexTokenModel(NewConn(c.PostgreSQL.DataSource()))
 	res, err := model.QueryLogo(context.Background())
 	if err != nil {
 		t.Error(err)
@@ -38,7 +38,7 @@ func Test_FindByOneAddress(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
-	model := NewSonexTokenModel(NewConn(c.PostgreSQL.DateSource()))
+	model := NewSonexTokenModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.FindByOneAddress(context.Background(), "0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C")
 	if err != nil {
 		t.Error(err)

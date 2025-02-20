@@ -19,7 +19,7 @@ func Test_GetPoolList(t *testing.T) {
 	a := &module_sonex.GetPoolListParams{
 		ChainId:         1946,
 		PositionManager: "0x3231734Cb30f7B5dc42D6354Ea42b4BAE54618Ab",
-		Order:           "ASC",
+		Order:           "YieldASC",
 		Page:            1,
 		Take:            10,
 		Keywords:        "",
@@ -27,14 +27,14 @@ func Test_GetPoolList(t *testing.T) {
 		Token1Address:   "",
 	}
 
-	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DataSource()))
 	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(context.Background(), a)
 	if err != nil {
 		logx.Debug(err)
 	}
 
 	for i, v := range data {
-		logx.Debug(i, v)
+		logx.Infof("i :%v v :%#v ", i, v)
 	}
 	logx.Debug(meta)
 }
@@ -45,7 +45,7 @@ func Test_GetAllPoolInfo(t *testing.T) {
 
 	logx.MustSetup(c.Log)
 
-	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DateSource()))
+	eventSonexFactoryPoolCreatedModel := NewEventSonexFactoryPoolCreatedModel(NewConn(c.PostgreSQL.DataSource()))
 	data, err := eventSonexFactoryPoolCreatedModel.GetAllPoolInfo(context.Background(), 1946)
 	if err != nil {
 		logx.Debug(err)

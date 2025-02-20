@@ -22,7 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type SonexPoolListLogic struct {
@@ -124,10 +123,9 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		}
 	}()
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
-
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	data, meta, err := eventSonexFactoryPoolCreatedModel.GetPoolList(ctx, &module_sonex.GetPoolListParams{
 		ChainId:         req.ChainId,
@@ -265,20 +263,28 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 				Decimals: int(_decimals1),
 			}
 
-			_yield, err := global.GetVolume24HTvlValue(cacher, global.YiedlRateKey, pool.Address)
+			// 计算yield
+			yield, err := global.GetVolume24HTvlValue(cacher, global.YiedlRateKey, pool.Address)
 			if errors.Is(err, redis.Nil) {
 				logx.Infof("Pool:%v NIL YIELD", pool.Address)
-				_yield = "0.0"
+				yield = "0.0"
 			}
 			if err != nil && !errors.Is(err, redis.Nil) {
 				logx.Infof("Pool:%v ERR  YIELD:%v", pool.Address, err)
-				_yield = "0.0"
+				yield = "0.0"
 			}
 
 			pool.Stablecoin = stablecoinToken.Address
 			pool.StablecoinDecimals = stablecoinToken.Decimals
-			pool.Yield24h = _yield //
-			pool.Volume = "0"      // 给个默认的值
+			pool.Yield24h = yield
+			pool.Volume = "0" // 给个默认的值
+
+			// 从redis 获 volume24H 值
+			volume24HofPool, err := global.GetVolume24HTvlValue(cacher, global.Volume24HKey, pool.Address)
+			if err != nil {
+				logx.Infof("ERR:%v", err)
+			}
+			pool.Volume = volume24HofPool
 			mu.Unlock()
 
 			poolChan <- pool
@@ -296,6 +302,8 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 		pools = append(pools, pool)
 	}
 
+	// TODO 后期的优化处理
+	// 该处代码后期需要再打开
 	switch req.Order {
 	case repository.PoolsOrderTvlDesc:
 		sort.SliceStable(pools, func(i, j int) bool {
@@ -328,24 +336,25 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			yieldUsd_i, _ := big.NewFloat(0).SetString(pools[i].Yield24h)
 			yieldUsd_j, _ := big.NewFloat(0).SetString(pools[j].Yield24h)
 			if yieldUsd_i.Cmp(yieldUsd_j) == 0 {
-				// 按照volume 排序序列
-				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
-				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
-				return volume24HUsd_i.Cmp(volume24HUsd_j) > 0
+				// 按照 TVL 排序序列
+				tvl24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvl24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvl24HUsd_i.Cmp(tvl24HUsd_j) > 0
 			} else {
 				return yieldUsd_i.Cmp(yieldUsd_j) > 0
 			}
 		})
 
 	case repository.PoolsOrderYieldAsc:
+
 		sort.SliceStable(pools, func(i, j int) bool {
 			yieldUsd_i, _ := big.NewFloat(0).SetString(pools[i].Yield24h)
 			yieldUsd_j, _ := big.NewFloat(0).SetString(pools[j].Yield24h)
 			if yieldUsd_i.Cmp(yieldUsd_j) == 0 {
-				// 按照volume 排序序列
-				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
-				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
-				return volume24HUsd_i.Cmp(volume24HUsd_j) < 0
+				// 按照 TVL 排序序列
+				tvl24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
+				tvl24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
+				return tvl24HUsd_i.Cmp(tvl24HUsd_j) < 0
 			} else {
 				return yieldUsd_i.Cmp(yieldUsd_j) < 0
 			}
@@ -356,7 +365,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			volumeUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
 			volumeUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
 			if volumeUsd_i.Cmp(volumeUsd_j) == 0 {
-				// 按照volume 排序序列
+				// 按照 TVL  排序序列
 				tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
 				tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
 				return tvlUsd_i.Cmp(tvlUsd_j) > 0
@@ -384,7 +393,7 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 			tvlUsd_i, _ := big.NewFloat(0).SetString(pools[i].TvlUSD)
 			tvlUsd_j, _ := big.NewFloat(0).SetString(pools[j].TvlUSD)
 			if tvlUsd_i.Cmp(tvlUsd_j) == 0 {
-				// 按照volume 排序序列
+				// 按照 volume 排序序列
 				volume24HUsd_i, _ := big.NewFloat(0).SetString(pools[i].Volume)
 				volume24HUsd_j, _ := big.NewFloat(0).SetString(pools[j].Volume)
 				return volume24HUsd_i.Cmp(volume24HUsd_j) > 0
@@ -401,22 +410,6 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	// 	return tvlUsd_i.Cmp(tvlUsd_j) > 0
 	// })
 
-	// calculate volume
-	_swapAmoutEthAndUsdMap, _, err := CalucatedVolume24H(conn, req.ChainId)
-	if err != nil {
-		return &response.ApiResponse{
-			Data: []*types.PoolsResponse_Pool{},
-			Meta: &types.PageResponse{},
-		}, err
-	}
-	// get Price from value
-	for _, pool := range pools {
-		for _, v := range _swapAmoutEthAndUsdMap {
-			if strings.EqualFold(pool.Address, v.ExtraPool) {
-				pool.Volume = v.Value
-			}
-		}
-	}
 	response := &response.ApiResponse{
 		Data: pools,
 		Meta: &types.PageResponse{
@@ -435,29 +428,4 @@ func (l *SonexPoolListLogic) refreshCache(req *types.PoolsRequest, cacher cache.
 	}
 
 	return response, nil
-}
-
-// 如果 _specialPoolAddress 不为空，就把 _specialPoolAddress对应的volume24H 返回
-func CalucatedVolume24H(conn sqlx.SqlConn, _chainId int64, _specialPoolAddress ...string) ([]*repository.PoolVolumeUsd, string, error) {
-
-	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
-	ctx := context.Background()
-	// 获取 event_sonex_pool_swap 里面的交易详情
-	poolVolumesMap, err := eventSonexPoolSwapModel.SummarizePoolVolumesUsd(ctx, _chainId, true)
-	if err != nil {
-		logx.Errorf("[refreshCache]: SummarizePoolVolumesUsd error: %s", err)
-		return nil, "", err
-	}
-	//  poolVolumesMapAfterProcessedItems 条目
-
-	_specialPoolAddressVolume24H := "0"
-	for _, v := range poolVolumesMap {
-		if len(_specialPoolAddress) == 1 {
-			if strings.EqualFold(v.ExtraPool, _specialPoolAddress[0]) {
-				_specialPoolAddressVolume24H = v.Value
-			}
-		}
-	}
-
-	return poolVolumesMap, _specialPoolAddressVolume24H, nil
 }

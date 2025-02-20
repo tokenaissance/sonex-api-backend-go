@@ -593,3 +593,42 @@ MINVALUE  1
 MAXVALUE 9223372036854775807
 START 1
 CACHE 1;
+
+-- ----------------------------
+-- 需要执行的
+-- Table structure for sonex_vol_tvl_record
+-- explorer 页面，vol 和 tvl 总值图表对应的数据库
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."sonex_vol_tvl_record";
+CREATE TABLE "public"."sonex_vol_tvl_record" (
+  "id" int8 NOT NULL DEFAULT nextval('sonex_vol_tvl_record_id_seq'::regclass),
+  "usdt_value" varchar COLLATE "pg_catalog"."default" NOT NULL,
+  "chain_id" int8 NOT NULL,
+  "type_of_value" int8 NOT NULL,
+  "createtime" int8 NOT NULL,
+  "type_of_uniswap" int8 NOT NULL
+)
+;
+ALTER TABLE "public"."sonex_vol_tvl_record" OWNER TO "apibackendgo";
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."type_of_value" IS '1: volume value; 2:tvl value';
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."createtime" IS 'createtime ';
+COMMENT ON COLUMN "public"."sonex_vol_tvl_record"."type_of_uniswap" IS '1: v3, 2: v2  ';
+
+-- ----------------------------
+-- Primary Key structure for table sonex_vol_tvl_record
+-- ----------------------------
+ALTER TABLE "public"."sonex_vol_tvl_record" ADD CONSTRAINT "sonex_pool_tvl_record_copy1_pkey" PRIMARY KEY ("id");
+
+SELECT setval('"sonex_vol_tvl_record_id_seq"', 1, true);
+
+DROP SEQUENCE IF EXISTS "sonex_vol_tvl_record_id_seq";
+CREATE SEQUENCE "sonex_vol_tvl_record_id_seq"
+INCREMENT 1
+MINVALUE  1
+MAXVALUE 9223372036854775807
+START 1
+CACHE 1;
+
+-- sonex_pool_tvl_record 用来给 vol 和  tvl  和  yield 排序 
+ALTER TABLE  "public"."sonex_pool_tvl_record"  ADD value_of_type  int8 DEFAULT  1000
+COMMENT ON COLUMN "public"."sonex_pool_tvl_record"."value_of_type" IS '1000: TVL ,1001:yield ,1002:volume';

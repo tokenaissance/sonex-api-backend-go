@@ -72,7 +72,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
 			if err == nil {
 				dataResult = cacheWarpper.Data
-				conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+				conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 				eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 				record, err := eventSonexFactoryPoolCreatedModel.FindLatestByChainId(l.ctx, req.ChainId)
 				switch err {
@@ -109,7 +109,7 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 		}
 	}
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
@@ -451,7 +451,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 		return nil, fmt.Errorf("%s", "Miss chain configure")
 	}
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	eventSonexFactoryPoolCreatedModel := repository.NewEventSonexFactoryPoolCreatedModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)

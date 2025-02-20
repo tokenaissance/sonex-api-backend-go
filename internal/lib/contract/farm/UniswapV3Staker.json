@@ -360,6 +360,12 @@
                 "internalType": "uint256",
                 "name": "checkpoint",
                 "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "incentiveId",
+                "type": "uint256"
             }
         ],
         "name": "UserRewardsUpdated",

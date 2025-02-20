@@ -51,7 +51,7 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	// checksum address
 	_poolAddressWithCheckSum := common.HexToAddress(_poolAddress).Hex()
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 
 	ctx := context.Background()
@@ -135,15 +135,18 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 	_amountPrice0, _ := balance0QuoDecimal.Float64()
 	_amountPrice1, _ := balance1QuoDecimal.Float64()
 
-	_volume24HString := getVolume24HOfPoolAddress(conn, req.ChainId, cacher, _poolAddressWithCheckSum)
+	// return the type of big float64
+	volume24HBigFloat64, volume24HString, volume24HFloat64 := getVolumeTotal(req.ChainId, _poolAddressWithCheckSum, conn)
 
-	_fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
-
-	if strings.EqualFold(_volume24HString, "") {
-		_volume24HString = "0"
+	// update volue24HbridgeToPoolAndSumOfPool to redis db
+	err = global.SetVolume24HTvlValue(cacher, global.Volume24HKey, _poolAddress, volume24HString)
+	if err != nil {
+		logx.Infof("API: poolinfo SetVolume24HValue:%v ERR :%v", _poolAddress, err)
+	} else {
+		logx.Infof("API: poolinfo SetVolume24HValue:%v value:%v", _poolAddress, volume24HString)
 	}
-	_volume24HBigFloat64, _ := new(big.Float).SetString(_volume24HString)
-	_volume24HFloat64, _ := _volume24HBigFloat64.Float64()
+
+	fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)
 
 	return &types.PoolInfoResponse{
 		StatusCode:       200,
@@ -159,11 +162,46 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 		TvlUSD:           _tvlUSD.String(),
 		TvlRatio:         returnVol24HOrTvl24H(cacher, _tvlUSD, global.Tvl24HKey, pool.Address),
 		IsTvlNegative:    false,
-		Vol24h:           _volume24HFloat64,
-		Vol24hRatio:      returnVol24HOrTvl24H(cacher, _volume24HBigFloat64, global.Volume24HKey, pool.Address),
+		Vol24h:           volume24HFloat64,
+		Vol24hRatio:      returnVol24HOrTvl24H(cacher, volume24HBigFloat64, global.Volume24HKey, pool.Address),
 		IsVol24hNegative: false,
-		Fee24h:           _fee24H,
+		Fee24h:           fee24H,
 	}, nil
+}
+
+func getVolumeTotal(chainId int64, poolAddress string, conn sqlx.SqlConn) (*big.Float, string, float64) {
+	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	// 跨池子的volume
+	_volume24HStringBridgePool, err1 := poolSwapModel.CalucateVolume24HBridgePool(context.Background(), chainId, poolAddress)
+	if err1 != nil {
+		logx.Errorf("CalucateVolume24HBridgePool ERR:%v ", err1)
+		_volume24HStringBridgePool = "0"
+	}
+
+	// 没有跨池子的 volume
+	// 计算的时候，要排除已经统计过的跨池子的volume24H 的计算
+	poolVolumeUsd, err2 := poolSwapModel.SummarizePoolVolumesUsdByPoolAddress(context.Background(), chainId, poolAddress)
+
+	if err2 != nil {
+		logx.Infof("SummarizePoolVolumesUsdByPoolAddress ERR:%v ", err2)
+		poolVolumeUsd.Value = "0"
+	}
+
+	// 没有跨池子的 volume
+	notVolume24HOfBridgePool, _ := new(big.Float).SetString(poolVolumeUsd.Value)
+	//  跨池子的 volume
+	volume24HOfBridgePool, _ := new(big.Float).SetString(_volume24HStringBridgePool)
+
+	sumOfBridegeAndNormalOfVolume24H := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
+
+	sumOfBridegeAndNormalOfVolume24HString := sumOfBridegeAndNormalOfVolume24H.String()
+
+	if strings.EqualFold(sumOfBridegeAndNormalOfVolume24HString, "") {
+		sumOfBridegeAndNormalOfVolume24HString = "0"
+	}
+
+	sumOfBridegeAndNormalOfVolume24HFloat64, _ := sumOfBridegeAndNormalOfVolume24H.Float64()
+	return sumOfBridegeAndNormalOfVolume24H, sumOfBridegeAndNormalOfVolume24HString, sumOfBridegeAndNormalOfVolume24HFloat64
 }
 
 type Call struct {
@@ -215,22 +253,6 @@ func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) err
 	}
 
 	return nil
-}
-
-// 获取 string ,自己再转为float64
-func getVolume24HOfPoolAddress(conn sqlx.SqlConn, _chainId int64, cacher cache.ICache, _poolAddress string) string {
-	_, volume24HValue, err := CalucatedVolume24H(conn, _chainId, _poolAddress)
-	if err != nil {
-		logx.Errorf(" getVolume24HOfPoolAddress error:%v", err)
-		return "0"
-	} else {
-		if strings.EqualFold(volume24HValue, "") {
-			volume24HValue = "0"
-		}
-	}
-
-	return volume24HValue
-
 }
 
 // _poolAddress checksum address
@@ -345,16 +367,16 @@ func SetTxhashCost(cacher cache.ICache, _txhash, _feeCost string) error {
 	return cacher.Set(fmt.Sprintf("txhashcost_%v", _txhash), _feeCost, 0)
 }
 
+// 按照1个小时的价格变化来,计算变化率
 func returnVol24HOrTvl24H(cacher cache.ICache, _tvlUSD *big.Float, _key string, _poolAddress string) string {
-	// _oldtvlUsdString, err8 := global.GetVolume24HTvlValue(cacher, global.Tvl24HKey, poolFromDB.Address)
 
 	logx.Infof("key:%v poolAddress:%v number:%v ", _key, _poolAddress, _tvlUSD)
-	_oldtvlUsdString, err8 := global.GetVolume24HTvlValue(cacher, _key, _poolAddress)
+	_oldtvlUsdString, err := global.GetVolume24HTvlValue(cacher, _key, _poolAddress)
 	_offsetValueQuo100_percentage, _ := new(big.Float).SetString("0")
-	if errors.Is(err8, redis.Nil) {
+	if errors.Is(err, redis.Nil) {
 		_offsetValueQuo100_percentage = new(big.Float).SetInt64(0)
-	} else if err8 != nil && !errors.Is(err8, redis.Nil) {
-		logx.Errorf("GetVolume24HTvlValue for volume:%v ", err8)
+	} else if err != nil && !errors.Is(err, redis.Nil) {
+		logx.Errorf("GetVolume24HTvlValue for volume:%v ", err)
 	} else {
 		// assign value
 		if strings.EqualFold(_oldtvlUsdString, "") {

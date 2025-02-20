@@ -24,6 +24,8 @@ type XpoolPoolListLogic struct {
 	ctx                               context.Context
 	svcCtx                            *svc.ServiceContext
 	eventXpoolFactoryPoolCreatedModel repository.EventXpoolFactoryPoolCreatedModel
+	eventXpoolPoolDepositedModel      repository.EventXpoolPoolDepositedModel
+	eventXpoolPoolWithdrawedModel     repository.EventXpoolPoolWithdrawedModel
 	tokenPriceModel                   repository.SonexTokenPriceRecordModel
 }
 
@@ -34,14 +36,272 @@ type CacheWarpper struct {
 
 // Xpool list
 func NewXpoolPoolListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *XpoolPoolListLogic {
-	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(svcCtx.Config.PostgreSQL.DataSource())
 	return &XpoolPoolListLogic{
 		Logger:                            logx.WithContext(ctx),
 		ctx:                               ctx,
 		svcCtx:                            svcCtx,
 		eventXpoolFactoryPoolCreatedModel: repository.NewEventXpoolFactoryPoolCreatedModel(conn),
+		eventXpoolPoolDepositedModel:      repository.NewEventXpoolPoolDepositedModel(conn),
+		eventXpoolPoolWithdrawedModel:     repository.NewEventXpoolPoolWithdrawedModel(conn),
 		tokenPriceModel:                   repository.NewSonexTokenPriceRecordModel(conn),
 	}
+}
+
+// XpoolUserEventType 用户操作事件类型
+type XpoolUserEventType int64
+
+const (
+	XpoolUserEventTypeDeposited XpoolUserEventType = iota
+	XpoolUserEventTypeWithdrawed
+)
+
+type XpoolDepositedEvent struct {
+	Id          int64     // 主键
+	CreatedAt   time.Time // 创建时间
+	UpdatedAt   time.Time // 更新时间
+	ChainId     int64     // 链ID
+	BlockNumber int64     // 区块高度
+	TxIndex     int64     // 交易索引
+	TxHash      string    // 交易哈希
+	TxAt        time.Time // 交易时间
+	From        string    // 交易发送者
+	To          string    // 交易接收者
+	Value       string    // 事件交易发生的 ETH amount，如果交易不包含 ETH，则该值为 0
+	EventUser   string    // 事件发送者
+	EventAmount string    // deposited amount token 数量
+	EventHeight int64     // deposited event 发生的区块高度
+	EventValue  float64   // deposited amount token 的美元价值
+}
+
+type XpoolWithdrawedEvent struct {
+	Id             int64     // 主键
+	CreatedAt      time.Time // 创建时间
+	UpdatedAt      time.Time // 更新时间
+	ChainId        int64     // 链ID
+	BlockNumber    int64     // 区块高度
+	TxIndex        int64     // 交易索引
+	TxHash         string    // 交易哈希
+	TxAt           time.Time // 交易时间
+	From           string    // 交易发送者
+	To             string    // 交易接收者
+	Value          string    // 事件交易发生的 ETH amount，如果交易不包含 ETH，则该值为 0
+	EventUser      string    // 事件发送者
+	EventWithdrawn string    // 事件提款数量
+	EventClaimed   string    // 事件已领取数量
+	EventHeight    int64     // 事件发生时的区块高度
+	EventValue     float64   // 事件提款金额的美元价值
+}
+
+// XpoolUserOperationEvent 用户操作事件，根据 type 类型，返回不同的 event 类型
+type XpoolUserOperationEvent struct {
+	XpoolUserEventType XpoolUserEventType
+	DepositedEvent     *XpoolDepositedEvent
+	WithdrawedEvent    *XpoolWithdrawedEvent
+}
+
+// GetUserOperationEvents 获取用户存款事件
+func (l *XpoolPoolListLogic) GetUserOperationEvents(chainId int64, userAddress string) (m map[string][]*XpoolUserOperationEvent, err error) {
+	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+	sonexConf := l.svcCtx.Config.GetSonexConfig(chainId)
+	if sonexConf == nil {
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
+	}
+	xpoolConf := l.svcCtx.Config.GetXpoolConfig(chainId)
+	if xpoolConf == nil {
+		return nil, fmt.Errorf("%s", "Miss xpool configure")
+	}
+
+	// get user deposited events
+	depositedEvents, err := l.eventXpoolPoolDepositedModel.GetDepositedEvents(l.ctx, chainId, userAddress)
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get user deposited events error: %s", err)
+		return nil, err
+	}
+
+	withdrawedEvents, err := l.eventXpoolPoolWithdrawedModel.GetWithdrawedEvents(l.ctx, chainId, userAddress)
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get user withdrawed events error: %s", err)
+		return nil, err
+	}
+
+	// Use a map to track unique addresses
+	seenAddresses := make(map[string]bool)
+	poolAddresses := make([]common.Address, 0)
+
+	// Add addresses from deposited events
+	for address := range depositedEvents {
+		if !seenAddresses[address] {
+			seenAddresses[address] = true
+			poolAddresses = append(poolAddresses, common.HexToAddress(address))
+		}
+	}
+
+	// Add addresses from withdrawn events
+	for address := range withdrawedEvents {
+		if !seenAddresses[address] {
+			seenAddresses[address] = true
+			poolAddresses = append(poolAddresses, common.HexToAddress(address))
+		}
+	}
+
+	// get pool infos
+	staticCaller, err := xpool.NewStaticCaller(l.svcCtx.Config)
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]: New static caller error: %s", err)
+		return nil, err
+	}
+	poolInfos, err := staticCaller.BatchGetPoolInfos(l.ctx, chainId, poolAddresses)
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]:BatchGetPoolInfos Batch get pool infos error: %s", err)
+		return nil, err
+	}
+
+	// get staking token addresses
+	stakingTokenAddresses := make([]string, 0)
+	linq.From(poolInfos).SelectT(func(kv linq.KeyValue) string {
+		poolInfo, ok := kv.Value.(*xpool.PoolInfo)
+		if !ok {
+			logx.Errorf("[XpoolPoolList]: Invalid pool info: %s", kv.Value)
+			return ""
+		}
+		return poolInfo.StakingToken.Hex()
+	}).ToSlice(&stakingTokenAddresses)
+
+	// get reward token addresses
+	rewardTokenAddresses := make([]string, 0)
+	linq.From(poolInfos).SelectT(func(kv linq.KeyValue) string {
+		poolInfo, ok := kv.Value.(*xpool.PoolInfo)
+		if !ok {
+			logx.Errorf("[XpoolPoolList]: Invalid pool info: %s", kv.Value)
+			return ""
+		}
+		return poolInfo.RewardToken.Hex()
+	}).ToSlice(&rewardTokenAddresses)
+
+	// get current prices
+	prices, err := l.getCurrentPrices(l.ctx, append(stakingTokenAddresses, rewardTokenAddresses...))
+	if err != nil {
+		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
+		return nil, err
+	}
+
+	m = make(map[string][]*XpoolUserOperationEvent, 0)
+	// enumerate pool address and deposited events
+	for address, events := range depositedEvents {
+		info, ok := poolInfos[common.HexToAddress(address).Hex()]
+		if !ok {
+			logx.Errorf("[XpoolPoolList]: Pool info not found: %s, pools: %v", common.HexToAddress(address).Hex(), poolInfos)
+			continue
+		}
+
+		// get staking token price
+		stakingTokenPrice, exists := prices[info.StakingToken.Hex()]
+		if !exists {
+			logx.Errorf("[XpoolPoolList]: Staking token price not found: %s", info.StakingToken.Hex())
+			continue
+		}
+
+		operationEvents, ok := m[address]
+		if !ok {
+			operationEvents = make([]*XpoolUserOperationEvent, 0)
+		}
+		// count deposited(stakeed) amount
+		for _, event := range events {
+			stakingTokenValue, err := sonex.NewTokenValue(event.EventAmount, int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
+			if err != nil {
+				logx.Errorf("[XpoolPoolList]: Invalid staking token value: %s", err)
+				continue
+			}
+
+			eventValue, _ := stakingTokenValue.ValueFloat64()
+			depositedEvent := &XpoolDepositedEvent{
+				Id:          event.Id,
+				CreatedAt:   event.CreatedAt,
+				UpdatedAt:   event.UpdatedAt,
+				ChainId:     event.ChainId,
+				BlockNumber: event.BlockNumber,
+				TxIndex:     event.TxIndex,
+				TxHash:      event.TxHash,
+				TxAt:        event.TxAt,
+				From:        event.From,
+				To:          event.To,
+				Value:       event.Value,
+				EventUser:   event.EventUser,
+				EventAmount: event.EventAmount,
+				EventHeight: event.EventHeight,
+				EventValue:  eventValue,
+			}
+			operationEvent := &XpoolUserOperationEvent{
+				XpoolUserEventType: XpoolUserEventTypeDeposited,
+				DepositedEvent:     depositedEvent,
+			}
+			operationEvents = append(operationEvents, operationEvent)
+		}
+		// deposited events map
+		m[address] = operationEvents
+	}
+
+	// enumerate pool address and deposited events
+	for address, events := range withdrawedEvents {
+		info, ok := poolInfos[common.HexToAddress(address).Hex()]
+		if !ok {
+			logx.Errorf("[XpoolPoolList]: Pool info not found: %s, pools: %v", common.HexToAddress(address).Hex(), poolInfos)
+			continue
+		}
+
+		// get staking token price
+		stakingTokenPrice, exists := prices[info.StakingToken.Hex()]
+		if !exists {
+			logx.Errorf("[XpoolPoolList]: Staking token price not found: %s", info.StakingToken.Hex())
+			continue
+		}
+
+		operationEvents, ok := m[address]
+		if !ok {
+			operationEvents = make([]*XpoolUserOperationEvent, 0)
+		}
+		// count deposited(stakeed) amount
+		for _, event := range events {
+			stakingTokenValue, err := sonex.NewTokenValue(event.EventWithdrawn, int(info.StakingTokenDecimals), sonex.WithTokenPrice(stakingTokenPrice))
+			if err != nil {
+				logx.Errorf("[XpoolPoolList]: Invalid staking token value: %s", err)
+				continue
+			}
+
+			eventValue, _ := stakingTokenValue.ValueFloat64()
+			withdrawedEvent := &XpoolWithdrawedEvent{
+				Id:             event.Id,
+				CreatedAt:      event.CreatedAt,
+				UpdatedAt:      event.UpdatedAt,
+				ChainId:        event.ChainId,
+				BlockNumber:    event.BlockNumber,
+				TxIndex:        event.TxIndex,
+				TxHash:         event.TxHash,
+				TxAt:           event.TxAt,
+				From:           event.From,
+				To:             event.To,
+				Value:          event.Value,
+				EventUser:      event.EventUser,
+				EventWithdrawn: event.EventWithdrawn,
+				EventClaimed:   event.EventClaimed,
+				EventHeight:    event.EventHeight,
+				EventValue:     eventValue,
+			}
+			operationEvent := &XpoolUserOperationEvent{
+				XpoolUserEventType: XpoolUserEventTypeWithdrawed,
+				WithdrawedEvent:    withdrawedEvent,
+			}
+			operationEvents = append(operationEvents, operationEvent)
+		}
+		// deposited events map
+		m[address] = operationEvents
+	}
+
+	return m, nil
 }
 
 func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (resp *response.ApiResponse, err error) {
@@ -275,7 +535,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 
 	// Pagination
 	total := int64(len(list))
-	list = l.getPagination(l.ctx, list, pageIndex, pageSize)
+	list = l.getPagination(list, pageIndex, pageSize)
 
 	return &response.ApiResponse{
 		Data: list,
@@ -287,7 +547,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	}, nil
 }
 
-func (l *XpoolPoolListLogic) getPagination(ctx context.Context, list []types.XpoolPoolListResponse_Pool, pageIndex *int64, pageSize *int64) []types.XpoolPoolListResponse_Pool {
+func (l *XpoolPoolListLogic) getPagination(list []types.XpoolPoolListResponse_Pool, pageIndex *int64, pageSize *int64) []types.XpoolPoolListResponse_Pool {
 	start := (*pageIndex - 1) * (*pageSize)
 	if start < 0 {
 		start = 0

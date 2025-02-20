@@ -26,7 +26,7 @@ func RewardClaimedCallback(conf config.Config, chainId int64, tx *node_caller.Tr
 				logx.Infof("RewardClaimedCallback retry %d times", retrys)
 			}
 
-			conn := repository.NewConn(conf.PostgreSQL.DateSource())
+			conn := repository.NewConn(conf.PostgreSQL.DataSource())
 			err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 				preDepositRewardClaimRecordModel := repository.NewPreDepositRewardClaimRecordModel(sqlx.NewSqlConnFromSession(s))
 				claimRecord, err := preDepositRewardClaimRecordModel.FindLatestByChainIdUser(ctx, chainId, event.User.Hex())

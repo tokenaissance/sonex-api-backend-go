@@ -12,39 +12,119 @@ import (
 	"sonex_api_backend_go/internal/repository"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+/*
+volume24H 统计跨池子volume的值
+tvl的值，方便获得tvl 的值
+// TODO 优化
+// tvl 的值进行写入,为了计算变化率
+*/
 func HandleRecordVol24hTvl24h(config *config.Config) {
 	// 记录下所有池子的VOL和TVL
-	logx.Info("HandleRecordVol24hTvl24h start")
-	conn := repository.NewConn(config.PostgreSQL.DateSource())
+	startTime := time.Now()
+	// start calucate the tvl for each pool
+	logx.Infof("HandleRecordVol24hTvl24h start Time : %v", startTime)
+
+	conn := repository.NewConn(config.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port), config.Redis.Password, config.Redis.DB)
 	ctx := context.Background()
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
+	poolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	sonexFactoryPoolCreatedMode := repository.NewEventSonexFactoryPoolCreatedModel(conn)
+
+	tvlvolRecordModel := repository.NewSonexVolTvlRecordModel(conn)
+	zeroTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
+
+	// 把各个volume 存入 sonex_vol_tvl_record ,做poollist的排序比较
+	volRecordModel := repository.NewSonexPoolTvlRecordModel(conn)
+
+	logx.Infof("zeroTime:%v  ", zeroTime)
 
 	if len(config.Chains) > 0 {
 		for _, v := range config.Chains {
-			_swapAmoutEthAndUsdMap, _, err := sonex.CalucatedVolume24H(conn, v.ChainId)
+
+			// 多条记录，没有跨池子的所有的pool的 Swap的Volume
+			notBridgePoolSwapRecords, err := poolSwapModel.SummarizePoolVolumesUsd(context.Background(), v.ChainId)
 			if err != nil {
-				logx.Errorf("HandleRecordVol24hTvl24h: in  CalucatedVolume24H :%v", err)
+				logx.Errorf("SummarizePoolVolumesUsd: in not volume ,0   :%v", err)
+			}
+
+			sonexConf := config.GetSonexConfig(v.ChainId)
+			poolList, err := sonexFactoryPoolCreatedMode.QueryByChainIdPositionManager(ctx, v.ChainId, sonexConf.PositionManager)
+			// 跨池子计算
+			if err != nil {
+				logx.Errorf("HandleRecordVol24hTvl24h: in  QueryByChainIdPositionManager :%v", err)
 			} else {
-				for _, v := range _swapAmoutEthAndUsdMap {
-					err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, v.ExtraPool, v.Value)
-					if err != nil {
-						logx.Errorf("HandleRecordVol24hTvl24h: in  SetVolume24HValue :%v", err)
+				if len(poolList) > 0 {
+					volTotalForAll := big.NewFloat(0)
+					for _, pool := range poolList {
+						// 单条的记录
+						volume24HOfBridgePool, err := poolSwapModel.CalucateVolume24HBridgePool(ctx, v.ChainId, pool.EventPool)
+
+						volumeFinalString := "0"
+						if err != nil {
+							// 获取单条跨池子失败,那就只搞正常的交易
+							for _, vNotBridgePoolSwapRecords := range notBridgePoolSwapRecords {
+								logx.Errorf(" CalucateVolume24HBridgePool :%v", err)
+								err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, vNotBridgePoolSwapRecords.Value)
+								if err != nil {
+									logx.Errorf("notVolume24HOfBridgePool  SetVolume24HValue :%v", err)
+								} else {
+									logx.Infof("totalVolume:%v notVolume24HOfBridgePool:%v   ", pool.EventPool, vNotBridgePoolSwapRecords)
+								}
+							}
+						} else {
+							notVolume24HOfBridgePoolItemValue := "0"
+							if len(notBridgePoolSwapRecords) > 0 {
+								for _, notVolume24HOfBridgePoolItem := range notBridgePoolSwapRecords {
+									// 有不是跨池子的交易volume
+									if strings.EqualFold(pool.EventPool, notVolume24HOfBridgePoolItem.ExtraPool) {
+										notVolume24HOfBridgePoolItemValue = notVolume24HOfBridgePoolItem.Value
+									}
+								}
+							}
+
+							// 没有跨池子的 volume
+							notVolume24HOfBridgePool, _ := new(big.Float).SetString(notVolume24HOfBridgePoolItemValue)
+							//  跨池子的 volume
+							volume24HOfBridgePool, _ := new(big.Float).SetString(volume24HOfBridgePool)
+
+							totalVolume := new(big.Float).Add(notVolume24HOfBridgePool, volume24HOfBridgePool)
+
+							volumeFinalString = totalVolume.String()
+							// 计算VOL for all
+							volTotalForAll = new(big.Float).Add(volTotalForAll, totalVolume)
+
+							err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, totalVolume.String())
+							if err != nil {
+								logx.Errorf("HandleRecordVol24hTvl24h: in  SetVolume24HValue :%v", err)
+							} else {
+								logx.Infof("HandleRecordVol24hTvl24h Set:%v totalVolume:%v notVolume24HOfBridgePool:%v  volume24HOfBridgePool:%v   ", pool.EventPool, totalVolume, notVolume24HOfBridgePool, volume24HOfBridgePool)
+							}
+						}
+
+						//  更新 VOLUME，用于排序
+						_, err = volRecordModel.UpdateOrInsertTvlByPoolAddress(volumeFinalString, pool.EventPool, 6, v.ChainId, repository.ValueOfTypeVolume)
+						if err != nil {
+							logx.Errorf("err:%v", err)
+						} else {
+							logx.Debug("Volume:poolAddress:", pool.EventPool, " volume:", volumeFinalString)
+						}
 					}
+
+					writeToPGForTvlValue(tvlvolRecordModel, volTotalForAll.String(), zeroTime, v.ChainId, repository.VolumeOfTypeoOfValue, repository.V3OfUniswap)
 				}
 			}
 		}
 	}
 
 	// get and set tvl
-
-	// func (m *customEventSonexFactoryPoolCreatedModel) QueryByChainId(ctx context.Context, chainId int64) ([]EventSonexFactoryPoolCreated, error) {
 	if len(config.Chains) > 0 {
 		for _, pool := range config.Chains {
 			_chainId := pool.ChainId
@@ -99,7 +179,6 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 								price0, _ = new(big.Int).SetString(v.Price, 10)
 								price0Decimal = int64(v.UsdDecimals)
 							}
-
 						}
 
 						for _, v := range prices {
@@ -167,9 +246,8 @@ func HandleRecordVol24hTvl24h(config *config.Config) {
 				for pool := range poolChan {
 					pools = append(pools, pool)
 				}
-				for _, v := range pools {
-					logx.Infof("pools :%v ", v)
-				}
+				_ = pools
+
 			}
 		}
 	}

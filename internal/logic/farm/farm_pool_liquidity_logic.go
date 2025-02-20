@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"sonex_api_backend_go/internal/lib/cache"
+	ethclientcache "sonex_api_backend_go/internal/lib/eth_client_cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
@@ -63,14 +64,14 @@ func (l *FarmPoolLiquidityLogic) FarmPoolLiquidity(req *types.FarmPoolLiquidityR
 		Token1Symbol:           "",
 	}
 
-	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	client, err := ethclientcache.GetEthClient(l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
 	if err != nil {
 		return nil, err
 	}
 	l.ethClient = client
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	l.cacher = redisCache
-	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 
 	farmPoolModel := repository.NewFarmPoolsModel(l.conn)
 	pool, err := farmPoolModel.FindByIncentiveId(context.Background(), l.chainId, req.IncentiveId)

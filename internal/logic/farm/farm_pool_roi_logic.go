@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sonex_api_backend_go/internal/lib/cache"
+	ethclientcache "sonex_api_backend_go/internal/lib/eth_client_cache"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -50,14 +51,14 @@ func (l *FarmPoolRoiLogic) FarmPoolRoi(req *types.FarmPoolRoiRequest) (resp *typ
 
 	resp = new(types.FarmPoolRoiResponse)
 
-	client, err := ethclient.DialContext(l.ctx, l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
+	client, err := ethclientcache.GetEthClient(l.svcCtx.Config.GetChainConfig(req.ChainId).GetNode())
 	if err != nil {
 		return nil, err
 	}
 	l.ethClient = client
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	l.cacher = redisCache
-	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	l.conn = repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 
 	// 获取质押池信息
 	farmPoolModel := repository.NewFarmPoolsModel(l.conn)

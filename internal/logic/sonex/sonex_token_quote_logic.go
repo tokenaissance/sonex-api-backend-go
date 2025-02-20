@@ -84,7 +84,7 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 			}
 		}()
 
-		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+		conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 		tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 		prices, err := tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, []string{fromAddress.Hex(), toAddress.Hex()})
 		if err != nil {

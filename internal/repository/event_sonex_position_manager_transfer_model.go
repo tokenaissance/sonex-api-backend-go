@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"sonex_api_backend_go/internal/types"
 	"strings"
 	"time"
@@ -24,18 +23,29 @@ type (
 		eventSonexPositionManagerTransferModel
 		withSession(session sqlx.Session) EventSonexPositionManagerTransferModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, fromE string, toE string, tokenId int64) error
+		FindByChainIdTokenIdWithPool(ctx context.Context, chainId int64, tokenId int64) (*EventSonexPositionManagerTransferWithPool, error)
 		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetValidTransferEventsForGalxeAddLiquidity(ctx context.Context, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
-		GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error)
-		GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, error)
+		GetAllUseablePositions(ctx context.Context, chainId int64, address, stakerAddress string) ([]*PositionTmpStruct, error)
+		// GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error)
+		// GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, error)
 	}
 
 	customEventSonexPositionManagerTransferModel struct {
 		*defaultEventSonexPositionManagerTransferModel
 	}
 )
+
+type EventSonexPositionManagerTransferWithPool struct {
+	*EventSonexPositionManagerTransfer
+	ExtraPool        string `db:"extra_pool"`
+	ExtraToken0      string `db:"extra_token0"`
+	ExtraToken1      string `db:"extra_token1"`
+	ExtraFee         string `db:"extra_fee"`
+	ExtraTickSpacing string `db:"extra_tick_spacing"`
+}
 
 // NewEventSonexPositionManagerTransferModel returns a model for the database table.
 func NewEventSonexPositionManagerTransferModel(conn sqlx.SqlConn) EventSonexPositionManagerTransferModel {
@@ -52,6 +62,35 @@ func (m *customEventSonexPositionManagerTransferModel) New(ctx context.Context, 
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventSonexPositionManagerTransferRows)
 	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
 	return err
+}
+
+func (m *customEventSonexPositionManagerTransferModel) FindByChainIdTokenIdWithPool(ctx context.Context, chainId int64, tokenId int64) (*EventSonexPositionManagerTransferWithPool, error) {
+	eventSonexPoolMintModel := newEventSonexPoolMintModel(m.conn)
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+			T.*,
+			S.extra_pool,
+			C.event_token0 AS extra_token0,
+			C.event_token1 AS extra_token1,
+			C.event_fee AS extra_fee,
+			C.event_tick_spacing AS extra_tick_spacing
+		FROM %s T 
+		LEFT JOIN %s S ON S.tx_hash = T.tx_hash 
+		LEFT JOIN %s C ON S.extra_pool = C.event_pool 
+		WHERE T.chain_id = $1 AND T.event_token_id = $2 AND T.event_from = $3
+		LIMIT 1
+	`, m.table, eventSonexPoolMintModel.tableName(), eventSonexFactoryPoolCreatedModel.tableName())
+	var resp EventSonexPositionManagerTransferWithPool
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, tokenId, (common.Address{}).Hex())
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }
 
 type transferData struct {
@@ -118,7 +157,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetValidTransferEventsFor
 	SELECT * FROM event_sonex_position_manager_transfer
 	WHERE event_sonex_position_manager_transfer.event_to = $1
 	AND event_sonex_position_manager_transfer.event_from = '0x0000000000000000000000000000000000000000'
-	AND event_sonex_position_manager_transfer.created_at > TIMESTAMP WITH TIME ZONE '2025-02-17 00:00:00+00'
+	AND event_sonex_position_manager_transfer.created_at > timestamp '2025-02-14'
 `
 	var resp []*EventSonexPositionManagerTransfer
 	address = common.HexToAddress(address).Hex()
@@ -227,6 +266,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvents(ctx con
 					Volume:      "0",
 				},
 				IsBurnt:   item.IsBurnt.Bool,
+				TxAt:      item.TxAt.Time.UTC().Format(time.RFC3339),
 				CreatedAt: item.CreatedAt.String,
 				UpdatedAt: item.UpdatedAt.String,
 			}
@@ -344,6 +384,7 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 			Volume:      "0",
 		},
 		IsBurnt:   item.IsBurnt.Bool,
+		TxAt:      item.TxAt.Time.UTC().Format(time.RFC3339),
 		CreatedAt: item.CreatedAt.String,
 		UpdatedAt: item.UpdatedAt.String,
 	}
@@ -352,51 +393,116 @@ func (m *customEventSonexPositionManagerTransferModel) GetTransferEvent(ctx cont
 	return result, nil
 }
 
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, addressfrom, addressto, poolAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error) {
-
-	validEvents, err := m.GetTransferEventsByFromAddressAndToAddress(ctx, chainId, addressfrom, addressto, poolAddress)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tokenIds := make([]*big.Int, 0)
-	for _, event := range validEvents {
-		eventTokenId_big := new(big.Int).SetInt64(event.EventTokenId)
-		tokenIds = append(tokenIds, eventTokenId_big)
-	}
-
-	return validEvents, tokenIds, nil
+type PositionTmpStruct struct {
+	EventTokenId     int64  `json:"event_token_id" db:"event_token_id"`
+	ExtraPool        string `json:"extra_pool" db:"extra_pool"`
+	IsBurnt          bool   `json:"is_burnt" db:"is_burnt"`
+	EventIncentiveId int64  `json:"event_incentive_id" db:"event_incentive_id"`
+	ExtraRate        string `json:"extra_rate" db:"extra_rate"`
+	EventWeight      int64  `json:"event_weight" db:"event_weight"`
+	Token0address    string `json:"token0_address"  db:"token0_address"`
+	Token1address    string `json:"token1_address"  db:"token1_address"`
 }
 
-/*
-一个 event_token_id 可以先stake 再unsake，然后再stake，不限制次数
-因此要 pg里面要 用  event_token_id 的最后一次 unstake
-*/
-func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, error) {
-
-	query := fmt.Sprintf(`
-		WITH SelectTemp AS (
-			SELECT 
-				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value, 
-				S.event_from,S.event_to, S.event_token_id, 
-				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
-			FROM %s S
-			WHERE 
-				S.chain_id = $1 AND S.event_from=$2 AND S.event_to = $3 AND S.to_ = $4 
-				
+// 获取自己的 可用的 position 的个数 余额
+func (m *customEventSonexPositionManagerTransferModel) GetAllUseablePositions(ctx context.Context, chainId int64, userAddress, stakerAddress string) ([]*PositionTmpStruct, error) {
+	query := `
+with positonInfo AS (
+SELECT t1.* FROM event_sonex_position_manager_transfer t1
+		WHERE t1.chain_id = $1
+		AND NOT EXISTS (
+			SELECT 1 FROM event_sonex_position_manager_transfer t2
+			WHERE t2.chain_id = t1.chain_id
+			AND t2.event_token_id = t1.event_token_id
+			AND t2.created_at > t1.created_at
 		)
+		AND t1.event_to = $2
+	)
+SELECT
+			t.event_token_id,
+			m.extra_pool,	
+			c.event_incentive_id,
+			r.event_new_rate_per_second AS extra_rate,	
+			c.event_weight ,
+			f.event_token0 AS token0_address,
+			f.event_token1 AS token1_address,
+			CASE WHEN EXISTS (
+				SELECT 1 
+				FROM event_sonex_position_manager_transfer
+				WHERE event_token_id = t.event_token_id
+				AND event_to = '0x0000000000000000000000000000000000000000' AND chain_id = $1
+			) THEN true ELSE false END AS is_burnt
+		FROM event_sonex_position_manager_transfer  t 
+		JOIN positonInfo on positonInfo.event_token_id = t.event_token_id
+		JOIN event_sonex_pool_mint m ON t.tx_hash = m.tx_hash
+		JOIN event_sonex_factory_pool_created f ON m.extra_pool = f.event_pool
+		JOIN event_farm_incentive_created c  ON c.event_pool = f.event_pool
+		JOIN event_farm_reward_rate_updated r  ON c.to_ =  r.to_
+		WHERE t.event_token_id = positonInfo.event_token_id 
+		AND t.chain_id =  $1 
+		AND r.to_ =  $3
+`
 
-		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_from,event_to, event_token_id
-		FROM SelectTemp
-		WHERE rn = 1
-	`, m.table)
-	var resp []*EventSonexPositionManagerTransfer
-	address_from := common.HexToAddress(fromaddress).Hex()
-	address_to := common.HexToAddress(tofarmAddress).Hex()
+	var items []*PositionTmpStruct
 
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address_from, address_to, poolAddress)
-	if err != nil {
+	err := m.conn.QueryRowsCtx(ctx, &items, query, chainId, userAddress, stakerAddress)
+	switch err {
+	case sqlx.ErrNotFound:
+		logx.Error("NIL ", err)
+		return nil, nil
+	case nil:
+		return items, nil
+	default:
+		logx.Errorf("ERR:%v ", err)
 		return nil, err
 	}
-	return resp, nil
 }
+
+// func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsFarmUnstake(ctx context.Context, chainId int64, addressfrom, addressto, poolAddress string) ([]*EventSonexPositionManagerTransfer, []*big.Int, error) {
+
+// 	validEvents, err := m.GetTransferEventsByFromAddressAndToAddress(ctx, chainId, addressfrom, addressto, poolAddress)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	tokenIds := make([]*big.Int, 0)
+// 	for _, event := range validEvents {
+// 		eventTokenId_big := new(big.Int).SetInt64(event.EventTokenId)
+// 		tokenIds = append(tokenIds, eventTokenId_big)
+// 	}
+
+// 	return validEvents, tokenIds, nil
+// }
+
+// /*
+// 一个 event_token_id 可以先stake 再unsake，然后再stake，不限制次数
+// 因此要 pg里面要 用  event_token_id 的最后一次 unstake
+// */
+// func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByFromAddressAndToAddress(ctx context.Context, chainId int64, fromaddress, tofarmAddress, poolAddress string) ([]*EventSonexPositionManagerTransfer, error) {
+
+// 	query := `
+// 		WITH SelectTemp AS (
+// 			SELECT
+// 				S.id, S.created_at, S.updated_at, S.chain_id, S.block_number, S.tx_index, S.tx_hash, S.tx_at, S.from_, S.to_, S.value,
+// 				S.event_from,S.event_to, S.event_token_id,
+// 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
+// 			FROM event_sonex_position_manager_transfer S
+// 			WHERE
+// 				S.chain_id = $1 AND S.event_from=$2 AND S.event_to = $3 AND S.to_ = $4
+
+// 		)
+
+// 		SELECT id, created_at, updated_at, chain_id, block_number, tx_index, tx_hash, tx_at, from_, to_, value, event_from,event_to, event_token_id
+// 		FROM SelectTemp
+// 		WHERE rn = 1
+// 	`
+// 	var resp []*EventSonexPositionManagerTransfer
+// 	address_from := common.HexToAddress(fromaddress).Hex()
+// 	address_to := common.HexToAddress(tofarmAddress).Hex()
+
+// 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address_from, address_to, poolAddress)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return resp, nil
+// }

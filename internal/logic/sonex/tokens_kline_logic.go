@@ -29,7 +29,7 @@ func NewTokensKlineLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Token
 }
 
 func (l *TokensKlineLogic) TokensKline(req *types.SonexTokenKlineRequest) (resp *types.SonexTokenKlineResponse, err error) {
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	model := repository.NewSonexTokenPriceRecordModel(conn)
 	result, err := model.TokenKlineRate(l.ctx, req.Address, req.Interval)
 	if err != nil {

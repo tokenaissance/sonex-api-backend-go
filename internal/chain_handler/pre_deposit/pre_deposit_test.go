@@ -20,7 +20,7 @@ func TestExecute(t *testing.T) {
 
 	global.Initialize(c)
 	global.InitIdGenerater(0)
-	handler, err := NewPreDepositHandler(c.PostgreSQL.DateSource(), *c.GetChainConfig(1946), *c.GetPreDepositConfig(1946))
+	handler, err := NewPreDepositHandler(c.PostgreSQL.DataSource(), *c.GetChainConfig(1946), *c.GetPreDepositConfig(1946))
 	if err != nil {
 		t.Error(err)
 		return

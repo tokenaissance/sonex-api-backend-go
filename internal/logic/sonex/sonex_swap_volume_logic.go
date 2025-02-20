@@ -27,7 +27,7 @@ func NewSonexSwapVolumeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *S
 	}
 }
 func (l *SonexSwapVolumeLogic) SonexSwapVolume(req *types.SwapVolumeRequest) (resp *types.SwapVolumeResponse, err error) {
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	model := repository.NewEventSonexPoolSwapModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	data, token0, err := model.GetSwapVolumes(l.ctx, req)

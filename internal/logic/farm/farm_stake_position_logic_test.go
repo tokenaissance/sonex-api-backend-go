@@ -138,3 +138,13 @@ func Test_SetRewardPoolInfo(t *testing.T) {
 		SetRewardPoolInfo(stakerAddress, rewardToken, chain, cacher)
 	}
 }
+
+func Test_getIncentiveInfoTokenIds(t *testing.T) {
+
+	var c config.Config
+	conf.MustLoad("../../../etc/forlocaluse0109.yaml", &c)
+	for _, chain := range c.Chains {
+		stakerAddress := "0x330104ea738276971a6A7BCbAB60A56e2BF558f3"
+		getIncentiveInfoTokenIds(stakerAddress, 0, chain)
+	}
+}

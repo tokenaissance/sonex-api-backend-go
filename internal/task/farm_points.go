@@ -27,7 +27,7 @@ func HandleFarmPoints(config *config.Config) {
 	retrys := 0
 	err := retry.Do(
 		func() error {
-			conn := repository.NewConn(config.PostgreSQL.DateSource())
+			conn := repository.NewConn(config.PostgreSQL.DataSource())
 			err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
 				for _, chainConf := range config.Chains {
 					farmConf := config.GetFarmConfig(chainConf.ChainId)
@@ -126,7 +126,7 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 		}).
 		ToSlice(&stakedRecords)
 	for _, item := range stakedRecords {
-		_, err := farmPointsRecordModel.FindOneByChianIdUserAddressIncentiveId(ctx, chainConf.ChainId, item.EventUser, item.EventIncentiveId)
+		_, err := farmPointsRecordModel.FindOneByChainIdUserAddressIncentiveId(ctx, chainConf.ChainId, item.EventUser, item.EventIncentiveId)
 		switch err {
 		case repository.ErrNotFound:
 		case nil:

@@ -25,7 +25,7 @@ func NewMetaLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MetaLogic {
 }
 
 func (l *MetaLogic) Meta(req *types.MetaRequest) (resp *types.MetaResponse, err error) {
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DateSource())
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	model := repository.NewChainScannerPrograssModel(conn)
 	chainScannerPrograsses := []types.ChainSyncPrograss{}
 	for _, chain := range l.svcCtx.Config.Chains {

@@ -69,7 +69,7 @@ func main() {
 	}
 
 	opts := []rest.RunOption{}
-	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders("x-chain-id"))
+	opts = append(opts, rest.WithCors(c.Domains...), rest.WithCorsHeaders("x-chain-id", "x-time-zone"))
 	if c.Debug {
 		opts = append(opts, rest.WithFileServer("/swagger", http.Dir("./static/swagger")))
 	}
@@ -119,12 +119,17 @@ func main() {
 	global.AddCronJob("0 30 0 * * ?", func() {
 		task.HandlePreDepositSnapshotDaily(&c)
 	})
+	global.AddCronJob("0 30 0 * * ?", func() {
+		task.HandleACSSwapReward(&c)
+	})
 	// global.AddCronJob("0 0/1 * * * ?", func() {
 	// 	task.HandleFarmPoints(&c)
 	// })
 
 	// every 6 hours,calcuate the vol and Tvl for pool
-	global.AddCronJob("@every 6h", func() {
+	// 计算tvl的增长速度
+	go task.HandleRecordVol24hTvl24h(&c)
+	global.AddCronJob("@every 1h", func() {
 		task.HandleRecordVol24hTvl24h(&c)
 	})
 
@@ -148,10 +153,15 @@ func main() {
 		{
 			config := c.GetSonexConfig(chain.ChainId)
 			if config != nil {
-				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := sonex.NewSonexHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
+
+				// Callback
+				handler.OnPositionManagerIncreaseLiquidity(sonex.ACSIncreaseLiquidityCallback(c))
+				handler.OnPoolSwap(sonex.ACSSwapCallback(c))
+
 				global.AddChainHandler(chain.ChainId, handler)
 			}
 		}
@@ -160,7 +170,7 @@ func main() {
 		{
 			config := c.GetPreDepositConfig(chain.ChainId)
 			if config != nil {
-				handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := pre_deposit.NewPreDepositHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
@@ -178,7 +188,7 @@ func main() {
 		{
 			config := c.GetFarmConfig(chain.ChainId)
 			if config != nil {
-				handler, err := farm.NewFarmHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := farm.NewFarmHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}
@@ -190,7 +200,7 @@ func main() {
 		{
 			config := c.GetXpoolConfig(chain.ChainId)
 			if config != nil {
-				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DateSource(), chain, *config)
+				handler, err := xpool.NewXpoolHandler(c.PostgreSQL.DataSource(), chain, *config)
 				if err != nil {
 					panic(err)
 				}

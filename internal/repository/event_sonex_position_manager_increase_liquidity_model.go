@@ -18,6 +18,8 @@ type (
 		eventSonexPositionManagerIncreaseLiquidityModel
 		withSession(session sqlx.Session) EventSonexPositionManagerIncreaseLiquidityModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, tokenId int64, liquidity string, amount0 string, amount1 string) error
+		GetIncreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenIds []int64) (map[int64][]*EventSonexPositionManagerIncreaseLiquidity, error)
+		GetIncreaseLiquidityEventsByAddress(ctx context.Context, chainId int64, address string) (map[int64][]*EventSonexPositionManagerIncreaseLiquidity, error)
 		AggregateAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error)
 		BatchAggregateAmounts(ctx context.Context, chainId int64, tokenDecimalPairs []*TokenDecimalPair) (map[int64]*sonex.TokenPair, error)
 		TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error)
@@ -66,6 +68,49 @@ func (m *customEventSonexPositionManagerIncreaseLiquidityModel) BatchAggregateAm
 
 func (m *customEventSonexPositionManagerIncreaseLiquidityModel) TotalAmounts(ctx context.Context, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (*sonex.TokenPair, error) {
 	return totalAmounts(ctx, m.conn, m.table, chainId, eventTokenId, decimal0, decimal1)
+}
+
+// GetIncreaseLiquidityEvents 获取增加流动性事件
+func (m *customEventSonexPositionManagerIncreaseLiquidityModel) GetIncreaseLiquidityEvents(ctx context.Context, chainId int64, eventTokenIds []int64) (map[int64][]*EventSonexPositionManagerIncreaseLiquidity, error) {
+	var events []*EventSonexPositionManagerIncreaseLiquidity
+	query := fmt.Sprintf(`
+		SELECT *
+		FROM %s
+		WHERE chain_id = $1 AND event_token_id = ANY($2)
+	`, m.table)
+
+	err := m.conn.QueryRowsCtx(ctx, &events, query, chainId, eventTokenIds)
+	if err != nil {
+		return nil, err
+	}
+
+	increaseLiquidityEvents := make(map[int64][]*EventSonexPositionManagerIncreaseLiquidity)
+	for _, event := range events {
+		increaseLiquidityEvents[event.EventTokenId] = append(increaseLiquidityEvents[event.EventTokenId], event)
+	}
+
+	return increaseLiquidityEvents, nil
+}
+
+func (m *customEventSonexPositionManagerIncreaseLiquidityModel) GetIncreaseLiquidityEventsByAddress(ctx context.Context, chainId int64, address string) (map[int64][]*EventSonexPositionManagerIncreaseLiquidity, error) {
+	var events []*EventSonexPositionManagerIncreaseLiquidity
+	query := fmt.Sprintf(`
+		SELECT *
+		FROM %s
+		WHERE chain_id = $1 AND from_ = $2
+	`, m.table)
+
+	err := m.conn.QueryRowsCtx(ctx, &events, query, chainId, address)
+	if err != nil {
+		return nil, err
+	}
+
+	increaseLiquidityEvents := make(map[int64][]*EventSonexPositionManagerIncreaseLiquidity)
+	for _, event := range events {
+		increaseLiquidityEvents[event.EventTokenId] = append(increaseLiquidityEvents[event.EventTokenId], event)
+	}
+
+	return increaseLiquidityEvents, nil
 }
 
 func aggregateAmounts(ctx context.Context, conn sqlx.SqlConn, tableName string, chainId int64, eventTokenId int64, decimal0 int, decimal1 int) (map[int64]*sonex.TokenPair, error) {
