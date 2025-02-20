@@ -257,13 +257,12 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 		}
 	}
 
-	_ = acsSwapAcsRecordModel
-	/*
-		err := acsSwapAcsRecordModel.BatchNew(ctx, data)
-		if err != nil {
-			return err
-		}
+	err := acsSwapAcsRecordModel.BatchNew(ctx, data)
+	if err != nil {
+		return err
+	}
 
+	/*
 		timestamp := time.Now().Unix() * 1000
 		nonce := uuid.New().String()
 		signatureStr := fmt.Sprintf("%s&timestamp=%d&nonce=%s", strings.Join(signatureStrs, "&"), timestamp, nonce)
