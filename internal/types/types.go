@@ -462,7 +462,6 @@ type PortfolioPosition struct {
 
 type PortfolioRequest struct {
 	ChainRequest
-	TimeZoneRequest
 	LiquiditySelected bool   `form:"liquiditySelected,default=false"`
 	FarmSelected      bool   `form:"farmSelected,default=false"`
 	XpoolSelected     bool   `form:"xpoolSelected,default=false"`

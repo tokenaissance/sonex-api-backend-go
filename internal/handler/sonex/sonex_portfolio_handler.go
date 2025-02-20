@@ -64,7 +64,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		xpoolSelected := req.XpoolSelected
 
 		// 用户所在时区，用于计算 assets rate
-		timeZone := req.TimeZone
+		timeZone := "Asia/Shanghai"
 
 		// 计算用户选中的 portfolio 数量
 		selectedCnt := 0
