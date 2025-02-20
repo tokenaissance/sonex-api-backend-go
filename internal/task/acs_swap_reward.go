@@ -1,7 +1,11 @@
 package task
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,12 +14,14 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/avast/retry-go/v4"
+	"github.com/google/uuid"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/rest/httpc"
@@ -262,45 +268,42 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 		return err
 	}
 
-	/*
-		timestamp := time.Now().Unix() * 1000
-		nonce := uuid.New().String()
-		signatureStr := fmt.Sprintf("%s&timestamp=%d&nonce=%s", strings.Join(signatureStrs, "&"), timestamp, nonce)
-		h := hmac.New(sha256.New, []byte(acsConf.ApiSecret))
-		h.Write([]byte(signatureStr))
-		signature := h.Sum(nil)
-		jsonBytes, err := json.Marshal(items)
-		if err != nil {
-			return err
-		}
-		json := string(jsonBytes)
-		reqBody := bytes.NewBuffer([]byte(json))
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/acs/addDiscretionaryPointsBatch", strings.TrimRight(acsConf.Host, "/")), reqBody)
-		if err != nil {
-			return err
-		}
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("x-timestamp", strconv.FormatInt(timestamp, 10))
-		req.Header.Add("x-nonce", nonce)
-		req.Header.Add("x-signature", hex.EncodeToString(signature))
+	timestamp := time.Now().Unix() * 1000
+	nonce := uuid.New().String()
+	signatureStr := fmt.Sprintf("%s&timestamp=%d&nonce=%s", strings.Join(signatureStrs, "&"), timestamp, nonce)
+	h := hmac.New(sha256.New, []byte(acsConf.ApiSecret))
+	h.Write([]byte(signatureStr))
+	signature := h.Sum(nil)
+	jsonBytes, err := json.Marshal(items)
+	if err != nil {
+		return err
+	}
+	json := string(jsonBytes)
+	reqBody := bytes.NewBuffer([]byte(json))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/acs/addDiscretionaryPointsBatch", strings.TrimRight(acsConf.Host, "/")), reqBody)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("x-timestamp", strconv.FormatInt(timestamp, 10))
+	req.Header.Add("x-nonce", nonce)
+	req.Header.Add("x-signature", hex.EncodeToString(signature))
 
-		resp, err := httpc.DoRequest(req)
-		if err != nil {
-			return err
-		}
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		resp.Body.Close()
-		switch resp.StatusCode {
-		case 201:
-		default:
-			return fmt.Errorf("status code %d: %s", resp.StatusCode, body)
-		}
-	*/
+	resp, err := httpc.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	switch resp.StatusCode {
+	case 201:
+	default:
+		return fmt.Errorf("status code %d: %s", resp.StatusCode, body)
+	}
 
-	logx.Infof("RemainingPoints: %d, Host: %s, ApiSecret: %s", acsInfo.Data.GetDefiPointInfoByDefiId.RemainingPoints, acsConf.Host, acsConf.ApiSecret)
 	logx.Infof("chain id: %d, send count: %d, send total acs: %d", chainConf.ChainId, len(items), sendTotal)
 
 	return nil
