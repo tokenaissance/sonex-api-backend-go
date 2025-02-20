@@ -159,7 +159,7 @@ func main() {
 				}
 
 				// Callback
-				// handler.OnPositionManagerIncreaseLiquidity(sonex.ACSIncreaseLiquidityCallback(c))
+				handler.OnPositionManagerIncreaseLiquidity(sonex.ACSIncreaseLiquidityCallback(c))
 				// handler.OnPoolSwap(sonex.ACSSwapCallback(c))
 
 				global.AddChainHandler(chain.ChainId, handler)
