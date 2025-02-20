@@ -112,6 +112,6 @@ ACS:
   Graphql: https://test4.xzsean.eu.org
   Host: https://test4.xzsean.eu.org
   DefiId: 3
-  ApiSecret: h5j8k3l6z9x2c5v8b1n4m7q2w5e8r1t4y7u2i5o8p
+  ApiSecret: ACS_API_SECRECT
   ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
   LiquidityUSDLimits: 10
