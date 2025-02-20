@@ -404,6 +404,10 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			Total:     int64(total),
 		}
 
+		// hotfix to compatible with online version
+		response.TotalPosition = portfolioStats.TotalAssets
+		response.ClaimableFees = portfolioStats.ClaimableFees
+
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}
 }
