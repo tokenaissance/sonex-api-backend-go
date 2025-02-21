@@ -65,7 +65,7 @@ func (m *customAcsSwapAcsRecordModel) BatchNew(ctx context.Context, data []AcsSw
 	for _, item := range data {
 		err = blk.Insert(
 			item.Id, NowUTC().Format("2006-01-02 15:04:05+00"), NowUTC().Format("2006-01-02 15:04:05+00"),
-			item.ChainId, item.UserAddress, item.Acs, item.TxHash, item.TxIndex, item.TxAt.Format("2006-01-02 15:04:05+00"),
+			item.ChainId, item.UserAddress, item.Acs, item.TxHash, item.TxIndex, item.TxAt.UTC().Format("2006-01-02 15:04:05+00"),
 			item.Pool, item.Token0, item.Token1, item.Amount0, item.Amount1, item.Token, item.Amount,
 		)
 		if err != nil {
