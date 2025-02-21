@@ -27,6 +27,13 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpc"
 )
 
+type acsReqItem struct {
+	UserAddress string `json:"userAddress"`
+	DefiId      int64  `json:"defiId"`
+	AcsAmount   int64  `json:"acsAmount"`
+	Description string `json:"description"`
+}
+
 func HandleACSSwapReward(conf *config.Config) {
 	end := time.Now().UTC().Truncate(time.Hour)
 	start := end.Add(time.Hour * -24)
@@ -81,7 +88,7 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 
 	// Query ACS total
 	wg.Add(1)
-	var acsInfo struct {
+	var acsInfo *struct {
 		Data struct {
 			GetDefiPointInfoByDefiId struct {
 				DailyPoints         int64 `json:"dailyPoints"`
@@ -100,41 +107,12 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 			}
 		}()
 
-		req := struct {
-			Query     string `json:"query"`
-			Variables struct {
-				DefiId int64 `json:"defiId"`
-			} `json:"variables"`
-		}{
-			Query: "query GetDefiPointInfoByDefiId($defiId: Int!) {\n  getDefiPointInfoByDefiId(defiId: $defiId) {\n    defiId\n    defiName\n    dailyPoints\n    remainingPoints\n    totalReceivedPoints\n  }\n}",
-			Variables: struct {
-				DefiId int64 `json:"defiId"`
-			}{
-				DefiId: acsConf.DefiId,
-			},
-		}
-
-		resp, err := httpc.Do(context.Background(), http.MethodPost, fmt.Sprintf("%s/graphql", strings.TrimRight(acsConf.Graphql, "/")), req)
+		info, err := queryACSInfo(acsConf)
 		if err != nil {
+			ch <- struct{ Err error }{Err: err}
 			return
 		}
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			ch <- struct{ Err error }{Err: fmt.Errorf("%s", err)}
-			return
-		}
-		resp.Body.Close()
-		switch resp.StatusCode {
-		case 200:
-			err = json.Unmarshal(body, &acsInfo)
-			if err != nil {
-				ch <- struct{ Err error }{Err: fmt.Errorf("%s", err)}
-				return
-			}
-		default:
-			ch <- struct{ Err error }{Err: fmt.Errorf("%s", body)}
-			return
-		}
+		acsInfo = info
 	}(results)
 
 	// Query previous day's swaps
@@ -173,15 +151,8 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 		return nil
 	}
 
-	// Send ACS request
-	type reqItem struct {
-		UserAddress string `json:"userAddress"`
-		DefiId      int64  `json:"defiId"`
-		AcsAmount   int64  `json:"acsAmount"`
-		Description string `json:"description"`
-	}
-	items := []reqItem{}
-	signatureStrs := []string{}
+	// Build ACS request items
+	items := []acsReqItem{}
 	data := []repository.AcsSwapAcsRecord{}
 	var sendTotal int64 = 0
 	for _, swap := range swaps {
@@ -229,14 +200,13 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 		}
 		sendTotal += acs
 
-		item := reqItem{
+		item := acsReqItem{
 			UserAddress: swap.From,
 			DefiId:      acsConf.DefiId,
 			AcsAmount:   acs,
 			Description: fmt.Sprintf("Type:SWAP,TxHash:%s,TxIndex:%d,Token:%s,Amount:%f", swap.TxHash, swap.TxIndex, tokenAddress, count),
 		}
 		items = append(items, item)
-		signatureStrs = append(signatureStrs, fmt.Sprintf("acsAmount=%d&defiId=%d&description=%s&userAddress=%s", item.AcsAmount, item.DefiId, item.Description, item.UserAddress))
 		id, err := global.NewId()
 		if err != nil {
 			return err
@@ -268,6 +238,159 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 		return err
 	}
 
+	// Query unsend
+	unsend, err := acsSwapAcsRecordModel.QueryUnsend(ctx)
+	if err != nil {
+		return err
+	}
+	for _, u := range unsend {
+		item := acsReqItem{
+			UserAddress: u.UserAddress,
+			DefiId:      acsConf.DefiId,
+			AcsAmount:   u.Acs,
+			Description: fmt.Sprintf("Type:SWAP,TxHash:%s,TxIndex:%d,Token:%s,Amount:%f", u.TxHash, u.TxIndex, u.Token, u.Amount),
+		}
+		items = append(items, item)
+	}
+
+	// Send ACS request
+	batchSize := 100
+	batchCount := len(items) / int(batchSize)
+	if len(items)%int(batchSize) > 0 {
+		batchCount++
+	}
+
+	var sendWg sync.WaitGroup
+	sendResults := make(chan struct {
+		Err error
+	}, batchCount)
+
+	for i := 0; i < batchCount; i++ {
+		start := i * int(batchSize)
+		end := (i + 1) * int(batchSize)
+		if end > len(items) {
+			end = len(items)
+		}
+		currentItems := items[start:end]
+
+		sendWg.Add(1)
+		go func(items []acsReqItem, ch chan struct{ Err error }) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct {
+						Err error
+					}{
+						Err: fmt.Errorf("%s(panic)", err),
+					}
+				}
+			}()
+
+			// err := sendACS(ctx, chainConf, acsConf, currentItems)
+			if err != nil {
+				ch <- struct {
+					Err error
+				}{
+					Err: err,
+				}
+				return
+			}
+		}(currentItems, sendResults)
+	}
+
+	go func() {
+		sendWg.Wait()
+		close(sendResults)
+	}()
+
+	for result := range sendResults {
+		if result.Err != nil {
+			// logx
+		}
+	}
+
+	logx.Infof("chain id: %d, send count: %d, send total acs: %d", chainConf.ChainId, len(items), sendTotal)
+
+	return nil
+}
+
+func queryACSInfo(acsConf config.ACSConfig) (*struct {
+	Data struct {
+		GetDefiPointInfoByDefiId struct {
+			DailyPoints         int64 `json:"dailyPoints"`
+			RemainingPoints     int64 `json:"remainingPoints"`
+			TotalReceivedPoints int64 `json:"totalReceivedPoints"`
+		}
+	}
+}, error) {
+	req := struct {
+		Query     string `json:"query"`
+		Variables struct {
+			DefiId int64 `json:"defiId"`
+		} `json:"variables"`
+	}{
+		Query: "query GetDefiPointInfoByDefiId($defiId: Int!) {\n  getDefiPointInfoByDefiId(defiId: $defiId) {\n    defiId\n    defiName\n    dailyPoints\n    remainingPoints\n    totalReceivedPoints\n  }\n}",
+		Variables: struct {
+			DefiId int64 `json:"defiId"`
+		}{
+			DefiId: acsConf.DefiId,
+		},
+	}
+
+	resp, err := httpc.Do(context.Background(), http.MethodPost, fmt.Sprintf("%s/graphql", strings.TrimRight(acsConf.Graphql, "/")), req)
+	if err != nil {
+		return nil, err
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body.Close()
+	var acsInfo struct {
+		Data struct {
+			GetDefiPointInfoByDefiId struct {
+				DailyPoints         int64 `json:"dailyPoints"`
+				RemainingPoints     int64 `json:"remainingPoints"`
+				TotalReceivedPoints int64 `json:"totalReceivedPoints"`
+			}
+		}
+	}
+	switch resp.StatusCode {
+	case 200:
+		err = json.Unmarshal(body, &acsInfo)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("%s", body)
+	}
+
+	return &acsInfo, nil
+}
+
+func sendACS(ctx context.Context, conf config.Config, unsend []repository.AcsSwapAcsRecord) error {
+	acsConf := conf.ACS
+	if acsConf == nil {
+		return fmt.Errorf("HandleACSSwapReward error: %s", "Miss acs configure")
+	}
+
+	ids := []int64{}
+	var totalACS int64
+	items := []acsReqItem{}
+	signatureStrs := []string{}
+	for _, u := range unsend {
+		ids = append(ids, u.Id)
+		item := acsReqItem{
+			UserAddress: u.UserAddress,
+			DefiId:      acsConf.DefiId,
+			AcsAmount:   u.Acs,
+			Description: fmt.Sprintf("Type:SWAP,TxHash:%s,TxIndex:%d,Token:%s,Amount:%f", u.TxHash, u.TxIndex, u.Token, u.Amount),
+		}
+		items = append(items, item)
+		signatureStrs = append(signatureStrs, fmt.Sprintf("acsAmount=%d&defiId=%d&description=%s&userAddress=%s", item.AcsAmount, item.DefiId, item.Description, item.UserAddress))
+		totalACS += u.Acs
+	}
+
 	timestamp := time.Now().Unix() * 1000
 	nonce := uuid.New().String()
 	signatureStr := fmt.Sprintf("%s&timestamp=%d&nonce=%s", strings.Join(signatureStrs, "&"), timestamp, nonce)
@@ -289,22 +412,67 @@ func acsSwapRewardLogic(ctx context.Context, conn sqlx.SqlConn, chainConf config
 	req.Header.Add("x-nonce", nonce)
 	req.Header.Add("x-signature", hex.EncodeToString(signature))
 
-	resp, err := httpc.DoRequest(req)
-	if err != nil {
-		return err
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	switch resp.StatusCode {
-	case 201:
-	default:
-		return fmt.Errorf("status code %d: %s", resp.StatusCode, body)
-	}
+	conn := repository.NewConn(conf.PostgreSQL.DataSource())
+	err = conn.TransactCtx(ctx, func(ctx context.Context, s sqlx.Session) error {
+		info, err := queryACSInfo(*acsConf)
+		if err != nil {
+			return err
+		}
+		before := info.Data.GetDefiPointInfoByDefiId.RemainingPoints
 
-	logx.Infof("chain id: %d, send count: %d, send total acs: %d", chainConf.ChainId, len(items), sendTotal)
+		acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(sqlx.NewSqlConnFromSession(s))
+
+		err = acsSwapAcsRecordModel.BatchUpdateSendById(ctx, ids)
+		if err != nil {
+			return err
+		}
+
+		resp, err := httpc.DoRequest(req)
+		if err != nil {
+			return err
+		}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		resp.Body.Close()
+		switch resp.StatusCode {
+		case 201:
+		default:
+			return fmt.Errorf("status code %d: %s", resp.StatusCode, body)
+		}
+
+		var after int64
+		err = retry.Do(
+			func() error {
+				info, err = queryACSInfo(*acsConf)
+				if err != nil {
+					return err
+				}
+				after = info.Data.GetDefiPointInfoByDefiId.RemainingPoints
+				if before-after != totalACS {
+					return fmt.Errorf("before ACS: %d, after ACS: %d, send ACS: %d: not match", before, after, totalACS)
+				}
+
+				return nil
+			},
+			retry.Attempts(5),
+			retry.Delay(time.Second*30),
+			retry.DelayType(retry.FixedDelay),
+			retry.OnRetry(func(n uint, err error) {
+				logx.Infof("verify points retry %d times: %s", n+1, err)
+			}),
+		)
+		if err != nil {
+			return err
+		}
+		logx.Infof("before ACS: %d, after ACS: %d, send ACS: %d", before, after, totalACS)
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

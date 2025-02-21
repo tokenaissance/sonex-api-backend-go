@@ -18,6 +18,8 @@ type (
 		acsSwapAcsRecordModel
 		withSession(session sqlx.Session) AcsSwapAcsRecordModel
 		BatchNew(ctx context.Context, data []AcsSwapAcsRecord) error
+		BatchUpdateSendById(ctx context.Context, ids []int64) error
+		QueryUnsend(ctx context.Context) ([]AcsSwapAcsRecord, error)
 		PageQueryTotalOrderByTotalACS(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]struct {
 			User string  `json:"user_address"`
 			ACS  int64   `json:"acs"`
@@ -76,6 +78,24 @@ func (m *customAcsSwapAcsRecordModel) BatchNew(ctx context.Context, data []AcsSw
 	}
 
 	return nil
+}
+
+func (m *customAcsSwapAcsRecordModel) BatchUpdateSendById(ctx context.Context, ids []int64) error {
+	query := fmt.Sprintf("UPDATE %s SET send = TRUE WHERE id = ANY($1)", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, ids)
+	return err
+}
+
+func (m *customAcsSwapAcsRecordModel) QueryUnsend(ctx context.Context) ([]AcsSwapAcsRecord, error) {
+	query := fmt.Sprintf(`
+		SELECT * FROM %s WHERE send = FALSE ORDER BY tx_at ASC, tx_hash ASC, tx_index ASC
+	`, m.table)
+	var resp []AcsSwapAcsRecord
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (m *customAcsSwapAcsRecordModel) PageQueryTotalOrderByTotalACS(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]struct {
