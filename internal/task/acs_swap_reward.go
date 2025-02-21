@@ -36,7 +36,7 @@ type acsReqItem struct {
 
 func HandleACSSwapReward(conf *config.Config) {
 	end := time.Now().UTC().Truncate(time.Hour)
-	start := end.Add(time.Hour * -1)
+	start := end.Add(time.Hour * -24)
 	logx.Infof("HandleACSSwapReward start: %s -> %s", start.Format(time.DateTime), end.Format(time.DateTime))
 
 	err := retry.Do(
