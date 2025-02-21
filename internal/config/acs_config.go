@@ -11,4 +11,5 @@ type ACSConfig struct {
 	ApiSecret          string     `json:","`
 	ASTR               string     `json:","`
 	LiquidityUSDLimits float64    `json:","`
+	ACSDailyLimits     int64      `json:","`
 }

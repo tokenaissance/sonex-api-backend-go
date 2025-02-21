@@ -115,3 +115,4 @@ ACS:
   ApiSecret: ACS_API_SECRECT
   ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
   LiquidityUSDLimits: 10
+  ACSDailyLimits: 75000
