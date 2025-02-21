@@ -482,7 +482,7 @@ func (m *customEventSonexPoolSwapModel) QueryByChainIdTimeToken(ctx context.Cont
 			S.chain_id = $1
   			AND (S.tx_at >= $2 AND S.tx_at < $3)
   			AND (C.event_token0 = ANY($4) OR C.event_token1 = ANY($4))
-		ORDER BY S.tx_at ASC
+		ORDER BY S.tx_at ASC, S.tx_hash ASC, S.tx_index ASC
 	`, m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	var resp []EventSonexPoolSwapWithPool
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, from, to, tokens)
