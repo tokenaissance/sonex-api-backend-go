@@ -45,13 +45,14 @@ type (
 		SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 
+		// 通过 pool adress 计算 volume for  kline
 		SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error)
 
 		SummarizePoolVolumesUsdForSevenDaysForYield(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
 
-		// 通过poolAddress,只计算跨链
+		// 通过 poolAddress, 只计算跨链
 		CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string, timePoint time.Time) (string, error)
 
 		// 计算所有的的计算正常的swap 交易
@@ -261,7 +262,7 @@ type VolumeDetailsRecord struct {
 }
 */
 
-// / // 每天24条, -1 作为偏移量, 每条数据间隔 3600 秒 间隔  ，这是曲线的K线
+// / // 每天 24 条, -1 作为偏移量, 每条数据间隔 3600 秒 间隔  ，这是曲线的K线
 // hours to days
 // 每天 1 条，-1 作为偏移量，柱状图，每条数据 间隔 86400 秒
 func (m *customEventSonexPoolSwapModel) SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error) {
