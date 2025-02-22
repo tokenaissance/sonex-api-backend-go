@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -20,6 +21,7 @@ type (
 		BatchNew(ctx context.Context, data []AcsSwapAcsRecord) error
 		BatchUpdateSendById(ctx context.Context, ids []int64) error
 		QueryUnsend(ctx context.Context) ([]AcsSwapAcsRecord, error)
+		QueryByTime(ctx context.Context, from time.Time, to time.Time) ([]AcsSwapAcsRecord, error)
 		PageQueryTotalOrderByTotalACS(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]struct {
 			User string  `json:"user_address"`
 			ACS  int64   `json:"acs"`
@@ -96,6 +98,21 @@ func (m *customAcsSwapAcsRecordModel) QueryUnsend(ctx context.Context) ([]AcsSwa
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (m *customAcsSwapAcsRecordModel) QueryByTime(ctx context.Context, from time.Time, to time.Time) ([]AcsSwapAcsRecord, error) {
+	query := fmt.Sprintf(`
+		SELECT *
+		FROM %s
+		WHERE tx_at >= $1 AND tx_at < $2
+		ORDER BY tx_at ASC, tx_hash ASC, tx_index ASC
+	`, m.table)
+	var resp []AcsSwapAcsRecord
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
 }
 
 func (m *customAcsSwapAcsRecordModel) PageQueryTotalOrderByTotalACS(ctx context.Context, orderBy string, pageSize int64, pageIndex int64) ([]struct {
