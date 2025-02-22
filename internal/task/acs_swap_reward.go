@@ -73,9 +73,6 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 	conn := repository.NewConn(conf.PostgreSQL.DataSource())
 	var unsends []repository.AcsSwapAcsRecord
 	err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
-		eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(sqlx.NewSqlConnFromSession(s))
-		acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(sqlx.NewSqlConnFromSession(s))
-
 		var wg sync.WaitGroup
 		results := make(chan struct {
 			Err error
@@ -132,6 +129,7 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 			}()
 
 			var err error
+			eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(repository.NewConn(conf.PostgreSQL.DataSource()))
 			swaps, err = eventSonexPoolSwapModel.QueryByChainIdTimeToken(ctx, chainConf.ChainId, start, end, acsConf.Tokens)
 			if err != nil {
 				ch <- struct{ Err error }{Err: err}
@@ -262,6 +260,8 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 				break
 			}
 		}
+
+		acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(sqlx.NewSqlConnFromSession(s))
 
 		err := acsSwapAcsRecordModel.BatchNew(ctx, data)
 		if err != nil {
