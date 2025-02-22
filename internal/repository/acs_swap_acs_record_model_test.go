@@ -50,6 +50,21 @@ func TestAcsSwapAcsRecordModelQueryUnsend(t *testing.T) {
 	_ = res
 }
 
+func TestAcsSwapAcsRecordModelQueryByTime(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+
+	model := NewAcsSwapAcsRecordModel(NewConn(c.PostgreSQL.DataSource()))
+	end, _ := time.ParseInLocation(time.DateTime, "2025-02-22 01:00:00", time.UTC)
+	start := end.Add(time.Hour * -1)
+	res, err := model.QueryByTime(context.Background(), start, end)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = res
+}
+
 func TestAcsSwapAcsRecordModelPageQueryOrderByTotalACS(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
