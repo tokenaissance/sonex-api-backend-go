@@ -342,20 +342,23 @@ func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) err
 
 func getValueOfAmountToken(rewards *big.Int, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (*big.Float, int64, error) {
 
-	decimals := int64(18)
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+
 	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId)
-	if err != nil && err != sqlx.ErrNotFound {
-		logx.Errorf("err %v ", err)
-		return big.NewFloat(0), decimals, err
+	switch err {
+	case nil:
+	case sqlx.ErrNotFound:
+		tokenInfo = &repository.TokenPriceRateRecordWithExtra{
+			TokenDecimals: 18,
+			TokenPriceRecord: repository.TokenPriceRecord{
+				Price:       "1000000",
+				UsdDecimals: 6,
+			},
+		}
+	default:
+		return nil, 0, err
 	}
 
-	if err != nil && err == sqlx.ErrNotFound {
-		logx.Errorf("err %v ", err)
-		tokenInfo.Price = "1000000"
-		tokenInfo.UsdDecimals = 6
-		tokenInfo.TokenDecimals = decimals
-	}
 	totalClaimableFeesUSD := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
 
 	logx.Infof("totalClaimableFeesUSD:%v", totalClaimableFeesUSD)
