@@ -155,7 +155,7 @@ FROM
 	case nil:
 		return tokenPriceRecordwithExtra, nil
 	case sqlx.ErrNotFound:
-		return nil, ErrNotFound
+		return &TokenPriceRateRecordWithExtra{}, ErrNotFound
 	default:
 		return nil, err
 	}
