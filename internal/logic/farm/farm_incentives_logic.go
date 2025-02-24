@@ -61,34 +61,29 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
-	// cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
-	tokenIds := map[int64][]int64{}
+	resp, tokenIds, err := l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 
 	if err != nil {
 		logx.Errorf("ERR from GetResponse:%v", err)
 		return resp, err
 	}
-	resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
+
 	if len(tokenIds) == 0 {
 		logx.Info("no tokenid founds")
 		return resp, nil
 	}
+
 	// Filter
 	if !strings.EqualFold(req.UserAddress, "") && common.IsHexAddress(req.UserAddress) {
 
-		// loop assgin
-		// TODO 优化
-		// if len(positions) > 0 {
 		if len(resp.List) > 0 {
 			for i, item := range resp.List {
-				// 可用余额
 				bal, _, _, _, _ := getBalance(req.ChainId, item.IncentiveId, req.UserAddress, farmConf.Staker, conn)
 				resp.List[i].Balance = bal
 			}
 		}
-		// }
 
 		usdAccuracy, _ := new(big.Float).SetString(resp.USD.Price)
 
