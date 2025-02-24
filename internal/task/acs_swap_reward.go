@@ -35,8 +35,8 @@ type acsReqItem struct {
 }
 
 func HandleACSSwapReward(conf *config.Config) {
-	end := time.Now().UTC().Truncate(time.Hour)
-	start := end.Add(time.Hour * -1)
+	start := time.Now().UTC().Truncate(time.Hour * 24)
+	end := start.Add(time.Hour * 24)
 	logx.Infof("HandleACSSwapReward start: %s -> %s", start.Format(time.DateTime), end.Format(time.DateTime))
 
 	err := retry.Do(
@@ -73,9 +73,6 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 	conn := repository.NewConn(conf.PostgreSQL.DataSource())
 	var unsends []repository.AcsSwapAcsRecord
 	err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
-		eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(sqlx.NewSqlConnFromSession(s))
-		acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(sqlx.NewSqlConnFromSession(s))
-
 		var wg sync.WaitGroup
 		results := make(chan struct {
 			Err error
@@ -92,7 +89,7 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 				}
 			}
 		}
-		go func(ch chan struct {
+		go func(ctx context.Context, ch chan struct {
 			Err error
 		}) {
 			defer wg.Done()
@@ -107,8 +104,7 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 				ch <- struct{ Err error }{Err: err}
 				return
 			}
-			conn := repository.NewConn(conf.PostgreSQL.DataSource())
-			acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(conn)
+			acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(repository.NewConn(conf.PostgreSQL.DataSource()))
 			unsends, err := acsSwapAcsRecordModel.QueryUnsend(ctx)
 			if err != nil {
 				ch <- struct{ Err error }{Err: err}
@@ -117,12 +113,12 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 			totalACS := linq.From(unsends).SelectT(func(item repository.AcsSwapAcsRecord) int64 { return item.Acs }).SumInts()
 			info.Data.GetDefiPointInfoByDefiId.RemainingPoints -= totalACS
 			acsInfo = info
-		}(results)
+		}(ctx, results)
 
 		// Query previous day's swaps
 		var swaps []repository.EventSonexPoolSwapWithPool
 		wg.Add(1)
-		go func(ch chan struct {
+		go func(ctx context.Context, ch chan struct {
 			Err error
 		}) {
 			defer wg.Done()
@@ -133,12 +129,41 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 			}()
 
 			var err error
+			eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(repository.NewConn(conf.PostgreSQL.DataSource()))
 			swaps, err = eventSonexPoolSwapModel.QueryByChainIdTimeToken(ctx, chainConf.ChainId, start, end, acsConf.Tokens)
 			if err != nil {
 				ch <- struct{ Err error }{Err: err}
 				return
 			}
-		}(results)
+		}(ctx, results)
+
+		// Query existed swaps
+		var existed []repository.AcsSwapAcsRecord
+		var existedMap = make(map[string]struct{})
+		wg.Add(1)
+		go func(ctx context.Context, ch chan struct {
+			Err error
+		}) {
+			defer wg.Done()
+			defer func() {
+				if err := recover(); err != nil {
+					ch <- struct{ Err error }{Err: fmt.Errorf("%s(panic)", err)}
+				}
+			}()
+
+			var err error
+			acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(repository.NewConn(conf.PostgreSQL.DataSource()))
+			existed, err = acsSwapAcsRecordModel.QueryByTime(ctx, start, end)
+			if err != nil {
+				ch <- struct{ Err error }{Err: err}
+				return
+			}
+			linq.From(existed).ToMapByT(
+				&existedMap,
+				func(item repository.AcsSwapAcsRecord) string { return fmt.Sprintf("%s-%d", item.TxHash, item.TxIndex) },
+				func(item repository.AcsSwapAcsRecord) struct{} { return struct{}{} },
+			)
+		}(ctx, results)
 
 		go func() {
 			wg.Wait()
@@ -151,6 +176,10 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 			}
 		}
 
+		linq.From(swaps).WhereT(func(item repository.EventSonexPoolSwapWithPool) bool {
+			_, ok := existedMap[fmt.Sprintf("%s-%d", item.TxHash, item.TxIndex)]
+			return !ok
+		}).ToSlice(&swaps)
 		if acsInfo.Data.GetDefiPointInfoByDefiId.RemainingPoints <= 0 || len(swaps) == 0 {
 			return nil
 		}
@@ -231,6 +260,8 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 				break
 			}
 		}
+
+		acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(sqlx.NewSqlConnFromSession(s))
 
 		err := acsSwapAcsRecordModel.BatchNew(ctx, data)
 		if err != nil {
