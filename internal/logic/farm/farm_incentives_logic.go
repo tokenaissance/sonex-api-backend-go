@@ -61,21 +61,20 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
+	// cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
 	tokenIds := map[int64][]int64{}
-	// Check cache
 
-	resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 	if err != nil {
 		logx.Errorf("ERR from GetResponse:%v", err)
 		return resp, err
 	}
+	resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 	if len(tokenIds) == 0 {
 		logx.Info("no tokenid founds")
 		return resp, nil
 	}
-
 	// Filter
 	if !strings.EqualFold(req.UserAddress, "") && common.IsHexAddress(req.UserAddress) {
 
@@ -84,15 +83,9 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		// if len(positions) > 0 {
 		if len(resp.List) > 0 {
 			for i, item := range resp.List {
-				// for _, vv := range positions {
-				// 	if strings.EqualFold(vv.Pool.Address, item.PoolAddress) {
-				// 		resp.List[i].Positions = append(resp.List[i].Positions, vv)
-				// 	}
-				// }
 				// 可用余额
 				bal, _, _, _, _ := getBalance(req.ChainId, item.IncentiveId, req.UserAddress, farmConf.Staker, conn)
 				resp.List[i].Balance = bal
-				logx.Infof("len:%v IncentiveId:%v ", len(resp.List[i].Positions), resp.List[i].IncentiveId)
 			}
 		}
 		// }
@@ -151,7 +144,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
 			resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
 
-			logx.Infof("SSSSA:%v B:%v c:%v totalClaimableFeesString:%v ", farmConf.Staker, req.UserAddress, item.IncentiveId, totalClaimableFeesString)
+			logx.Infof("UserAddress:%v incentiveid:%v totalClaimableFeesString:%v ", req.UserAddress, item.IncentiveId, totalClaimableFeesString)
 
 			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
 			if err != nil {
@@ -230,7 +223,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
-		return resp, tokenIds, err
+		return resp, nil, err
 	}
 	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
 
@@ -241,16 +234,14 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, req.ChainId, common.HexToAddress(farmConf.Staker).Hex())
 	if err != nil {
 		logx.Errorf("ERR1:%v ", err)
-		return resp, tokenIds, err
+		return resp, nil, err
 	}
-	logx.Infof("incentiveCreatedRecords:%v len :%v  ", incentiveCreatedRecords, len(incentiveCreatedRecords))
 	validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(l.ctx, req.ChainId)
 	if err != nil {
 		logx.Errorf("ERR2:%v ", err)
-		return resp, tokenIds, err
+		return resp, nil, err
 	}
 	validStakeRecordMap := map[int64][]repository.EventFarmTokenStaked{}
-	logx.Infof("validStakeRecords:%v ", validStakeRecords)
 	linq.From(validStakeRecords).
 		GroupByT(
 			func(item repository.EventFarmTokenStaked) int64 { return item.EventIncentiveId },
@@ -268,14 +259,12 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			},
 		)
 
-	logx.Infof("validStakeRecordMap:%v ", validStakeRecordMap)
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
 	if err != nil {
 		logx.Errorf("ERR3:%v ", err)
-		return resp, tokenIds, err
+		return resp, nil, err
 	}
 
-	logx.Infof("prices:%#v ", prices)
 	var wg sync.WaitGroup
 	results := make(chan struct {
 		Data     types.FarmIncentivesResponse_Data
@@ -313,8 +302,16 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				logx.Errorf("%s", fmt.Sprintf("Get token1 error: %s %s", record.ExtraToken1, err))
 				return
 			}
-			price0 := prices[token0.Address]
-			price1 := prices[token1.Address]
+			price0, ok := prices[token0.Address]
+			if !ok {
+				logx.Errorf("Get price error:%v ", token0.Address)
+				return
+			}
+			price1, ok := prices[token1.Address]
+			if !ok {
+				logx.Errorf("Get price error:%v ", token1.Address)
+				return
+			}
 
 			_price0divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price0), new(big.Float).SetFloat64(math.Pow10(int(6))))
 			_price1divUsdDecimals := new(big.Float).Quo(new(big.Float).SetInt(price1), new(big.Float).SetFloat64(math.Pow10(int(6))))
@@ -326,29 +323,27 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				logx.Errorf("%s", fmt.Sprintf("Get extra token error: %s %s", record.EventRewardToken, err))
 				return
 			}
-			logx.Infof("rewardToken:%#v", rewardToken)
 			ratepersecond, _ := new(big.Float).SetString(record.ExtraRate)
-			logx.Info("333333:", rewardToken.Address, "prices[rewardToken.Address]:", prices[rewardToken.Address])
-			rewardPrice := new(big.Float).SetInt(prices[rewardToken.Address])
-			logx.Info("4444444:")
+			val, ok := prices[rewardToken.Address]
+			if !ok {
+				val = big.NewInt(1000000) //  1U
+			}
+			rewardPrice := new(big.Float).SetInt(val)
 			// rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil))
 			rewardTokenAccuracy := new(big.Float).SetFloat64(math.Pow10(int(rewardToken.Decimals)))
-			logx.Info("555555:")
 
 			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(ratepersecond, rewardPrice), rewardTokenAccuracy), usdAccuracy)
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
-			logx.Info("77777777:")
-			logx.Infof("record.EventIncentiveId:%v , 666666:rewardToken:%#v ratepersecond :%v  rewardPrice:%v totalRewardUSD365: %v  ", record.EventIncentiveId, rewardToken, ratepersecond, rewardPrice, totalRewardUSD)
 
-			errSetTotalReward365ForIncentiveId := global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
-			if errSetTotalReward365ForIncentiveId != nil {
-				logx.Errorf("errSetTotalReward365ForIncentiveId:%v ", errSetTotalReward365ForIncentiveId)
+			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
+			if err != nil {
+				logx.Errorf("ERR:%v ", err)
+				return
 			}
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
 			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
-			logx.Info("1111111111111111111111:", ok)
 			var status string
 			if record.ExtraEnded {
 				status = "closed"
@@ -356,21 +351,20 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				status = "active"
 			}
 
-			rewards, errgetRewardsAmount := getRewardsAmount(farmConf.Staker, req.UserAddress, record.EventIncentiveId, *chainConf)
-			if errgetRewardsAmount != nil {
-				logx.Errorf("getRewardsAmount:%v ", errgetRewardsAmount)
+			rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, record.EventIncentiveId, *chainConf)
+			if err != nil {
+				logx.Errorf("getRewardsAmount:%v ", err)
 				return
 			}
 
-			totalClaimableFeesUSD, _, errgetValueOfAmountToken := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
+			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
 
-			if errgetValueOfAmountToken != nil {
-				logx.Errorf("getValueOfAmountToken:%v ", errgetValueOfAmountToken)
+			if err != nil {
+				logx.Errorf("getValueOfAmountToken:%v ", err)
 				return
 			}
 
 			totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
-			logx.Infof("record.EventIncentiveId:%v totalClaimableFeesUSD:%v  rewards :%v ", record.EventIncentiveId, totalClaimableFeesUSDFloat64, rewards.String())
 
 			eventWeightString := big.NewInt(record.EventWeight).String()
 			totalWeightString, err := SetRewardPoolInfo(farmConf.Staker, record.EventRewardToken, *chainConf, cacher)
@@ -400,7 +394,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					logx.Error(fmt.Errorf("getIncentiveInfoTokenIds error: %v", err))
 					return
 				}
-				logx.Infof("tokenIdsTotal:%v tokenIds:%v ", tokenIdsTotal, tokenIds)
 				positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIdsTotal)
 				if err != nil {
 					logx.Error(fmt.Errorf("BatchGetPositions error: %v", err))
@@ -452,7 +445,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				}
 				tokenIdsResult = tids
 			} else {
-				logx.Info("notoknotok")
 				// apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 				// 0 的时候  就应该按照1来算
 				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
@@ -507,13 +499,11 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	for result := range results {
 		if result.Err != nil {
 			logx.Errorf("result error:%v", result.Err)
-			return resp, nil, result.Err
+			return resp, tokenIds, result.Err
 		}
 		list = append(list, result.Data)
 		tokenIds[result.Data.IncentiveId] = result.TokenIds
 	}
-
-	logx.Info(" tokenIds: ", tokenIds)
 
 	return &types.FarmIncentivesResponse{
 		USD: types.FarmIncentivesResponse_Token{
