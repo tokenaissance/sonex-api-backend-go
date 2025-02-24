@@ -236,11 +236,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			logx.Errorf("ERR:%v", err)
 			return resp, err
 		}
-		unclaimeds, err := statcCaller.BatchGetUnclaimeds(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress), incentiveIds)
-		if err != nil {
-			logx.Errorf("ERR:%v", err)
-			return resp, err
-		}
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
@@ -270,7 +265,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			resp.List[i].TotalClaimedFeesUSD = totalClaimedFeesUSD_bigFloat.String()
 			totalClaimedFeesUSDFloat64, _ := totalClaimedFeesUSD_bigFloat.Float64()
 			resp.List[i].TotalClaimedFeesUSDFloat64 = totalClaimedFeesUSDFloat64
-			_ = unclaimeds
 		}
 
 	}
