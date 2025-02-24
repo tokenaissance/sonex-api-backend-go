@@ -116,3 +116,10 @@ ACS:
   ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
   LiquidityUSDLimits: 10
   ACSDailyLimits: 75000
+
+
+BlockScoutUrl:
+  - https://soneium-minato.blockscout.com/api/v2/addresses
+
+BlockScoutXRequsetId:
+  - 7b9ec8b688d1e921e990f13f09eb70b5
