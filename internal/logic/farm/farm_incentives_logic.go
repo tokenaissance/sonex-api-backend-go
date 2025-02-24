@@ -61,7 +61,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
-	// cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
 	resp, tokenIds, err := l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
