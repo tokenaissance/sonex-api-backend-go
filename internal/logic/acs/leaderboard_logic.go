@@ -50,6 +50,13 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 		pageIndex = *req.PageIndex
 	}
 
+	var userAddress string
+	if req.User == nil {
+		userAddress = ""
+	} else {
+		userAddress = *req.User
+	}
+
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
@@ -83,9 +90,9 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 	}
 
 	// User
-	user := &types.LeaderboardResponse_Item{User: *req.User}
-	if req.User != nil && common.IsHexAddress(*req.User) {
-		user.User = common.HexToAddress(*req.User).Hex()
+	user := &types.LeaderboardResponse_Item{User: userAddress}
+	if userAddress != "" && common.IsHexAddress(userAddress) {
+		user.User = common.HexToAddress(userAddress).Hex()
 
 		wg.Add(1)
 		go func(ch chan struct {
@@ -100,7 +107,7 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 				}
 			}()
 
-			res, err := acsSwapAcsRecordModel.FindTotalByUser(l.ctx, common.HexToAddress(*req.User).Hex())
+			res, err := acsSwapAcsRecordModel.FindTotalByUser(l.ctx, common.HexToAddress(userAddress).Hex())
 			switch err {
 			case repository.ErrNotFound:
 			case nil:
