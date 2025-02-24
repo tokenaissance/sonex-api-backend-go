@@ -8,7 +8,6 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/module/farm"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -231,16 +230,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 		var incentiveIds []int64
 		linq.From(resp.List).SelectT(func(item types.FarmIncentivesResponse_Data) int64 { return item.IncentiveId }).ToSlice(&incentiveIds)
-		statcCaller, err := farm.NewStaticCaller(l.svcCtx.Config)
-		if err != nil {
-			logx.Errorf("ERR:%v", err)
-			return resp, err
-		}
-		unclaimeds, err := statcCaller.BatchGetUnclaimeds(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress), incentiveIds)
-		if err != nil {
-			logx.Errorf("ERR:%v", err)
-			return resp, err
-		}
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
@@ -270,7 +259,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			resp.List[i].TotalClaimedFeesUSD = totalClaimedFeesUSD_bigFloat.String()
 			totalClaimedFeesUSDFloat64, _ := totalClaimedFeesUSD_bigFloat.Float64()
 			resp.List[i].TotalClaimedFeesUSDFloat64 = totalClaimedFeesUSDFloat64
-			_ = unclaimeds
 		}
 
 	}
