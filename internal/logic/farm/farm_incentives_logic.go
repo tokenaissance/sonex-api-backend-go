@@ -338,7 +338,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			}
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
-			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
 			var status string
 			if record.ExtraEnded {
 				status = "closed"
@@ -370,6 +369,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			if strings.EqualFold(totalWeightString, "0") {
 				totalWeightString = "1000"
 			}
+			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
 			if ok {
 				tokenIds := []*big.Int{}
 				userAddressesMap := map[string]struct{}{}
