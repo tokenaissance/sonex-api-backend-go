@@ -642,7 +642,9 @@ type SonexTvlKlineRequest struct {
 }
 
 type SonexTvlKlineResponse struct {
-	Records []UsdCreatedRecord `json:"records"`
+	TotalUsdOfRecord string             `json:"totalUsdOfRecord"`
+	NumberOfRecords  int64              `json:"numberOfRecords"`
+	Records          []UsdCreatedRecord `json:"records"`
 }
 
 type SonexVolumeKlineRequest struct {
@@ -650,7 +652,9 @@ type SonexVolumeKlineRequest struct {
 }
 
 type SonexVolumeKlineResponse struct {
-	Records []UsdCreatedRecord `json:"records"`
+	TotalUsdOfRecord string             `json:"totalUsdOfRecord"`
+	NumberOfRecords  int64              `json:"numberOfRecords"`
+	Records          []UsdCreatedRecord `json:"records"`
 }
 
 type StakePositionsInfoResponse_Data struct {

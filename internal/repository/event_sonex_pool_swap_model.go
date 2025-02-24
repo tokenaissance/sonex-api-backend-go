@@ -45,18 +45,19 @@ type (
 		SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 
+		// 通过 pool adress 计算 volume for  kline
 		SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error)
 
 		SummarizePoolVolumesUsdForSevenDaysForYield(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error)
 		GetSwapVolumes(ctx context.Context, opts *types.SwapVolumeRequest) ([]*types.SwapVolume, *types.Token_TokenInfo, error)
 		GetTransactionByPoolAddress(ctx context.Context, chainId int64, _poolAddress string, last24Hours bool) ([]string, error)
 
-		// 通过poolAddress,只计算跨链
-		CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string) (string, error)
+		// 通过 poolAddress, 只计算跨链
+		CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string, timePoint time.Time) (string, error)
 
 		// 计算所有的的计算正常的swap 交易
 		// 也就是说，如果 tx_hash 在跨池子中，计算过，那么需要排除掉那个tx_hash ,不计算
-		SummarizePoolVolumesUsd(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error)
+		SummarizePoolVolumesUsd(ctx context.Context, chainId int64, timePoint time.Time) ([]*PoolVolumeUsd, error)
 
 		// 通过poolAddress,只计算正常的swap 交易
 		// 也就是说，如果 tx_hash 在跨池子中，计算过，那么需要排除掉那个tx_hash ,不计算
@@ -261,7 +262,7 @@ type VolumeDetailsRecord struct {
 }
 */
 
-// / // 每天24条, -1 作为偏移量, 每条数据间隔 3600 秒 间隔  ，这是曲线的K线
+// / // 每天 24 条, -1 作为偏移量, 每条数据间隔 3600 秒 间隔  ，这是曲线的K线
 // hours to days
 // 每天 1 条，-1 作为偏移量，柱状图，每条数据 间隔 86400 秒
 func (m *customEventSonexPoolSwapModel) SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error) {
@@ -1439,7 +1440,7 @@ func (m *customEventSonexPoolSwapModel) aggregateSwapsBy24Hour(swaps []*types.Sw
 	return result
 }
 
-func (m *customEventSonexPoolSwapModel) CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string) (string, error) {
+func (m *customEventSonexPoolSwapModel) CalucateVolume24HBridgePool(ctx context.Context, chainId int64, poolAddres string, timePoint time.Time) (string, error) {
 	type valueTmpStruct struct {
 		Value sql.NullString `db:"value"`
 	}
@@ -1452,10 +1453,10 @@ with pool AS (
     where event_pool = $2
 ), tx_first_event AS (
     -- 每个交易的第一个 swap 事件
-    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= NOW() - INTERVAL '24 HOURS' AND extra_pool = $2 order by tx_hash, tx_index
+    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= $2 - INTERVAL '24 HOURS' AND extra_pool = $3 order by tx_hash, tx_index
 ), tx_last_event AS (
     -- 每个交易的最后一个 swap 事件
-    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= NOW() - INTERVAL '24 HOURS' AND extra_pool = $2   order by tx_hash, tx_index DESC
+    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= $2 - INTERVAL '24 HOURS' AND extra_pool = $3 order by tx_hash, tx_index DESC
 ), events AS (
     -- join tx_first_event & tx_last_event
     select
@@ -1494,7 +1495,7 @@ from  amount , priceRecord
 
 `
 	var value valueTmpStruct
-	err := m.conn.QueryRowCtx(ctx, &value, query, chainId, poolAddres)
+	err := m.conn.QueryRowCtx(ctx, &value, query, chainId, timePoint, poolAddres)
 	if err != nil {
 		logx.Infof("NODATA volue24H:%v ", err)
 		return "0", err
@@ -1511,15 +1512,14 @@ from  amount , priceRecord
 // 计算所有的的计算正常的swap 交易
 // 需要排除掉跨池子的交易hash
 // 也就是说，如果 tx_hash 在跨池子中计算过，那么需要排除掉那个tx_hash ,不计算
-func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64) ([]*PoolVolumeUsd, error) {
-
+func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Context, chainId int64, timePoint time.Time) ([]*PoolVolumeUsd, error) {
 	volumeQuery := `
 	
 SELECT CAST
 	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
 	t1.extra_pool
 FROM
-	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id =$1  GROUP BY extra_pool) AS t1
+	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= $1 - INTERVAL '24 HOURS' AND chain_id =$2  GROUP BY extra_pool) AS t1
 	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
 	-- 需要排除掉跨池子的交易hash 也就是说，如果 tx_hash 在跨池子中计算过，那么需要排除掉那个tx_hash ,不计算
@@ -1529,7 +1529,7 @@ FROM
 
 	// Execute the query and scan results into poolVolumes slice
 	var poolVolumesUsd []*PoolVolumeUsd
-	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, chainId)
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, timePoint, chainId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute volume query: %w", err)
 	}

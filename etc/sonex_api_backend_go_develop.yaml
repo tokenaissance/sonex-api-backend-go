@@ -32,7 +32,7 @@ Chains:
     Name: Minato
     Nodes:
       # URL:Weight
-      http://10.1.30.102:8545: 100
+      http://10.1.30.101:8545: 100
     MinConfirmations: 0
     MinDelayWaitMillisecond: 2000
     MaxLogsNumber: 5000
@@ -68,7 +68,7 @@ PreDeposits:
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1946
-    Staker: 0xeC8BcA27444bA6360EfF22365b42012d029D6324
+    Staker: 0x4cbDf61246F481b0A2e46721d455e39105721d28
     PointsHoldTimeLimits: 300
     PointsUSDLimits: 10
     Points: 5000
@@ -83,15 +83,36 @@ ACS:
         0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655,
         0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391,
       ]
+    - [
+        0xB58d8a552fE885488aD664c20eCf12634258750e,
+        0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391,
+      ]
+    - [
+        0xD1e36E7C3827568F0F9FbFb8DFFEF2e0527EA71a,
+        0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391,
+      ]
+    - [
+        0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655,
+        0xB58d8a552fE885488aD664c20eCf12634258750e,
+      ]
+    - [
+        0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655,
+        0xD1e36E7C3827568F0F9FbFb8DFFEF2e0527EA71a,
+      ]
+    - [
+        0xB58d8a552fE885488aD664c20eCf12634258750e,
+        0xD1e36E7C3827568F0F9FbFb8DFFEF2e0527EA71a,
+      ]
   Tokens:
     - 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
-    - 0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C
+    - 0xB58d8a552fE885488aD664c20eCf12634258750e
+    - 0xD1e36E7C3827568F0F9FbFb8DFFEF2e0527EA71a
   Points: 100
   SubTitle: ACS
   Graphql: https://test4.xzsean.eu.org
   Host: https://test4.xzsean.eu.org
   DefiId: 3
-  ApiSecret: h5j8k3l6z9x2c5v8b1n4m7q2w5e8r1t4y7u2i5o8p
+  ApiSecret: ACS_API_SECRECT
   ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
   LiquidityUSDLimits: 10
   ACSDailyLimits: 75000

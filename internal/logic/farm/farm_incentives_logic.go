@@ -2,14 +2,12 @@ package farm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/module/farm"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
@@ -63,108 +61,107 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
-	cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
+	// cacheKey := fmt.Sprintf("farm:pools:%d", req.ChainId)
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
 	tokenIds := map[int64][]int64{}
-	// Check cache
-	lastUpdate, err := redisCache.Get(cacheKey)
-	if err == nil && lastUpdate != "" {
-		var cacheWarpper CacheWarpper
-		err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
-		if err == nil {
-			resp = &types.FarmIncentivesResponse{
-				List: cacheWarpper.List,
-			}
-			tokenIds = cacheWarpper.TokenIds
-			var respLock sync.Mutex
-			eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
-			eventFarmIncentiveEndedModel := repository.NewEventFarmIncentiveEndedModel(conn)
-			eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
-			eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
-			var wg sync.WaitGroup
+	// // Check cache
+	// lastUpdate, err := redisCache.Get(cacheKey)
+	// if err == nil && lastUpdate != "" {
+	// 	var cacheWarpper CacheWarpper
+	// 	err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+	// 	if err == nil {
+	// 		resp = &types.FarmIncentivesResponse{
+	// 			List: cacheWarpper.List,
+	// 		}
+	// 		tokenIds = cacheWarpper.TokenIds
+	// 		var respLock sync.Mutex
+	// 		eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+	// 		eventFarmIncentiveEndedModel := repository.NewEventFarmIncentiveEndedModel(conn)
+	// 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
+	// 		eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
+	// 		var wg sync.WaitGroup
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+	// 		wg.Add(1)
+	// 		go func() {
+	// 			defer wg.Done()
 
-				record, err := eventFarmIncentiveCreatedModel.FindLatestByChainId(l.ctx, req.ChainId)
-				switch err {
-				case repository.ErrNotFound:
-					return
-				case nil:
-					if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
-						respLock.Lock()
-						defer respLock.Unlock()
-						resp = nil
-					}
-				default:
-					logx.Errorf("FindLatestByChainId error: %v", err)
-					return
-				}
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+	// 			record, err := eventFarmIncentiveCreatedModel.FindLatestByChainId(l.ctx, req.ChainId)
+	// 			switch err {
+	// 			case repository.ErrNotFound:
+	// 				return
+	// 			case nil:
+	// 				if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
+	// 					respLock.Lock()
+	// 					defer respLock.Unlock()
+	// 					resp = nil
+	// 				}
+	// 			default:
+	// 				logx.Errorf("FindLatestByChainId error: %v", err)
+	// 				return
+	// 			}
+	// 		}()
+	// 		wg.Add(1)
+	// 		go func() {
+	// 			defer wg.Done()
 
-				record, err := eventFarmIncentiveEndedModel.FindLatestByChainId(l.ctx, req.ChainId)
-				switch err {
-				case repository.ErrNotFound:
-					return
-				case nil:
-					if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
-						respLock.Lock()
-						defer respLock.Unlock()
-						resp = nil
-					}
-				default:
-					logx.Errorf("FindLatestByChainId error: %v", err)
-					return
-				}
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+	// 			record, err := eventFarmIncentiveEndedModel.FindLatestByChainId(l.ctx, req.ChainId)
+	// 			switch err {
+	// 			case repository.ErrNotFound:
+	// 				return
+	// 			case nil:
+	// 				if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
+	// 					respLock.Lock()
+	// 					defer respLock.Unlock()
+	// 					resp = nil
+	// 				}
+	// 			default:
+	// 				logx.Errorf("FindLatestByChainId error: %v", err)
+	// 				return
+	// 			}
+	// 		}()
+	// 		wg.Add(1)
+	// 		go func() {
+	// 			defer wg.Done()
 
-				record, err := eventFarmTokenStakedModel.FindLatestByChainId(l.ctx, req.ChainId)
-				switch err {
-				case repository.ErrNotFound:
-					return
-				case nil:
-					if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
-						respLock.Lock()
-						defer respLock.Unlock()
-						resp = nil
-					}
-				default:
-					logx.Errorf("FindLatestByChainId error: %v", err)
-					return
-				}
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+	// 			record, err := eventFarmTokenStakedModel.FindLatestByChainId(l.ctx, req.ChainId)
+	// 			switch err {
+	// 			case repository.ErrNotFound:
+	// 				return
+	// 			case nil:
+	// 				if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
+	// 					respLock.Lock()
+	// 					defer respLock.Unlock()
+	// 					resp = nil
+	// 				}
+	// 			default:
+	// 				logx.Errorf("FindLatestByChainId error: %v", err)
+	// 				return
+	// 			}
+	// 		}()
+	// 		wg.Add(1)
+	// 		go func() {
+	// 			defer wg.Done()
 
-				record, err := eventFarmTokenUnstakedModel.FindLatestByChainId(l.ctx, req.ChainId)
-				switch err {
-				case repository.ErrNotFound:
-					return
-				case nil:
-					if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
-						respLock.Lock()
-						defer respLock.Unlock()
-						resp = nil
-					}
-				default:
-					logx.Errorf("FindLatestByChainId error: %v", err)
-					return
-				}
-			}()
-			wg.Wait()
-		}
-	}
+	// 			record, err := eventFarmTokenUnstakedModel.FindLatestByChainId(l.ctx, req.ChainId)
+	// 			switch err {
+	// 			case repository.ErrNotFound:
+	// 				return
+	// 			case nil:
+	// 				if record.TxAt.UTC().After(cacheWarpper.LastUpdate) {
+	// 					respLock.Lock()
+	// 					defer respLock.Unlock()
+	// 					resp = nil
+	// 				}
+	// 			default:
+	// 				logx.Errorf("FindLatestByChainId error: %v", err)
+	// 				return
+	// 			}
+	// 		}()
+	// 		wg.Wait()
+	// 	}
+	// }
 
-	// No cache
 	// 查看是否过期
 	if resp == nil {
 		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
@@ -186,15 +183,9 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		// if len(positions) > 0 {
 		if len(resp.List) > 0 {
 			for i, item := range resp.List {
-				// for _, vv := range positions {
-				// 	if strings.EqualFold(vv.Pool.Address, item.PoolAddress) {
-				// 		resp.List[i].Positions = append(resp.List[i].Positions, vv)
-				// 	}
-				// }
 				// 可用余额
 				bal, _, _, _, _ := getBalance(req.ChainId, item.IncentiveId, req.UserAddress, farmConf.Staker, conn)
 				resp.List[i].Balance = bal
-				logx.Infof("len:%v IncentiveId:%v ", len(resp.List[i].Positions), resp.List[i].IncentiveId)
 			}
 		}
 		// }
@@ -239,16 +230,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 		var incentiveIds []int64
 		linq.From(resp.List).SelectT(func(item types.FarmIncentivesResponse_Data) int64 { return item.IncentiveId }).ToSlice(&incentiveIds)
-		statcCaller, err := farm.NewStaticCaller(l.svcCtx.Config)
-		if err != nil {
-			logx.Errorf("ERR:%v", err)
-			return resp, err
-		}
-		unclaimeds, err := statcCaller.BatchGetUnclaimeds(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress), incentiveIds)
-		if err != nil {
-			logx.Errorf("ERR:%v", err)
-			return resp, err
-		}
 		for i, item := range resp.List {
 			if val, ok := staked[item.IncentiveId]; ok {
 				resp.List[i].Staked = val
@@ -263,7 +244,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
 			resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
 
-			logx.Infof("SSSSA:%v B:%v c:%v totalClaimableFeesString:%v ", farmConf.Staker, req.UserAddress, item.IncentiveId, totalClaimableFeesString)
+			logx.Infof("UserAddress:%v incentiveid:%v totalClaimableFeesString:%v ", req.UserAddress, item.IncentiveId, totalClaimableFeesString)
 
 			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
 			if err != nil {
@@ -278,7 +259,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			resp.List[i].TotalClaimedFeesUSD = totalClaimedFeesUSD_bigFloat.String()
 			totalClaimedFeesUSDFloat64, _ := totalClaimedFeesUSD_bigFloat.Float64()
 			resp.List[i].TotalClaimedFeesUSDFloat64 = totalClaimedFeesUSDFloat64
-			_ = unclaimeds
 		}
 
 	}
@@ -356,14 +336,12 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 		logx.Errorf("ERR1:%v ", err)
 		return resp, nil, err
 	}
-	logx.Infof("incentiveCreatedRecords:%v len :%v  ", incentiveCreatedRecords, len(incentiveCreatedRecords))
 	validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(l.ctx, req.ChainId)
 	if err != nil {
 		logx.Errorf("ERR2:%v ", err)
 		return resp, nil, err
 	}
 	validStakeRecordMap := map[int64][]repository.EventFarmTokenStaked{}
-	logx.Infof("validStakeRecords:%v ", validStakeRecords)
 	linq.From(validStakeRecords).
 		GroupByT(
 			func(item repository.EventFarmTokenStaked) int64 { return item.EventIncentiveId },
@@ -381,14 +359,12 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			},
 		)
 
-	logx.Infof("validStakeRecordMap:%v ", validStakeRecordMap)
 	prices, err := tokenPriceModel.QueryLatestHistoryPrices(l.ctx)
 	if err != nil {
 		logx.Errorf("ERR3:%v ", err)
 		return resp, nil, err
 	}
 
-	logx.Infof("prices:%#v ", prices)
 	var wg sync.WaitGroup
 	results := make(chan struct {
 		Data     types.FarmIncentivesResponse_Data
@@ -439,20 +415,14 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				logx.Errorf("%s", fmt.Sprintf("Get extra token error: %s %s", record.EventRewardToken, err))
 				return
 			}
-			logx.Infof("rewardToken:%#v", rewardToken)
 			ratepersecond, _ := new(big.Float).SetString(record.ExtraRate)
-			logx.Info("333333:", rewardToken.Address, "prices[rewardToken.Address]:", prices[rewardToken.Address])
 			rewardPrice := new(big.Float).SetInt(prices[rewardToken.Address])
-			logx.Info("4444444:")
 			// rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil))
 			rewardTokenAccuracy := new(big.Float).SetFloat64(math.Pow10(int(rewardToken.Decimals)))
-			logx.Info("555555:")
 
 			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(ratepersecond, rewardPrice), rewardTokenAccuracy), usdAccuracy)
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
-			logx.Info("77777777:")
-			logx.Infof("record.EventIncentiveId:%v , 666666:rewardToken:%#v ratepersecond :%v  rewardPrice:%v totalRewardUSD365: %v  ", record.EventIncentiveId, rewardToken, ratepersecond, rewardPrice, totalRewardUSD)
 
 			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
 			if err != nil {
@@ -461,7 +431,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			var dataResult types.FarmIncentivesResponse_Data
 			tokenIdsResult := []int64{}
 			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
-			logx.Info("1111111111111111111111:", ok)
 			var status string
 			if record.ExtraEnded {
 				status = "closed"
@@ -477,11 +446,11 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
 
 			if err != nil {
+				totalClaimableFeesUSD = big.NewFloat(0)
 				logx.Errorf("getValueOfAmountToken:%v ", err)
 			}
 
 			totalClaimableFeesUSDFloat64, _ := totalClaimableFeesUSD.Float64()
-			logx.Infof("record.EventIncentiveId:%v totalClaimableFeesUSD:%v  rewards :%v ", record.EventIncentiveId, totalClaimableFeesUSDFloat64, rewards.String())
 
 			eventWeightString := big.NewInt(record.EventWeight).String()
 			totalWeightString, err := SetRewardPoolInfo(farmConf.Staker, record.EventRewardToken, *chainConf, cacher)
@@ -510,7 +479,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					logx.Error(fmt.Errorf("getIncentiveInfoTokenIds error: %v", err))
 					return
 				}
-				logx.Infof("tokenIdsTotal:%v tokenIds:%v ", tokenIdsTotal, tokenIds)
 				positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIdsTotal)
 				if err != nil {
 					logx.Error(fmt.Errorf("BatchGetPositions error: %v", err))
@@ -562,7 +530,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				}
 				tokenIdsResult = tids
 			} else {
-				logx.Info("notoknotok")
 				// apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 				// 0 的时候  就应该按照1来算
 				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
@@ -622,8 +589,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 		list = append(list, result.Data)
 		tokenIds[result.Data.IncentiveId] = result.TokenIds
 	}
-
-	logx.Info(" tokenIds: ", tokenIds)
 
 	return &types.FarmIncentivesResponse{
 		USD: types.FarmIncentivesResponse_Token{

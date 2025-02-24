@@ -96,7 +96,7 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainId(ctx context.Contex
 				S.chain_id = $1
 				AND S.event_incentive_id IN (
 					SELECT event_incentive_id FROM %s C
-					WHERE event_incentive_id NOT IN (SELECT event_incentive_id FROM event_farm_incentive_ended)
+--					WHERE event_incentive_id NOT IN (SELECT event_incentive_id FROM event_farm_incentive_ended)
 				)
 				AND (SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
 				(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
