@@ -165,6 +165,10 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	// 查看是否过期
 	if resp == nil {
 		resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
+		if err != nil {
+			logx.Errorf("err from GetResponse :%v   ", err)
+			return resp, err
+		}
 		if len(tokenIds) == 0 {
 			logx.Info("no tokenid founds")
 			return resp, nil
@@ -583,7 +587,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	tokenIds = map[int64][]int64{}
 	for result := range results {
 		if result.Err != nil {
-			logx.Errorf("result error:%v", err)
+			logx.Errorf("result error:%v", result.Err)
 			return resp, nil, result.Err
 		}
 		list = append(list, result.Data)
