@@ -66,10 +66,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 	tokenIds := map[int64][]int64{}
 
-	if err != nil {
-		logx.Errorf("ERR from GetResponse:%v", err)
-		return resp, err
-	}
 	resp, tokenIds, err = l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 	if len(tokenIds) == 0 {
 		logx.Info("no tokenid founds")
