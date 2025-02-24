@@ -1038,6 +1038,51 @@
         ]
       }
     },
+    "/sonex/swaptokens": {
+      "get": {
+        "operationId": "SonexSwapTokensHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SwapTokensResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ALL",
+              "TOP",
+              "OFFICAL"
+            ]
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/token/price": {
       "get": {
         "operationId": "SonexTokenPriceHandler",
@@ -4277,6 +4322,118 @@
         "data",
         "meta",
         "message"
+      ]
+    },
+    "SwapTokenInfo": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "volume": {
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "logo": {
+          "type": "string"
+        }
+      },
+      "title": "SwapTokenInfo",
+      "required": [
+        "address",
+        "name",
+        "symbol",
+        "decimals"
+      ]
+    },
+    "SwapTokenInfoWithBalance": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "string"
+        },
+        "usd_value": {
+          "type": "string"
+        }
+      },
+      "title": "SwapTokenInfoWithBalance",
+      "required": [
+        "address",
+        "name",
+        "symbol",
+        "decimals"
+      ]
+    },
+    "SwapTokensRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "order_by": {
+          "type": "string",
+          "enum": [
+            "ALL",
+            "TOP",
+            "OFFICAL"
+          ]
+        }
+      },
+      "title": "SwapTokensRequest"
+    },
+    "SwapTokensResponse": {
+      "type": "object",
+      "properties": {
+        "token_list_top": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SwapTokenInfo"
+          },
+          "description": " TOP"
+        },
+        "token_list_all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SwapTokenInfoWithBalance"
+          },
+          "description": " ALL ,OFFICAL"
+        }
+      },
+      "title": "SwapTokensResponse",
+      "required": [
+        "token_list_top",
+        "token_list_all"
       ]
     },
     "SwapVolume": {

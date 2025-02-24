@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sonex_api_backend_go/internal/types"
+	"time"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -23,6 +25,8 @@ type (
 		FindAllToMap(ctx context.Context) (map[string]SonexToken, error)
 		QueryLogo(ctx context.Context) (map[string]string, error)
 		FindByOneAddress(ctx context.Context, address string) (PoolsResponse_Token, error)
+		// swap page token
+		QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfoWithBalance, error)
 	}
 
 	customSonexTokenModel struct {
@@ -231,4 +235,62 @@ func (m *customSonexTokenModel) FindByOneAddress(ctx context.Context, address st
 		return resp, err
 	}
 	return resp, nil
+}
+
+type SonexTokenWithPrice struct {
+	Id             int64          `db:"id"`
+	CreatedAt      time.Time      `db:"created_at"`
+	UpdatedAt      time.Time      `db:"updated_at"`
+	DeletedAt      sql.NullTime   `db:"deleted_at"`
+	Name           string         `db:"name"`
+	Symbol         string         `db:"symbol"`
+	Address        string         `db:"address"`
+	Decimals       int64          `db:"decimals"`
+	Logo           sql.NullString `db:"logo"`
+	Sort           int64          `db:"sort"`
+	RecommendOrder int64          `db:"recommendOrder"`
+	IsHidden       bool           `db:"isHidden"`
+	Volume         string         `db:"volume"`
+	Additional     string         `db:"additional"`
+	Price          sql.NullString `db:"price"`
+}
+
+func (m *customSonexTokenModel) QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfoWithBalance, error) {
+
+	query := `
+
+SELECT sonex_token.* ,t3.price FROM sonex_token  
+JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = sonex_token.address
+ORDER BY sonex_token.symbol ASC
+`
+	var resp []SonexTokenWithPrice
+	var swapTokenInfo []types.SwapTokenInfoWithBalance
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return swapTokenInfo, err
+	}
+	if len(resp) == 0 {
+		return swapTokenInfo, nil
+	}
+	// change TokenWithPrice to SwapTokenInfoWithBalance
+
+	for i, v := range resp {
+		logx.Infof("i:%v ,v :%v ", i, v)
+
+		oneSwapTokenInfoWithBalance := types.SwapTokenInfoWithBalance{
+			Address:  v.Address,
+			Name:     v.Name,
+			Symbol:   v.Symbol,
+			Price:    v.Price.String,
+			Decimals: v.Decimals,
+			Logo:     v.Logo.String,
+			Balance:  "0",
+			UsdValue: "0",
+		}
+
+		swapTokenInfo = append(swapTokenInfo, oneSwapTokenInfoWithBalance)
+	}
+
+	return swapTokenInfo, nil
 }

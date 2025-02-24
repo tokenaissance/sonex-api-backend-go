@@ -45,6 +45,8 @@ type (
 		SummarizeVolumesByChainId(ctx context.Context, chainId int64) (map[string]*big.Int, error)
 		SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error)
 
+		// swap page token,返回 24 个 小时内交易的Top Five代币的 Volume USD
+		SummarizeVolumesUsdByChainId(ctx context.Context, chainId int64, itemsNum int64) ([]types.SwapTokenInfo, error)
 		// 通过 pool adress 计算 volume for  kline
 		SummarizePoolInfoKineData(ctx context.Context, chainId int64, pooladdress string, offsetDay int64) ([]types.VolumeDetailsRecord, error)
 
@@ -1013,6 +1015,57 @@ func (m *customEventSonexPoolSwapModel) SummarizeVolumesByChainId(ctx context.Co
 	}
 
 	return result, nil
+}
+
+// calucate the volume of  top five volume in  24 Hours
+func (m *customEventSonexPoolSwapModel) SummarizeVolumesUsdByChainId(ctx context.Context, chainId int64, itemsNum int64) ([]types.SwapTokenInfo, error) {
+	/*
+		Address  string `json:"address"`
+		Name     string `json:"name"`
+		Symbol   string `json:"symbol"`
+		Volume   string `json:"volume,optional"`
+		Price    string `json:"price,optional"`
+		Decimals int64  `json:"decimals"`
+		Logo     string `json:"logo,optional"`
+	*/
+	query := `
+
+	with tokenVolumeInfo AS (
+SELECT 
+			address, name,symbol,SUM(volume) AS volume,price,decimals,logo
+		FROM (
+			SELECT C.event_token0 AS address, SUM(ABS(COALESCE(S.event_amount0::NUMERIC,0))) AS volume,price,st.decimals,st.name,st.symbol,st.logo
+			FROM event_sonex_pool_swap S
+			JOIN event_sonex_factory_pool_created C ON S.extra_pool = C.event_pool 
+			JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = C.event_token0
+			JOIN token st ON st.address = C.event_token0
+			WHERE S.chain_id = $1  AND  S.tx_at >= NOW() - INTERVAL  '24 HOURS' 
+			GROUP BY event_token0,price,decimals,name,symbol,logo
+			UNION
+			SELECT C.event_token1 AS address, SUM(ABS(COALESCE(S.event_amount1::NUMERIC,0)))  AS volume,price,st.decimals,st.name ,st.symbol,st.logo
+			FROM event_sonex_pool_swap S
+			JOIN event_sonex_factory_pool_created C ON S.extra_pool = C.event_pool
+			JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = C.event_token1
+			JOIN token st ON st.address = C.event_token1
+			WHERE S.chain_id = $1  AND  S.tx_at >= NOW() - INTERVAL  '24 HOURS' 
+			GROUP BY event_token1,price,decimals,name ,symbol,logo
+		)
+		GROUP BY address,price,decimals,name ,symbol,logo
+)
+	
+SELECT address,name ,symbol,   volume / power(10,decimals)  * price / 1000000  AS volume,price / 1000000,decimals,logo  FROM tokenVolumeInfo ORDER BY volume DESC LIMIT $2;
+
+
+	`
+
+	var records []types.SwapTokenInfo
+	err := m.conn.QueryRowsCtx(ctx, &records, query, chainId, itemsNum)
+	if err != nil {
+		logx.Errorf("ERR:%v ", err)
+		return records, err
+	}
+
+	return records, nil
 }
 
 func (m *customEventSonexPoolSwapModel) SummarizePoolVolumes(ctx context.Context, chainId int64, last24Hours bool) (map[string]*PoolVolume, error) {

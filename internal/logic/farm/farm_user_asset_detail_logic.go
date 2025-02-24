@@ -356,9 +356,7 @@ func getValueOfAmountToken(rewards *big.Int, incentiveId, chainId int64, chain *
 		tokenInfo.UsdDecimals = 6
 		tokenInfo.TokenDecimals = decimals
 	}
-	totalClaimableFeesUSD := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
-
-	logx.Infof("totalClaimableFeesUSD:%v", totalClaimableFeesUSD)
+	totalClaimableFeesUSD, _ := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
 
 	if totalClaimableFeesUSD.Cmp(big.NewFloat(0)) == 0 {
 		totalClaimableFeesUSD = big.NewFloat(0)
