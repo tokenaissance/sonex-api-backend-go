@@ -1064,7 +1064,7 @@
             "type": "string"
           },
           {
-            "name": "order_by",
+            "name": "orderBy",
             "in": "query",
             "required": false,
             "type": "string",
@@ -4401,7 +4401,7 @@
         "address": {
           "type": "string"
         },
-        "order_by": {
+        "orderBy": {
           "type": "string",
           "enum": [
             "ALL",

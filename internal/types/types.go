@@ -738,7 +738,7 @@ type SwapTokenInfoWithBalance struct {
 type SwapTokensRequest struct {
 	ChainRequest
 	Address string `form:"address,optional"`
-	OrderBy string `form:"order_by,optional,options=ALL|TOP|OFFICAL"`
+	OrderBy string `form:"orderBy,optional,options=ALL|TOP|OFFICAL"`
 }
 
 type SwapTokensResponse struct {

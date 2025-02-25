@@ -181,7 +181,6 @@ func getUserTokenDetailStructFromScout(chain config.ChainConfig, tokenList []typ
 	// get balance from  userBalanceRecord
 	for _, v := range userBalanceRecord {
 		for ii, vv := range tokenList {
-			logx.Infof("userBalanceRecord  ii:%v  vv:%#v ", ii, vv)
 			if strings.EqualFold(strings.ToLower(vv.Address), strings.ToLower(v.TokenDetail.Address)) &&
 				!strings.EqualFold(v.Value, "") {
 
