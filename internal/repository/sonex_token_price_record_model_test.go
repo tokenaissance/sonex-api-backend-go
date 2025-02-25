@@ -145,3 +145,20 @@ func Test_GetBytypeOfValueAndChainId(t *testing.T) {
 		logx.Infof("n   %v", records)
 	}
 }
+
+func Test_QueryByChainIdWithPrice(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+	model := NewTokenModel(NewConn(c.PostgreSQL.DataSource()))
+
+	records, err := model.QueryByChainIdWithPrice(context.Background(), 1946)
+	if err != nil {
+		logx.Errorf("err%v", err)
+		return
+	} else {
+		for i, v := range records {
+			logx.Infof("i %v v :%#v", i, v)
+		}
+
+	}
+}

@@ -103,6 +103,40 @@ type TokensResponse_Token {
 	Hidden bool   `json:"hidden"`
 }
 
+type SwapTokensRequest {
+	ChainRequest
+	Address string `form:"address,optional"`
+	OrderBy string `form:"order_by,optional,options=ALL|TOP|OFFICAL"`
+}
+
+type SwapTokensResponse {
+	TokenListTop []SwapTokenInfo	 `json:"token_list_top"` // TOP  
+	TokenListAll []SwapTokenInfoWithBalance `json:"token_list_all"` // ALL ,OFFICAL
+}
+
+type SwapTokenInfo {
+	Address     string `json:"address"`
+	Name        string `json:"name"`
+	Symbol      string `json:"symbol"`
+	Volume      string `json:"volume,optional"`
+	Price       string `json:"price,optional"`
+	Decimals    int64  `json:"decimals"`
+	Logo        string `json:"logo,optional"`
+}
+
+type SwapTokenInfoWithBalance {
+	Address     string `json:"address"`
+	Name        string `json:"name"`
+	Symbol      string `json:"symbol"`
+	Price       string `json:"price,optional"`
+	Decimals    int64  `json:"decimals"`
+	Logo        string `json:"logo,optional"`
+	Balance     string `json:"balance,optional"`
+	UsdValue  string `json:"usd_value,optional"`
+}
+
+
+
 type PaginationMeta {
 	Page            int  `json:"page"`
 	Take            int  `json:"take"`
@@ -773,4 +807,7 @@ service sonex_api_backend_go {
 
 	@handler SonexTvlKlineHandler
 	get /tvlkline (SonexTvlKlineRequest) returns (SonexTvlKlineResponse)
+
+	@handler SonexSwapTokensHandler
+	get /swaptokens (SwapTokensRequest) returns (SwapTokensResponse)
 }
