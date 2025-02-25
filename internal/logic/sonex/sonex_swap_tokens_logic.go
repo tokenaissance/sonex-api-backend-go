@@ -10,9 +10,11 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
@@ -65,7 +67,7 @@ func getTop5VolumeIn24Hours(cacher cache.ICache, eventSonexPoolSwapModel reposit
 	}
 
 	if len(volumes) == 0 {
-		volumes, err = eventSonexPoolSwapModel.SummarizeVolumesUsdByChainId(context.Background(), chainId,5)
+		volumes, err = eventSonexPoolSwapModel.SummarizeVolumesUsdByChainId(context.Background(), chainId, 5)
 		if err != nil {
 			logx.Errorf("Summarize volumes error: %s", err)
 			return []types.SwapTokenInfo{}, err
@@ -91,10 +93,69 @@ func getTop5VolumeIn24Hours(cacher cache.ICache, eventSonexPoolSwapModel reposit
 	return volumes, nil
 }
 
-func getUserTokenDetailStructFromScout(userAddressWithCheckSum, blockScoutUrl string, blockScoutXRequsetId []string) []*TokenUserStruct {
+// for tokenList
+func getTokenBalanceMultipleCall(chain config.ChainConfig, tokenList []types.SwapTokenInfoWithBalance, userAddress string) ([]types.SwapTokenInfoWithBalance, error) {
+	if len(tokenList) == 0 {
+		return tokenList, nil
+	}
+	if strings.EqualFold(userAddress, "") {
+		return tokenList, nil
+	}
+	// 用 go
+	var wg sync.WaitGroup
+
+	poolChan := make(chan types.SwapTokenInfoWithBalance, len(tokenList))
+	pools := make([]types.SwapTokenInfoWithBalance, 0, len(tokenList))
+
+	for i, v := range tokenList {
+		logx.Infof("i:%v v :%v ", i, v)
+		wg.Add(1)
+		go func(swapTokenInfo types.SwapTokenInfoWithBalance) {
+			defer wg.Done()
+			balance := big.NewInt(0)
+			Multicall(
+				context.Background(),
+				chain,
+				Call{
+					Contract: common.HexToAddress(swapTokenInfo.Address),
+					Method:   "balanceOf",
+					Args:     []interface{}{common.HexToAddress(userAddress)},
+					Result:   &balance,
+				},
+			)
+			swapTokenInfo.Balance = balance.String()
+
+			userBalanceReadableUsd, userBalanceReadable := global.CalucateOneTokenUsdInPool(balance, swapTokenInfo.Price, int64(6), swapTokenInfo.Decimals)
+			swapTokenInfo.UsdValue = userBalanceReadableUsd.String()
+			swapTokenInfo.Balance = userBalanceReadable.String()
+
+			logx.Infof("swapTokenInfo.Address: %v  balance: %v", swapTokenInfo.Address, balance)
+			poolChan <- swapTokenInfo
+		}(v)
+	}
+
+	go func() {
+		wg.Wait()
+		close(poolChan)
+	}()
+
+	for pool := range poolChan {
+		pools = append(pools, pool)
+	}
+	return pools, nil
+
+}
+func getUserTokenDetailStructFromScout(chain config.ChainConfig, tokenList []types.SwapTokenInfoWithBalance, userAddressWithCheckSum, blockScoutUrl string, blockScoutXRequsetId []string) ([]types.SwapTokenInfoWithBalance, error) {
 
 	var userBalanceRecord []*TokenUserStruct
 	var err error
+
+	if !strings.EqualFold(userAddressWithCheckSum, "") {
+		if !common.IsHexAddress(userAddressWithCheckSum) {
+			logx.Errorf("invalid user address:%v ", userAddressWithCheckSum)
+			return tokenList, err
+		}
+	}
 
 	if !strings.EqualFold(userAddressWithCheckSum, "") {
 		url_prefix := blockScoutUrl
@@ -104,7 +165,33 @@ func getUserTokenDetailStructFromScout(userAddressWithCheckSum, blockScoutUrl st
 			logx.Infof("Get user:%v  balance from blockscout failed :%v ", userAddressWithCheckSum, err)
 		}
 	}
-	return userBalanceRecord
+	// by mulitipla call
+	if len(userBalanceRecord) == 0 {
+		// use multiple call to get the user balance
+		tokenWithBalance, err := getTokenBalanceMultipleCall(chain, tokenList, userAddressWithCheckSum)
+		if err != nil {
+			logx.Infof("getTokenBalanceMultipleCall ERR:%v ", err)
+			return tokenList, err
+		}
+		return tokenWithBalance, nil
+	}
+
+	// get balance from  userBalanceRecord
+	for i, v := range userBalanceRecord {
+		for ii, vv := range tokenList {
+			logx.Infof("i:%v v :%#v  ii:%v  vv:%#v ", i, v, ii, vv)
+			if strings.EqualFold(strings.ToLower(vv.Address), strings.ToLower(v.TokenDetail.Address)) &&
+				!strings.EqualFold(v.Value, "") {
+
+				balance_bigInt, _ := new(big.Int).SetString(v.Value, 10)
+				userBalanceReadableUsd, userBalanceReadable := global.CalucateOneTokenUsdInPool(balance_bigInt, vv.Price, int64(6), vv.Decimals)
+				tokenList[ii].UsdValue = userBalanceReadableUsd.String()
+				tokenList[ii].Balance = userBalanceReadable.String()
+			}
+		}
+	}
+
+	return tokenList, err
 }
 func getTokenList(conn sqlx.SqlConn, chainId int64, orderBy string) ([]types.SwapTokenInfoWithBalance, error) {
 	var tokenList []types.SwapTokenInfoWithBalance
@@ -136,27 +223,29 @@ func getTokenList(conn sqlx.SqlConn, chainId int64, orderBy string) ([]types.Swa
 }
 func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*types.SwapTokensResponse, error) {
 	if req.ChainId == 0 {
-		return &types.SwapTokensResponse{}, errors.New("Invalid chainid")
+		return &types.SwapTokensResponse{}, errors.New("invalid chainid")
 	}
 
-	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
-	if chainConf == nil {
-		return &types.SwapTokensResponse{}, errors.New("Miss chain configure")
-	}
-
-	// ctx := context.Background()
 	if !strings.EqualFold(req.Address, "") {
 		if !common.IsHexAddress(req.Address) {
 			logx.Errorf("invalid user address:%v ", req.Address)
 			return &types.SwapTokensResponse{}, errors.New("invalid address")
 		}
 	}
+
+	// 判断conf
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	if chainConf == nil {
+		return &types.SwapTokensResponse{}, errors.New("miss chain configure")
+	}
+
 	// checksum address
 	userAddressWithCheckSum := common.HexToAddress(req.Address).Hex()
 
-	// get balance
 	// 默认用ALL字段排序
-	if strings.EqualFold(req.OrderBy, "") {
+	if !strings.EqualFold(req.OrderBy, ORFERBY_ALL) &&
+		!strings.EqualFold(req.OrderBy, ORFERBY_OFFICAL) &&
+		!strings.EqualFold(req.OrderBy, ORFERBY_TOP) {
 		req.OrderBy = ORFERBY_ALL
 	}
 
@@ -173,7 +262,7 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 		volumes, err = getTop5VolumeIn24Hours(cacher, eventSonexPoolSwapModel, req.ChainId)
 
 		if err != nil {
-			logx.Errorf("ERR:%v ", err)
+			logx.Errorf("getTop5VolumeIn24Hours ERR:%v ", err)
 			return &types.SwapTokensResponse{}, err
 		}
 
@@ -181,59 +270,41 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 
 	}
 
-	// get user balance from block scout
-	userBalanceRecord := getUserTokenDetailStructFromScout(userAddressWithCheckSum, l.svcCtx.Config.BlockScoutUrl[0], l.svcCtx.Config.BlockScoutXRequsetId)
-
-	logx.Infof("userBalanceRecord:%#v ", userBalanceRecord)
-	// 获取该user address 的所有代币
-
 	var tokenList []types.SwapTokenInfoWithBalance
 	tokenList, err = getTokenList(conn, req.ChainId, req.OrderBy)
 	if err != nil {
-
 		logx.Errorf("ERR:%v ", err)
 		return &types.SwapTokensResponse{}, err
-
 	}
+
 	// 选择 ALL
 	if len(tokenList) == 0 {
-		logx.Error("not token list")
+		logx.Error("no token list")
 		return &types.SwapTokensResponse{}, nil
 	}
 
-	// return only record
-	if len(userBalanceRecord) == 0 {
+	// get user balance from block scout
+	// 获取该user address 的所有代币
+	tokenListWithBalance, err := getUserTokenDetailStructFromScout(*chainConf, tokenList, userAddressWithCheckSum, l.svcCtx.Config.BlockScoutUrl[0], l.svcCtx.Config.BlockScoutXRequsetId)
 
+	if err != nil {
+		logx.Errorf("getUserTokenDetailStructFromScout:%v ", err)
 		return &types.SwapTokensResponse{TokenListAll: tokenList}, nil
 	}
+	logx.Infof("userBalanceRecord:%#v ", tokenListWithBalance)
 
-	// get balance from  userBalanceRecord
-	for i, v := range userBalanceRecord {
-		for ii, vv := range tokenList {
-			logx.Infof("i:%v v :%v  ii:%v  vv:%v ", i, v, ii, vv)
-			if strings.EqualFold(strings.ToLower(vv.Address), strings.ToLower(v.TokenDetail.Address)) &&
-				!strings.EqualFold(v.Value, "") {
-
-				balance_bigInt, _ := new(big.Int).SetString(v.Value, 10)
-				userBalanceReadableUsd, userBalanceReadable := global.CalucateOneTokenUsdInPool(balance_bigInt, vv.Price, int64(6), vv.Decimals)
-				tokenList[ii].UsdValue = userBalanceReadableUsd.String()
-				tokenList[ii].Balance = userBalanceReadable.String()
-			}
-		}
-	}
-
-	sort.SliceStable(tokenList, func(i, j int) bool {
+	sort.SliceStable(tokenListWithBalance, func(i, j int) bool {
 		usd_i, _ := big.NewFloat(0).SetString(tokenList[i].UsdValue)
 		usd_j, _ := big.NewFloat(0).SetString(tokenList[j].UsdValue)
 		if usd_i.Cmp(usd_j) == 0 {
 			// 按照 symbol 排序序列
-			return tokenList[i].Symbol < tokenList[i].Symbol
+			return tokenListWithBalance[i].Symbol < tokenListWithBalance[i].Symbol
 		} else {
 			return usd_i.Cmp(usd_j) > 0
 		}
 	})
 
-	return &types.SwapTokensResponse{TokenListAll: tokenList}, nil
+	return &types.SwapTokensResponse{TokenListAll: tokenListWithBalance}, nil
 
 }
 

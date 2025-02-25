@@ -260,7 +260,7 @@ func (m *customSonexTokenModel) QueryByChainIdWithPrice(ctx context.Context, cha
 	query := `
 
 SELECT sonex_token.* ,t3.price FROM sonex_token  
-JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = sonex_token.address
+LEFT JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = sonex_token.address
 ORDER BY sonex_token.symbol ASC
 `
 	var resp []SonexTokenWithPrice
