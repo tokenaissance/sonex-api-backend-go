@@ -106,7 +106,7 @@ type TokensResponse_Token {
 type SwapTokensRequest {
 	ChainRequest
 	Address string `form:"address,optional"`
-	OrderBy string `form:"order_by,optional,options=ALL|TOP|OFFICAL"`
+	OrderBy string `form:"orderBy,optional,options=ALL|TOP|OFFICAL"`
 }
 
 type SwapTokensResponse {
