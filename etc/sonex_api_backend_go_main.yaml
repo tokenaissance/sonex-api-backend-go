@@ -74,8 +74,8 @@ PreDeposits:
 Farms:
   - ChainId: 1868
     Staker: 0xa704c7B3a6177E795c1fA3755223a428498F5909
-    PointsHoldTimeLimits: 300
-    PointsUSDLimits: 10
+    PointsHoldTimeLimits: 604800
+    PointsUSDLimits: 100
     Points: 5000
     SubTitle: Farm
 ACS:

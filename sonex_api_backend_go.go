@@ -122,7 +122,7 @@ func main() {
 	global.AddCronJob("00 30 23 * * ?", func() {
 		task.HandleACSSwapReward(&c)
 	})
-	global.AddCronJob("0 0/1 * * * ?", func() {
+	global.AddCronJob("0 0 0/1 * * ?", func() {
 		task.HandleFarmPoints(&c)
 	})
 
