@@ -1450,13 +1450,13 @@ with pool AS (
         event_token0 AS token0,
         event_token1 AS token1
     from event_sonex_factory_pool_created
-    where event_pool = $2
+    where event_pool = $3
 ), tx_first_event AS (
     -- 每个交易的第一个 swap 事件
-    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= $2 - INTERVAL '24 HOURS' AND extra_pool = $3 order by tx_hash, tx_index
+    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= to_timestamp( CAST($2 AS double precision) ) - INTERVAL '24 HOURS' AND extra_pool = $3 order by tx_hash, tx_index
 ), tx_last_event AS (
     -- 每个交易的最后一个 swap 事件
-    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= $2 - INTERVAL '24 HOURS' AND extra_pool = $3 order by tx_hash, tx_index DESC
+    select distinct on (tx_hash) * from event_sonex_pool_swap where   chain_id= $1 AND tx_at >= to_timestamp( CAST($2 AS double precision) ) - INTERVAL '24 HOURS' AND extra_pool = $3 order by tx_hash, tx_index DESC
 ), events AS (
     -- join tx_first_event & tx_last_event
     select
@@ -1468,7 +1468,7 @@ with pool AS (
     left join tx_last_event AS t2 ON t2.tx_hash=t1.tx_hash
     left join event_sonex_factory_pool_created AS t3 ON t3.event_pool=t1.extra_pool
     left join event_sonex_factory_pool_created AS t4 ON t4.event_pool=t2.extra_pool
-		left join event_sonex_factory_pool_created AS t5 ON t5.event_pool= $2
+		left join event_sonex_factory_pool_created AS t5 ON t5.event_pool= $3
 ), priceRecord AS (
     SELECT price :: NUMERIC 
 		FROM sonex_token_price_record  t5 , pool
@@ -1495,7 +1495,7 @@ from  amount , priceRecord
 
 `
 	var value valueTmpStruct
-	err := m.conn.QueryRowCtx(ctx, &value, query, chainId, timePoint, poolAddres)
+	err := m.conn.QueryRowCtx(ctx, &value, query, chainId, timePoint.Unix(), poolAddres)
 	if err != nil {
 		logx.Infof("NODATA volue24H:%v ", err)
 		return "0", err
@@ -1519,7 +1519,7 @@ SELECT CAST
 	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
 	t1.extra_pool
 FROM
-	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= $1 - INTERVAL '24 HOURS' AND chain_id =$2  GROUP BY extra_pool) AS t1
+	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >=to_timestamp( CAST($1 AS double precision) )   - INTERVAL '24 HOURS' AND chain_id =$2  GROUP BY extra_pool) AS t1
 	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
 	-- 需要排除掉跨池子的交易hash 也就是说，如果 tx_hash 在跨池子中计算过，那么需要排除掉那个tx_hash ,不计算
@@ -1529,7 +1529,7 @@ FROM
 
 	// Execute the query and scan results into poolVolumes slice
 	var poolVolumesUsd []*PoolVolumeUsd
-	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, timePoint, chainId)
+	err := m.conn.QueryRowsCtx(ctx, &poolVolumesUsd, volumeQuery, timePoint.Unix(), chainId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute volume query: %w", err)
 	}

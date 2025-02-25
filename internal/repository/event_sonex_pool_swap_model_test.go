@@ -232,6 +232,20 @@ func Test_CalucateVolume24HBridgePool(t *testing.T) {
 
 }
 
+func Test_SummarizePoolVolumesUsd(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
+
+	volume24H, err := model.SummarizePoolVolumesUsd(context.Background(), 1946, time.Now())
+	if err != nil {
+		t.Error(err)
+	}
+
+	logx.Infof("volume24H:%v ", volume24H)
+}
+
 func Test_SummarizePoolVolumesUsdByPoolAddress(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
