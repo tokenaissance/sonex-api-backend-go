@@ -359,7 +359,7 @@ func getValueOfAmountToken(rewards *big.Int, incentiveId, chainId int64, chain *
 		return nil, 0, err
 	}
 
-	totalClaimableFeesUSD := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
+	totalClaimableFeesUSD, _ := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
 
 	logx.Infof("totalClaimableFeesUSD:%v", totalClaimableFeesUSD)
 

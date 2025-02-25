@@ -333,7 +333,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
 			if err != nil {
-				logx.Errorf("ERR:%v ", err)
+				logx.Errorf("SetTotalReward365ForIncentiveId ERR:%v ", err)
 				return
 			}
 			var dataResult types.FarmIncentivesResponse_Data
@@ -347,14 +347,14 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 			rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, record.EventIncentiveId, *chainConf)
 			if err != nil {
-				logx.Errorf("getRewardsAmount:%v ", err)
+				logx.Errorf("getRewardsAmount ERR:%v ", err)
 				return
 			}
 
 			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
 
 			if err != nil {
-				logx.Errorf("getValueOfAmountToken:%v ", err)
+				logx.Errorf("getValueOfAmountToken:ERR %v ", err)
 				return
 			}
 
@@ -363,7 +363,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			eventWeightString := big.NewInt(record.EventWeight).String()
 			totalWeightString, err := SetRewardPoolInfo(farmConf.Staker, record.EventRewardToken, *chainConf, cacher)
 			if err != nil {
-				logx.Errorf("Err:%v ", err)
+				logx.Errorf("SetRewardPoolInfo Err:%v ", err)
 				return
 			}
 			if strings.EqualFold(totalWeightString, "0") {
