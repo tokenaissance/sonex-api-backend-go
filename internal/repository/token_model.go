@@ -99,15 +99,15 @@ ORDER BY token.symbol ASC
 			isOfficial = IsOffical
 		}
 		oneSwapTokenInfoWithBalance := types.SwapTokenInfo{
-			Address:   v.Address,
-			Name:      v.Name,
-			Symbol:    v.Symbol,
-			Price:     v.Price.String,
-			Decimals:  v.Decimals,
-			Logo:      v.Logo.String,
-			IsOffical: isOfficial,
-			Balance:   "0",
-			UsdValue:  "0",
+			Address:    v.Address,
+			Name:       v.Name,
+			Symbol:     v.Symbol,
+			Price:      v.Price.String,
+			Decimals:   v.Decimals,
+			Logo:       v.Logo.String,
+			IsOfficial: isOfficial,
+			Balance:    "0",
+			UsdValue:   "0",
 		}
 
 		swapTokenInfo = append(swapTokenInfo, oneSwapTokenInfoWithBalance)
