@@ -35,6 +35,26 @@ type Comparison struct {
 	Percentage string `json:"percentage"`
 }
 
+type DashboardIncentiveInfo struct {
+	IncentiveId                  int64   `json:"incentiveId"`
+	FeeRatio                     string  `json:"feeRatio"`
+	Token0Symbol                 string  `json:"token0symbol"` // token0代币符号
+	Token0Logo                   string  `json:"token0_logo"`
+	Token1Symbol                 string  `json:"token1Symbol"` // token1代币符号
+	Token1Logo                   string  `json:"token1_logo"`
+	Staked                       int64   `json:"staked"`                       //  正在质押的个数
+	StakedUsd                    string  `json:"StakedUsd"`                    // 质押的 LP 的 USD
+	TotalClaimableFeesUSD        string  `json:"totalClaimableFeesUsd"`        // 用户未领取的手续费的价值
+	TotalClaimedFeesUSD          string  `json:"totalClaimedFeesUSD"`          // 用户已经领取的手续的价值
+	TotalClaimableFeesUSDFloat64 float64 `json:"totalClaimableFeesUSDFloat64"` // 用户未领取的手续费的价值
+	TotalClaimedFeesUSDFloat64   float64 `json:"TotalClaimedFeesUSDFloat64"`   // 用户已经领取的手续的价值
+}
+
+type DashboardIncentiveWithStakedUsd struct {
+	TotalStakedLpUsd    string                   `json:"totalStakedLpUsd"`
+	DashboardIncentives []DashboardIncentiveInfo `json:"dashboardIncentives"`
+}
+
 type FarmIncentivesRequest struct {
 	ChainRequest
 	UserAddress string `form:"userAddress,optional"`                  // 用户地址
@@ -715,35 +735,26 @@ type SwapEventResponse struct {
 }
 
 type SwapTokenInfo struct {
-	Address  string `json:"address"`
-	Name     string `json:"name"`
-	Symbol   string `json:"symbol"`
-	Volume   string `json:"volume,optional"`
-	Price    string `json:"price,optional"`
-	Decimals int64  `json:"decimals"`
-	Logo     string `json:"logo,optional"`
-}
-
-type SwapTokenInfoWithBalance struct {
-	Address  string `json:"address"`
-	Name     string `json:"name"`
-	Symbol   string `json:"symbol"`
-	Price    string `json:"price,optional"`
-	Decimals int64  `json:"decimals"`
-	Logo     string `json:"logo,optional"`
-	Balance  string `json:"balance,optional"`
-	UsdValue string `json:"usd_value,optional"`
+	Address   string `json:"address"`
+	Name      string `json:"name"`
+	Symbol    string `json:"symbol"`
+	Volume    string `json:"volume,optional"` // TOP
+	Price     string `json:"price,optional"`
+	Decimals  int64  `json:"decimals"`
+	Logo      string `json:"logo,optional"`
+	IsOffical int64  `json:"IsOffical,optional"` // 1:官方代币,
+	Balance   string `json:"balance,optional"`   // ALL,OFFICIAL
+	UsdValue  string `json:"usd_value,optional"` // ALL,OFFICIAL
 }
 
 type SwapTokensRequest struct {
 	ChainRequest
 	Address string `form:"address,optional"`
-	OrderBy string `form:"orderBy,optional,options=ALL|TOP|OFFICAL"`
+	OrderBy string `form:"orderBy,optional,options=ALL|TOP|OFFICIAL"`
 }
 
 type SwapTokensResponse struct {
-	TokenListTop []SwapTokenInfo            `json:"token_list_top"` // TOP
-	TokenListAll []SwapTokenInfoWithBalance `json:"token_list_all"` // ALL ,OFFICAL
+	List []SwapTokenInfo `json:"list"` // TOP , ALL ,OFFICIAL
 }
 
 type SwapVolume struct {
@@ -987,17 +998,6 @@ type UnstakePositionsInfoResponse_Data struct {
 type UsdCreatedRecord struct {
 	UsdtValue  string `json:"usdt_value"`
 	Createtime int64  `json:"createtime"`
-}
-
-type UserAssetData struct {
-	IncentiveId           string `form:"incentiveId"`           // 质押池ID
-	TotalClaimableFees    string `json:"totalClaimableFees"`    // 用户总可领取的手续费
-	TotalClaimableFeesUSD string `json:"totalClaimableFeesUsd"` // 用户总可领取的手续费的价值
-	Decimals              int64  `json:"decimals"`              // ClaimableFees的精度
-	LPStakedNum           int64  `json:"lpStakedNum"`           // 用户质押的LP token ID数量
-	LPBalance             int64  `json:"lpBalance"`             // 用户的LP token ID的余额, LiquidityUSD
-	Balance               int64  `json:"balance"`               // 用户的LP token ID的个数余额
-	APR                   string `json:"apr"`                   // 年化收益率
 }
 
 type VolumeDetailsRecord struct {

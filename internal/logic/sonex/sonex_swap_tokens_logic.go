@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math/big"
-	"net/http"
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"sonex_api_backend_go/internal/config"
@@ -41,8 +38,8 @@ func NewSonexSwapTokensLogic(ctx context.Context, svcCtx *svc.ServiceContext) *S
 }
 
 var ORFERBY_ALL = "ALL"
-var ORFERBY_TOP = "TOP" // TOPFIVE
-var ORFERBY_OFFICAL = "OFFICAL"
+var ORFERBY_TOP = "TOP"           // TOPFIVE
+var ORFERBY_OFFICIAL = "OFFICIAL" // OFFICIAL
 
 type SwapTokenInfoCacheWarpper struct {
 	Data       []types.SwapTokenInfo
@@ -93,7 +90,7 @@ func getTop5VolumeIn24Hours(cacher cache.ICache, eventSonexPoolSwapModel reposit
 }
 
 // for tokenList
-func getTokenBalanceMultipleCall(chain config.ChainConfig, tokenList []types.SwapTokenInfoWithBalance, userAddress string) ([]types.SwapTokenInfoWithBalance, error) {
+func getTokenBalanceMultipleCall(chain config.ChainConfig, tokenList []types.SwapTokenInfo, userAddress string) ([]types.SwapTokenInfo, error) {
 	if len(tokenList) == 0 {
 		return tokenList, errors.New("no token list")
 	}
@@ -104,12 +101,12 @@ func getTokenBalanceMultipleCall(chain config.ChainConfig, tokenList []types.Swa
 
 	var wg sync.WaitGroup
 
-	poolChan := make(chan types.SwapTokenInfoWithBalance, len(tokenList))
-	pools := make([]types.SwapTokenInfoWithBalance, 0, len(tokenList))
+	poolChan := make(chan types.SwapTokenInfo, len(tokenList))
+	pools := make([]types.SwapTokenInfo, 0, len(tokenList))
 
 	for _, v := range tokenList {
 		wg.Add(1)
-		go func(swapTokenInfo types.SwapTokenInfoWithBalance) {
+		go func(swapTokenInfo types.SwapTokenInfo) {
 			defer wg.Done()
 			balance := big.NewInt(0)
 			Multicall(
@@ -146,10 +143,7 @@ func getTokenBalanceMultipleCall(chain config.ChainConfig, tokenList []types.Swa
 	return pools, nil
 
 }
-func getUserTokenDetailStructFromScout(chain config.ChainConfig, tokenList []types.SwapTokenInfoWithBalance, userAddressWithCheckSum, blockScoutUrl string, blockScoutXRequsetId []string) ([]types.SwapTokenInfoWithBalance, error) {
-
-	var userBalanceRecord []*TokenUserStruct
-	var err error
+func getUserTokenDetailStructFromScout(chain config.ChainConfig, tokenList []types.SwapTokenInfo, userAddressWithCheckSum string) ([]types.SwapTokenInfo, error) {
 
 	if !strings.EqualFold(userAddressWithCheckSum, "") {
 		if !common.IsHexAddress(userAddressWithCheckSum) {
@@ -159,65 +153,44 @@ func getUserTokenDetailStructFromScout(chain config.ChainConfig, tokenList []typ
 	}
 
 	if !strings.EqualFold(userAddressWithCheckSum, "") {
-		url_prefix := blockScoutUrl
-		url := fmt.Sprintf("%v/%v/%v", url_prefix, userAddressWithCheckSum, "token-balances")
-		userBalanceRecord, err = getUserBalanceFromBlockScout(url, roundRequestIds(blockScoutXRequsetId)())
-		if err != nil {
-			// go on to get data
-			logx.Infof("Get user:%v  balance from blockscout failed :%v ", userAddressWithCheckSum, err)
-		}
-	}
-	// by mulitipla call
-	if len(userBalanceRecord) == 0 {
-		// use multiple call to get the user balance
+
 		tokenWithBalance, err := getTokenBalanceMultipleCall(chain, tokenList, userAddressWithCheckSum)
 		if err != nil {
 			logx.Infof("getTokenBalanceMultipleCall ERR:%v ", err)
 			return tokenList, err
 		}
 		return tokenWithBalance, nil
-	}
 
-	// get balance from  userBalanceRecord
-	for _, v := range userBalanceRecord {
-		for ii, vv := range tokenList {
-			if strings.EqualFold(strings.ToLower(vv.Address), strings.ToLower(v.TokenDetail.Address)) &&
-				!strings.EqualFold(v.Value, "") {
-
-				balance_bigInt, _ := new(big.Int).SetString(v.Value, 10)
-				userBalanceReadableUsd, userBalanceReadable := global.CalucateOneTokenUsdInPool(balance_bigInt, vv.Price, int64(6), vv.Decimals)
-				tokenList[ii].UsdValue = userBalanceReadableUsd.String()
-				tokenList[ii].Balance = userBalanceReadable.String()
-			}
-		}
 	}
 
 	return tokenList, nil
 }
 
 // // ALL / OFFICAL
-func getTokenList(conn sqlx.SqlConn, chainId int64, orderBy string) ([]types.SwapTokenInfoWithBalance, error) {
-	var tokenList []types.SwapTokenInfoWithBalance
+func getTokenList(conn sqlx.SqlConn, chainId int64, orderBy string) ([]types.SwapTokenInfo, error) {
+	var tokenList []types.SwapTokenInfo
 	var err error
+	tokenModel := repository.NewTokenModel(conn)
+
 	// OFFICAL : sonex_token
-	if strings.EqualFold(orderBy, ORFERBY_OFFICAL) {
-		sonexTokenModel := repository.NewSonexTokenModel(conn)
-		tokenList, err = sonexTokenModel.QueryByChainIdWithPrice(context.Background(), chainId)
+	if strings.EqualFold(orderBy, ORFERBY_OFFICIAL) {
+
+		tokenList, err = tokenModel.QueryByChainIdWithPrice(context.Background(), chainId, true)
 		if err != nil {
-			logx.Errorf("QueryByChainIdWithPrice ERR:%v ", err)
-			return []types.SwapTokenInfoWithBalance{}, err
+			logx.Errorf(" QueryByChainIdWithPrice ERR:%v ", err)
+			return []types.SwapTokenInfo{}, err
 		}
 
 		return tokenList, nil
+
 	}
 
 	// 选择 ALL : token
 	if strings.EqualFold(orderBy, ORFERBY_ALL) {
-		tokenModel := repository.NewTokenModel(conn)
-		tokenList, err := tokenModel.QueryByChainIdWithPrice(context.Background(), chainId)
+		tokenList, err = tokenModel.QueryByChainIdWithPrice(context.Background(), chainId, false)
 		if err != nil {
 			logx.Errorf(" QueryByChainIdWithPrice ERR:%v ", err)
-			return []types.SwapTokenInfoWithBalance{}, err
+			return []types.SwapTokenInfo{}, err
 		}
 
 		return tokenList, nil
@@ -248,7 +221,7 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 
 	// 默认用ALL字段
 	if !strings.EqualFold(req.OrderBy, ORFERBY_ALL) &&
-		!strings.EqualFold(req.OrderBy, ORFERBY_OFFICAL) &&
+		!strings.EqualFold(req.OrderBy, ORFERBY_OFFICIAL) &&
 		!strings.EqualFold(req.OrderBy, ORFERBY_TOP) {
 		req.OrderBy = ORFERBY_ALL
 	}
@@ -270,11 +243,11 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 			return &types.SwapTokensResponse{}, err
 		}
 
-		return &types.SwapTokensResponse{TokenListTop: volumes}, nil
+		return &types.SwapTokensResponse{List: volumes}, nil
 
 	}
 
-	var tokenList []types.SwapTokenInfoWithBalance
+	var tokenList []types.SwapTokenInfo
 
 	tokenList, err = getTokenList(conn, req.ChainId, req.OrderBy) // ALL / OFFICAL
 	if err != nil {
@@ -290,11 +263,11 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 
 	// get user balance from block scout
 	// 获取该user address 的所有代币
-	tokenListWithBalance, err := getUserTokenDetailStructFromScout(*chainConf, tokenList, userAddressWithCheckSum, l.svcCtx.Config.BlockScoutUrl[0], l.svcCtx.Config.BlockScoutXRequsetId)
+	tokenListWithBalance, err := getUserTokenDetailStructFromScout(*chainConf, tokenList, userAddressWithCheckSum)
 	if err != nil {
 		logx.Errorf("getUserTokenDetailStructFromScout:%v ", err)
 		// 默认给个值
-		return &types.SwapTokensResponse{TokenListAll: tokenList}, nil
+		return &types.SwapTokensResponse{List: tokenList}, nil
 	}
 
 	logx.Infof("tokenListWithBalance:%#v ", tokenListWithBalance)
@@ -310,9 +283,11 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 		}
 	})
 
-	return &types.SwapTokensResponse{TokenListAll: tokenListWithBalance}, nil
+	return &types.SwapTokensResponse{List: tokenListWithBalance}, nil
 
 }
+
+/*
 
 type TokenDetailStruct struct {
 	Address              string `json:"address"`
@@ -320,6 +295,7 @@ type TokenDetailStruct struct {
 	Decimals             string `json:"decimals"`
 	ExchangeRate         string `json:"exchange_rate"`
 	Holders              string `json:"holders"`
+	IconUrl              string `json:"icon_url"`
 	Name                 string `json:"name"`
 	Symbol               string `json:"symbol"`
 	TotalSupply          string `json:"total_supply"`
@@ -347,8 +323,11 @@ func roundRequestIds(RequestIds []string) func() string {
 func getUserBalanceFromBlockScout(url, x_request_id string) ([]*TokenUserStruct, error) {
 	var tokenDetails []*TokenUserStruct
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+	}
 
+	logx.Infof("url:%v ", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		logx.Errorf("Get getUserBalanceFromBlockScout NewRequest:%v ", err)
@@ -356,6 +335,7 @@ func getUserBalanceFromBlockScout(url, x_request_id string) ([]*TokenUserStruct,
 	}
 
 	req.Header.Add("x-request-id", x_request_id)
+
 	response, err := client.Do(req)
 	if err != nil {
 		logx.Errorf("getUserBalanceFromBlockScout DO error:%v ", err)
@@ -370,6 +350,7 @@ func getUserBalanceFromBlockScout(url, x_request_id string) ([]*TokenUserStruct,
 		logx.Errorf("getUserBalanceFromBlockScout ReadAll error:%v ", err)
 		return tokenDetails, err
 	}
+	logx.Infof("sssss:%v ", string(body))
 	// token details
 	err = json.Unmarshal(body, &tokenDetails)
 	if err != nil {
@@ -379,3 +360,4 @@ func getUserBalanceFromBlockScout(url, x_request_id string) ([]*TokenUserStruct,
 
 	return tokenDetails, nil
 }
+*/

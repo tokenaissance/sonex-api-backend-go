@@ -49,10 +49,14 @@ func Test_Multiple(t *testing.T) {
 
 func Test_getUserBalanceFromBlockScout(t *testing.T) {
 
+	var c config.Config
+	conf.MustLoad("../../../etc/forlocaluse0109.yaml", &c)
+
+	logx.MustSetup(c.Log)
 	ret, err := getUserBalanceFromBlockScout("https://soneium-minato.blockscout.com/api/v2/addresses/0xeC8BcA27444bA6360EfF22365b42012d029D6324/token-balances", "7b9ec8b688d1e921e990f13f09eb70b5")
 
 	if err != nil {
-		logx.Errorf("ERR:%v ", err)
+		logx.Errorf("ERRXXXXX:%v ", err)
 		return
 	}
 	if len(ret) > 0 {
