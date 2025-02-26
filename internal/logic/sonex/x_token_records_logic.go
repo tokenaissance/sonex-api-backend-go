@@ -47,7 +47,6 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 	xpoolConf := l.svcCtx.Config.GetXpoolConfig(req.ChainId)
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
-	eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(conn)
 
 	options := repository.EventXtokenTransferQueryOptions{}
 	// Source
@@ -66,6 +65,7 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 		}
 	case SOURCE_XPOOL:
 		if xpoolConf != nil {
+			eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(conn)
 			pools, err := eventXpoolFactoryPoolCreatedModel.QueryByChainIdFactory(l.ctx, req.ChainId, xpoolConf.Factory)
 			if err != nil {
 				return nil, err
