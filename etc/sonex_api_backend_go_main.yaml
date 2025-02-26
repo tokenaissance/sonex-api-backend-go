@@ -12,12 +12,18 @@ Sentry:
   Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
   TracesSampleRate: 1.0
   Environment: mainnet
-PostgreSQL:
+PostgreSQL: # 可读可写的主库
   Host: PG_HOST
   Port: PG_PORT
   User: PG_USER
   Password: PG_PWD
   DbName: PG_DBNAME
+PostgreSQLReadOnly: # 只读从库
+  Host: PG_READ_HOST
+  Port: PG_READ_PORT
+  User: PG_READ_USER
+  Password: PG_READ_PWD
+  DbName: PG_READ_DBNAME
 Redis:
   Host: REDIS_HOST
   Port: REDIS_PORT
@@ -56,6 +62,7 @@ Sonexes:
     PositionManager: 0x6f5F9d55f727928b644B04d987B1c0Cf50AF8C0B
     Quoter: 0x715BE426a0c8E0A14aBc0130f08F06aa41B1f218
     SwapRouter: 0xDEf357D505690F1b0032a74C3b581163c23d1535
+    XToken: 0x27a131ab51dDD12c31A7C28213A7A4584758bdE7
 PreDeposits:
   - ChainId: 1868
     WASTR: 0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441

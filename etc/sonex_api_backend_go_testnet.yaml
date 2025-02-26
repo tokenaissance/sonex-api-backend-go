@@ -9,12 +9,18 @@ Sentry:
   Dsn: https://3962404eda8bdc647ddf29979c2f12b2@o4508643209838592.ingest.us.sentry.io/4508657842847744
   TracesSampleRate: 1.0
   Environment: testnet
-PostgreSQL:
+PostgreSQL: # 可读可写的主库
   Host: PG_HOST
   Port: PG_PORT
   User: PG_USER
   Password: PG_PWD
   DbName: PG_DBNAME
+PostgreSQLReadOnly: # 只读从库
+  Host: PG_READ_HOST
+  Port: PG_READ_PORT
+  User: PG_READ_USER
+  Password: PG_READ_PWD
+  DbName: PG_READ_DBNAME
 Redis:
   Host: REDIS_HOST
   Port: REDIS_PORT
