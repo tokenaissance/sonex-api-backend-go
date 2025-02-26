@@ -68,7 +68,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			var bestPrice *cache.Price
 
 			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
-			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
 			if err != nil {
 				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 				return
@@ -89,7 +89,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			if bestPrice == nil {
 				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals/2), nil)
 				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals/2), nil))
-				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
 				if err != nil {
 					logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 					return
@@ -112,7 +112,7 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 			if bestPrice == nil {
 				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
 				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
-				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 2)
+				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
 				if err != nil {
 					logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 					return

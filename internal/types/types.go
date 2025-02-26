@@ -1011,6 +1011,24 @@ type Withdrawn struct {
 	WithdrawnAmount1 string `json:"withdrawnAmount1"`
 }
 
+type XTokenRecordsRequest struct {
+	ChainRequest
+	Source *string `form:"source,optional"`
+	User   *string `form:"user,optional"`
+	PageRequest
+}
+
+type XTokenRecordsResponse struct {
+	Records []XTokenRecordsResponse_Record `json:"records"`
+}
+
+type XTokenRecordsResponse_Record struct {
+	Source    string `json:"source"`
+	User      string `json:"user"`
+	Amount    string `json:"amount"`
+	TimeStamp int64  `json:"timestamp"`
+}
+
 type XpoolPoolListRequest struct {
 	ChainRequest
 	UserAddress string `form:"userAddress,optional"`             // 用户地址
