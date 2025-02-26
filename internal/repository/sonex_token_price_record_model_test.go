@@ -151,7 +151,7 @@ func Test_QueryByChainIdWithPrice(t *testing.T) {
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 	model := NewTokenModel(NewConn(c.PostgreSQL.DataSource()))
 
-	records, err := model.QueryByChainIdWithPrice(context.Background(), 1946)
+	records, err := model.QueryByChainIdWithPrice(context.Background(), 1946, true)
 	if err != nil {
 		logx.Errorf("err%v", err)
 		return

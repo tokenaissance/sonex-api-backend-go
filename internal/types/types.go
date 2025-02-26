@@ -742,9 +742,9 @@ type SwapTokenInfo struct {
 	Price     string `json:"price,optional"`
 	Decimals  int64  `json:"decimals"`
 	Logo      string `json:"logo,optional"`
-	IsOffical int64  `json:"IsOffical,optional"` // 1:官方代币,
-	Balance   string `json:"balance,optional"`   // ALL,OFFICIAL
-	UsdValue  string `json:"usd_value,optional"` // ALL,OFFICIAL
+	IsOffical int64  `json:"isOffical,optional"` // 1:官方代币,
+	Balance   string `json:"balance,optional"`   // ALL,OFFICIAL 时，传入的代币的余额
+	UsdValue  string `json:"usd_value,optional"` // ALL,OFFICIAL, 传入的代币的USD
 }
 
 type SwapTokensRequest struct {

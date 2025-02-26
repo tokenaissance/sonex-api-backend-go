@@ -4437,18 +4437,18 @@
         "logo": {
           "type": "string"
         },
-        "IsOffical": {
+        "isOffical": {
           "type": "integer",
           "format": "int64",
           "description": " 1:官方代币,"
         },
         "balance": {
           "type": "string",
-          "description": " ALL,OFFICIAL"
+          "description": " ALL,OFFICIAL 时，传入的代币的余额"
         },
         "usd_value": {
           "type": "string",
-          "description": " ALL,OFFICIAL"
+          "description": " ALL,OFFICIAL, 传入的代币的USD"
         }
       },
       "title": "SwapTokenInfo",
