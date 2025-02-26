@@ -37,15 +37,17 @@ type (
 	}
 
 	Token struct {
-		Id       int64          `db:"id"`
-		ChainId  int64          `db:"chain_id"`
-		Name     string         `db:"name"`
-		Symbol   string         `db:"symbol"`
-		Decimals int64          `db:"decimals"`
-		Address  string         `db:"address"`
-		Logo     sql.NullString `db:"logo"`
-		Sort     int64          `db:"sort"`
-		Hidden   bool           `db:"hidden"`
+		Id         int64          `db:"id"`
+		ChainId    int64          `db:"chain_id"`
+		Name       string         `db:"name"`
+		Symbol     string         `db:"symbol"`
+		Decimals   int64          `db:"decimals"`
+		Address    string         `db:"address"`
+		Logo       sql.NullString `db:"logo"`
+		Sort       int64          `db:"sort"`
+		Hidden     bool           `db:"hidden"`
+		Office     bool           `db:"office"`
+		Stablecoin bool           `db:"stablecoin"`
 	}
 )
 
@@ -91,14 +93,14 @@ func (m *defaultTokenModel) FindOneByAddressChainId(ctx context.Context, address
 }
 
 func (m *defaultTokenModel) Insert(ctx context.Context, data *Token) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)", m.table, tokenRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.Name, data.Symbol, data.Decimals, data.Address, data.Logo, data.Sort, data.Hidden)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", m.table, tokenRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.Name, data.Symbol, data.Decimals, data.Address, data.Logo, data.Sort, data.Hidden, data.Office, data.Stablecoin)
 	return ret, err
 }
 
 func (m *defaultTokenModel) Update(ctx context.Context, newData *Token) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, tokenRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.Name, newData.Symbol, newData.Decimals, newData.Address, newData.Logo, newData.Sort, newData.Hidden)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.Name, newData.Symbol, newData.Decimals, newData.Address, newData.Logo, newData.Sort, newData.Hidden, newData.Office, newData.Stablecoin)
 	return err
 }
 
