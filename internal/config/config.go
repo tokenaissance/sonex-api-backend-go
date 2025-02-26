@@ -9,6 +9,7 @@ type Config struct {
 	Domains              []string             `json:",optional,default=[]"`
 	Sentry               SentryConfig         `json:","`
 	PostgreSQL           PgConfig             `json:","`
+	PostgreSQLReadOnly   PgConfig             `json:","`
 	Redis                RedisConfig          `json:","`
 	PointsService        *PointsServiceConfig `json:",optional"`
 	Galxe                *GalxeConfig         `json:",optional"`
