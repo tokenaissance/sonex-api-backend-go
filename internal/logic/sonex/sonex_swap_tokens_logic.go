@@ -42,13 +42,13 @@ var ORFERBY_TOP = "TOP"           // TOPFIVE
 var ORFERBY_OFFICIAL = "OFFICIAL" // OFFICIAL
 
 type SwapTokenInfoCacheWarpper struct {
-	Data       []types.SwapTokenInfo
+	Data       []repository.TokenInfoTmp
 	LastUpdate time.Time
 }
 
-func getTop5VolumeIn24Hours(cacher cache.ICache, eventSonexPoolSwapModel repository.EventSonexPoolSwapModel, chainId int64) ([]types.SwapTokenInfo, error) {
+func getTop5VolumeIn24Hours(cacher cache.ICache, eventSonexPoolSwapModel repository.EventSonexPoolSwapModel, chainId int64) ([]repository.TokenInfoTmp, error) {
 
-	var volumes []types.SwapTokenInfo
+	var volumes []repository.TokenInfoTmp
 	volumeCacheKey := fmt.Sprintf("sonex:swap_page_tokens_volume:%d", chainId)
 	// Check cache
 	var cacheWarpper SwapTokenInfoCacheWarpper
@@ -67,22 +67,22 @@ func getTop5VolumeIn24Hours(cacher cache.ICache, eventSonexPoolSwapModel reposit
 		volumes, err = eventSonexPoolSwapModel.SummarizeVolumesUsdByChainId(context.Background(), chainId, 5)
 		if err != nil {
 			logx.Errorf("Summarize volumes error: %s", err)
-			return []types.SwapTokenInfo{}, err
+			return []repository.TokenInfoTmp{}, err
 		}
 		if len(volumes) == 0 {
 			logx.Error("No volume  data")
-			return []types.SwapTokenInfo{}, errors.New("no volume data ")
+			return []repository.TokenInfoTmp{}, errors.New("no volume data ")
 		}
 
 		respBytes, err := json.Marshal(SwapTokenInfoCacheWarpper{Data: volumes, LastUpdate: time.Now().UTC()})
 		if err != nil {
 			logx.Errorf("Marshal response error: %v", err)
-			return []types.SwapTokenInfo{}, err
+			return []repository.TokenInfoTmp{}, err
 		}
 		err = cacher.Set(volumeCacheKey, respBytes, time.Hour*1)
 		if err != nil {
 			logx.Errorf("Set cache error: %v", err)
-			return []types.SwapTokenInfo{}, err
+			return []repository.TokenInfoTmp{}, err
 		}
 	}
 
@@ -231,19 +231,37 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
-	var volumes []types.SwapTokenInfo
+	// var volumes []types.SwapTokenInfo
 	var err error
 	// 选择 TOP  FIVE
 	if strings.EqualFold(req.OrderBy, ORFERBY_TOP) {
 
-		volumes, err = getTop5VolumeIn24Hours(cacher, eventSonexPoolSwapModel, req.ChainId)
+		volumes, err := getTop5VolumeIn24Hours(cacher, eventSonexPoolSwapModel, req.ChainId)
 
 		if err != nil {
 			logx.Errorf("getTop5VolumeIn24Hours ERR:%v ", err)
 			return &types.SwapTokensResponse{}, err
 		}
+		var lists []types.SwapTokenInfo
+		for _, v := range volumes {
+			isOffical := int64(0)
+			if v.IsOffical {
+				isOffical = 1
+			}
+			list := types.SwapTokenInfo{
+				Address:   v.Address,  // string `json:"address"`
+				Name:      v.Name,     //, string `json:"name"`
+				Symbol:    v.Symbol,   //  string `json:"symbol"`
+				Volume:    v.Volume,   // string `json:"volume,optional"` // TOP
+				Price:     v.Price,    //  string `json:"price,optional"`
+				Decimals:  v.Decimals, // int64  `json:"decimals"`
+				Logo:      v.Logo,     //  string `json:"logo,optional"`
+				IsOffical: isOffical,  // int64  `json:"isOffical,optional"` // 1:官方代币,
+			}
+			lists = append(lists, list)
+		}
 
-		return &types.SwapTokensResponse{List: volumes}, nil
+		return &types.SwapTokensResponse{List: lists}, nil
 
 	}
 
