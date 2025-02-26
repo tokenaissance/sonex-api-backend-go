@@ -1071,7 +1071,7 @@
             "enum": [
               "ALL",
               "TOP",
-              "OFFICAL"
+              "OFFICIAL"
             ]
           }
         ],
@@ -1705,6 +1705,93 @@
       "required": [
         "comparison",
         "percentage"
+      ]
+    },
+    "DashboardIncentiveInfo": {
+      "type": "object",
+      "properties": {
+        "incentiveId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "feeRatio": {
+          "type": "string"
+        },
+        "token0symbol": {
+          "type": "string",
+          "description": " token0代币符号"
+        },
+        "token0_logo": {
+          "type": "string"
+        },
+        "token1Symbol": {
+          "type": "string",
+          "description": " token1代币符号"
+        },
+        "token1_logo": {
+          "type": "string"
+        },
+        "staked": {
+          "type": "integer",
+          "format": "int64",
+          "description": "  正在质押的个数"
+        },
+        "StakedUsd": {
+          "type": "string",
+          "description": " 质押的 LP 的 USD"
+        },
+        "totalClaimableFeesUsd": {
+          "type": "string",
+          "description": " 用户未领取的手续费的价值"
+        },
+        "totalClaimedFeesUSD": {
+          "type": "string",
+          "description": " 用户已经领取的手续的价值"
+        },
+        "totalClaimableFeesUSDFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 用户未领取的手续费的价值"
+        },
+        "TotalClaimedFeesUSDFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 用户已经领取的手续的价值"
+        }
+      },
+      "title": "DashboardIncentiveInfo",
+      "required": [
+        "incentiveId",
+        "feeRatio",
+        "token0symbol",
+        "token0_logo",
+        "token1Symbol",
+        "token1_logo",
+        "staked",
+        "StakedUsd",
+        "totalClaimableFeesUsd",
+        "totalClaimedFeesUSD",
+        "totalClaimableFeesUSDFloat64",
+        "TotalClaimedFeesUSDFloat64"
+      ]
+    },
+    "DashboardIncentiveWithStakedUsd": {
+      "type": "object",
+      "properties": {
+        "totalStakedLpUsd": {
+          "type": "string"
+        },
+        "dashboardIncentives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DashboardIncentiveInfo"
+          }
+        }
+      },
+      "title": "DashboardIncentiveWithStakedUsd",
+      "required": [
+        "totalStakedLpUsd",
+        "dashboardIncentives"
       ]
     },
     "FarmIncentivesRequest": {
@@ -4337,7 +4424,8 @@
           "type": "string"
         },
         "volume": {
-          "type": "string"
+          "type": "string",
+          "description": " TOP"
         },
         "price": {
           "type": "string"
@@ -4348,46 +4436,22 @@
         },
         "logo": {
           "type": "string"
+        },
+        "IsOffical": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 1:官方代币,"
+        },
+        "balance": {
+          "type": "string",
+          "description": " ALL,OFFICIAL"
+        },
+        "usd_value": {
+          "type": "string",
+          "description": " ALL,OFFICIAL"
         }
       },
       "title": "SwapTokenInfo",
-      "required": [
-        "address",
-        "name",
-        "symbol",
-        "decimals"
-      ]
-    },
-    "SwapTokenInfoWithBalance": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "symbol": {
-          "type": "string"
-        },
-        "price": {
-          "type": "string"
-        },
-        "decimals": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "logo": {
-          "type": "string"
-        },
-        "balance": {
-          "type": "string"
-        },
-        "usd_value": {
-          "type": "string"
-        }
-      },
-      "title": "SwapTokenInfoWithBalance",
       "required": [
         "address",
         "name",
@@ -4406,7 +4470,7 @@
           "enum": [
             "ALL",
             "TOP",
-            "OFFICAL"
+            "OFFICIAL"
           ]
         }
       },
@@ -4415,25 +4479,17 @@
     "SwapTokensResponse": {
       "type": "object",
       "properties": {
-        "token_list_top": {
+        "list": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SwapTokenInfo"
           },
-          "description": " TOP"
-        },
-        "token_list_all": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SwapTokenInfoWithBalance"
-          },
-          "description": " ALL ,OFFICAL"
+          "description": " TOP , ALL ,OFFICIAL"
         }
       },
       "title": "SwapTokensResponse",
       "required": [
-        "token_list_top",
-        "token_list_all"
+        "list"
       ]
     },
     "SwapVolume": {
@@ -5358,58 +5414,6 @@
       "required": [
         "usdt_value",
         "createtime"
-      ]
-    },
-    "UserAssetData": {
-      "type": "object",
-      "properties": {
-        "incentiveId": {
-          "type": "string",
-          "description": " 质押池ID"
-        },
-        "totalClaimableFees": {
-          "type": "string",
-          "description": " 用户总可领取的手续费"
-        },
-        "totalClaimableFeesUsd": {
-          "type": "string",
-          "description": " 用户总可领取的手续费的价值"
-        },
-        "decimals": {
-          "type": "integer",
-          "format": "int64",
-          "description": " ClaimableFees的精度"
-        },
-        "lpStakedNum": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户质押的LP token ID数量"
-        },
-        "lpBalance": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户的LP token ID的余额, LiquidityUSD"
-        },
-        "balance": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户的LP token ID的个数余额"
-        },
-        "apr": {
-          "type": "string",
-          "description": " 年化收益率"
-        }
-      },
-      "title": "UserAssetData",
-      "required": [
-        "incentiveId",
-        "totalClaimableFees",
-        "totalClaimableFeesUsd",
-        "decimals",
-        "lpStakedNum",
-        "lpBalance",
-        "balance",
-        "apr"
       ]
     },
     "VolumeDetailsRecord": {

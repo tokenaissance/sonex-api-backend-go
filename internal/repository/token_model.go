@@ -21,7 +21,7 @@ type (
 		withSession(session sqlx.Session) TokenModel
 		QueryByChainId(ctx context.Context, chainId int64) ([]Token, error)
 		// swap page token
-		QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfoWithBalance, error)
+		QueryByChainIdWithPrice(ctx context.Context, chainId int64, isOfficalNeeded bool) ([]types.SwapTokenInfo, error)
 		QueryByChainIdAddress(ctx context.Context, chainId int64, addresses []string) ([]Token, error)
 	}
 
@@ -70,7 +70,8 @@ func (m *customTokenModel) QueryByChainIdAddress(ctx context.Context, chainId in
 	return resp, nil
 }
 
-func (m *customTokenModel) QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfoWithBalance, error) {
+var IsOffical = int64(1) //
+func (m *customTokenModel) QueryByChainIdWithPrice(ctx context.Context, chainId int64, isOfficalNeeded bool) ([]types.SwapTokenInfo, error) {
 	query := `
 
 SELECT token.* ,t3.price FROM token  
@@ -80,7 +81,7 @@ ORDER BY token.symbol ASC
 
 `
 	var resp []TokenWithPrice
-	var swapTokenInfo []types.SwapTokenInfoWithBalance
+	var swapTokenInfo []types.SwapTokenInfo
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
@@ -93,16 +94,20 @@ ORDER BY token.symbol ASC
 
 	for i, v := range resp {
 		logx.Infof("i:%v ,v :%v ", i, v)
-
-		oneSwapTokenInfoWithBalance := types.SwapTokenInfoWithBalance{
-			Address:  v.Address,
-			Name:     v.Name,
-			Symbol:   v.Symbol,
-			Price:    v.Price.String,
-			Decimals: v.Decimals,
-			Logo:     v.Logo.String,
-			Balance:  "0",
-			UsdValue: "0",
+		isOfficial := int64(0)
+		if isOfficalNeeded && v.Office {
+			isOfficial = IsOffical
+		}
+		oneSwapTokenInfoWithBalance := types.SwapTokenInfo{
+			Address:   v.Address,
+			Name:      v.Name,
+			Symbol:    v.Symbol,
+			Price:     v.Price.String,
+			Decimals:  v.Decimals,
+			Logo:      v.Logo.String,
+			IsOffical: isOfficial,
+			Balance:   "0",
+			UsdValue:  "0",
 		}
 
 		swapTokenInfo = append(swapTokenInfo, oneSwapTokenInfoWithBalance)

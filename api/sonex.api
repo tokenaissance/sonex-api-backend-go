@@ -106,36 +106,25 @@ type TokensResponse_Token {
 type SwapTokensRequest {
 	ChainRequest
 	Address string `form:"address,optional"`
-	OrderBy string `form:"orderBy,optional,options=ALL|TOP|OFFICAL"`
+	OrderBy string `form:"orderBy,optional,options=ALL|TOP|OFFICIAL"`
 }
 
 type SwapTokensResponse {
-	TokenListTop []SwapTokenInfo	 `json:"token_list_top"` // TOP  
-	TokenListAll []SwapTokenInfoWithBalance `json:"token_list_all"` // ALL ,OFFICAL
+	List []SwapTokenInfo	 `json:"list"`          // TOP , ALL ,OFFICIAL
 }
 
 type SwapTokenInfo {
 	Address     string `json:"address"`
 	Name        string `json:"name"`
 	Symbol      string `json:"symbol"`
-	Volume      string `json:"volume,optional"`
+	Volume      string `json:"volume,optional"`      // TOP 
 	Price       string `json:"price,optional"`
 	Decimals    int64  `json:"decimals"`
 	Logo        string `json:"logo,optional"`
+	IsOffical   int64  `json:"IsOffical,optional"`   // 1:官方代币,
+	Balance     string `json:"balance,optional"`     // ALL,OFFICIAL
+	UsdValue    string `json:"usd_value,optional"`   // ALL,OFFICIAL
 }
-
-type SwapTokenInfoWithBalance {
-	Address     string `json:"address"`
-	Name        string `json:"name"`
-	Symbol      string `json:"symbol"`
-	Price       string `json:"price,optional"`
-	Decimals    int64  `json:"decimals"`
-	Logo        string `json:"logo,optional"`
-	Balance     string `json:"balance,optional"`
-	UsdValue  string `json:"usd_value,optional"`
-}
-
-
 
 type PaginationMeta {
 	Page            int  `json:"page"`

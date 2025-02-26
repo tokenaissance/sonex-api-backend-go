@@ -26,7 +26,7 @@ type (
 		QueryLogo(ctx context.Context) (map[string]string, error)
 		FindByOneAddress(ctx context.Context, address string) (PoolsResponse_Token, error)
 		// swap page token
-		QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfoWithBalance, error)
+		QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfo, error)
 	}
 
 	customSonexTokenModel struct {
@@ -255,7 +255,7 @@ type SonexTokenWithPrice struct {
 	Price          sql.NullString `db:"price"`
 }
 
-func (m *customSonexTokenModel) QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfoWithBalance, error) {
+func (m *customSonexTokenModel) QueryByChainIdWithPrice(ctx context.Context, chainId int64) ([]types.SwapTokenInfo, error) {
 
 	query := `
 
@@ -264,7 +264,7 @@ LEFT JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FR
 ORDER BY sonex_token.symbol ASC
 `
 	var resp []SonexTokenWithPrice
-	var swapTokenInfo []types.SwapTokenInfoWithBalance
+	var swapTokenInfo []types.SwapTokenInfo
 	err := m.conn.QueryRowsCtx(ctx, &resp, query)
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
@@ -275,10 +275,8 @@ ORDER BY sonex_token.symbol ASC
 	}
 	// change TokenWithPrice to SwapTokenInfoWithBalance
 
-	for i, v := range resp {
-		logx.Infof("i:%v ,v :%v ", i, v)
-
-		oneSwapTokenInfoWithBalance := types.SwapTokenInfoWithBalance{
+	for _, v := range resp {
+		oneSwapTokenInfoWithBalance := types.SwapTokenInfo{
 			Address:  v.Address,
 			Name:     v.Name,
 			Symbol:   v.Symbol,
