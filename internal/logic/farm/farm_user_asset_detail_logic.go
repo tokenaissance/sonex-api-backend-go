@@ -366,7 +366,7 @@ func getValueOfAmountToken(rewards *big.Int, incentiveId, chainId int64, chain *
 	if totalClaimableFeesUSD.Cmp(big.NewFloat(0)) == 0 {
 		totalClaimableFeesUSD = big.NewFloat(0)
 	}
-	// 已经领取的奖励
+	// 未领取的奖励
 	return totalClaimableFeesUSD, tokenInfo.TokenDecimals, nil
 }
 

@@ -1800,19 +1800,19 @@
           "type": "string",
           "description": " 用户未领取的手续费的价值"
         },
-        "totalClaimedFeesUSD": {
-          "type": "string",
-          "description": " 用户已经领取的手续的价值"
-        },
         "totalClaimableFeesUSDFloat64": {
           "type": "number",
           "format": "double",
           "description": " 用户未领取的手续费的价值"
         },
-        "TotalClaimedFeesUSDFloat64": {
+        "revenueString": {
+          "type": "string",
+          "description": " 用户已经领取的手续的价值+用户未领取的手续费的价值"
+        },
+        "revenueFloat64": {
           "type": "number",
           "format": "double",
-          "description": " 用户已经领取的手续的价值"
+          "description": " 用户已经领取的手续的价值++用户未领取的手续费的价值"
         }
       },
       "title": "DashboardIncentiveInfo",
@@ -1826,16 +1826,30 @@
         "staked",
         "StakedUsd",
         "totalClaimableFeesUsd",
-        "totalClaimedFeesUSD",
         "totalClaimableFeesUSDFloat64",
-        "TotalClaimedFeesUSDFloat64"
+        "revenueString",
+        "revenueFloat64"
       ]
     },
     "DashboardIncentiveWithStakedUsd": {
       "type": "object",
       "properties": {
         "totalStakedLpUsd": {
-          "type": "string"
+          "type": "string",
+          "description": " 总质押的LP 的USD"
+        },
+        "totalStakedLpUsdFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 总质押的LP 的float64"
+        },
+        "totalRevenueUsd": {
+          "type": "string",
+          "description": " 总质押的收益"
+        },
+        "totalRevenueUsdFloat64": {
+          "type": "number",
+          "format": "double"
         },
         "dashboardIncentives": {
           "type": "array",
@@ -1847,6 +1861,9 @@
       "title": "DashboardIncentiveWithStakedUsd",
       "required": [
         "totalStakedLpUsd",
+        "totalStakedLpUsdFloat64",
+        "totalRevenueUsd",
+        "totalRevenueUsdFloat64",
         "dashboardIncentives"
       ]
     },

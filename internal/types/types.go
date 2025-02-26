@@ -45,14 +45,17 @@ type DashboardIncentiveInfo struct {
 	Staked                       int64   `json:"staked"`                       //  正在质押的个数
 	StakedUsd                    string  `json:"StakedUsd"`                    // 质押的 LP 的 USD
 	TotalClaimableFeesUSD        string  `json:"totalClaimableFeesUsd"`        // 用户未领取的手续费的价值
-	TotalClaimedFeesUSD          string  `json:"totalClaimedFeesUSD"`          // 用户已经领取的手续的价值
 	TotalClaimableFeesUSDFloat64 float64 `json:"totalClaimableFeesUSDFloat64"` // 用户未领取的手续费的价值
-	TotalClaimedFeesUSDFloat64   float64 `json:"TotalClaimedFeesUSDFloat64"`   // 用户已经领取的手续的价值
+	RevenueString                string  `json:"revenueString"`                // 用户已经领取的手续的价值+用户未领取的手续费的价值
+	RevenueFloat64               float64 `json:"revenueFloat64"`               // 用户已经领取的手续的价值++用户未领取的手续费的价值
 }
 
 type DashboardIncentiveWithStakedUsd struct {
-	TotalStakedLpUsd    string                   `json:"totalStakedLpUsd"`
-	DashboardIncentives []DashboardIncentiveInfo `json:"dashboardIncentives"`
+	TotalStakedLpUsd        string                   `json:"totalStakedLpUsd"`        // 总质押的LP 的USD
+	TotalStakedLpUsdFloat64 float64                  `json:"totalStakedLpUsdFloat64"` // 总质押的LP 的float64
+	TotalRevenueUsd         string                   `json:"totalRevenueUsd"`         // 总质押的收益
+	TotalRevenueUsdFloat64  float64                  `json:"totalRevenueUsdFloat64"`
+	DashboardIncentives     []DashboardIncentiveInfo `json:"dashboardIncentives"`
 }
 
 type FarmIncentivesRequest struct {
