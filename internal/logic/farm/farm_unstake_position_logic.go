@@ -250,7 +250,7 @@ func checkUser(userAddress string) error {
 	}
 	return nil
 }
-func GetUserDashboardInfo(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
+func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
 
 	ret := &types.DashboardIncentiveWithStakedUsd{}
 	var err error

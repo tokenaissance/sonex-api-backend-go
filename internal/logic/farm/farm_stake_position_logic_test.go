@@ -153,5 +153,5 @@ func Test_GetUserDashboardInfo(t *testing.T) {
 
 	var c config.Config
 	conf.MustLoad("../../../etc/forlocaluse0109.yaml", &c)
-	GetUserDashboardInfo(c, 1946, "0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D")
+	GetFarmIncentives(c, 1946, "0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D")
 }
