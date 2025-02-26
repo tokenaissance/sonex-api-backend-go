@@ -249,14 +249,14 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 				isOffical = 1
 			}
 			list := types.SwapTokenInfo{
-				Address:   v.Address,  // string `json:"address"`
-				Name:      v.Name,     //, string `json:"name"`
-				Symbol:    v.Symbol,   //  string `json:"symbol"`
-				Volume:    v.Volume,   // string `json:"volume,optional"` // TOP
-				Price:     v.Price,    //  string `json:"price,optional"`
-				Decimals:  v.Decimals, // int64  `json:"decimals"`
-				Logo:      v.Logo,     //  string `json:"logo,optional"`
-				IsOffical: isOffical,  // int64  `json:"isOffical,optional"` // 1:官方代币,
+				Address:    v.Address,  // string `json:"address"`
+				Name:       v.Name,     //, string `json:"name"`
+				Symbol:     v.Symbol,   //  string `json:"symbol"`
+				Volume:     v.Volume,   // string `json:"volume,optional"` // TOP
+				Price:      v.Price,    //  string `json:"price,optional"`
+				Decimals:   v.Decimals, // int64  `json:"decimals"`
+				Logo:       v.Logo,     //  string `json:"logo,optional"`
+				IsOfficial: isOffical,  // int64  `json:"isOffical,optional"` // 1:官方代币,
 			}
 			lists = append(lists, list)
 		}

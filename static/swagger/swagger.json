@@ -4437,7 +4437,7 @@
         "logo": {
           "type": "string"
         },
-        "isOffical": {
+        "isOfficial": {
           "type": "integer",
           "format": "int64",
           "description": " 1:官方代币,"
