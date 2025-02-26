@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"sonex_api_backend_go/internal/handler/response"
 	"sonex_api_backend_go/internal/lib/global"
@@ -161,7 +162,7 @@ func (l *LeaderboardLogic) Leaderboard(req *types.LeaderboardRequest) (resp *res
 		switch err {
 		case repository.ErrNotFound:
 		case nil:
-			latestUpdated = latest.TxAt.Unix()
+			latestUpdated = latest.TxAt.Truncate(time.Hour * 24).Add(time.Hour * 24).Unix()
 		default:
 			ch <- struct {
 				Err error
