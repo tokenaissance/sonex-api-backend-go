@@ -1431,6 +1431,62 @@
         ]
       }
     },
+    "/sonex/xtoken/records": {
+      "get": {
+        "operationId": "XTokenRecordsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/XTokenRecordsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "20"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/xpool/pool/list": {
       "get": {
         "summary": "Xpool list",
@@ -5293,6 +5349,68 @@
       "required": [
         "withdrawnAmount0",
         "withdrawnAmount1"
+      ]
+    },
+    "XTokenRecordsRequest": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "XTokenRecordsRequest"
+    },
+    "XTokenRecordsResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/XTokenRecordsResponse_Record"
+          }
+        }
+      },
+      "title": "XTokenRecordsResponse",
+      "required": [
+        "records"
+      ]
+    },
+    "XTokenRecordsResponse_Record": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "XTokenRecordsResponse_Record",
+      "required": [
+        "source",
+        "user",
+        "amount",
+        "timestamp"
       ]
     },
     "XpoolPoolListRequest": {

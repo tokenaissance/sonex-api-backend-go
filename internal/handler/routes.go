@@ -212,6 +212,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/volumekline",
 				Handler: sonex.SonexVolumeKlineHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/xtoken/records",
+				Handler: sonex.XTokenRecordsHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/sonex"),
 	)
