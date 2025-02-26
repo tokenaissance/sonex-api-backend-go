@@ -27,7 +27,7 @@ type (
 	}
 
 	EventXtokenTransferQueryOptions struct {
-		Source    *string
+		Sources   []string
 		User      *string
 		OrderBy   *string
 		PageSize  *int64
@@ -57,9 +57,9 @@ func (m *customEventXtokenTransferModel) PageQuery(ctx context.Context, opts Eve
 	var conditions []string
 	var params []interface{}
 
-	if opts.Source != nil {
-		conditions = append(conditions, fmt.Sprintf("event_from = $%d", len(params)+1))
-		params = append(params, *opts.Source)
+	if len(opts.Sources) > 0 {
+		conditions = append(conditions, fmt.Sprintf("event_from = ANY($%d)", len(params)+1))
+		params = append(params, opts.Sources)
 	}
 	if opts.User != nil {
 		conditions = append(conditions, fmt.Sprintf("event_to = $%d", len(params)+1))

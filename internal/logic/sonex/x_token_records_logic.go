@@ -9,6 +9,7 @@ import (
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -43,19 +44,37 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 	}
 	preDepositConf := l.svcCtx.Config.GetPreDepositConfig(req.ChainId)
 	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
+	xpoolConf := l.svcCtx.Config.GetXpoolConfig(req.ChainId)
+
+	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
+	eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(conn)
 
 	options := repository.EventXtokenTransferQueryOptions{}
 	// Source
 	switch *req.Source {
 	case SOURCE_PRE_DEPOSIT:
 		if preDepositConf != nil {
-			options.Source = &preDepositConf.RewardClaimer
+			options.Sources = []string{preDepositConf.RewardClaimer}
 		} else {
 			return nil, fmt.Errorf("%s", "Miss pre deposit configure")
 		}
 	case SOURCE_FARM:
 		if farmConf != nil {
-			options.Source = &farmConf.Staker
+			options.Sources = []string{farmConf.Staker}
+		} else {
+			return nil, fmt.Errorf("%s", "Miss farm configure")
+		}
+	case SOURCE_XPOOL:
+		if xpoolConf != nil {
+			pools, err := eventXpoolFactoryPoolCreatedModel.QueryByChainIdFactory(l.ctx, req.ChainId, xpoolConf.Factory)
+			if err != nil {
+				return nil, err
+			}
+			var poolAddresses []string
+			linq.From(pools).SelectT(func(pool repository.EventXpoolFactoryPoolCreated) string {
+				return pool.EventPool
+			}).ToSlice(&poolAddresses)
+			options.Sources = poolAddresses
 		} else {
 			return nil, fmt.Errorf("%s", "Miss farm configure")
 		}
@@ -78,7 +97,6 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 	}
 	options.PageIndex = req.PageIndex
 
-	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	eventXtokenTransferModel := repository.NewEventXtokenTransferModel(conn)
 	records, total, err := eventXtokenTransferModel.PageQuery(l.ctx, options)
 	if err != nil {
@@ -91,6 +109,8 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 			source = SOURCE_PRE_DEPOSIT
 		} else if farmConf != nil && record.EventFrom == farmConf.Staker {
 			source = SOURCE_FARM
+		} else if xpoolConf != nil && linq.From(options.Sources).AnyWithT(func(item string) bool { return item == record.EventFrom }) {
+			source = SOURCE_XPOOL
 		} else {
 			source = "UNKNOWN"
 		}
