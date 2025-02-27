@@ -607,7 +607,8 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 						Symbol:   wt.Symbol,
 						Decimals: wt.Decimals,
 					},
-					Pools: []types.Pool{},
+					Pools:      []types.Pool{},
+					IsOfficial: wt.Office,
 				},
 			}
 		}

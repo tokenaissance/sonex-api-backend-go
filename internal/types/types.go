@@ -738,16 +738,17 @@ type SwapEventResponse struct {
 }
 
 type SwapTokenInfo struct {
-	Address    string `json:"address"`
-	Name       string `json:"name"`
-	Symbol     string `json:"symbol"`
-	Volume     string `json:"volume,optional"` // TOP
-	Price      string `json:"price,optional"`
-	Decimals   int64  `json:"decimals"`
-	Logo       string `json:"logo,optional"`
-	IsOfficial int64  `json:"isOfficial,optional"` // 1:官方代币,
-	Balance    string `json:"balance,optional"`    // ALL,OFFICIAL 时，传入的代币的余额
-	UsdValue   string `json:"usd_value,optional"`  // ALL,OFFICIAL, 传入的代币的USD
+	Address    string     `json:"address"`
+	Name       string     `json:"name"`
+	Symbol     string     `json:"symbol"`
+	VolumeUsd  string     `json:"volumeUsd,optional"` // TOP
+	PriceUsd   string     `json:"priceUsd,optional"`
+	Decimals   int64      `json:"decimals"`
+	Logo       string     `json:"logo,optional"`
+	IsOfficial int64      `json:"isOfficial,optional"` // 1:官方代币,
+	Balance    string     `json:"balance,optional"`    // ALL,OFFICIAL 时，传入的代币的余额
+	UsdValue   string     `json:"usd_value,optional"`  // ALL,OFFICIAL, 传入的代币的USD
+	RiseFall1D Comparison `json:"riseRall1D"`          // 1 天的涨跌幅
 }
 
 type SwapTokensRequest struct {
@@ -886,6 +887,7 @@ type TokenWithExtra struct {
 	Kline      []Kline    `json:"kline"`
 	RiseFall1H Comparison `json:"riseRall1H"`
 	RiseFall1D Comparison `json:"riseRall1D"`
+	IsOfficial bool       `json:"isOfficial,optional"` // true :官方代币, false  :非官方代币
 }
 
 type Token_Kline struct {
