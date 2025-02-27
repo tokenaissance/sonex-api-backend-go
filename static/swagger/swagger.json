@@ -1038,51 +1038,6 @@
         ]
       }
     },
-    "/sonex/swaptokens": {
-      "get": {
-        "operationId": "SonexSwapTokensHandler",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/SwapTokensResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-chain-id",
-            "in": "query",
-            "required": true,
-            "type": "integer",
-            "format": "int64"
-          },
-          {
-            "name": "address",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "orderBy",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "ALL",
-              "TOP",
-              "OFFICIAL"
-            ]
-          }
-        ],
-        "tags": [
-          "sonex"
-        ],
-        "consumes": [
-          "multipart/form-data"
-        ]
-      }
-    },
     "/sonex/token/price": {
       "get": {
         "operationId": "SonexTokenPriceHandler",
@@ -5046,6 +5001,11 @@
         },
         "riseRall1D": {
           "$ref": "#/definitions/Comparison"
+        },
+        "isOfficial": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " true :官方代币, false  :非官方代币"
         }
       },
       "title": "TokenWithExtra",
@@ -5348,6 +5308,11 @@
         },
         "riseRall1D": {
           "$ref": "#/definitions/Comparison"
+        },
+        "isOfficial": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " true :官方代币, false  :非官方代币"
         },
         "logo": {
           "type": "string"

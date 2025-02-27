@@ -813,9 +813,6 @@ service sonex_api_backend_go {
 	@handler SonexTvlKlineHandler
 	get /tvlkline (SonexTvlKlineRequest) returns (SonexTvlKlineResponse)
 
-	@handler SonexSwapTokensHandler
-	get /swaptokens (SwapTokensRequest) returns (SwapTokensResponse)
-
 	@handler XTokenRecordsHandler
 	get /xtoken/records (XTokenRecordsRequest) returns (XTokenRecordsResponse)
 }

@@ -887,6 +887,7 @@ type TokenWithExtra struct {
 	Kline      []Kline    `json:"kline"`
 	RiseFall1H Comparison `json:"riseRall1H"`
 	RiseFall1D Comparison `json:"riseRall1D"`
+	IsOfficial bool       `json:"isOfficial,optional"` // true :官方代币, false  :非官方代币
 }
 
 type Token_Kline struct {
