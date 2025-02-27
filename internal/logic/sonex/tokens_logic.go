@@ -598,6 +598,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 		pools, pok := tokenPoolsMap[wt.Address]
 		if tok && pok {
 			data.Pools = pools
+			data.IsOfficial = wt.Office
 		} else {
 			data = types.TokensResponse_Token{
 				TokenWithExtra: types.TokenWithExtra{
