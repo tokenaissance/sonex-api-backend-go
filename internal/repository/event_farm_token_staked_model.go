@@ -55,7 +55,7 @@ func (m *customEventFarmTokenStakedModel) New(ctx context.Context, id int64, cha
 }
 
 func (m *customEventFarmTokenStakedModel) Exists(ctx context.Context, event_user string) (bool, error) {
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE event_user = $1 ORDER BY tx_at DESC LIMIT 1", eventFarmTokenStakedRows, m.table)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE event_user = $1 LIMIT 1", eventFarmTokenStakedRows, m.table)
 	var resp EventFarmTokenStaked
 	err := m.conn.QueryRowCtx(ctx, &resp, query, event_user)
 	switch err {
