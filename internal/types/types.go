@@ -108,6 +108,7 @@ type FarmIncentivesResponse_Data struct {
 	TotalClaimableFeesUSDFloat64 float64                           `json:"-"`                     // 用户未领取的手续费的价值
 	TotalClaimedFeesUSDFloat64   float64                           `json:"-"`                     // 用户已经领取的手续的价值
 	ListStakedPosition           []StakePositionsInfoResponse_Data `json:"-"`
+	RewardTokenLogo              string                            `json:"rewardTokenLogo"`
 }
 
 type FarmIncentivesResponse_Token struct {

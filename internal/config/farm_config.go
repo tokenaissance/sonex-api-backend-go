@@ -8,4 +8,5 @@ type FarmConfig struct {
 	PointsUSDLimits      float64 `json:","`
 	Points               int64   `json:","`
 	SubTitle             string  `json:","`
+	XRewardToken         string  `json:","`
 }

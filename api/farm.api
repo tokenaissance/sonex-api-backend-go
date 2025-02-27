@@ -62,8 +62,8 @@ type FarmIncentivesResponse_Data {
 	LiquidityUSDFloat64        	 float64 `json:"-"`   // 池子的流动性价值（USD）
 	TotalClaimableFeesUSDFloat64 float64 `json:"-"` // 用户未领取的手续费的价值
 	TotalClaimedFeesUSDFloat64 	 float64 `json:"-"`     // 用户已经领取的手续的价值
-
 	ListStakedPosition []StakePositionsInfoResponse_Data     `json:"-"`
+	RewardTokenLogo  string `json:"rewardTokenLogo"`
 }
 
 type DashboardIncentiveWithStakedUsd {

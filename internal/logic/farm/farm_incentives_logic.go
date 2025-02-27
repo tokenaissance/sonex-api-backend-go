@@ -369,6 +369,10 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			if strings.EqualFold(totalWeightString, "0") {
 				totalWeightString = "1000"
 			}
+			rewardTokenLogo := ""
+			if !strings.EqualFold(farmConf.XRewardToken, "") {
+				rewardTokenLogo = farmConf.XRewardToken
+			}
 			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
 			if ok {
 				tokenIds := []*big.Int{}
@@ -437,6 +441,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Status:                       status,
 					StartAt:                      record.EventStartTime,
 					Earned:                       big.NewInt(0).String(),
+					RewardTokenLogo:              rewardTokenLogo,
 				}
 				tokenIdsResult = tids
 			} else {
@@ -472,6 +477,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Status:                       status,
 					StartAt:                      record.EventStartTime,
 					Earned:                       big.NewInt(0).String(),
+					RewardTokenLogo:              rewardTokenLogo,
 				}
 			}
 
