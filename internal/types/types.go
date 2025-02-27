@@ -220,16 +220,16 @@ type Fees struct {
 	FeeAmount1 string `json:"feeAmount1"`
 }
 
-type GalxeAddLiquidityRequest struct {
-	Address string `form:"address"`
-}
-
 type GalxeAddLiquidityResponse struct {
 	IsAddLiquidityOrNot bool `json:"isAddLiquidityOrNot"`
 }
 
-type GalxeSwapRequest struct {
+type GalxeAddressRequest struct {
 	Address string `form:"address"`
+}
+
+type GalxeFarmingResponse struct {
+	IsFarmingOrNot bool `json:"isFarmingOrNot"`
 }
 
 type GalxeSwapResponse struct {

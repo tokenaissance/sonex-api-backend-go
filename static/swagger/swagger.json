@@ -597,6 +597,33 @@
         ]
       }
     },
+    "/sonex/galxefarming": {
+      "get": {
+        "operationId": "SonexGalxeFarmingHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/GalxeFarmingResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/galxeswap": {
       "get": {
         "operationId": "SonexGalxeswapHandler",
@@ -2518,18 +2545,6 @@
         "feeAmount1"
       ]
     },
-    "GalxeAddLiquidityRequest": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        }
-      },
-      "title": "GalxeAddLiquidityRequest",
-      "required": [
-        "address"
-      ]
-    },
     "GalxeAddLiquidityResponse": {
       "type": "object",
       "properties": {
@@ -2543,16 +2558,29 @@
         "isAddLiquidityOrNot"
       ]
     },
-    "GalxeSwapRequest": {
+    "GalxeAddressRequest": {
       "type": "object",
       "properties": {
         "address": {
           "type": "string"
         }
       },
-      "title": "GalxeSwapRequest",
+      "title": "GalxeAddressRequest",
       "required": [
         "address"
+      ]
+    },
+    "GalxeFarmingResponse": {
+      "type": "object",
+      "properties": {
+        "isFarmingOrNot": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "GalxeFarmingResponse",
+      "required": [
+        "isFarmingOrNot"
       ]
     },
     "GalxeSwapResponse": {
