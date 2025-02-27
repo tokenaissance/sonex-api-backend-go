@@ -2060,6 +2060,9 @@
           "items": {
             "$ref": "#/definitions/StakePositionsInfoResponse_Data"
           }
+        },
+        "rewardTokenLogo": {
+          "type": "string"
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -2092,7 +2095,8 @@
         "totalWeight",
         "-",
         "totalClaimableFeesUsd",
-        "totalClaimedFeesUSD"
+        "totalClaimedFeesUSD",
+        "rewardTokenLogo"
       ]
     },
     "FarmIncentivesResponse_Token": {

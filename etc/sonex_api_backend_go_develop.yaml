@@ -80,6 +80,7 @@ Farms:
     PointsUSDLimits: 10
     Points: 5000
     SubTitle: Farm
+    XRewardToken: https://img.sonex.so/X-Token-logo.svg
 Xpools:
   - ChainId: 1946
     Factory: 0xB1E6ef99cB82ae685b8289DE3251b5427Dc72148
