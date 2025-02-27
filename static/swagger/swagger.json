@@ -4496,11 +4496,11 @@
         "symbol": {
           "type": "string"
         },
-        "volume": {
+        "volumeUsd": {
           "type": "string",
           "description": " TOP"
         },
-        "price": {
+        "priceUsd": {
           "type": "string"
         },
         "decimals": {
@@ -4522,6 +4522,10 @@
         "usd_value": {
           "type": "string",
           "description": " ALL,OFFICIAL, 传入的代币的USD"
+        },
+        "riseRall1D": {
+          "$ref": "#/definitions/Comparison",
+          "description": " 1 天的涨跌幅"
         }
       },
       "title": "SwapTokenInfo",
@@ -4529,7 +4533,8 @@
         "address",
         "name",
         "symbol",
-        "decimals"
+        "decimals",
+        "riseRall1D"
       ]
     },
     "SwapTokensRequest": {

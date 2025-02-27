@@ -102,7 +102,7 @@ ORDER BY token.symbol ASC
 			Address:    v.Address,
 			Name:       v.Name,
 			Symbol:     v.Symbol,
-			Price:      v.Price.String,
+			PriceUsd:   v.Price.String,
 			Decimals:   v.Decimals,
 			Logo:       v.Logo.String,
 			IsOfficial: isOfficial,

@@ -122,7 +122,7 @@ func getTokenBalanceMultipleCall(chain config.ChainConfig, tokenList []types.Swa
 			// balance 大于 0
 			if balance.Cmp(big.NewInt(0)) > 0 {
 				swapTokenInfo.Balance = balance.String()
-				userBalanceReadableUsd, userBalanceReadable := global.CalucateOneTokenUsdInPool(balance, swapTokenInfo.Price, int64(6), swapTokenInfo.Decimals)
+				userBalanceReadableUsd, userBalanceReadable := global.CalucateOneTokenUsdInPool(balance, swapTokenInfo.PriceUsd, int64(6), swapTokenInfo.Decimals)
 				swapTokenInfo.UsdValue = userBalanceReadableUsd.String()
 				swapTokenInfo.Balance = userBalanceReadable.String()
 				logx.Infof("swapTokenInfo.Address: %v  balance: %v", swapTokenInfo.Address, balance)
@@ -227,12 +227,17 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 	}
 
 	// 设置 10分钟 缓存
-
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	eventSonexPoolSwapModel := repository.NewEventSonexPoolSwapModel(conn)
+	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
 	// var volumes []types.SwapTokenInfo
 	var err error
+	var tokenList []types.SwapTokenInfo
+	var tokenAddressStrs []string
+
+	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(6), nil))
+
 	// 选择 TOP  FIVE
 	if strings.EqualFold(req.OrderBy, ORFERBY_TOP) {
 
@@ -242,30 +247,48 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 			logx.Errorf("getTop5VolumeIn24Hours ERR:%v ", err)
 			return &types.SwapTokensResponse{}, err
 		}
-		var lists []types.SwapTokenInfo
+		// range volume
 		for _, v := range volumes {
+			tokenAddressStrs = append(tokenAddressStrs, v.Address)
+
 			isOffical := int64(0)
 			if v.IsOffical {
 				isOffical = 1
 			}
 			list := types.SwapTokenInfo{
-				Address:    v.Address,  // string `json:"address"`
-				Name:       v.Name,     //, string `json:"name"`
-				Symbol:     v.Symbol,   //  string `json:"symbol"`
-				Volume:     v.Volume,   // string `json:"volume,optional"` // TOP
-				Price:      v.Price,    //  string `json:"price,optional"`
-				Decimals:   v.Decimals, // int64  `json:"decimals"`
-				Logo:       v.Logo,     //  string `json:"logo,optional"`
-				IsOfficial: isOffical,  // int64  `json:"isOffical,optional"` // 1:官方代币,
+				Address:    v.Address,
+				Name:       v.Name,
+				Symbol:     v.Symbol,
+				VolumeUsd:  v.Volume,
+				PriceUsd:   v.Price,
+				Decimals:   v.Decimals,
+				Logo:       v.Logo,
+				IsOfficial: isOffical,
 			}
-			lists = append(lists, list)
+			tokenList = append(tokenList, list)
 		}
 
-		return &types.SwapTokensResponse{List: lists}, nil
+		// Get current price
+		currentPriceRecords, last1DPriceRecords := getCurrentPriceAnd1dPrice(tokenPriceModel, tokenAddressStrs)
+
+		for _, item := range tokenList {
+			currentPrice := big.NewInt(0)
+			if currentPriceRecord, ok := currentPriceRecords[item.Address]; ok {
+				currentPrice = currentPriceRecord
+			}
+			last1DPrice, _ := usdAccuracy.Int(nil)
+			if last1DPriceRecord, ok := last1DPriceRecords[item.Address]; ok {
+				last1DPrice = last1DPriceRecord
+			}
+
+			comparison1D, percentage1DF := comparePrices(currentPrice, last1DPrice)
+			percentage1D, _ := percentage1DF.Float64()
+			item.RiseFall1D = types.Comparison{Comparison: comparison1D, Percentage: fmt.Sprintf("%f", percentage1D)}
+		}
+
+		return &types.SwapTokensResponse{List: tokenList}, nil
 
 	}
-
-	var tokenList []types.SwapTokenInfo
 
 	tokenList, err = getTokenList(conn, req.ChainId, req.OrderBy) // ALL / OFFICAL
 	if err != nil {
@@ -290,6 +313,27 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 
 	logx.Infof("tokenListWithBalance:%#v ", tokenListWithBalance)
 
+	for _, v := range tokenListWithBalance {
+		tokenAddressStrs = append(tokenAddressStrs, v.Address)
+	}
+
+	currentPriceRecords, last1DPriceRecords := getCurrentPriceAnd1dPrice(tokenPriceModel, tokenAddressStrs)
+	for _, item := range tokenListWithBalance {
+		// Get current price
+		currentPrice := big.NewInt(0)
+		if currentPriceRecord, ok := currentPriceRecords[item.Address]; ok {
+			currentPrice = currentPriceRecord
+		}
+		last1DPrice, _ := usdAccuracy.Int(nil)
+		if last1DPriceRecord, ok := last1DPriceRecords[item.Address]; ok {
+			last1DPrice = last1DPriceRecord
+		}
+
+		comparison1D, percentage1DF := comparePrices(currentPrice, last1DPrice)
+		percentage1D, _ := percentage1DF.Float64()
+		item.RiseFall1D = types.Comparison{Comparison: comparison1D, Percentage: fmt.Sprintf("%f", percentage1D)}
+	}
+
 	sort.SliceStable(tokenListWithBalance, func(i, j int) bool {
 		usd_i, _ := big.NewFloat(0).SetString(tokenList[i].UsdValue)
 		usd_j, _ := big.NewFloat(0).SetString(tokenList[j].UsdValue)
@@ -305,77 +349,52 @@ func (l *SonexSwapTokensLogic) SonexSwapTokens(req *types.SwapTokensRequest) (*t
 
 }
 
-/*
+// calucate 1d raise fall
+// current price ,last day price
+func getCurrentPriceAnd1dPrice(tokenPriceModel repository.SonexTokenPriceRecordModel, tokenAddressStrs []string) (map[string]*big.Int, map[string]*big.Int) {
+	var wg sync.WaitGroup
+	var err error
+	var currentPriceRecords map[string]*big.Int
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-type TokenDetailStruct struct {
-	Address              string `json:"address"`
-	CirculatingMarketCap string `json:"circulating_market_cap"`
-	Decimals             string `json:"decimals"`
-	ExchangeRate         string `json:"exchange_rate"`
-	Holders              string `json:"holders"`
-	IconUrl              string `json:"icon_url"`
-	Name                 string `json:"name"`
-	Symbol               string `json:"symbol"`
-	TotalSupply          string `json:"total_supply"`
-	TypeString           string `json:"type"`
-	Volume24h            string `json:"volume_24h"`
+		currentPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddresses(context.Background(), tokenAddressStrs)
+		if err != nil {
+			logx.Errorf("Get current price error: %s", err)
+			return
+		}
+	}()
+
+	// Get last 1D price
+	var last1DPriceRecords map[string]*big.Int
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		last1DPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(context.Background(), tokenAddressStrs, "1d")
+		if err != nil {
+			logx.Errorf("Get last 1D price error: %s", err)
+			return
+		}
+	}()
+	return currentPriceRecords, last1DPriceRecords
 }
-
-type TokenUserStruct struct {
-	TokenDetail   TokenDetailStruct `json:"token"`
-	TokenId       string            `json:"token_id"`
-	TokenInstance string            `json:"token_instance"`
-	Value         string            `json:"value"`
+func comparePrices(currentPrice, comparePrice *big.Int) (string, *big.Float) {
+	currentPriceF := new(big.Float).SetInt(currentPrice)
+	comparePriceF := new(big.Float).SetInt(comparePrice)
+	var comparison string
+	var percentage *big.Float
+	diff := new(big.Float).Sub(currentPriceF, comparePriceF)
+	if diff.Cmp(big.NewFloat(0)) > 0 {
+		comparison = "UP"
+		percentage = new(big.Float).Quo(diff, comparePriceF)
+	} else if diff.Cmp(big.NewFloat(0)) < 0 {
+		comparison = "DOWN"
+		percentage = new(big.Float).Quo(diff, comparePriceF)
+	} else {
+		comparison = "SAME"
+		percentage = big.NewFloat(0)
+	}
+	return comparison, percentage
 }
-
-func roundRequestIds(RequestIds []string) func() string {
-	var n uint64
-	return func() string {
-		tn := atomic.LoadUint64(&n)
-		atomic.AddUint64(&n, 1)
-		return RequestIds[int(tn)%len(RequestIds)]
-	}
-}
-
-// 从浏览器来的userbalance 数据
-func getUserBalanceFromBlockScout(url, x_request_id string) ([]*TokenUserStruct, error) {
-	var tokenDetails []*TokenUserStruct
-
-	client := &http.Client{
-		Timeout: 20 * time.Second,
-	}
-
-	logx.Infof("url:%v ", url)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		logx.Errorf("Get getUserBalanceFromBlockScout NewRequest:%v ", err)
-		return tokenDetails, err
-	}
-
-	req.Header.Add("x-request-id", x_request_id)
-
-	response, err := client.Do(req)
-	if err != nil {
-		logx.Errorf("getUserBalanceFromBlockScout DO error:%v ", err)
-		return tokenDetails, err
-	}
-
-	defer response.Body.Close()
-
-	// Body
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		logx.Errorf("getUserBalanceFromBlockScout ReadAll error:%v ", err)
-		return tokenDetails, err
-	}
-	logx.Infof("sssss:%v ", string(body))
-	// token details
-	err = json.Unmarshal(body, &tokenDetails)
-	if err != nil {
-		logx.Errorf("Unmarshal error:%v ", err)
-		return tokenDetails, err
-	}
-
-	return tokenDetails, nil
-}
-*/
