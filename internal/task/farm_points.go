@@ -212,7 +212,7 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 		url := fmt.Sprintf("%s/extra/increase_points", strings.TrimRight(conf.PointsService.Host, "/"))
 		resp, err := httpc.Do(context.Background(), http.MethodPost, url, req)
 		if err != nil {
-			logx.Errorf("HandleFarmPointsDaily error: User %s, IncentiveId %d, TokenId %d, %s",
+			logx.Errorf("HandleFarmPoints error: User %s, IncentiveId %d, TokenId %d, %s",
 				item.EventUser,
 				item.EventIncentiveId,
 				item.EventTokenId,
@@ -221,7 +221,7 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 			return nil
 		}
 		if resp.StatusCode != http.StatusOK {
-			logx.Errorf("HandleFarmPointsDaily error: User %s, IncentiveId %d, TokenId %d, %s",
+			logx.Errorf("HandleFarmPoints error: User %s, IncentiveId %d, TokenId %d, %s",
 				item.EventUser,
 				item.EventIncentiveId,
 				item.EventTokenId,
@@ -229,6 +229,12 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 			)
 			return nil
 		}
+		logx.Infof("HandleFarmPoints increase points: User %s, IncentiveId %d, TokenId %d, Points %d",
+			item.EventUser,
+			item.EventIncentiveId,
+			item.EventTokenId,
+			farmConf.Points,
+		)
 	}
 
 	return nil

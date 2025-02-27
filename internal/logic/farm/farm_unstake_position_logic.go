@@ -8,8 +8,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"sonex_api_backend_go/internal/config"
+	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/lib/global"
 	sonex_logic "sonex_api_backend_go/internal/logic/sonex"
 	"sonex_api_backend_go/internal/module/sonex"
@@ -19,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type FarmUnstakePositionLogic struct {
@@ -231,4 +234,191 @@ func getIncentiveInfoTokenIds(staker string, incetiveId int64, chain config.Chai
 
 		return nil, nil
 	}
+}
+
+func checkUser(userAddress string) error {
+	if !strings.EqualFold(userAddress, "") {
+		if !common.IsHexAddress(userAddress) {
+			logx.Errorf("invalid user address:%v ", userAddress)
+			return errors.New("invalid address")
+		}
+	}
+
+	if strings.EqualFold(userAddress, "") {
+		logx.Error(" user address is empty ")
+		return errors.New("user address is empty")
+	}
+	return nil
+}
+func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
+
+	ret := &types.DashboardIncentiveWithStakedUsd{}
+	var err error
+	if checkUser(userAddress) != nil {
+		return &types.DashboardIncentiveWithStakedUsd{}, err
+	}
+
+	farmConf := conf.GetFarmConfig(chainId)
+	chainConf := conf.GetChainConfig(chainId)
+	conn := repository.NewConn(conf.PostgreSQL.DataSource())
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", conf.Redis.Host, conf.Redis.Port), conf.Redis.Password, conf.Redis.DB)
+
+	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+	tokenModel := repository.NewTokenModel(conn)
+
+	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(context.Background(), chainId, common.HexToAddress(farmConf.Staker).Hex())
+	if err != nil {
+		logx.Errorf("ERR1:%v ", err)
+		return &types.DashboardIncentiveWithStakedUsd{}, err
+	}
+
+	var wg sync.WaitGroup
+	results := make(chan *types.DashboardIncentiveInfo, len(incentiveCreatedRecords))
+
+	totalStakedLp := big.NewFloat(0)
+	TotalFeeRevenue := big.NewFloat(0)
+	for _, incincentiveCreatedRecordItem := range incentiveCreatedRecords {
+		wg.Add(1)
+		go func(record *repository.EventFarmIncentiveCreatedWithExtra) {
+			defer wg.Done()
+
+			unclaimedTotalRewards, err := getRewardsAmount(farmConf.Staker, userAddress, record.EventIncentiveId, *chainConf)
+			if err != nil {
+				logx.Errorf("getRewardsAmount ERR:%v ", err)
+				return
+			}
+
+			totalClaimedAmount, err := getClainedAmount(userAddress, chainId, record.EventIncentiveId, conn)
+			if err != nil {
+				logx.Errorf("getClainedAmount:%v ", err)
+				return
+			}
+
+			unclaimedFeesUSD, claimedAmountFeeUsd, err := getValueOfAmountTokenFordashboard(unclaimedTotalRewards, totalClaimedAmount, record.EventIncentiveId, chainId, chainConf, conn)
+
+			if err != nil {
+				logx.Errorf("getValueOfAmountTokenFordashboard:%v ", err)
+				return
+			}
+
+			totalClaimableFeesUSDFloat64, _ := unclaimedFeesUSD.Float64()
+			//
+			revenueBigFloat := new(big.Float).Add(unclaimedFeesUSD, claimedAmountFeeUsd)
+			revenueString, _ := revenueBigFloat.Float64()
+
+			TotalFeeRevenue = new(big.Float).Add(TotalFeeRevenue, revenueBigFloat)
+			// 获取质押的数量
+			// 获取用户的  lpbalance
+			lpBalance, stakedNum, _, _, err := getStakedNum(conn, cacher, chainId, record.EventIncentiveId, userAddress)
+			if err != nil && err != sqlx.ErrNotFound {
+				return
+			}
+
+			totalStakedLp = new(big.Float).Add(totalStakedLp, lpBalance)
+
+			token0Symbol, token0Logo, token1Symbol, token1Logo := getToken0SymbolAndToken1(tokenModel, chainId, record.ExtraToken0, record.ExtraToken1)
+
+			dataResult := &types.DashboardIncentiveInfo{
+				IncentiveId:                  record.EventIncentiveId,
+				FeeRatio:                     record.ExtraFee,
+				Token0Symbol:                 token0Symbol,
+				Token0Logo:                   token0Logo,
+				Token1Symbol:                 token1Symbol,
+				Token1Logo:                   token1Logo,
+				Staked:                       stakedNum,
+				StakedUsd:                    lpBalance.String(),
+				TotalClaimableFeesUSD:        unclaimedFeesUSD.String(),
+				TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
+				RevenueString:                claimedAmountFeeUsd.String(),
+				RevenueFloat64:               revenueString,
+			}
+			results <- dataResult
+		}(&incincentiveCreatedRecordItem)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for pool := range results {
+		ret.DashboardIncentives = append(ret.DashboardIncentives, *pool)
+	}
+	totalFeeRevenueFloat64, _ := TotalFeeRevenue.Float64()
+	ret.TotalRevenueUsd = TotalFeeRevenue.String()
+	ret.TotalRevenueUsdFloat64 = totalFeeRevenueFloat64
+
+	ret.TotalStakedLpUsd = totalStakedLp.String()
+	totalStakedLpFloat64, _ := totalStakedLp.Float64()
+	ret.TotalStakedLpUsdFloat64 = totalStakedLpFloat64
+
+	logx.Infof(" GetUserDashboardInfo sret %#v ", ret)
+	return ret, err
+}
+
+func getToken0SymbolAndToken1(tokenModel repository.TokenModel, chainId int64, token0, token1 string) (string, string, string, string) {
+	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{token0, token1})
+	if err != nil {
+		logx.Errorf("QueryByChainIdAddress:%v ", err)
+		return "", "", "", ""
+	}
+
+	token0Symbol := ""
+	token0Logo := ""
+	token1Symbol := ""
+	token1Logo := ""
+	for _, v := range tokensInfo {
+		if strings.EqualFold(v.Address, token0) {
+			token0Symbol = v.Symbol
+			token0Logo = v.Logo.String
+
+		}
+
+		if strings.EqualFold(v.Address, token1) {
+			token1Symbol = v.Symbol
+			token1Logo = v.Logo.String
+		}
+	}
+	return token0Symbol, token0Logo, token1Symbol, token1Logo
+
+}
+
+// 未领取的奖励,领取的奖励
+func getValueOfAmountTokenFordashboard(unclaimedTokenAmount, claimedTokenAmount *big.Int, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (*big.Float, *big.Float, error) {
+
+	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
+
+	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId)
+	switch err {
+	case nil:
+	case sqlx.ErrNotFound:
+		tokenInfo = &repository.TokenPriceRateRecordWithExtra{
+			TokenDecimals: 18,
+			TokenPriceRecord: repository.TokenPriceRecord{
+				Price:       "1000000",
+				UsdDecimals: 6,
+			},
+		}
+	default:
+		return nil, nil, err
+	}
+
+	totalClaimableFeesUSD, _ := global.CalucateOneTokenUsdInPool(unclaimedTokenAmount, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
+
+	logx.Infof("totalClaimableFeesUSD:%v", totalClaimableFeesUSD)
+
+	if totalClaimableFeesUSD.Cmp(big.NewFloat(0)) == 0 {
+		totalClaimableFeesUSD = big.NewFloat(0)
+	}
+
+	claimedTokenAmountFeeUsd, _ := global.CalucateOneTokenUsdInPool(claimedTokenAmount, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
+
+	logx.Infof("claimedTokenAmountFeeUsd:%v", claimedTokenAmountFeeUsd)
+
+	if claimedTokenAmountFeeUsd.Cmp(big.NewFloat(0)) == 0 {
+		claimedTokenAmountFeeUsd = big.NewFloat(0)
+	}
+
+	// 未领取的奖励,领取的奖励
+	return totalClaimableFeesUSD, claimedTokenAmountFeeUsd, nil
 }
