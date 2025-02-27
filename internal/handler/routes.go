@@ -119,6 +119,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/galxefarming",
+				Handler: sonex.SonexGalxeFarmingHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/galxeswap",
 				Handler: sonex.SonexGalxeswapHandler(serverCtx),
 			},

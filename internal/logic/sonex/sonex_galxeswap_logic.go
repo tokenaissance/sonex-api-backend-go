@@ -26,7 +26,7 @@ func NewSonexGalxeswapLogic(ctx context.Context, svcCtx *svc.ServiceContext) *So
 	}
 }
 
-func (l *SonexGalxeswapLogic) SonexGalxeswap(req *types.GalxeSwapRequest) (resp *types.GalxeSwapResponse, err error) {
+func (l *SonexGalxeswapLogic) SonexGalxeswap(req *types.GalxeAddressRequest) (resp *types.GalxeSwapResponse, err error) {
 	// todo: add your logic here and delete this line
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())

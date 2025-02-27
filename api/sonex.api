@@ -659,7 +659,7 @@ type PoolInfoResponse {
 	Fee24h           float64             `json:"fee24h"`
 }
 
-type GalxeSwapRequest {
+type GalxeAddressRequest {
 	Address string `form:"address"`
 }
 
@@ -693,12 +693,12 @@ type VolumeDetailsRecord {
 	CreatedAt   int64   `json:"createdat"`
 }
 
-type GalxeAddLiquidityRequest {
-	Address string `form:"address"`
-}
-
 type GalxeAddLiquidityResponse {
 	IsAddLiquidityOrNot bool `json:"isAddLiquidityOrNot"`
+}
+
+type GalxeFarmingResponse {
+	IsFarmingOrNot bool `json:"isFarmingOrNot"`
 }
 
 //  sonex volumetotal request
@@ -799,13 +799,16 @@ service sonex_api_backend_go {
 	get /portfolio (PortfolioRequest) returns (PortfolioResponse)
 
 	@handler SonexGalxeswapHandler
-	get /galxeswap (GalxeSwapRequest) returns (GalxeSwapResponse)
+	get /galxeswap (GalxeAddressRequest) returns (GalxeSwapResponse)
 
 	@handler SonexGalxeTgidHandler
 	get /galxetgid (GalxeTgIdRequest) returns (GalxeTgIdResponse)
 
 	@handler SonexGalxeAddliquidityHandler
-	get /galxeaddliquidity (GalxeAddLiquidityRequest) returns (GalxeAddLiquidityResponse)
+	get /galxeaddliquidity (GalxeAddressRequest) returns (GalxeAddLiquidityResponse)
+
+	@handler SonexGalxeFarmingHandler
+	get /galxefarming (GalxeAddressRequest) returns (GalxeFarmingResponse)
 
 	@handler SonexVolumeKlineHandler
 	get /volumekline (SonexVolumeKlineRequest) returns (SonexVolumeKlineResponse)
