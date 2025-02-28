@@ -115,28 +115,6 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 			acsInfo = info
 		}(ctx, results)
 
-		// Query token prices
-		var prices map[string]*big.Int
-		wg.Add(1)
-		go func(ctx context.Context, ch chan struct {
-			Err error
-		}) {
-			defer wg.Done()
-			defer func() {
-				if err := recover(); err != nil {
-					ch <- struct{ Err error }{Err: fmt.Errorf("%s(panic)", err)}
-				}
-			}()
-
-			var err error
-			sonexTokenPriceRecordModel := repository.NewSonexTokenPriceRecordModel(repository.NewConn(conf.PostgreSQL.DataSource()))
-			prices, err = sonexTokenPriceRecordModel.QueryLatestHistoryPricesByAddresses(ctx, acsConf.Tokens)
-			if err != nil {
-				ch <- struct{ Err error }{Err: err}
-				return
-			}
-		}(ctx, results)
-
 		// Query previous day's swaps
 		var swaps []repository.EventSonexPoolSwapWithPool
 		wg.Add(1)
@@ -198,21 +176,10 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 			}
 		}
 
-		linq.From(swaps).
-			WhereT(func(item repository.EventSonexPoolSwapWithPool) bool {
-				_, ok := existedMap[fmt.Sprintf("%s-%d", item.TxHash, item.TxIndex)]
-				return !ok
-			}).
-			OrderByT(func(item repository.EventSonexPoolSwapWithPool) int64 {
-				return item.TxAt.Unix()
-			}).
-			ThenByT(func(item repository.EventSonexPoolSwapWithPool) string {
-				return item.TxHash
-			}).
-			ThenByT(func(item repository.EventSonexPoolSwapWithPool) int64 {
-				return item.TxIndex
-			}).
-			ToSlice(&swaps)
+		linq.From(swaps).WhereT(func(item repository.EventSonexPoolSwapWithPool) bool {
+			_, ok := existedMap[fmt.Sprintf("%s-%d", item.TxHash, item.TxIndex)]
+			return !ok
+		}).ToSlice(&swaps)
 		if acsInfo.Data.GetDefiPointInfoByDefiId.RemainingPoints <= 0 || len(swaps) == 0 {
 			return nil
 		}
@@ -221,59 +188,43 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 		}
 
 		// Build data items
-		usd, err := global.GetToken(chainConf.ChainId, chainConf.USD)
-		if err != nil {
-			return err
-		}
-		usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usd.Decimals), nil))
 		data := []repository.AcsSwapAcsRecord{}
 		var sendTotal int64 = 0
 		for _, swap := range swaps {
 			var tokenAddress string
-			var count float64
-			var value float64
-			if price, ok := prices[swap.ExtraToken0]; ok && linq.From(acsConf.Tokens).Contains(swap.ExtraToken0) {
+			var amount *big.Float
+			if linq.From(acsConf.Tokens).Contains(swap.ExtraToken0) {
 				tokenAddress = swap.ExtraToken0
-				amount, _ := new(big.Float).SetString(swap.EventAmount0)
+				amount, _ = new(big.Float).SetString(swap.EventAmount0)
 				amount = new(big.Float).Abs(amount)
-				token, err := global.GetToken(chainConf.ChainId, swap.ExtraToken0)
-				if err != nil {
-					return err
-				}
-				accuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
-				count, _ = new(big.Float).Quo(amount, accuracy).Float64()
-				value, _ = new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(amount, new(big.Float).SetInt(price)), accuracy), usdAccuracy).Float64()
 			}
-			if price, ok := prices[swap.ExtraToken1]; ok && linq.From(acsConf.Tokens).Contains(swap.ExtraToken1) {
-				amount, _ := new(big.Float).SetString(swap.EventAmount1)
-				amount = new(big.Float).Abs(amount)
-				token, err := global.GetToken(chainConf.ChainId, swap.ExtraToken1)
-				if err != nil {
-					return err
-				}
-				accuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
-				count1, _ := new(big.Float).Quo(amount, accuracy).Float64()
-				value1, _ := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(amount, new(big.Float).SetInt(price)), accuracy), usdAccuracy).Float64()
-				if value1 > value {
+			if linq.From(acsConf.Tokens).Contains(swap.ExtraToken1) {
+				amount1, _ := new(big.Float).SetString(swap.EventAmount1)
+				amount1 = new(big.Float).Abs(amount1)
+				if amount == nil || amount1.Cmp(amount) > 0 {
 					tokenAddress = swap.ExtraToken1
-					count = count1
-					value = value1
+					amount = amount1
 				}
 			}
-
+			token, err := global.GetToken(chainConf.ChainId, tokenAddress)
+			if err != nil {
+				return err
+			}
+			accuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
+			count, _ := new(big.Float).Quo(amount, accuracy).Float64()
 			var acs int64
-			if value <= 10 {
-				acs = 1
-			} else if value <= 50 {
-				acs = int64(value * 0.2)
-			} else if value <= 100 {
-				acs = int64(value * 0.3)
-			} else if value <= 300 {
-				acs = int64(value * 0.4)
-			} else if value <= 500 {
-				acs = int64(value * 0.5)
+			if count <= 500 {
+				acs = int64(count * 0.1)
+			} else if count <= 1000 {
+				acs = int64(count * 0.2)
+			} else if count <= 3000 {
+				acs = int64(count * 0.3)
+			} else if count <= 5000 {
+				acs = int64(count * 0.4)
+			} else if count <= 10000 {
+				acs = int64(count * 0.5)
 			} else {
-				acs = int64(value)
+				acs = int64(count * 0.6)
 			}
 
 			if acs == 0 {
@@ -312,7 +263,7 @@ func acsSwapRewardLogic(ctx context.Context, conf config.Config, chainConf confi
 
 		acsSwapAcsRecordModel := repository.NewAcsSwapAcsRecordModel(sqlx.NewSqlConnFromSession(s))
 
-		err = acsSwapAcsRecordModel.BatchNew(ctx, data)
+		err := acsSwapAcsRecordModel.BatchNew(ctx, data)
 		if err != nil {
 			return err
 		}
