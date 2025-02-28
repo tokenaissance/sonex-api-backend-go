@@ -85,6 +85,7 @@ Farms:
     PointsUSDLimits: 100
     Points: 5000
     SubTitle: Farm
+    XRewardToken: https://img.sonex.so/X-Token-logo.svg
 ACS:
   Pools:
     # USDC.e/USDT
