@@ -3,8 +3,10 @@ package sonex
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"sonex_api_backend_go/internal/handler/response"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -41,6 +43,10 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	if chainConf == nil {
 		return nil, fmt.Errorf("%s", "Miss chain configure")
+	}
+	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+	if sonexConf == nil {
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
 	}
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	eventXpoolFactoryPoolCreatedModel := repository.NewEventXpoolFactoryPoolCreatedModel(conn)
@@ -106,6 +112,11 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 	if err != nil {
 		return nil, err
 	}
+	xtoken, err := global.GetToken(chainConf.ChainId, sonexConf.XToken)
+	if err != nil {
+		return nil, err
+	}
+	accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(xtoken.Decimals), nil)
 	recordsResutl := []types.XTokenRecordsResponse_Record{}
 	for _, record := range records {
 		var source string
@@ -118,10 +129,12 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 		} else {
 			source = record.EventFrom
 		}
+		value, _ := new(big.Float).SetString(record.EventValue)
+		amount, _ := new(big.Float).Quo(value, new(big.Float).SetInt(accuracy)).Float64()
 		recordsResutl = append(recordsResutl, types.XTokenRecordsResponse_Record{
 			Source:    source,
 			User:      record.EventTo,
-			Amount:    record.EventValue,
+			Amount:    fmt.Sprintf("%f", amount),
 			TimeStamp: record.TxAt.Unix(),
 		})
 	}
