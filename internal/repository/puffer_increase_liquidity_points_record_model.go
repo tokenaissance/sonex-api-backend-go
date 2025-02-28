@@ -45,7 +45,7 @@ func (m *customPufferIncreaseLiquidityPointsRecordModel) New(ctx context.Context
 
 func (m *customPufferIncreaseLiquidityPointsRecordModel) QueryByUserDate(ctx context.Context, chainId int64, user string, date string) ([]PufferIncreaseLiquidityPointsRecord, error) {
 	query := fmt.Sprintf(`
-		SELECT * FROM %s WHERE chain_id = $1 AND user_address = $2 AND tx_at::DATE = $3
+	  SELECT * FROM %s WHERE chain_id = $1 AND user_address = $2 AND tx_at::DATE = $3
 	`, m.table)
 	var resp []PufferIncreaseLiquidityPointsRecord
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, date)
