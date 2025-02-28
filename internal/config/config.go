@@ -18,6 +18,7 @@ type Config struct {
 	Xpools        []XpoolConfig        `json:",optional"`
 	Farms         []FarmConfig         `json:",optional"`
 	ACS           *ACSConfig           `json:",optional"`
+	Puffer        *PufferConfig        `json:",optional"`
 }
 
 // Get general configuration of a blockchain of `chainId`.

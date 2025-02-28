@@ -124,3 +124,13 @@ ACS:
   ASTR: 0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655
   LiquidityUSDLimits: 10
   ACSDailyLimits: 75000
+Puffer:
+  Pools:
+    - [
+        0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C,
+        0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391,
+      ]
+  Points: 250
+  SubTitle: Puffer
+  LiquidityUSDLimits: 100
+  DailyLimits: 3
