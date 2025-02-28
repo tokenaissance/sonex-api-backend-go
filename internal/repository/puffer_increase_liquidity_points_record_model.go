@@ -48,6 +48,6 @@ func (m *customPufferIncreaseLiquidityPointsRecordModel) QueryCountByUserDate(ct
 		SELECT COUNT(*) FROM %s WHERE chain_id = $1 AND user_address = $2 AND tx_at::DATE = $3
 	`, m.table)
 	var count int64
-	err := m.conn.QueryRowsCtx(ctx, &count, query, chainId, user, date)
+	err := m.conn.QueryRowCtx(ctx, &count, query, chainId, user, date)
 	return count, err
 }
