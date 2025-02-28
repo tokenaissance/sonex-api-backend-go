@@ -225,7 +225,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
-
+	tokenModel := repository.NewTokenModel(conn)
 	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, req.ChainId, common.HexToAddress(farmConf.Staker).Hex())
 	if err != nil {
 		logx.Errorf("ERR1:%v ", err)
@@ -369,10 +369,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			if strings.EqualFold(totalWeightString, "0") {
 				totalWeightString = "1000"
 			}
-			rewardTokenLogo := ""
-			if !strings.EqualFold(farmConf.XRewardToken, "") {
-				rewardTokenLogo = farmConf.XRewardToken
-			}
+			rewardTokenLogo := getRewardTokenLogo(tokenModel, farmConf.XRewardToken, req.ChainId, record.EventRewardToken)
 			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
 			if ok {
 				tokenIds := []*big.Int{}
@@ -528,6 +525,29 @@ type FarmIncentivesOperationEvent struct {
 	FarmIncentivesOperationEventType FarmIncentivesOperationEventType
 	StakedEvent                      *repository.EventFarmTokenStaked
 	UnstakedEvent                    *repository.EventFarmTokenUnstaked
+}
+
+func getRewardTokenLogo(tokenModel repository.TokenModel, configRewardTokenLogo string, chainId int64, rewardToken string) string {
+	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{rewardToken})
+	if err != nil {
+		logx.Errorf("QueryByChainIdAddress:%v ", err)
+		return ""
+	}
+	rewardTokenLogo := ""
+	if len(tokensInfo) > 0 {
+		for _, v := range tokensInfo {
+			if strings.EqualFold(v.Address, rewardToken) {
+				rewardTokenLogo = v.Logo.String
+			}
+		}
+	}
+
+	if strings.EqualFold(rewardTokenLogo, "") {
+		if !strings.EqualFold(configRewardTokenLogo, "") {
+			rewardTokenLogo = configRewardTokenLogo
+		}
+	}
+	return rewardTokenLogo
 }
 
 // GetFarmIncentivesOperationEvents 获取 user address 质押/解质押事件, key 为 incentive id
