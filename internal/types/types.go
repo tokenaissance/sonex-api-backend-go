@@ -960,7 +960,7 @@ type TokensInfoRequest struct {
 
 type TokensRequest struct {
 	ChainRequest
-	OrderBy string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC"`
+	OrderBy string `form:"orderBy,optional,options=1H_ASC|1H_DESC|1D_ASC|1D_DESC|Volume_ASC|Volume_DESC|ALPHABETICAL"`
 	PageRequest
 	NoCache bool `form:"noCache,optional,default=false"`
 }

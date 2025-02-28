@@ -403,6 +403,11 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})
+		case "ALPHABETICAL":
+			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) string {
+				return item.Symbol
+			})
+
 		default:
 			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
