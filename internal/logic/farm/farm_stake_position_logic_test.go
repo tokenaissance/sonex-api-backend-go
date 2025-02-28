@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
+	"sonex_api_backend_go/internal/repository"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -154,4 +155,20 @@ func Test_GetUserDashboardInfo(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/forlocaluse0109.yaml", &c)
 	GetFarmIncentives(c, 1946, "0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D")
+}
+
+func Test_getBalance(t *testing.T) {
+
+	var c config.Config
+	conf.MustLoad("../../../etc/forlocaluse0109.yaml", &c)
+
+	conn := repository.NewConn(c.PostgreSQL.DataSource())
+
+	a, b, ce, d, err := getBalance(1946, 4, "0x74A5Fe281F4d8B9fB3e96D97bBDE14949B5c44e2", "0xBaE0872462B2E0a426fd3293B44cd86DE5BF4c91", conn)
+
+	if err != nil {
+		logx.Errorf("Err :%v ", err)
+		return
+	}
+	logx.Infof("a:%v , b:%v , ce:%v , d:%v ", a, b, ce, d)
 }

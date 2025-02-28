@@ -101,7 +101,7 @@ func getStakedNum(conn sqlx.SqlConn, cacher cache.ICache, chainId, incentiveIdin
 	return lpBalance, stakedNum, rewardToken, eventPool, nil
 }
 
-// 获取自己可用的balance 个数
+// 获取自己可用的 balance 个数
 func getBalance(chainId, incentiveIdint int64, userAddress, stakerAddress string, conn sqlx.SqlConn) (int64, int64, string, string, error) {
 	model := repository.NewEventSonexPositionManagerTransferModel(conn)
 	useablePositions, err := model.GetAllUseablePositions(context.Background(), chainId, userAddress, stakerAddress)
@@ -115,11 +115,13 @@ func getBalance(chainId, incentiveIdint int64, userAddress, stakerAddress string
 	event_weight := int64(1)
 	token0Address := ""
 	token1Address := ""
+	isExisted := map[int64]bool{}
 	for _, v := range useablePositions {
 		if v.IsBurnt {
 			continue
 		}
-		if v.EventIncentiveId == int64(incentiveIdint) {
+		if v.EventIncentiveId == int64(incentiveIdint) && !isExisted[v.EventTokenId] {
+			isExisted[v.EventTokenId] = true
 			notburtPositions = append(notburtPositions, v)
 			event_weight = v.EventWeight
 			token0Address = v.Token0address
