@@ -225,7 +225,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 	tokenPriceModel := repository.NewSonexTokenPriceRecordModel(conn)
-
+	tokenModel := repository.NewTokenModel(conn)
 	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(l.ctx, req.ChainId, common.HexToAddress(farmConf.Staker).Hex())
 	if err != nil {
 		logx.Errorf("ERR1:%v ", err)
@@ -333,7 +333,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
 			if err != nil {
-				logx.Errorf("ERR:%v ", err)
+				logx.Errorf("SetTotalReward365ForIncentiveId ERR:%v ", err)
 				return
 			}
 			var dataResult types.FarmIncentivesResponse_Data
@@ -347,14 +347,14 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 			rewards, err := getRewardsAmount(farmConf.Staker, req.UserAddress, record.EventIncentiveId, *chainConf)
 			if err != nil {
-				logx.Errorf("getRewardsAmount:%v ", err)
+				logx.Errorf("getRewardsAmount ERR:%v ", err)
 				return
 			}
 
 			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
 
 			if err != nil {
-				logx.Errorf("getValueOfAmountToken:%v ", err)
+				logx.Errorf("getValueOfAmountToken:ERR %v ", err)
 				return
 			}
 
@@ -363,12 +363,13 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			eventWeightString := big.NewInt(record.EventWeight).String()
 			totalWeightString, err := SetRewardPoolInfo(farmConf.Staker, record.EventRewardToken, *chainConf, cacher)
 			if err != nil {
-				logx.Errorf("Err:%v ", err)
+				logx.Errorf("SetRewardPoolInfo Err:%v ", err)
 				return
 			}
 			if strings.EqualFold(totalWeightString, "0") {
 				totalWeightString = "1000"
 			}
+			rewardTokenLogo := getRewardTokenLogo(tokenModel, farmConf.XRewardToken, req.ChainId, record.EventRewardToken)
 			validStakeRecords, ok := validStakeRecordMap[record.EventIncentiveId]
 			if ok {
 				tokenIds := []*big.Int{}
@@ -437,6 +438,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Status:                       status,
 					StartAt:                      record.EventStartTime,
 					Earned:                       big.NewInt(0).String(),
+					RewardTokenLogo:              rewardTokenLogo,
 				}
 				tokenIdsResult = tids
 			} else {
@@ -472,6 +474,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 					Status:                       status,
 					StartAt:                      record.EventStartTime,
 					Earned:                       big.NewInt(0).String(),
+					RewardTokenLogo:              rewardTokenLogo,
 				}
 			}
 
@@ -522,6 +525,29 @@ type FarmIncentivesOperationEvent struct {
 	FarmIncentivesOperationEventType FarmIncentivesOperationEventType
 	StakedEvent                      *repository.EventFarmTokenStaked
 	UnstakedEvent                    *repository.EventFarmTokenUnstaked
+}
+
+func getRewardTokenLogo(tokenModel repository.TokenModel, configRewardTokenLogo string, chainId int64, rewardToken string) string {
+	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{rewardToken})
+	if err != nil {
+		logx.Errorf("QueryByChainIdAddress:%v ", err)
+		return ""
+	}
+	rewardTokenLogo := ""
+	if len(tokensInfo) > 0 {
+		for _, v := range tokensInfo {
+			if strings.EqualFold(v.Address, rewardToken) {
+				rewardTokenLogo = v.Logo.String
+			}
+		}
+	}
+
+	if strings.EqualFold(rewardTokenLogo, "") {
+		if !strings.EqualFold(configRewardTokenLogo, "") {
+			rewardTokenLogo = configRewardTokenLogo
+		}
+	}
+	return rewardTokenLogo
 }
 
 // GetFarmIncentivesOperationEvents 获取 user address 质押/解质押事件, key 为 incentive id

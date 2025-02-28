@@ -150,6 +150,7 @@ func main() {
 	// Register chain handler
 	for _, chain := range c.Chains {
 		// Sonex handler
+		// XToken handler
 		{
 			config := c.GetSonexConfig(chain.ChainId)
 			if config != nil {
@@ -162,7 +163,13 @@ func main() {
 				handler.OnPositionManagerIncreaseLiquidity(sonex.ACSIncreaseLiquidityCallback(c))
 				// handler.OnPoolSwap(sonex.ACSSwapCallback(c))
 
+				xtokenHandler, err := sonex.NewXTokenHandler(c.PostgreSQL.DataSource(), chain, *config)
+				if err != nil {
+					panic(err)
+				}
+
 				global.AddChainHandler(chain.ChainId, handler)
+				global.AddChainHandler(chain.ChainId, xtokenHandler)
 			}
 		}
 

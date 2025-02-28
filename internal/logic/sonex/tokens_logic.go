@@ -403,6 +403,11 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 			}).ThenByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
 			})
+		case "ALPHABETICAL":
+			query = linq.From(dataResult).OrderByT(func(item types.TokensResponse_Token) string {
+				return item.Symbol
+			})
+
 		default:
 			query = linq.From(dataResult).OrderByDescendingT(func(item types.TokensResponse_Token) int64 {
 				return item.Sort
@@ -598,6 +603,7 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 		pools, pok := tokenPoolsMap[wt.Address]
 		if tok && pok {
 			data.Pools = pools
+			data.IsOfficial = wt.Office
 		} else {
 			data = types.TokensResponse_Token{
 				TokenWithExtra: types.TokenWithExtra{
@@ -607,7 +613,8 @@ func (l *TokensLogic) getData(req *types.TokensRequest) ([]types.TokensResponse_
 						Symbol:   wt.Symbol,
 						Decimals: wt.Decimals,
 					},
-					Pools: []types.Pool{},
+					Pools:      []types.Pool{},
+					IsOfficial: wt.Office,
 				},
 			}
 		}

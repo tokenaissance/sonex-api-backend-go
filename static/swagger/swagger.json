@@ -597,6 +597,33 @@
         ]
       }
     },
+    "/sonex/galxefarming": {
+      "get": {
+        "operationId": "SonexGalxeFarmingHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/GalxeFarmingResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/galxeswap": {
       "get": {
         "operationId": "SonexGalxeswapHandler",
@@ -1169,7 +1196,8 @@
               "1D_ASC",
               "1D_DESC",
               "Volume_ASC",
-              "Volume_DESC"
+              "Volume_DESC",
+              "ALPHABETICAL"
             ]
           },
           {
@@ -1431,6 +1459,62 @@
         ]
       }
     },
+    "/sonex/xtoken/records": {
+      "get": {
+        "operationId": "XTokenRecordsHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/XTokenRecordsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "20"
+          },
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64",
+            "default": "1"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/xpool/pool/list": {
       "get": {
         "summary": "Xpool list",
@@ -1662,6 +1746,110 @@
         "percentage"
       ]
     },
+    "DashboardIncentiveInfo": {
+      "type": "object",
+      "properties": {
+        "incentiveId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "feeRatio": {
+          "type": "string"
+        },
+        "token0symbol": {
+          "type": "string",
+          "description": " token0代币符号"
+        },
+        "token0_logo": {
+          "type": "string"
+        },
+        "token1Symbol": {
+          "type": "string",
+          "description": " token1代币符号"
+        },
+        "token1_logo": {
+          "type": "string"
+        },
+        "staked": {
+          "type": "integer",
+          "format": "int64",
+          "description": "  正在质押的个数"
+        },
+        "StakedUsd": {
+          "type": "string",
+          "description": " 质押的 LP 的 USD"
+        },
+        "totalClaimableFeesUsd": {
+          "type": "string",
+          "description": " 用户未领取的手续费的价值"
+        },
+        "totalClaimableFeesUSDFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 用户未领取的手续费的价值"
+        },
+        "revenueString": {
+          "type": "string",
+          "description": " 用户已经领取的手续的价值+用户未领取的手续费的价值"
+        },
+        "revenueFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 用户已经领取的手续的价值++用户未领取的手续费的价值"
+        }
+      },
+      "title": "DashboardIncentiveInfo",
+      "required": [
+        "incentiveId",
+        "feeRatio",
+        "token0symbol",
+        "token0_logo",
+        "token1Symbol",
+        "token1_logo",
+        "staked",
+        "StakedUsd",
+        "totalClaimableFeesUsd",
+        "totalClaimableFeesUSDFloat64",
+        "revenueString",
+        "revenueFloat64"
+      ]
+    },
+    "DashboardIncentiveWithStakedUsd": {
+      "type": "object",
+      "properties": {
+        "totalStakedLpUsd": {
+          "type": "string",
+          "description": " 总质押的LP 的USD"
+        },
+        "totalStakedLpUsdFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " 总质押的LP 的float64"
+        },
+        "totalRevenueUsd": {
+          "type": "string",
+          "description": " 总质押的收益"
+        },
+        "totalRevenueUsdFloat64": {
+          "type": "number",
+          "format": "double"
+        },
+        "dashboardIncentives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DashboardIncentiveInfo"
+          }
+        }
+      },
+      "title": "DashboardIncentiveWithStakedUsd",
+      "required": [
+        "totalStakedLpUsd",
+        "totalStakedLpUsdFloat64",
+        "totalRevenueUsd",
+        "totalRevenueUsdFloat64",
+        "dashboardIncentives"
+      ]
+    },
     "FarmIncentivesRequest": {
       "type": "object",
       "properties": {
@@ -1873,6 +2061,9 @@
           "items": {
             "$ref": "#/definitions/StakePositionsInfoResponse_Data"
           }
+        },
+        "rewardTokenLogo": {
+          "type": "string"
         }
       },
       "title": "FarmIncentivesResponse_Data",
@@ -1905,7 +2096,8 @@
         "totalWeight",
         "-",
         "totalClaimableFeesUsd",
-        "totalClaimedFeesUSD"
+        "totalClaimedFeesUSD",
+        "rewardTokenLogo"
       ]
     },
     "FarmIncentivesResponse_Token": {
@@ -2358,18 +2550,6 @@
         "feeAmount1"
       ]
     },
-    "GalxeAddLiquidityRequest": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        }
-      },
-      "title": "GalxeAddLiquidityRequest",
-      "required": [
-        "address"
-      ]
-    },
     "GalxeAddLiquidityResponse": {
       "type": "object",
       "properties": {
@@ -2383,16 +2563,29 @@
         "isAddLiquidityOrNot"
       ]
     },
-    "GalxeSwapRequest": {
+    "GalxeAddressRequest": {
       "type": "object",
       "properties": {
         "address": {
           "type": "string"
         }
       },
-      "title": "GalxeSwapRequest",
+      "title": "GalxeAddressRequest",
       "required": [
         "address"
+      ]
+    },
+    "GalxeFarmingResponse": {
+      "type": "object",
+      "properties": {
+        "isFarmingOrNot": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "GalxeFarmingResponse",
+      "required": [
+        "isFarmingOrNot"
       ]
     },
     "GalxeSwapResponse": {
@@ -4279,6 +4472,92 @@
         "message"
       ]
     },
+    "SwapTokenInfo": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "volumeUsd": {
+          "type": "string",
+          "description": " TOP"
+        },
+        "priceUsd": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "isOfficial": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 1:官方代币,"
+        },
+        "balance": {
+          "type": "string",
+          "description": " ALL,OFFICIAL 时，传入的代币的余额"
+        },
+        "usd_value": {
+          "type": "string",
+          "description": " ALL,OFFICIAL, 传入的代币的USD"
+        },
+        "riseRall1D": {
+          "$ref": "#/definitions/Comparison",
+          "description": " 1 天的涨跌幅"
+        }
+      },
+      "title": "SwapTokenInfo",
+      "required": [
+        "address",
+        "name",
+        "symbol",
+        "decimals",
+        "riseRall1D"
+      ]
+    },
+    "SwapTokensRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "orderBy": {
+          "type": "string",
+          "enum": [
+            "ALL",
+            "TOP",
+            "OFFICIAL"
+          ]
+        }
+      },
+      "title": "SwapTokensRequest"
+    },
+    "SwapTokensResponse": {
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SwapTokenInfo"
+          },
+          "description": " TOP , ALL ,OFFICIAL"
+        }
+      },
+      "title": "SwapTokensResponse",
+      "required": [
+        "list"
+      ]
+    },
     "SwapVolume": {
       "type": "object",
       "properties": {
@@ -4755,6 +5034,11 @@
         },
         "riseRall1D": {
           "$ref": "#/definitions/Comparison"
+        },
+        "isOfficial": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " true :官方代币, false  :非官方代币"
         }
       },
       "title": "TokenWithExtra",
@@ -5010,7 +5294,8 @@
             "1D_ASC",
             "1D_DESC",
             "Volume_ASC",
-            "Volume_DESC"
+            "Volume_DESC",
+            "ALPHABETICAL"
           ]
         },
         "pageSize": {
@@ -5057,6 +5342,11 @@
         },
         "riseRall1D": {
           "$ref": "#/definitions/Comparison"
+        },
+        "isOfficial": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " true :官方代币, false  :非官方代币"
         },
         "logo": {
           "type": "string"
@@ -5203,58 +5493,6 @@
         "createtime"
       ]
     },
-    "UserAssetData": {
-      "type": "object",
-      "properties": {
-        "incentiveId": {
-          "type": "string",
-          "description": " 质押池ID"
-        },
-        "totalClaimableFees": {
-          "type": "string",
-          "description": " 用户总可领取的手续费"
-        },
-        "totalClaimableFeesUsd": {
-          "type": "string",
-          "description": " 用户总可领取的手续费的价值"
-        },
-        "decimals": {
-          "type": "integer",
-          "format": "int64",
-          "description": " ClaimableFees的精度"
-        },
-        "lpStakedNum": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户质押的LP token ID数量"
-        },
-        "lpBalance": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户的LP token ID的余额, LiquidityUSD"
-        },
-        "balance": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 用户的LP token ID的个数余额"
-        },
-        "apr": {
-          "type": "string",
-          "description": " 年化收益率"
-        }
-      },
-      "title": "UserAssetData",
-      "required": [
-        "incentiveId",
-        "totalClaimableFees",
-        "totalClaimableFeesUsd",
-        "decimals",
-        "lpStakedNum",
-        "lpBalance",
-        "balance",
-        "apr"
-      ]
-    },
     "VolumeDetailsRecord": {
       "type": "object",
       "properties": {
@@ -5293,6 +5531,68 @@
       "required": [
         "withdrawnAmount0",
         "withdrawnAmount1"
+      ]
+    },
+    "XTokenRecordsRequest": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "default": "20"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int64",
+          "default": "1"
+        }
+      },
+      "title": "XTokenRecordsRequest"
+    },
+    "XTokenRecordsResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/XTokenRecordsResponse_Record"
+          }
+        }
+      },
+      "title": "XTokenRecordsResponse",
+      "required": [
+        "records"
+      ]
+    },
+    "XTokenRecordsResponse_Record": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "XTokenRecordsResponse_Record",
+      "required": [
+        "source",
+        "user",
+        "amount",
+        "timestamp"
       ]
     },
     "XpoolPoolListRequest": {

@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 func TestHandleRecordTokenPrice(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 
+	sqlx.DisableLog()
 	err := global.Initialize(c)
 	if err != nil {
 		t.Error(err)
