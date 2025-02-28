@@ -119,8 +119,7 @@ func main() {
 	global.AddCronJob("0 30 0 * * ?", func() {
 		task.HandlePreDepositSnapshotDaily(&c)
 	})
-	// global.AddCronJob("00 30 23 * * ?", func() {
-	global.AddCronJob("0 0 0/1 * * ?", func() {
+	global.AddCronJob("00 30 23 * * ?", func() {
 		task.HandleACSSwapReward(&c)
 	})
 	global.AddCronJob("0 0 0/1 * * ?", func() {
@@ -162,6 +161,7 @@ func main() {
 
 				// Callback
 				handler.OnPositionManagerIncreaseLiquidity(sonex.ACSIncreaseLiquidityCallback(c))
+				handler.OnPositionManagerIncreaseLiquidity(sonex.PufferIncreaseLiquidityCallback(c))
 				// handler.OnPoolSwap(sonex.ACSSwapCallback(c))
 
 				xtokenHandler, err := sonex.NewXTokenHandler(c.PostgreSQL.DataSource(), chain, *config)
