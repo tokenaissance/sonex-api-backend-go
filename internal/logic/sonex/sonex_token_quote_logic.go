@@ -137,9 +137,14 @@ func (l *SonexTokenQuoteLogic) SonexTokenQuote(req *types.TokenQuoteRequest) (re
 	}
 
 	// Filter and sort
+	average := linq.From(prices).SelectT(func(item cache.Price) float64 {
+		value, _ := new(big.Float).SetInt(item.Value).Float64()
+		return value
+	}).Average()
 	linq.From(prices).
 		WhereT(func(item cache.Price) bool {
-			return item.Value.Cmp(common.Big0) > 0
+			value, _ := new(big.Float).SetInt(item.Value).Float64()
+			return item.Value.Cmp(common.Big0) > 0 && value >= average
 		}).
 		OrderByT(func(item cache.Price) float64 {
 			return math.Abs(item.PriceImpact)
