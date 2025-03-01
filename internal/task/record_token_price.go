@@ -65,98 +65,93 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				}
 			}()
 
-			var bestPrice *cache.Price
-
-			amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
-			successed, failed, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
-			if err != nil {
-				logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
-				return
-			}
-			if len(successed) > 0 {
-				average := linq.From(successed).SelectT(func(item cache.Price) float64 {
-					value, _ := new(big.Float).SetInt(item.Value).Float64()
-					return value
-				}).Average()
-				priceA := linq.From(successed).
-					WhereT(func(item cache.Price) bool {
-						value, _ := new(big.Float).SetInt(item.Value).Float64()
-						return math.Abs(item.PriceImpact) < 0.1 && value >= average
-					}).
-					OrderByT(func(item cache.Price) float64 {
-						return math.Abs(item.PriceImpact)
-					}).First()
-				if price, ok := priceA.(cache.Price); ok {
-					bestPrice = &price
+			prices := []*cache.Price{}
+			{
+				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals), nil))
+				successed, _, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
+				if err != nil {
+					logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
+					return
+				}
+				if len(successed) > 0 {
+					var ps []*cache.Price
+					linq.From(successed).
+						WhereT(func(item cache.Price) bool {
+							return math.Abs(item.PriceImpact) < 0.1
+						}).
+						SelectT(func(item cache.Price) *cache.Price {
+							return &item
+						}).
+						ToSlice(&ps)
+					prices = append(prices, ps...)
 				}
 			}
 
-			if bestPrice == nil {
+			{
 				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals/2), nil)
 				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals/2), nil))
-				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
+				successed, _, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
 				if err != nil {
 					logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 					return
 				}
 				if len(successed) > 0 {
-					average := linq.From(successed).SelectT(func(item cache.Price) float64 {
-						value, _ := new(big.Float).SetInt(item.Value).Float64()
-						return value
-					}).Average()
-					priceA := linq.From(successed).
+					var ps []*cache.Price
+					linq.From(successed).
 						WhereT(func(item cache.Price) bool {
-							value, _ := new(big.Float).SetInt(item.Value).Float64()
-							return math.Abs(item.PriceImpact) < 0.1 && value >= average
+							return math.Abs(item.PriceImpact) < 0.1
 						}).
-						OrderByT(func(item cache.Price) float64 {
-							return math.Abs(item.PriceImpact)
-						}).First()
-					if price, ok := priceA.(cache.Price); ok {
-						price.Value = new(big.Int).Mul(price.Value, accuracy)
-						bestPrice = &price
-					}
+						SelectT(func(item cache.Price) *cache.Price {
+							item.Value = new(big.Int).Mul(item.Value, accuracy)
+							return &item
+						}).
+						ToSlice(&ps)
+					prices = append(prices, ps...)
 				}
 			}
 
-			if bestPrice == nil {
+			{
 				accuracy := new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil)
 				amountIn := new(big.Int).Mul(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(token.Decimals-usdToken.Decimals), nil))
-				successed, failed, err = global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
+				successed, _, err := global.QuoteExactInput(context.Background(), nil, item.ChainId, item.Address, chainConf.USD, amountIn, 3)
 				if err != nil {
 					logx.Errorf("Get %s[%s] price failed: %s", item.Address, item.Symbol, err)
 					return
 				}
 				if len(successed) > 0 {
-					average := linq.From(successed).SelectT(func(item cache.Price) float64 {
-						value, _ := new(big.Float).SetInt(item.Value).Float64()
-						return value
-					}).Average()
-					priceA := linq.From(successed).
+					var ps []*cache.Price
+					linq.From(successed).
 						WhereT(func(item cache.Price) bool {
-							value, _ := new(big.Float).SetInt(item.Value).Float64()
-							return math.Abs(item.PriceImpact) < 0.1 && value >= average
+							return math.Abs(item.PriceImpact) < 0.1
 						}).
-						OrderByT(func(item cache.Price) float64 {
-							return math.Abs(item.PriceImpact)
-						}).First()
-					if price, ok := priceA.(cache.Price); ok {
-						price.Value = new(big.Int).Mul(price.Value, accuracy)
-						bestPrice = &price
-					}
+						SelectT(func(item cache.Price) *cache.Price {
+							item.Value = new(big.Int).Mul(item.Value, accuracy)
+							return &item
+						}).
+						ToSlice(&ps)
+					prices = append(prices, ps...)
 				}
 			}
 
+			average := linq.From(prices).SelectT(func(item *cache.Price) float64 {
+				value, _ := new(big.Float).SetInt(item.Value).Float64()
+				return value
+			}).Average()
+			priceA := linq.From(prices).
+				WhereT(func(item *cache.Price) bool {
+					value, _ := new(big.Float).SetInt(item.Value).Float64()
+					return math.Abs(item.PriceImpact) < 0.1 && value >= average
+				}).
+				OrderByT(func(item *cache.Price) float64 {
+					return math.Abs(item.PriceImpact)
+				}).First()
+			var bestPrice *cache.Price
+			if price, ok := priceA.(*cache.Price); ok {
+				bestPrice = price
+			}
+
 			if bestPrice == nil {
-				failedList := []string{}
-				for _, item := range failed {
-					pools := []string{}
-					for _, pool := range item.Pools {
-						pools = append(pools, fmt.Sprintf("%s:%s[%d]", pool.Token0, pool.Token1, pool.Fee))
-					}
-					failedList = append(failedList, fmt.Sprintf("Path: %s, Error: %s", strings.Join(pools, " -> "), item.Err.Error()))
-				}
-				logx.Errorf("Get %s[%s] best price failed,Success count: %d, Failed list: %v", item.Address, item.Symbol, len(successed), failedList)
+				logx.Errorf("Get %s[%s] best price failed, Success count: %d", item.Address, item.Symbol, len(prices))
 				return
 			}
 
