@@ -485,6 +485,7 @@ type PortfolioStats struct {
 	TotalAssets       float64 `json:"totalAssets"`       // 所有资产净值
 	TotalAssetsRate   string  `json:"totalAssetsRate"`   // 所有资产净值相比前一天的变化率
 	TotalAssetsChange float64 `json:"totalAssetsChange"` // 所有资产净值相比前一天的变化量（绝对值）
+	Earns             float64 `json:"earns"`             // 所有可提资产净值 + 所有已提资产净值
 	ClaimableFees     float64 `json:"claimableFees"`     // 所有可提资产净值
 	LiquidityPosition float64 `json:"liquidityPosition"` // liquidity position 净值总和
 	TotalFarmStaked   float64 `json:"totalFarmStaked"`   // farm pool 净值总和

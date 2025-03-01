@@ -87,6 +87,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		farmEarns := 0.0
 		xpoolEarns := 0.0
 
+		// 总的已经领取收益
+		totalFeeRevenue := 0.0
+
 		// 用户所在时区的当日 00:00
 		todayBegin := getUserTimeZoneDayStart(timeZone)
 		var previousDayTotalAssets float64
@@ -196,6 +199,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				}
 				portfolioStats.LiquidityPosition += position.Position
 				liquidityClaimableFees += position.ClaimableFees
+				totalFeeRevenue += position.PNL
 
 				txAt, err := time.Parse(time.RFC3339, position.TxAt)
 				if err != nil {
@@ -269,6 +273,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
 				earnedValueFloat64, _ := rewardTokenValue.ValueFloat64()
 				feeRevenue := fmt.Sprintf("%.2f", earnedValueFloat64+claimedRewardTokenValueFloat64)
+				totalFeeRevenue += earnedValueFloat64 + claimedRewardTokenValueFloat64
+
 				if portfolioType == portfolioTypeXpool {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: portfolioTypeXpool,
@@ -327,6 +333,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 			for _, incentive := range incentives.Incentives.DashboardIncentives {
 				feeRevenue := incentive.RevenueFloat64
+
+				totalFeeRevenue += feeRevenue
+
 				stakedUsdFloat64, err := strconv.ParseFloat(incentive.StakedUsd, 64)
 				if err != nil {
 					logx.Errorf("[SonexPortfolioHandler]: incentive.StakedUsd %s ParseFloat error: %s, chainId: %d, address: %s", incentive.StakedUsd, err.Error(), req.ChainId, req.Address)
@@ -361,8 +370,10 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 计算总资产和可提资产
 		portfolioStats.TotalAssets = portfolioStats.LiquidityPosition + portfolioStats.TotalXpoolStaked + portfolioStats.TotalFarmStaked
+		// 尚未被领取的收益
 		portfolioStats.ClaimableFees = liquidityClaimableFees + farmEarns + xpoolEarns
-
+		// 已经被领取的收益 + 尚未被领取的收益
+		portfolioStats.Earns = totalFeeRevenue
 		// Calculate total assets rate, handling division by zero
 		if previousDayTotalAssets > 0 {
 			portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
