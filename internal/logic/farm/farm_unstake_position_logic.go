@@ -316,13 +316,16 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 
 			totalStakedLp = new(big.Float).Add(totalStakedLp, lpBalance)
 
-			token0Symbol, token0Logo, token1Symbol, token1Logo := getToken0SymbolAndToken1(tokenModel, chainId, record.ExtraToken0, record.ExtraToken1)
+			token0Address, token0Symbol, token0Logo, token1Address, token1Symbol, token1Logo := getToken0SymbolAndToken1(tokenModel, chainId, record.ExtraToken0, record.ExtraToken1)
 
 			dataResult := &types.DashboardIncentiveInfo{
 				IncentiveId:                  record.EventIncentiveId,
+				PoolAddress:                  record.EventPool,
 				FeeRatio:                     record.ExtraFee,
+				Token0Address:                token0Address,
 				Token0Symbol:                 token0Symbol,
 				Token0Logo:                   token0Logo,
+				Token1Address:                token1Address,
 				Token1Symbol:                 token1Symbol,
 				Token1Logo:                   token1Logo,
 				Staked:                       stakedNum,
@@ -356,30 +359,34 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 	return ret, err
 }
 
-func getToken0SymbolAndToken1(tokenModel repository.TokenModel, chainId int64, token0, token1 string) (string, string, string, string) {
+func getToken0SymbolAndToken1(tokenModel repository.TokenModel, chainId int64, token0, token1 string) (string, string, string, string, string, string) {
 	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{token0, token1})
 	if err != nil {
 		logx.Errorf("QueryByChainIdAddress:%v ", err)
-		return "", "", "", ""
+		return "", "", "", "", "", ""
 	}
 
+	token0Address := ""
 	token0Symbol := ""
 	token0Logo := ""
+	token1Address := ""
 	token1Symbol := ""
 	token1Logo := ""
 	for _, v := range tokensInfo {
 		if strings.EqualFold(v.Address, token0) {
+			token0Address = v.Address
 			token0Symbol = v.Symbol
 			token0Logo = v.Logo.String
 
 		}
 
 		if strings.EqualFold(v.Address, token1) {
+			token1Address = v.Address
 			token1Symbol = v.Symbol
 			token1Logo = v.Logo.String
 		}
 	}
-	return token0Symbol, token0Logo, token1Symbol, token1Logo
+	return token0Address, token0Symbol, token0Logo, token1Address, token1Symbol, token1Logo
 
 }
 
