@@ -18,7 +18,7 @@ type (
 		pufferIncreaseLiquidityPointsRecordModel
 		withSession(session sqlx.Session) PufferIncreaseLiquidityPointsRecordModel
 		New(ctx context.Context, id int64, chainId int64, user string, points int64, txHash string, txIndex int64, txAt time.Time, tokenId int64, pool string, token0 string, token1 string, amount0 *big.Int, amount1 *big.Int) error
-		QueryCountByUserDate(ctx context.Context, chainId int64, user string, date string) (int64, error)
+		QueryByUserDate(ctx context.Context, chainId int64, user string, date string) ([]PufferIncreaseLiquidityPointsRecord, error)
 	}
 
 	customPufferIncreaseLiquidityPointsRecordModel struct {
@@ -43,11 +43,14 @@ func (m *customPufferIncreaseLiquidityPointsRecordModel) New(ctx context.Context
 	return err
 }
 
-func (m *customPufferIncreaseLiquidityPointsRecordModel) QueryCountByUserDate(ctx context.Context, chainId int64, user string, date string) (int64, error) {
+func (m *customPufferIncreaseLiquidityPointsRecordModel) QueryByUserDate(ctx context.Context, chainId int64, user string, date string) ([]PufferIncreaseLiquidityPointsRecord, error) {
 	query := fmt.Sprintf(`
-		SELECT COUNT(*) FROM %s WHERE chain_id = $1 AND user_address = $2 AND tx_at::DATE = $3
+		SELECT * FROM %s WHERE chain_id = $1 AND user_address = $2 AND tx_at::DATE = $3
 	`, m.table)
-	var count int64
-	err := m.conn.QueryRowsCtx(ctx, &count, query, chainId, user, date)
-	return count, err
+	var resp []PufferIncreaseLiquidityPointsRecord
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, date)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
