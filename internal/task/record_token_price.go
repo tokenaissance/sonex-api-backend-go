@@ -74,9 +74,14 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				return
 			}
 			if len(successed) > 0 {
+				average := linq.From(successed).SelectT(func(item cache.Price) float64 {
+					value, _ := new(big.Float).SetInt(item.Value).Float64()
+					return value
+				}).Average()
 				priceA := linq.From(successed).
 					WhereT(func(item cache.Price) bool {
-						return math.Abs(item.PriceImpact) < 0.1
+						value, _ := new(big.Float).SetInt(item.Value).Float64()
+						return math.Abs(item.PriceImpact) < 0.1 && value >= average
 					}).
 					OrderByT(func(item cache.Price) float64 {
 						return math.Abs(item.PriceImpact)
@@ -95,9 +100,14 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 					return
 				}
 				if len(successed) > 0 {
+					average := linq.From(successed).SelectT(func(item cache.Price) float64 {
+						value, _ := new(big.Float).SetInt(item.Value).Float64()
+						return value
+					}).Average()
 					priceA := linq.From(successed).
 						WhereT(func(item cache.Price) bool {
-							return math.Abs(item.PriceImpact) < 0.1
+							value, _ := new(big.Float).SetInt(item.Value).Float64()
+							return math.Abs(item.PriceImpact) < 0.1 && value >= average
 						}).
 						OrderByT(func(item cache.Price) float64 {
 							return math.Abs(item.PriceImpact)
@@ -118,9 +128,14 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 					return
 				}
 				if len(successed) > 0 {
+					average := linq.From(successed).SelectT(func(item cache.Price) float64 {
+						value, _ := new(big.Float).SetInt(item.Value).Float64()
+						return value
+					}).Average()
 					priceA := linq.From(successed).
 						WhereT(func(item cache.Price) bool {
-							return math.Abs(item.PriceImpact) < 0.1
+							value, _ := new(big.Float).SetInt(item.Value).Float64()
+							return math.Abs(item.PriceImpact) < 0.1 && value >= average
 						}).
 						OrderByT(func(item cache.Price) float64 {
 							return math.Abs(item.PriceImpact)
@@ -145,7 +160,9 @@ func RecordTokenPrice(chainConf config.ChainConfig, conn sqlx.SqlConn) error {
 				return
 			}
 
-			logx.Infof("Best price %s %s %s\n", item.Symbol, item.Address, bestPrice.Value.String())
+			var paths []string
+			linq.From(bestPrice.Path.Tokens).SelectT(func(item common.Address) string { return item.Hex() }).ToSlice(&paths)
+			logx.Infof("Best price %s %s %s %s", item.Symbol, item.Address, bestPrice.Value.String(), strings.Join(paths, "->"))
 
 			err = blk.Insert(item.Symbol, item.Address, bestPrice.Value.String(), time.Now().UTC().Format("2006-01-02 15:04:05+00"), usdToken.Decimals)
 			if err != nil {
