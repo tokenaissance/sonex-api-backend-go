@@ -119,11 +119,11 @@ func PufferIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx 
 					}
 
 					// DailyLimits
-					count, err := pufferIncreaseLiquidityPointsRecordModel.QueryCountByUserDate(ctx, chainId, tx.From.Hex(), tx.TxAt.UTC().Format(time.DateOnly))
+					records, err := pufferIncreaseLiquidityPointsRecordModel.QueryByUserDate(ctx, chainId, tx.From.Hex(), tx.TxAt.UTC().Format(time.DateOnly))
 					if err != nil {
 						return err
 					}
-					if count >= pufferConf.DailyLimits {
+					if int64(len(records)) >= pufferConf.DailyLimits {
 						return nil
 					}
 
