@@ -78,16 +78,29 @@ func CalcRecordVol24hTvl24h(config *config.Config, startTime time.Time, fullWork
 			volume24HOfBridgePool, err := poolSwapModel.CalucateVolume24HBridgePool(ctx, v.ChainId, pool.EventPool, startTime)
 
 			volumeFinalString := "0"
+			totalVolume := new(big.Float).SetInt64(0)
 			if err != nil {
+				logx.Infof(" calucate birgige swap pool ERR :%v pool.EventPool:%v  don't have bridge swap tx ", err, pool.EventPool)
+
 				// 获取单条跨池子失败,那就只搞正常的交易
+				notVolume24HOfBridgePoolItemValue := "0"
 				for _, vNotBridgePoolSwapRecords := range notBridgePoolSwapRecords {
-					logx.Errorf(" CalucateVolume24HBridgePool :%v", err)
+
+					if strings.EqualFold(pool.EventPool, vNotBridgePoolSwapRecords.ExtraPool) {
+						notVolume24HOfBridgePoolItemValue = vNotBridgePoolSwapRecords.Value
+					}
+
 					err := global.SetVolume24HTvlValue(cacher, global.Volume24HKey, pool.EventPool, vNotBridgePoolSwapRecords.Value)
 					if err != nil {
 						logx.Errorf("notVolume24HOfBridgePool  SetVolume24HValue :%v", err)
 					} else {
 						logx.Infof("totalVolume:%v notVolume24HOfBridgePool:%v   ", pool.EventPool, vNotBridgePoolSwapRecords)
 					}
+
+					// 没有跨池子的 volume
+					notVolume24HOfBridgePool, _ := new(big.Float).SetString(notVolume24HOfBridgePoolItemValue)
+					totalVolume = new(big.Float).Add(totalVolume, notVolume24HOfBridgePool)
+					volumeFinalString = totalVolume.String()
 				}
 			} else {
 				notVolume24HOfBridgePoolItemValue := "0"

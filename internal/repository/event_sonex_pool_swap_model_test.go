@@ -269,7 +269,7 @@ func Test_SummarizeVolumesUsdByChainId(t *testing.T) {
 
 	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
 
-	volume24H, err := model.SummarizeVolumesUsdByChainId(context.Background(), 1946,5)
+	volume24H, err := model.SummarizeVolumesUsdByChainId(context.Background(), 1946, 5)
 	if err != nil {
 		t.Error(err)
 	}
@@ -278,5 +278,22 @@ func Test_SummarizeVolumesUsdByChainId(t *testing.T) {
 		logx.Infof("i %v v :%#v ", i, v)
 	}
 	logx.Infof("volume24H:%v ", volume24H)
+	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
+}
+
+func Test_SummarizePoolVolumesUsdForSevenDaysForYield(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
+
+	volume24H, err := model.SummarizePoolVolumesUsdForSevenDaysForYield(context.Background(), 1946)
+	if err != nil {
+		t.Error(err)
+	}
+
+	for i, v := range volume24H {
+		logx.Infof("i %v v :%#v ", i, v)
+	}
 	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
 }
