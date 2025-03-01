@@ -3554,6 +3554,11 @@
           "format": "double",
           "description": " 所有资产净值相比前一天的变化量（绝对值）"
         },
+        "earns": {
+          "type": "number",
+          "format": "double",
+          "description": " 所有可提资产净值 + 所有已提资产净值"
+        },
         "claimableFees": {
           "type": "number",
           "format": "double",
@@ -3580,6 +3585,7 @@
         "totalAssets",
         "totalAssetsRate",
         "totalAssetsChange",
+        "earns",
         "claimableFees",
         "liquidityPosition",
         "totalFarmStaked",
