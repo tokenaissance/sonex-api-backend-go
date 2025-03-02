@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"sonex_api_backend_go/internal/handler/response"
 	lib_common "sonex_api_backend_go/internal/lib/common"
+	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/module/xpool"
 	"sonex_api_backend_go/internal/repository"
@@ -183,7 +184,7 @@ func (l *XpoolPoolListLogic) GetUserOperationEvents(chainId int64, userAddress s
 	}).ToSlice(&rewardTokenAddresses)
 
 	// get current prices
-	prices, err := l.getCurrentPrices(l.ctx, append(stakingTokenAddresses, rewardTokenAddresses...))
+	prices, err := l.getCurrentPrices(l.ctx, chainId, append(stakingTokenAddresses, rewardTokenAddresses...))
 	if err != nil {
 		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
 		return nil, err
@@ -377,7 +378,7 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 	}
 
 	// 获取当前价格
-	prices, err := l.getCurrentPrices(l.ctx, append(stakingTokenAddresses, rewardTokenAddresses...))
+	prices, err := l.getCurrentPrices(l.ctx, chainId, append(stakingTokenAddresses, rewardTokenAddresses...))
 	if err != nil {
 		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
 		return nil, err
@@ -565,7 +566,22 @@ func (l *XpoolPoolListLogic) getPagination(list []types.XpoolPoolListResponse_Po
 }
 
 // getCurrentPrices 获取当前价格
-func (l *XpoolPoolListLogic) getCurrentPrices(ctx context.Context, addressList []string) (prices map[string]*sonex.TokenPrice, err error) {
+func (l *XpoolPoolListLogic) getCurrentPrices(ctx context.Context, chainId int64, addressList []string) (prices map[string]*sonex.TokenPrice, err error) {
+	sonexConf := l.svcCtx.Config.GetSonexConfig(chainId)
+	if sonexConf == nil {
+		return nil, fmt.Errorf("%s", "Miss sonex configure")
+	}
+	xTokenAddr := common.HexToAddress(sonexConf.XToken)
+
+	chainConf := l.svcCtx.Config.GetChainConfig(chainId)
+	if chainConf == nil {
+		return nil, fmt.Errorf("Miss chain configure")
+	}
+	usdToken, err := global.GetToken(chainId, common.HexToAddress(chainConf.USD).Hex())
+	if err != nil {
+		return nil, err
+	}
+
 	records, err := l.tokenPriceModel.GetCurrentPrices(ctx, addressList)
 	if err != nil {
 		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
@@ -581,6 +597,37 @@ func (l *XpoolPoolListLogic) getCurrentPrices(ctx context.Context, addressList [
 		prices[record.TokenAddress] = tp
 	}
 
-	// todo db 获取不到的话，从链上获取价格
+	// set xToken price
+	for _, addr := range addressList {
+		// 1. db 价格存在，pass
+		if _, ok := prices[addr]; ok {
+			continue
+		}
+
+		// 设置默认价格为 1U
+		tp, err := sonex.NewTokenPrice("1", 1)
+		if err != nil {
+			logx.Errorf("[XpoolPoolList]: Invalid token price: %s", err)
+			return nil, err
+		}
+
+		// 2. db 价格不存在，当 addr 为 xToken 时，设置价格为默认 1U
+		if xTokenAddr.Cmp(common.HexToAddress(addr)) == 0 {
+			prices[addr] = tp
+			continue
+		}
+
+		// 3. db 价格不存在，且不是 xToken，则从链上查询数据，如果获取不到，则将价格设置为 1U
+		bestPrice0, _, _, err := global.GetPrices(ctx, nil, chainId, common.HexToAddress(addr).Hex(), true, 2)
+		if err != nil {
+			logx.Errorf("[XpoolPoolList]: getCurrentPrices GetPrices error: %s", err.Error())
+		}
+		if err == nil && bestPrice0 != nil {
+			tp.SetPrice(bestPrice0.Value.String())
+			tp.SetDecimals(int(usdToken.Decimals))
+		}
+		prices[addr] = tp
+	}
+
 	return prices, nil
 }
