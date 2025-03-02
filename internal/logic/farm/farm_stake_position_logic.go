@@ -119,6 +119,16 @@ func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache,
 					logx.Errorf("SonexPosition %#v  Err:%v", reqPositions, err)
 					return &types.FarmStakeResponse{}, err
 				} else {
+
+					// 该 tokenid  approved 失败，意味着该 tokenid 不能 stake成功
+					// 比如 : 因为 burn  token id事件没有被扫描到导致的，需要补扫描
+					// 加了错误处理，保证可以 stake 的 tokenid 功能正常
+					isApprovedOrNot, err := getTokenIdApprovedOrNot(*chain, v.TokenId.Int64(), sonexConf.PositionManager, farmConf.Staker)
+					if err != nil {
+						logx.Errorf("getTokenIdApprovedOrNot failed  for tokenID :%v ,maybe need rescanner error %v", v.TokenId.Int64(), err)
+						continue
+					}
+
 					feeTier = int64(respSonex.Position.Pool.FeeTier)
 					sqrtPrice96 = v.Pool.Slot0.SqrtPriceX96.String()
 					token0Decimals = int64(respSonex.Position.TokenValue0.Decimals)
@@ -140,12 +150,13 @@ func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache,
 					token1Usd, token1AmountQuoTokenDecimals := calucateTokenUsd(respSonex.Position.TokenValue1.Amount, respSonex.Position.TokenValue1.Decimals, respSonex.Position.TokenValue1.Token_TokenPrice.Price, respSonex.Position.TokenValue1.Token_TokenPrice.Decimals)
 					tokenUsd := new(big.Float).Add(token0Usd, token1Usd)
 					count++
+
 					list := types.StakePositionsInfoResponse_Data{
 						PositionId:     v.TokenId.Int64(),
 						Token0Amount:   token0AmountQuoTokenDecimals.String(),
 						Token1Amount:   token1AmountQuoTokenDecimals.String(),
 						TokenUsd:       tokenUsd.String(),
-						IsNeedApproved: getTokenIdApprovedOrNot(*chain, v.TokenId.Int64(), sonexConf.PositionManager, farmConf.Staker),
+						IsNeedApproved: isApprovedOrNot,
 					}
 					logx.Infof("ZZZZZ:tokenId:%v,isApproved:%v ", list.PositionId, list.IsNeedApproved)
 					List = append(List, list)
@@ -209,7 +220,7 @@ func SetPositionValue(cacher cache.ICache, poolAddress string, tokenId int64, va
 var IsNeedApprovedTrue = int64(1)
 var IsNeedApprovedFalse = int64(2)
 
-func getTokenIdApprovedOrNot(chain config.ChainConfig, tokenId int64, positionManagerAddress, farmAddress string) int64 {
+func getTokenIdApprovedOrNot(chain config.ChainConfig, tokenId int64, positionManagerAddress, farmAddress string) (int64, error) {
 	ret := common.Address{}
 	call := Call{
 		Contract: common.HexToAddress(positionManagerAddress),
@@ -217,11 +228,15 @@ func getTokenIdApprovedOrNot(chain config.ChainConfig, tokenId int64, positionMa
 		Args:     []interface{}{tokenId},
 		Result:   &ret,
 	}
-	MulticallForGetApproved(context.Background(), chain, call)
-	if strings.EqualFold(ret.String(), farmAddress) {
-		return IsNeedApprovedFalse
+	err := MulticallForGetApproved(context.Background(), chain, call)
+	if err != nil {
+		logx.Errorf("MulticallForGetApproved tokenid :%v ERR:%v  ", tokenId, err)
+		return IsNeedApprovedFalse, err
 	}
-	return IsNeedApprovedTrue
+	if strings.EqualFold(ret.String(), farmAddress) {
+		return IsNeedApprovedFalse, nil
+	}
+	return IsNeedApprovedTrue, nil
 }
 func MulticallForGetApproved(ctx context.Context, chain config.ChainConfig, calls ...Call) error {
 	nftPositionManager, _ := abi.JSON(strings.NewReader(lib_uniswap_v3.NonfungiblePositionManagerABI))
