@@ -122,7 +122,8 @@ func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache,
 
 					// 该 tokenid  approved 失败，意味着该 tokenid 不能 stake成功
 					// 比如 : 因为 burn  token id事件没有被扫描到导致的，需要补扫描
-					// 加了错误处理，保证可以 stake 的tokenid 功能正常
+					// 加了错误处理，保证可以 stake 的 tokenid 功能正常
+
 					isApprovedOrNot, err := getTokenIdApprovedOrNot(*chain, v.TokenId.Int64(), sonexConf.PositionManager, farmConf.Staker)
 					if err != nil {
 						logx.Errorf("getTokenIdApprovedOrNot failed  for tokenID :%v ,maybe need rescanner error %v", v.TokenId.Int64(), err)
