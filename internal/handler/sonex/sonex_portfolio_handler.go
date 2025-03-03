@@ -346,12 +346,12 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: portfolioTypeFarm,
 						FarmPool: &types.PortfolioFarm{
-							// PoolAddress:  incentive.PoolAddress,
-							FeeRatio:     incentive.FeeRatio,
-							Token0Symbol: incentive.Token0Symbol,
-							// Token0Address:        incentive.Token0Address,
-							Token1Symbol: incentive.Token1Symbol,
-							// Token1Address:        incentive.Token1Address,
+							PoolAddress:          incentive.PoolAddress,
+							FeeRatio:             incentive.FeeRatio,
+							Token0Symbol:         incentive.Token0Symbol,
+							Token0Address:        incentive.Token0Address,
+							Token1Symbol:         incentive.Token1Symbol,
+							Token1Address:        incentive.Token1Address,
 							PositionValue:        incentive.StakedUsd,
 							PositionValueFloat64: stakedUsdFloat64,
 							FeeRevenue:           fmt.Sprintf("%.2f", feeRevenue),
