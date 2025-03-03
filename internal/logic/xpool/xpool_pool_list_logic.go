@@ -582,6 +582,19 @@ func (l *XpoolPoolListLogic) getCurrentPrices(ctx context.Context, chainId int64
 		return nil, err
 	}
 
+	// unique address list
+	filterM := make(map[string]bool)
+	uniqueAddr := make([]string, 0)
+	for _, addr := range addressList {
+		if _, ok := filterM[addr]; ok {
+			continue
+		}
+		filterM[addr] = true
+		uniqueAddr = append(uniqueAddr, addr)
+	}
+
+	addressList = uniqueAddr
+
 	records, err := l.tokenPriceModel.GetCurrentPrices(ctx, addressList)
 	if err != nil {
 		logx.Errorf("[XpoolPoolList]: Get current prices error: %s", err)
@@ -605,7 +618,7 @@ func (l *XpoolPoolListLogic) getCurrentPrices(ctx context.Context, chainId int64
 		}
 
 		// 设置默认价格为 1U
-		tp, err := sonex.NewTokenPrice("1", 1)
+		tp, err := sonex.NewTokenPrice("1", 0)
 		if err != nil {
 			logx.Errorf("[XpoolPoolList]: Invalid token price: %s", err)
 			return nil, err
