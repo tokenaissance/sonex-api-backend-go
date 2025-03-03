@@ -964,6 +964,31 @@
             "type": "string"
           },
           {
+            "name": "orderBy",
+            "description": " 排序字段",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "balance",
+              "revenue",
+              "stakedlp",
+              "apr",
+              "staked"
+            ]
+          },
+          {
+            "name": "orderDirection",
+            "description": " 排序方向",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "desc",
+              "asc"
+            ]
+          },
+          {
             "name": "pageSize",
             "in": "query",
             "required": false,
@@ -3495,6 +3520,25 @@
         "address": {
           "type": "string"
         },
+        "orderBy": {
+          "type": "string",
+          "enum": [
+            "balance",
+            "revenue",
+            "stakedlp",
+            "apr",
+            "staked"
+          ],
+          "description": " 排序字段"
+        },
+        "orderDirection": {
+          "type": "string",
+          "enum": [
+            "desc",
+            "asc"
+          ],
+          "description": " 排序方向"
+        },
         "pageSize": {
           "type": "integer",
           "format": "int64",
@@ -3648,6 +3692,11 @@
           "type": "number",
           "format": "double",
           "description": " 用户已经质押的美元价值 用于排序"
+        },
+        "aPRFlot64": {
+          "type": "number",
+          "format": "double",
+          "description": " 年化收益率 float64 辅助排序用"
         }
       },
       "title": "PortfolioXpool",

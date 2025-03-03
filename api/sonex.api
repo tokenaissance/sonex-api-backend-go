@@ -515,6 +515,8 @@ type PortfolioRequest {
 	TimeZoneRequest
 	PortfolioType     string `form:"portfolioType,options=liquidity|farm|xpool,default=liquidity"`
 	Address           string `form:"address"`
+	OrderBy     	  string `form:"orderBy,optional,options=balance|revenue|stakedlp|apr|staked"` // 排序字段
+	OrderDirection 	  string `form:"orderDirection,optional,options=desc|asc"` // 排序方向
 	PageRequest
 }
 
@@ -530,7 +532,8 @@ type PortfolioXpool {
 	Earned              string `json:"earned"`              // 用户未提取的质押奖励美元价值
 	Status              string `json:"status"`              // 运行状态{Staking}
 
-	StakedFloat64 float64 `json:"-"` // 用户已经质押的美元价值 用于排序
+	StakedFloat64 		float64 `json:"-"` // 用户已经质押的美元价值 用于排序
+	APRFlot64           float64 `json:"-"` // 年化收益率 float64 辅助排序用
 }
 
 // Farm Pool 在 portfolio 内的展示用数据结构

@@ -24,9 +24,24 @@ import (
 )
 
 const (
-	portfolioTypeLiquidity string = "liquidity"
-	portfolioTypeFarm      string = "farm"
-	portfolioTypeXpool     string = "xpool"
+	PortfolioTypeLiquidity string = "liquidity"
+	PortfolioTypeFarm      string = "farm"
+	PortfolioTypeXpool     string = "xpool"
+)
+
+// balance|revenue|stakedlp|apr|staked
+const (
+	OrderByBalance  string = "balance"
+	OrderByRevenue  string = "revenue"
+	OrderByStakedLP string = "stakedlp"
+	OrderByAPR      string = "apr"
+	OrderByStaked   string = "staked"
+)
+
+// order direction
+const (
+	OrderDirectionDESC string = "desc"
+	OrderDirectionASC  string = "asc"
 )
 
 type LiquidityList struct {
@@ -66,6 +81,26 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 分页参数
 		pageIndex := *req.PageIndex
 		pageSize := *req.PageSize
+
+		// 排序参数
+		orderBy := req.OrderBy
+		orderDirection := req.OrderDirection
+		if len(orderBy) <= 0 {
+			switch req.PortfolioType {
+			case PortfolioTypeLiquidity:
+				orderBy = OrderByBalance
+			case PortfolioTypeFarm:
+				orderBy = OrderByBalance
+			case PortfolioTypeXpool:
+				orderBy = OrderByStaked
+			default:
+				orderBy = OrderByBalance
+			}
+		}
+		if len(orderDirection) <= 0 {
+			// default desc
+			orderDirection = OrderDirectionDESC
+		}
 
 		// 用户选中的 portfolio 类型，仅支持单选
 		portfolioType := req.PortfolioType
@@ -180,7 +215,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 			// count in total position & liquidity claimable fees
 			for _, position := range liquidityList.Positions {
-				if portfolioType == portfolioTypeLiquidity {
+				if portfolioType == PortfolioTypeLiquidity {
 					// 判断 liquidity position 是否支持 farm stake
 					liquidityStakeable := false
 					for _, farmIncentive := range liquidityList.FarmIncentivesPools {
@@ -192,7 +227,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						}
 					}
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
-						Type:              portfolioTypeLiquidity,
+						Type:              PortfolioTypeLiquidity,
 						LiquidityPosition: position,
 						LiquidityStakable: liquidityStakeable,
 					})
@@ -275,9 +310,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				feeRevenue := fmt.Sprintf("%.2f", earnedValueFloat64+claimedRewardTokenValueFloat64)
 				totalFeeRevenue += earnedValueFloat64 + claimedRewardTokenValueFloat64
 
-				if portfolioType == portfolioTypeXpool {
+				if portfolioType == PortfolioTypeXpool {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
-						Type: portfolioTypeXpool,
+						Type: PortfolioTypeXpool,
 						Xpool: &types.PortfolioXpool{
 							PoolAddress:         xpool.PoolAddress,               // 质押池合约地址
 							StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
@@ -285,10 +320,12 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
 							APR:                 xpool.APR,                       // 年化收益率
 							Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
-							StakedFloat64:       xpoolStaked,                     // 用户已经质押的美元价值
 							FeeRevenue:          feeRevenue,                      // 用户已经领取的收益 + 用户可以领取的收益
 							Status:              xpool.Status,
 							Earned:              rewardTokenValue.ValueString(), // 用户可以领取的收益
+
+							StakedFloat64: xpoolStaked,    // 用户已经质押的美元价值
+							APRFlot64:     xpool.APRFloat, // 年化收益率 float64，辅助排序用
 						},
 					})
 				}
@@ -342,9 +379,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					continue
 				}
 
-				if portfolioType == portfolioTypeFarm {
+				if portfolioType == PortfolioTypeFarm {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
-						Type: portfolioTypeFarm,
+						Type: PortfolioTypeFarm,
 						FarmPool: &types.PortfolioFarm{
 							PoolAddress:          incentive.PoolAddress,
 							FeeRatio:             incentive.FeeRatio,
@@ -387,7 +424,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		response.Stats = portfolioStats
 
 		// sort portfolio positions
-		sort(portfolioPositions)
+		sort(portfolioPositions, orderBy, orderDirection)
 
 		total := len(portfolioPositions)
 		// pagination
@@ -407,23 +444,70 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	}
 }
 
-// sort descending 排序 portfolio positions
-func sort(portfolioPositions []*types.PortfolioPosition) {
+// sort descending 排序 portfolio positions, orderBy 排序字段, direction 排序方向
+func sort(portfolioPositions []*types.PortfolioPosition, orderBy string, direction string) {
 	// sort
-	linq.From(portfolioPositions).OrderByDescendingT(func(item *types.PortfolioPosition) lib_common.CompareableFloat {
+	if direction == OrderDirectionDESC {
+		linq.From(portfolioPositions).OrderByDescendingT(func(item *types.PortfolioPosition) lib_common.CompareableFloat {
 
-		positionValue := float64(0)
-		switch item.Type {
-		case portfolioTypeLiquidity:
-			positionValue = item.LiquidityPosition.Position
-		case portfolioTypeFarm:
-			positionValue = item.FarmPool.PositionValueFloat64
-		case portfolioTypeXpool:
-			positionValue = item.Xpool.StakedFloat64
-		}
+			sortValue := float64(0)
+			switch item.Type {
+			case PortfolioTypeLiquidity:
+				if orderBy == OrderByBalance {
+					sortValue = item.LiquidityPosition.Position
+				}
+				if orderBy == OrderByRevenue {
+					sortValue = item.LiquidityPosition.PNL
+				}
+			case PortfolioTypeFarm:
+				if orderBy == OrderByBalance {
+					sortValue = item.FarmPool.PositionValueFloat64
+				}
+				if orderBy == OrderByStakedLP {
+					sortValue = float64(item.FarmPool.StakedLPNum)
+				}
+			case PortfolioTypeXpool:
+				if orderBy == OrderByStaked {
+					sortValue = item.Xpool.StakedFloat64
+				}
+				if orderBy == OrderByAPR {
+					sortValue = item.Xpool.APRFlot64
+				}
+			}
 
-		return lib_common.CompareableFloat{Value: new(big.Float).SetFloat64(positionValue)}
-	}).ToSlice(&portfolioPositions)
+			return lib_common.CompareableFloat{Value: new(big.Float).SetFloat64(sortValue)}
+		}).ToSlice(&portfolioPositions)
+	} else {
+		linq.From(portfolioPositions).OrderByT(func(item *types.PortfolioPosition) lib_common.CompareableFloat {
+
+			sortValue := float64(0)
+			switch item.Type {
+			case PortfolioTypeLiquidity:
+				if orderBy == OrderByBalance {
+					sortValue = item.LiquidityPosition.Position
+				}
+				if orderBy == OrderByRevenue {
+					sortValue = item.LiquidityPosition.PNL
+				}
+			case PortfolioTypeFarm:
+				if orderBy == OrderByBalance {
+					sortValue = item.FarmPool.PositionValueFloat64
+				}
+				if orderBy == OrderByStakedLP {
+					sortValue = float64(item.FarmPool.StakedLPNum)
+				}
+			case PortfolioTypeXpool:
+				if orderBy == OrderByStaked {
+					sortValue = item.Xpool.StakedFloat64
+				}
+				if orderBy == OrderByAPR {
+					sortValue = item.Xpool.APRFlot64
+				}
+			}
+
+			return lib_common.CompareableFloat{Value: new(big.Float).SetFloat64(sortValue)}
+		}).ToSlice(&portfolioPositions)
+	}
 }
 
 // getUserTimeZoneDayStart 获取用户所在时区的当日开始时间
