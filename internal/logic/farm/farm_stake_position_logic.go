@@ -116,7 +116,7 @@ func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache,
 				}
 				respSonex, err := l2.SonexPosition(&reqPositions)
 				if err != nil {
-					logx.Errorf("SonexPosition %#v  Err:%v", reqPositions, err)
+					logx.Errorf("SonexPosition %#v  tokenid:%v  Err:%v", reqPositions, v.TokenId.Int64(), err)
 					return &types.FarmStakeResponse{}, err
 				} else {
 
