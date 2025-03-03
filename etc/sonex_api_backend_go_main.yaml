@@ -88,7 +88,7 @@ Farms:
     XRewardToken: https://img.sonex.so/X-Token-logo.svg
 Xpools:
   - ChainId: 1868
-    Factory: 0x63d0Ac8A898aFff5EB8Fb1ef754e5a82cf972756
+    Factory: 0x894C819BE4BFf3eE3588fB4bFdFE6E7c40bb7451
     BlockTime: 2000
 ACS:
   Pools:
