@@ -1,18 +1,18 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : postgres
+ Source Server         : sonex-api-backend-go
  Source Server Type    : PostgreSQL
- Source Server Version : 160003 (160003)
- Source Host           : 10.0.0.150:5432
+ Source Server Version : 160006 (160006)
+ Source Host           : 10.1.84.8:5432
  Source Catalog        : sonex-api-backend-go
  Source Schema         : public
 
  Target Server Type    : PostgreSQL
- Target Server Version : 160003 (160003)
+ Target Server Version : 160006 (160006)
  File Encoding         : 65001
 
- Date: 12/02/2025 15:59:24
+ Date: 03/03/2025 12:25:48
 */
 
 
