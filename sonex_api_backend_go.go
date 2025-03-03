@@ -161,6 +161,7 @@ func main() {
 
 				// Callback
 				handler.OnPositionManagerIncreaseLiquidity(sonex.ACSIncreaseLiquidityCallback(c))
+				handler.OnPositionManagerIncreaseLiquidity(sonex.PufferIncreaseLiquidityCallback(c))
 				// handler.OnPoolSwap(sonex.ACSSwapCallback(c))
 
 				xtokenHandler, err := sonex.NewXTokenHandler(c.PostgreSQL.DataSource(), chain, *config)
