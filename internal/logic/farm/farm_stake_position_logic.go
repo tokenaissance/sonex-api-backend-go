@@ -126,7 +126,6 @@ func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache,
 					isApprovedOrNot, err := getTokenIdApprovedOrNot(*chain, v.TokenId.Int64(), sonexConf.PositionManager, farmConf.Staker)
 					if err != nil {
 						logx.Errorf("getTokenIdApprovedOrNot failed  for tokenID :%v ,maybe need rescanner error %v", v.TokenId.Int64(), err)
-						continue
 					}
 
 					feeTier = int64(respSonex.Position.Pool.FeeTier)
