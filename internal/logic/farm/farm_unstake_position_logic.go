@@ -139,7 +139,7 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 				}
 				respSonex, err := l2.SonexPosition(&reqPositions)
 				if err != nil {
-					logx.Errorf("SonexPosition %#v  Err:%v", reqPositions, err)
+					logx.Errorf("SonexPosition:%#v for tokenid %#v  Err:%v", reqPositions, v.TokenId.Int64(), err)
 					return &types.FarmUnstakeResponse{}, err
 				} else {
 					feeTier = int64(respSonex.Position.Pool.FeeTier)
