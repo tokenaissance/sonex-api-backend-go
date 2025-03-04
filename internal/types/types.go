@@ -45,12 +45,15 @@ type DashboardIncentiveInfo struct {
 	Token1Address                string  `json:"token1Address"`
 	Token1Symbol                 string  `json:"token1Symbol"`                 // token1代币符号
 	Token1Logo                   string  `json:"token1Logo"`                   // logo
+	RewardTokenLogo              string  `json:"rewardTokenLogo"`              // reward token logo
 	Staked                       int64   `json:"staked"`                       //  正在质押的个数
 	StakedUsd                    string  `json:"StakedUsd"`                    // 质押的 LP 的 USD
 	TotalClaimableFeesUSD        string  `json:"totalClaimableFeesUsd"`        // 用户未领取的手续费的价值
 	TotalClaimableFeesUSDFloat64 float64 `json:"totalClaimableFeesUSDFloat64"` // 用户未领取的手续费的价值
+	TotalClaimableFeesAmount     string  `json:"totalClaimableFeesAmount"`     // 用户未领取的手续的reward token 数量(去掉精度)
 	RevenueString                string  `json:"revenueString"`                // 用户已经领取的手续的价值+用户未领取的手续费的价值
 	RevenueFloat64               float64 `json:"revenueFloat64"`               // 用户已经领取的手续的价值++用户未领取的手续费的价值
+	RevenueAmount                string  `json:"revenueAmount"`                // 用户已经领取的手续的reward token 数量(去掉精度)
 }
 
 type DashboardIncentiveWithStakedUsd struct {
@@ -447,17 +450,22 @@ type PoolsResponse_Volume struct {
 }
 
 type PortfolioFarm struct {
-	PoolAddress          string  `json:"poolAddress"`   // v3 流动性池合约地址
-	FeeRatio             string  `json:"feeRatio"`      // 池子手续费率
-	Token0Symbol         string  `json:"token0Symbol"`  // token0 代币符号
-	Token0Address        string  `json:"token0Address"` // token0 代币合约地址
-	Token1Symbol         string  `json:"token1Symbol"`  // token1 代币符号
-	Token1Address        string  `json:"token1Address"` // token1 代币合约地址
-	PositionValue        string  `json:"positionValue"` // pool position 美元净值
-	FeeRevenue           string  `json:"feeRevenue"`    // 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值
-	Earned               string  `json:"earned"`        // 用户未提取的质押奖励美元价值
-	StakedLPNum          int64   `json:"stakedLPNum"`   // 质押的LP的个数
-	PositionValueFloat64 float64 `json:"-"`             // pool position 美元净值 用于排序
+	PoolAddress          string  `json:"poolAddress"`      // v3 流动性池合约地址
+	FeeRatio             string  `json:"feeRatio"`         // 池子手续费率
+	Token0Symbol         string  `json:"token0Symbol"`     // token0 代币符号
+	Token0Address        string  `json:"token0Address"`    // token0 代币合约地址
+	Token0Logo           string  `json:"token0Logo"`       // token0 logo
+	Token1Symbol         string  `json:"token1Symbol"`     // token1 代币符号
+	Token1Address        string  `json:"token1Address"`    // token1 代币合约地址
+	Token1Logo           string  `json:"token1Logo"`       // token1 logo
+	RewardTokenLogo      string  `json:"rewardTokenLogo"`  // reward token logo
+	PositionValue        string  `json:"positionValue"`    // pool position 美元净值
+	FeeRevenue           string  `json:"feeRevenue"`       // 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值
+	FeeRevenueAmount     string  `json:"feeRevenueAmount"` // 用户提取的质押奖励代币数量+用户未提取的质押奖励代币数量
+	Earned               string  `json:"earned"`           // 用户未提取的质押奖励美元价值
+	EarnedAmount         string  `json:"earnedAmount"`     // 用户未提取的质押奖励代币数量
+	StakedLPNum          int64   `json:"stakedLPNum"`      // 质押的LP的个数
+	PositionValueFloat64 float64 `json:"-"`                // pool position 美元净值 用于排序
 }
 
 type PortfolioPosition struct {

@@ -387,12 +387,16 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							FeeRatio:             incentive.FeeRatio,
 							Token0Symbol:         incentive.Token0Symbol,
 							Token0Address:        incentive.Token0Address,
+							Token0Logo:           incentive.Token0Logo,
 							Token1Symbol:         incentive.Token1Symbol,
 							Token1Address:        incentive.Token1Address,
+							Token1Logo:           incentive.Token1Logo,
 							PositionValue:        incentive.StakedUsd,
 							PositionValueFloat64: stakedUsdFloat64,
 							FeeRevenue:           fmt.Sprintf("%.2f", feeRevenue),
+							FeeRevenueAmount:     incentive.RevenueAmount,
 							Earned:               incentive.TotalClaimableFeesUSD,
+							EarnedAmount:         incentive.TotalClaimableFeesAmount,
 							StakedLPNum:          incentive.Staked, // 质押的LP个数
 						},
 					})
