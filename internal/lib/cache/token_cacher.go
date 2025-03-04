@@ -195,18 +195,6 @@ func (cacher *TokenCacher) sortPaths(ctx context.Context, paths []quoter.Path, m
 //
 // Fetch online if cache miss.
 func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
-	if address == (common.Address{}) {
-		eth := cacher.chainConf.ETH
-		if eth == nil {
-			return nil, fmt.Errorf("%s", "Miss ETH configure")
-		}
-		return &Token{
-			Address:  (common.Address{}).Hex(),
-			Name:     eth.Name,
-			Symbol:   eth.Symbol,
-			Decimals: eth.Decimals,
-		}, nil
-	}
 
 	cacher.tokensLock.RLock()
 	token, ok := cacher.tokens[address.Hex()]
@@ -236,7 +224,25 @@ func (cacher *TokenCacher) Get(address common.Address) (*Token, error) {
 		onchainInfo := <-onChainTokenInfoChan
 		dbLogo := <-dbTokenLogoChan
 
-		if (onchainInfo.err != nil) || (dbLogo.err != nil) {
+		if onchainInfo.err != nil {
+			if address == (common.Address{}) {
+				eth := cacher.chainConf.ETH
+				if eth == nil {
+					return nil, fmt.Errorf("%s", "Miss ETH configure")
+				}
+				onchainInfo = onChainTokenInfo{
+					tokenInfo: &Token{
+						Address:  (common.Address{}).Hex(),
+						Name:     eth.Name,
+						Symbol:   eth.Symbol,
+						Decimals: eth.Decimals,
+					},
+				}
+			} else {
+				return nil, fmt.Errorf("%s", "Miss token info")
+			}
+		}
+		if dbLogo.err != nil {
 			return nil, fmt.Errorf("%s", "Miss token info")
 		}
 

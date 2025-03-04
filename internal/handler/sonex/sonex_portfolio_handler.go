@@ -292,9 +292,9 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					logx.Errorf("[SonexPortfolioHandler]: rewardTokenPrice NewTokenPrice error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					continue
 				}
-				rewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
+				earnedRewardTokenValue, err := sonex_module.NewTokenValue(xpool.Earned, int(xpool.RewardTokenDecimals), sonex_module.WithTokenPrice(rewardTokenPrice))
 				if err != nil {
-					logx.Errorf("[SonexPortfolioHandler]: rewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
+					logx.Errorf("[SonexPortfolioHandler]: earnedRewardTokenValue NewTokenValue error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
 					continue
 				}
 
@@ -306,8 +306,10 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 				xpoolStaked, _ := stakingTokenValue.ValueFloat64()
 				claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
-				earnedValueFloat64, _ := rewardTokenValue.ValueFloat64()
+				earnedValueFloat64, _ := earnedRewardTokenValue.ValueFloat64()
 				feeRevenue := fmt.Sprintf("%.2f", earnedValueFloat64+claimedRewardTokenValueFloat64)
+				feeRevenueValue := earnedRewardTokenValue.AmountAdd(claimedRewardTokenValue.Amount())
+
 				totalFeeRevenue += earnedValueFloat64 + claimedRewardTokenValueFloat64
 
 				if portfolioType == PortfolioTypeXpool {
@@ -318,14 +320,17 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							StakingTokenName:    xpool.StakingTokenName,          // 质押的代币名称
 							StakingTokenSymbol:  xpool.StakingTokenSymbol,        // 质押的代币符号
 							StakingTokenAddress: xpool.StakingTokenAddress,       // 质押的代币合约地址
+							StakingTokenLogo:    xpool.StakingTokenLogo,          // 质押的代币logo
+							RewardTokenLogo:     xpool.RewardTokenLogo,           // 奖励的代币logo
 							APR:                 xpool.APR,                       // 年化收益率
 							Staked:              stakingTokenValue.ValueString(), // 用户已经质押的美元价值
 							FeeRevenue:          feeRevenue,                      // 用户已经领取的收益 + 用户可以领取的收益
+							FeeRevenueAmount:    feeRevenueValue.AmountWithoutDecimals(),
 							Status:              xpool.Status,
-							Earned:              rewardTokenValue.ValueString(), // 用户可以领取的收益
-
-							StakedFloat64: xpoolStaked,    // 用户已经质押的美元价值
-							APRFlot64:     xpool.APRFloat, // 年化收益率 float64，辅助排序用
+							Earned:              earnedRewardTokenValue.ValueString(), // 用户可以领取的收益
+							EarnedAmount:        earnedRewardTokenValue.AmountWithoutDecimals(),
+							StakedFloat64:       xpoolStaked,    // 用户已经质押的美元价值
+							APRFlot64:           xpool.APRFloat, // 年化收益率 float64，辅助排序用
 						},
 					})
 				}
@@ -333,7 +338,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				portfolioStats.TotalXpoolStaked += xpoolStaked
 
 				// 计算用户可领取的奖励代币价值
-				claimableRewardTokenValueFloat64, _ := rewardTokenValue.ValueFloat64()
+				claimableRewardTokenValueFloat64, _ := earnedRewardTokenValue.ValueFloat64()
 				xpoolEarns += claimableRewardTokenValueFloat64
 			}
 		}
@@ -387,12 +392,16 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							FeeRatio:             incentive.FeeRatio,
 							Token0Symbol:         incentive.Token0Symbol,
 							Token0Address:        incentive.Token0Address,
+							Token0Logo:           incentive.Token0Logo,
 							Token1Symbol:         incentive.Token1Symbol,
 							Token1Address:        incentive.Token1Address,
+							Token1Logo:           incentive.Token1Logo,
 							PositionValue:        incentive.StakedUsd,
 							PositionValueFloat64: stakedUsdFloat64,
 							FeeRevenue:           fmt.Sprintf("%.2f", feeRevenue),
+							FeeRevenueAmount:     incentive.RevenueAmount,
 							Earned:               incentive.TotalClaimableFeesUSD,
+							EarnedAmount:         incentive.TotalClaimableFeesAmount,
 							StakedLPNum:          incentive.Staked, // 质押的LP个数
 						},
 					})

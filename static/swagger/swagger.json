@@ -1799,6 +1799,10 @@
           "type": "string",
           "description": " logo"
         },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " reward token logo"
+        },
         "staked": {
           "type": "integer",
           "format": "int64",
@@ -1817,6 +1821,10 @@
           "format": "double",
           "description": " 用户未领取的手续费的价值"
         },
+        "totalClaimableFeesAmount": {
+          "type": "string",
+          "description": " 用户未领取的手续的reward token 数量(去掉精度)"
+        },
         "revenueString": {
           "type": "string",
           "description": " 用户已经领取的手续的价值+用户未领取的手续费的价值"
@@ -1825,6 +1833,10 @@
           "type": "number",
           "format": "double",
           "description": " 用户已经领取的手续的价值++用户未领取的手续费的价值"
+        },
+        "revenueAmount": {
+          "type": "string",
+          "description": " 用户已经领取的手续的reward token 数量(去掉精度)"
         }
       },
       "title": "DashboardIncentiveInfo",
@@ -1838,12 +1850,15 @@
         "token1Address",
         "token1Symbol",
         "token1Logo",
+        "rewardTokenLogo",
         "staked",
         "StakedUsd",
         "totalClaimableFeesUsd",
         "totalClaimableFeesUSDFloat64",
+        "totalClaimableFeesAmount",
         "revenueString",
-        "revenueFloat64"
+        "revenueFloat64",
+        "revenueAmount"
       ]
     },
     "DashboardIncentiveWithStakedUsd": {
@@ -3424,6 +3439,10 @@
           "type": "string",
           "description": " token0 代币合约地址"
         },
+        "token0Logo": {
+          "type": "string",
+          "description": " token0 logo"
+        },
         "token1Symbol": {
           "type": "string",
           "description": " token1 代币符号"
@@ -3431,6 +3450,14 @@
         "token1Address": {
           "type": "string",
           "description": " token1 代币合约地址"
+        },
+        "token1Logo": {
+          "type": "string",
+          "description": " token1 logo"
+        },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " reward token logo"
         },
         "positionValue": {
           "type": "string",
@@ -3440,9 +3467,17 @@
           "type": "string",
           "description": " 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值"
         },
+        "feeRevenueAmount": {
+          "type": "string",
+          "description": " 用户提取的质押奖励代币数量+用户未提取的质押奖励代币数量"
+        },
         "earned": {
           "type": "string",
           "description": " 用户未提取的质押奖励美元价值"
+        },
+        "earnedAmount": {
+          "type": "string",
+          "description": " 用户未提取的质押奖励代币数量"
         },
         "stakedLPNum": {
           "type": "integer",
@@ -3461,11 +3496,16 @@
         "feeRatio",
         "token0Symbol",
         "token0Address",
+        "token0Logo",
         "token1Symbol",
         "token1Address",
+        "token1Logo",
+        "rewardTokenLogo",
         "positionValue",
         "feeRevenue",
+        "feeRevenueAmount",
         "earned",
+        "earnedAmount",
         "stakedLPNum",
         "-"
       ]
@@ -3668,6 +3708,14 @@
           "type": "string",
           "description": " 质押的代币合约地址"
         },
+        "stakingTokenLogo": {
+          "type": "string",
+          "description": " 质押的代币logo"
+        },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " 奖励的代币logo"
+        },
         "apr": {
           "type": "string",
           "description": " 年化收益率"
@@ -3680,9 +3728,17 @@
           "type": "string",
           "description": " 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值"
         },
+        "feeRevenueAmount": {
+          "type": "string",
+          "description": " 用户提取的质押奖励代币数量+用户未提取的质押奖励代币数量"
+        },
         "earned": {
           "type": "string",
           "description": " 用户未提取的质押奖励美元价值"
+        },
+        "earnedAmount": {
+          "type": "string",
+          "description": " 用户未提取的质押奖励代币数量"
         },
         "status": {
           "type": "string",
@@ -3705,10 +3761,14 @@
         "stakingTokenName",
         "stakingTokenSymbol",
         "stakingTokenAddress",
+        "stakingTokenLogo",
+        "rewardTokenLogo",
         "apr",
         "staked",
         "feeRevenue",
+        "feeRevenueAmount",
         "earned",
+        "earnedAmount",
         "status",
         "-"
       ]
@@ -5569,6 +5629,9 @@
           "format": "int64",
           "description": " 质押的代币合约精度"
         },
+        "stakingTokenLogo": {
+          "type": "string"
+        },
         "stakingTokenPrice": {
           "type": "string",
           "description": " 质押的代币价格"
@@ -5589,6 +5652,10 @@
           "type": "integer",
           "format": "int64",
           "description": " 奖励的代币合约精度"
+        },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " 奖励的代币logo"
         },
         "rewardTokenPrice": {
           "type": "string",
@@ -5676,11 +5743,13 @@
         "stakingTokenSymbol",
         "stakingTokenAddress",
         "stakingTokenDecimals",
+        "stakingTokenLogo",
         "stakingTokenPrice",
         "rewardTokenName",
         "rewardTokenSymbol",
         "rewardTokenAddress",
         "rewardTokenDecimals",
+        "rewardTokenLogo",
         "rewardTokenPrice",
         "poolAddress",
         "rewardPerBlock",

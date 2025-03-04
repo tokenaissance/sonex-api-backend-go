@@ -492,11 +492,13 @@ func (l *XpoolPoolListLogic) XpoolPoolList(req *types.XpoolPoolListRequest) (res
 			StakingTokenSymbol:   info.StakingTokenSymbol,                   // 质押的代币符号
 			StakingTokenAddress:  info.StakingToken.Hex(),                   // 质押的代币合约地址
 			StakingTokenDecimals: info.StakingTokenDecimals,                 // 质押的代币精度
+			StakingTokenLogo:     info.StakingTokenLogo,                     // 质押的代币logo
 			StakingTokenPrice:    stakingTokenPriceString,                   // 质押的代币价格
 			RewardTokenName:      info.RewardTokenName,                      // 奖励的代币名称
 			RewardTokenSymbol:    info.RewardTokenSymbol,                    // 奖励的代币符号
 			RewardTokenAddress:   info.RewardToken.Hex(),                    // 奖励的代币合约地址
 			RewardTokenDecimals:  info.RewardTokenDecimals,                  // 奖励的代币精度
+			RewardTokenLogo:      info.RewardTokenLogo,                      // 奖励的代币logo
 			RewardTokenPrice:     rewardTokenPriceString,                    // 奖励的代币价格
 			PoolAddress:          common.HexToAddress(pool.EventPool).Hex(), // 质押池合约地址
 			RewardPerBlock:       info.RewardPerBlock.String(),              // 出块奖励

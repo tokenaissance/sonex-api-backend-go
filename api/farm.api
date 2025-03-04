@@ -84,14 +84,17 @@ type DashboardIncentiveInfo {
 	Token1Address       string `json:"token1Address"`   
 	Token1Symbol        string `json:"token1Symbol"` // token1代币符号
 	Token1Logo          string `json:"token1Logo"`  // logo
+	RewardTokenLogo     string `json:"rewardTokenLogo"` // reward token logo
 	Staked              int64  `json:"staked"`      //  正在质押的个数
 	StakedUsd           string `json:"StakedUsd"`   // 质押的 LP 的 USD
 
 	TotalClaimableFeesUSD string `json:"totalClaimableFeesUsd"` // 用户未领取的手续费的价值
 	TotalClaimableFeesUSDFloat64 float64 `json:"totalClaimableFeesUSDFloat64"` // 用户未领取的手续费的价值
+	TotalClaimableFeesAmount string `json:"totalClaimableFeesAmount"` // 用户未领取的手续的reward token 数量(去掉精度)
 
 	RevenueString string `json:"revenueString"`     // 用户已经领取的手续的价值+用户未领取的手续费的价值
 	RevenueFloat64 	 float64 `json:"revenueFloat64"`     // 用户已经领取的手续的价值++用户未领取的手续费的价值
+	RevenueAmount string `json:"revenueAmount"` // 用户已经领取的手续的reward token 数量(去掉精度)
 }
 
 
