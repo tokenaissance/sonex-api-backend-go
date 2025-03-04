@@ -12,10 +12,12 @@ type PoolInfo struct {
 	StakingTokenName     string
 	StakingTokenSymbol   string
 	StakingTokenDecimals int64
+	StakingTokenLogo     string
 	RewardToken          common.Address
 	RewardTokenName      string
 	RewardTokenSymbol    string
 	RewardTokenDecimals  int64
+	RewardTokenLogo      string
 	RewardPerBlock       *big.Int
 	TotalStaked          *big.Int
 	StakedNumber         *big.Int
