@@ -12,26 +12,27 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func TestGet(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
-	token, err := cacher.Get(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"))
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946), c.PostgreSQL)
+	token, err := cacher.Get(common.HexToAddress("0xe3336b3E0d36aacCddEcCC1B4c5d75D5216e932d"))
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	fmt.Println(token)
+	logx.Infof("token: %+v", token)
 }
 
 func TestSet(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946), c.PostgreSQL)
 	err := cacher.Set(common.HexToAddress("0xE9A198d38483aD727ABC8b0B1e16B2d338CF0391"))
 	if err != nil {
 		t.Error(err)
@@ -66,7 +67,7 @@ func TestQuoteExactInput(t *testing.T) {
 		{Address: common.HexToAddress("0x51B4C3556150c1A1f28705D89EB258E7796cfCDd"), Token0: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Token1: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Fee: 10000},
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
-	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946), c.PostgreSQL)
 	prices, err := cacher.QuoteExactInput(
 		context.Background(),
 		pools,
@@ -115,7 +116,7 @@ func TestQuoteExactOutput(t *testing.T) {
 		{Address: common.HexToAddress("0x51B4C3556150c1A1f28705D89EB258E7796cfCDd"), Token0: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Token1: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Fee: 10000},
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
-	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946), c.PostgreSQL)
 	prices, err := cacher.QuoteExactOutput(
 		context.Background(),
 		pools,
@@ -164,7 +165,7 @@ func TestGetPrices(t *testing.T) {
 		{Address: common.HexToAddress("0x51B4C3556150c1A1f28705D89EB258E7796cfCDd"), Token0: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Token1: common.HexToAddress("0x8879309d4002b8C98163Ece3f58653F774de8416"), Fee: 10000},
 		{Address: common.HexToAddress("0xd907bcaBF3eE0d484094f4dC9B707598c6907D5B"), Token0: common.HexToAddress("0x2337511E43b7d63FBc283900Be9fb25fc6EcC25C"), Token1: common.HexToAddress("0x26e6f7c7047252DdE3dcBF26AA492e6a264Db655"), Fee: 10000},
 	}
-	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946), c.PostgreSQL)
 
 	prices, err := cacher.GetPrices(context.Background(), pools, common.HexToAddress("0x8879309d4002b8c98163ece3f58653f774de8416"), false, 0, 50)
 	if err != nil {
@@ -184,7 +185,7 @@ func TestGetPricesWithCache(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946), c.PostgreSQL)
 
 	start := time.Now()
 
@@ -256,7 +257,7 @@ func TestBatchGetTotalSupplies(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../../etc/sonex_api_backend_go_local.yaml", &c)
 
-	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946))
+	cacher := NewTokenCacher(*c.GetChainConfig(1946), *c.GetSonexConfig(1946), c.PostgreSQL)
 	result, err := cacher.BatchGetTotalSupplies(
 		context.Background(),
 		[]common.Address{

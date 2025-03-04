@@ -58,6 +58,7 @@ Sonexes:
     Quoter: 0x331c6643D472648C220686169Ec1D15BeE9a63a2
     SwapRouter: 0x6321199D6E1ed41771ff89eb757479600E4427d9
     XToken: 0xe3336b3E0d36aacCddEcCC1B4c5d75D5216e932d
+    XTokenLogo: https://img.sonex.so/X-Token-logo.svg
 PreDeposits:
   - ChainId: 1946
     WASTR: 0x3c1F7c5f4C560afFCFe2b5ebF1271c3310867ff4
