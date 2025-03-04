@@ -1753,22 +1753,32 @@
           "type": "integer",
           "format": "int64"
         },
+        "poolAddress": {
+          "type": "string"
+        },
         "feeRatio": {
+          "type": "string"
+        },
+        "token0Address": {
           "type": "string"
         },
         "token0symbol": {
           "type": "string",
           "description": " token0代币符号"
         },
-        "token0_logo": {
+        "token0Logo": {
+          "type": "string"
+        },
+        "token1Address": {
           "type": "string"
         },
         "token1Symbol": {
           "type": "string",
           "description": " token1代币符号"
         },
-        "token1_logo": {
-          "type": "string"
+        "token1Logo": {
+          "type": "string",
+          "description": " logo"
         },
         "staked": {
           "type": "integer",
@@ -1801,11 +1811,14 @@
       "title": "DashboardIncentiveInfo",
       "required": [
         "incentiveId",
+        "poolAddress",
         "feeRatio",
+        "token0Address",
         "token0symbol",
-        "token0_logo",
+        "token0Logo",
+        "token1Address",
         "token1Symbol",
-        "token1_logo",
+        "token1Logo",
         "staked",
         "StakedUsd",
         "totalClaimableFeesUsd",
