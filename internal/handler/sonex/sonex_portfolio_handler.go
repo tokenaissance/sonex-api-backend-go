@@ -307,8 +307,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				xpoolStaked, _ := stakingTokenValue.ValueFloat64()
 				claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
 				earnedValueFloat64, _ := earnedRewardTokenValue.ValueFloat64()
-				feeRevenue := fmt.Sprintf("%.2f", earnedValueFloat64+claimedRewardTokenValueFloat64)
 				feeRevenueValue := earnedRewardTokenValue.AmountAdd(claimedRewardTokenValue.Amount())
+				feeRevenue := feeRevenueValue.ValueString()
 
 				totalFeeRevenue += earnedValueFloat64 + claimedRewardTokenValueFloat64
 
