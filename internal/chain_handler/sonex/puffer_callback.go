@@ -147,7 +147,7 @@ func PufferIncreaseLiquidityCallback(conf config.Config) func(chainId int64, tx 
 						tx.From.Hex(),
 						pufferConf.Points,
 						pufferConf.SubTitle,
-						fmt.Sprintf("acs-%s-%d", event.Raw.TxHash.Hex(), int64(event.Raw.Index)),
+						fmt.Sprintf("puffer-%s-%d", event.Raw.TxHash.Hex(), int64(event.Raw.Index)),
 						map[string]string{
 							"txHash":    event.Raw.TxHash.Hex(),
 							"txIndex":   strconv.FormatUint(uint64(event.Raw.Index), 10),
