@@ -219,7 +219,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					// 判断 liquidity position 是否支持 farm stake
 					liquidityStakeable := false
 					for _, farmIncentive := range liquidityList.FarmIncentivesPools {
-						if common.HexToAddress(farmIncentive.ExtraToken0).Cmp(common.HexToAddress(position.Pool.Token0.Address)) == 0 &&
+						if !farmIncentive.ExtraEnded && common.HexToAddress(farmIncentive.ExtraToken0).Cmp(common.HexToAddress(position.Pool.Token0.Address)) == 0 &&
 							common.HexToAddress(farmIncentive.ExtraToken1).Cmp(common.HexToAddress(position.Pool.Token1.Address)) == 0 &&
 							farmIncentive.ExtraFee == strconv.FormatInt(int64(position.Pool.FeeTier), 10) {
 							liquidityStakeable = true
