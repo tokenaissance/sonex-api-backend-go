@@ -121,11 +121,11 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 	for _, record := range records {
 		var source string
 		if preDepositConf != nil && record.EventFrom == preDepositConf.RewardClaimer {
-			source = SOURCE_PRE_DEPOSIT
+			source = "ASTR Surge"
 		} else if farmConf != nil && record.EventFrom == farmConf.Staker {
-			source = SOURCE_FARM
+			source = "Staked Liquidity"
 		} else if xpoolConf != nil && linq.From(poolAddresses).AnyWithT(func(item string) bool { return item == record.EventFrom }) {
-			source = SOURCE_XPOOL
+			source = "Staked Token"
 		} else {
 			source = record.EventFrom
 		}
