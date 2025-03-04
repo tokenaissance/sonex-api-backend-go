@@ -219,7 +219,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					// 判断 liquidity position 是否支持 farm stake
 					liquidityStakeable := false
 					for _, farmIncentive := range liquidityList.FarmIncentivesPools {
-						if common.HexToAddress(farmIncentive.ExtraToken0).Cmp(common.HexToAddress(position.Pool.Token0.Address)) == 0 &&
+						if !farmIncentive.ExtraEnded && common.HexToAddress(farmIncentive.ExtraToken0).Cmp(common.HexToAddress(position.Pool.Token0.Address)) == 0 &&
 							common.HexToAddress(farmIncentive.ExtraToken1).Cmp(common.HexToAddress(position.Pool.Token1.Address)) == 0 &&
 							farmIncentive.ExtraFee == strconv.FormatInt(int64(position.Pool.FeeTier), 10) {
 							liquidityStakeable = true
@@ -307,8 +307,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				xpoolStaked, _ := stakingTokenValue.ValueFloat64()
 				claimedRewardTokenValueFloat64, _ := claimedRewardTokenValue.ValueFloat64()
 				earnedValueFloat64, _ := earnedRewardTokenValue.ValueFloat64()
-				feeRevenue := fmt.Sprintf("%.2f", earnedValueFloat64+claimedRewardTokenValueFloat64)
 				feeRevenueValue := earnedRewardTokenValue.AmountAdd(claimedRewardTokenValue.Amount())
+				feeRevenue := feeRevenueValue.ValueString()
 
 				totalFeeRevenue += earnedValueFloat64 + claimedRewardTokenValueFloat64
 
@@ -384,7 +384,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					continue
 				}
 
-				if portfolioType == PortfolioTypeFarm {
+				if (portfolioType == PortfolioTypeFarm) && (incentive.Staked > 0) {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: PortfolioTypeFarm,
 						FarmPool: &types.PortfolioFarm{
@@ -557,6 +557,7 @@ func getPagination(list []*types.PortfolioPosition, pageIndex int64, pageSize in
 
 // getLiquidity 获取用户有效 positions 列表
 func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*LiquidityList, error) {
+	address := common.HexToAddress(req.Address).Hex()
 	l := sonex.NewSonexPositionsLogic(ctx, svcCtx)
 	f := farm.NewFarmIncentivesLogic(ctx, svcCtx)
 
@@ -578,12 +579,12 @@ func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 	farmIncentivesPoolsChan := make(chan farmIncentivesPoolsResult, 1)
 
 	go func() {
-		positions, err := l.SonexPositions(ctx, req.ChainId, req.Address)
+		positions, err := l.SonexPositions(ctx, req.ChainId, address)
 		positionsChan <- positionsResult{positions: positions, err: err}
 	}()
 
 	go func() {
-		operationEvents, err := l.GetLiquidityOperationEventsWithTokenValue(ctx, req.ChainId, req.Address)
+		operationEvents, err := l.GetLiquidityOperationEventsWithTokenValue(ctx, req.ChainId, address)
 		operationEventsChan <- operationEventsResult{operationEvents: operationEvents, err: err}
 	}()
 
@@ -618,6 +619,7 @@ func getLiquidity(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 
 // getXPools 获取用户有效 xpool 列表
 func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*xpoolList, error) {
+	address := common.HexToAddress(req.Address).Hex()
 	l := xpool.NewXpoolPoolListLogic(ctx, svcCtx)
 
 	type poolsResult struct {
@@ -639,7 +641,7 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 			ChainRequest: types.ChainRequest{
 				ChainId: req.ChainId,
 			},
-			UserAddress: req.Address,
+			UserAddress: address,
 			PageRequest: types.PageRequest{
 				PageIndex: &pageIndex,
 				PageSize:  &pageSize,
@@ -659,7 +661,7 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 	}()
 
 	go func() {
-		operationEvents, err := l.GetUserOperationEvents(req.ChainId, req.Address)
+		operationEvents, err := l.GetUserOperationEvents(req.ChainId, address)
 		if err != nil {
 			operationEventsChan <- operationEventsResult{err: fmt.Errorf("[SonexPortfolioHandler]:getXPools GetUserOperationEvents error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)}
 			return
@@ -685,6 +687,8 @@ func getXPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Portfo
 
 // getFarmPools 获取用户有效 farm 列表
 func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.PortfolioRequest) (*FarmIncentiveList, error) {
+	address := common.HexToAddress(req.Address).Hex()
+
 	l := farm.NewFarmIncentivesLogic(ctx, svcCtx)
 	f := farm.NewFarmUnstakePositionLogic(ctx, svcCtx)
 
@@ -702,13 +706,13 @@ func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 	operationEventsChan := make(chan farmIncentivesOperationEventsResult, 1)
 
 	go func() {
-		incentives, err := f.GetFarmIncentives(svcCtx.Config, req.ChainId, req.Address)
+		incentives, err := f.GetFarmIncentives(svcCtx.Config, req.ChainId, address)
 		incentivesChan <- farmIncentivesResult{incentives: incentives, err: err}
 	}()
 
 	go func() {
 		// 用户质押&解质押事件
-		operationEvents, err := l.GetFarmIncentivesOperationEvents(req.ChainId, req.Address)
+		operationEvents, err := l.GetFarmIncentivesOperationEvents(req.ChainId, address)
 		operationEventsChan <- farmIncentivesOperationEventsResult{operationEvents: operationEvents, err: err}
 	}()
 
