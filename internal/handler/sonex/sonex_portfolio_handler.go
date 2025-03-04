@@ -384,7 +384,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					continue
 				}
 
-				if portfolioType == PortfolioTypeFarm {
+				if (portfolioType == PortfolioTypeFarm) && (incentive.Staked > 0) {
 					portfolioPositions = append(portfolioPositions, &types.PortfolioPosition{
 						Type: PortfolioTypeFarm,
 						FarmPool: &types.PortfolioFarm{
