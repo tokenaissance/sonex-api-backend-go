@@ -638,6 +638,14 @@ type PoolInfoResponse {
 	Fee24h           float64             `json:"fee24h"`
 }
 
+type IntractAddressRequest {
+	Address string `form:"address"`
+}
+
+type IntractSwapResponse {
+	Result bool `json:"result"`
+}
+
 type GalxeAddressRequest {
 	Address string `form:"address"`
 }
@@ -779,6 +787,9 @@ service sonex_api_backend_go {
 
 	@handler SonexGalxeswapHandler
 	get /galxeswap (GalxeAddressRequest) returns (GalxeSwapResponse)
+
+	@handler SonexIntractswapHandler
+	get /intractswap (IntractAddressRequest) returns (IntractSwapResponse)
 
 	@handler SonexGalxeTgidHandler
 	get /galxetgid (GalxeTgIdRequest) returns (GalxeTgIdResponse)
