@@ -15,9 +15,13 @@ import (
 )
 
 func TokenStakedCallback(conf config.Config, chainId int64, tx *node_caller.Transaction, event *farm.UniswapV3StakerTokenStaked) {
+	if !repository.BadgeIsInCampaignTime(tx.TxAt) {
+		return
+	}
+
 	sonexConf := conf.GetSonexConfig(chainId)
 	if sonexConf == nil {
-		logx.Errorf("ACSSwapCallback error: %s", "Miss sonex configure")
+		logx.Errorf("SwapCallback error: %s", "Miss sonex configure")
 		return
 	}
 
@@ -41,34 +45,32 @@ func TokenStakedCallback(conf config.Config, chainId int64, tx *node_caller.Tran
 		logx.Errorf("BatchGetPositions ERR :%v ", err)
 		return
 	}
-
-	for i, position := range positions {
-
-		logx.Infof("\n i:%v position:%#v \n ", i, position)
-		totalBalanceUSD, _, _, err := global.SummarizePositions(conf, context.Background(), chainId, positions)
-		if err != nil {
-			logx.Errorf("err:%v ", err)
-			return
-		}
-		logx.Infof("\n tokenid:%v valueusd :%v ", event.TokenId, totalBalanceUSD)
-
-		// 把 tokenId 写入的值写入表 sonex_badge_staked_position
-		data := &repository.SonexBadgeStakedPosition{
-			PositionId:    event.TokenId.Int64(),
-			PositionValue: totalBalanceUSD.String(),
-			UserAddress:   event.User.String(),
-		}
-		retInserted, err := sonexBadgeStakedPosition.Insert(context.Background(), data)
-		if err != nil {
-			logx.Errorf("Insert staked tokenId :%v  Err:%v ", event.TokenId.Int64(), err)
-			return
-		}
-		inserted, err := retInserted.LastInsertId()
-		if err != nil {
-			logx.Errorf("Insert staked tokenId :%v  LastInsertId Err:%v ", event.TokenId.Int64(), err)
-			return
-		}
-		logx.Infof("Insert staked tokenId :%v success ret:%v  ", event.TokenId.Int64(), inserted)
+	if len(positions) != 1 {
+		logx.Errorf("BatchGetPositions: unable to get token(id=%v)", event.TokenId)
+		return
 	}
+	totalBalanceUSD, _, _, err := global.SummarizePositions(conf, context.Background(), chainId, positions)
+	if err != nil {
+		logx.Errorf("err:%v ", err)
+		return
+	}
+	logx.Infof("\n tokenid:%v valueusd :%v ", event.TokenId, totalBalanceUSD)
 
+	// 把 tokenId 写入的值写入表 sonex_badge_staked_position
+	data := &repository.SonexBadgeStakedPosition{
+		PositionId:    event.TokenId.Int64(),
+		PositionValue: totalBalanceUSD.String(),
+		UserAddress:   event.User.String(),
+	}
+	retInserted, err := sonexBadgeStakedPosition.Insert(context.Background(), data)
+	if err != nil {
+		logx.Errorf("Insert staked tokenId :%v  Err:%v ", event.TokenId.Int64(), err)
+		return
+	}
+	inserted, err := retInserted.LastInsertId()
+	if err != nil {
+		logx.Errorf("Insert staked tokenId :%v  LastInsertId Err:%v ", event.TokenId.Int64(), err)
+		return
+	}
+	logx.Infof("Insert staked tokenId :%v success ret:%v  ", event.TokenId.Int64(), inserted)
 }
