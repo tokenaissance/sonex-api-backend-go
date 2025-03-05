@@ -645,7 +645,7 @@ func (m *customEventSonexPoolSwapModel) QueryByWalletWithExtraMoreThanValueUsd(c
 SELECT t1.amount0 / POWER(10,t5.decimals) * t3.price / 1000000  AS value,
 	t1.extra_pool 
 FROM
-	(SELECT  extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >=  TIMESTAMP WITH TIME ZONE '2025-03-05 00:00:00+00' AND from_ = $1 GROUP BY extra_pool) AS t1
+	(SELECT  extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >=  TIMESTAMP WITH TIME ZONE '2025-03-06 00:00:00+00' AND from_ = $1 GROUP BY extra_pool) AS t1
 	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
 	JOIN token t5 ON t5.address = t2.event_token0 
