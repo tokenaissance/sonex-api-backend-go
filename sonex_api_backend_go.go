@@ -119,8 +119,7 @@ func main() {
 	global.AddCronJob("0 30 0 * * ?", func() {
 		task.HandlePreDepositSnapshotDaily(&c)
 	})
-	// global.AddCronJob("00 30 23 * * ?", func() {
-	global.AddCronJob("0 0 0/1 * * ?", func() {
+	global.AddCronJob("00 30 23 * * ?", func() {
 		task.HandleACSSwapReward(&c)
 	})
 	global.AddCronJob("0 0 0/1 * * ?", func() {

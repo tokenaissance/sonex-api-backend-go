@@ -3698,25 +3698,13 @@
         "meta": {
           "$ref": "#/definitions/PageResponse",
           "description": " pagination meta"
-        },
-        "totalPosition": {
-          "type": "number",
-          "format": "double",
-          "description": " 所有资产净值"
-        },
-        "claimableFees": {
-          "type": "number",
-          "format": "double",
-          "description": " 所有可提资产净值"
         }
       },
       "title": "PortfolioResponse",
       "required": [
         "stats",
         "positions",
-        "meta",
-        "totalPosition",
-        "claimableFees"
+        "meta"
       ]
     },
     "PortfolioStats": {
@@ -5771,7 +5759,7 @@
           "type": "string",
           "description": " 年化收益率"
         },
-        "aPRFloat": {
+        "aprFloat": {
           "type": "number",
           "format": "double",
           "description": " 年化收益率，辅助排序用"
@@ -5842,13 +5830,18 @@
         "blockTime",
         "tvl",
         "apr",
-        "-",
+        "aprFloat",
         "staked",
         "earned",
         "joinNum",
         "status",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "stakingTokenPriceWithDecimals",
+        "stakingTokenPriceDecimals",
+        "rewardTokenPriceWithDecimals",
+        "rewardTokenPriceDecimals",
+        "claimed"
       ]
     },
     "XpoolPoolStatsRequest": {
