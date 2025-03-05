@@ -634,12 +634,22 @@ type PoolInfoResponse {
 	Fee24h           float64             `json:"fee24h"`
 }
 
+type IntractErrorStruct {
+	Code int64 `json:"code"`
+	Message string `json:"message"`
+}
+
+type IntractDataStruct {
+	Result bool `json:"result"`
+}
+
 type IntractAddressRequest {
 	Address string `form:"address"`
 }
 
 type IntractSwapResponse {
-	Result bool `json:"result"`
+	Error IntractErrorStruct  `json:"error"`
+	Data  IntractDataStruct `json:"data"`
 }
 
 type GalxeAddressRequest {
