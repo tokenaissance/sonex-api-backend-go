@@ -297,3 +297,20 @@ func Test_SummarizePoolVolumesUsdForSevenDaysForYield(t *testing.T) {
 	}
 	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
 }
+
+func Test_QueryByWalletWithExtraMoreThanValueUsd(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
+
+	volume24H, err := model.QueryByWalletWithExtraMoreThanValueUsd(context.Background(), "0x7A98A81457634Ab9d8CddDE35a0eD5db0F39735D", 10)
+	if err != nil {
+		t.Error(err)
+	}
+
+	for i, v := range volume24H {
+		logx.Infof("i %v v :%#v ", i, v)
+	}
+	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
+}

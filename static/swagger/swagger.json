@@ -679,6 +679,33 @@
         ]
       }
     },
+    "/sonex/intractswap": {
+      "get": {
+        "operationId": "SonexIntractswapHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/IntractSwapResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/pools": {
       "get": {
         "operationId": "SonexPoolListHandler",
@@ -2672,6 +2699,31 @@
       "title": "GalxeTgIdResponse",
       "required": [
         "isPlayedOrNot"
+      ]
+    },
+    "IntractAddressRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      },
+      "title": "IntractAddressRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "IntractSwapResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "IntractSwapResponse",
+      "required": [
+        "result"
       ]
     },
     "Invested": {
