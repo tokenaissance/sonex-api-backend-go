@@ -17,7 +17,7 @@ var _ SonexBadgeStakedPositionModel = (*customSonexBadgeStakedPositionModel)(nil
 // 	// 3 个里程碑的 swap 次数要求
 // 	MilestoneCondsSwaps = []uint32{10, 25, 45}
 // 	// 3 个里程碑的质押的 position 总价值要求要求
-// 	MilestoneCondsStakes = []uint32{20, 100, 200}
+// 	MilestoneCondsStakes = []uint64{20, 100, 200}
 // // 3 个里程碑的积分奖励
 // MilestonePoints      = []uint64{3000, 5000, 8000}
 // )
@@ -41,6 +41,7 @@ type (
 		sonexBadgeStakedPositionModel
 		withSession(session sqlx.Session) SonexBadgeStakedPositionModel
 		SumValueByUser(ctx context.Context, user string) (uint64, error)
+		AggregateValueByUser(ctx context.Context) ([]BadgeStakedValue, error)
 	}
 
 	customSonexBadgeStakedPositionModel struct {
@@ -60,7 +61,7 @@ func (m *customSonexBadgeStakedPositionModel) withSession(session sqlx.Session) 
 }
 
 func (m *customSonexBadgeStakedPositionModel) SumValueByUser(ctx context.Context, user string) (uint64, error) {
-	query := fmt.Sprintf("select CAST(COALESCE(SUM(event_amount0::NUMERIC),0)/1000000 as bigint) from %s where user_address = $1", m.table)
+	query := fmt.Sprintf("select CAST(COALESCE(SUM(position_value::NUMERIC),0)/1000000 as bigint) from %s where user_address = $1", m.table)
 	var sum uint64
 	err := m.conn.QueryRowCtx(ctx, &sum, query, user)
 	switch err {
@@ -69,6 +70,28 @@ func (m *customSonexBadgeStakedPositionModel) SumValueByUser(ctx context.Context
 	default:
 		return 0, err
 	}
+}
+
+type BadgeStakedValue struct {
+	UserAddress string `db:"user_address"`
+	Value       string `db:"value"`
+}
+
+// aggregate value by user
+func (m *customSonexBadgeStakedPositionModel) AggregateValueByUser(ctx context.Context) ([]BadgeStakedValue, error) {
+	query := `SELECT * FROM (
+			SELECT
+				user_address,
+				CAST(COALESCE(SUM(position_value::NUMERIC),0)/1000000 AS bigint) AS value
+			FROM sonex_badge_staked_position
+			GROUP BY user_address
+		) AS t1
+		WHERE value >= 20 AND user_address NOT IN (
+			SELECT user_address FROM sonex_badge_rewards
+		)`
+	var resp []BadgeStakedValue
+	err := m.conn.QueryRowsCtx(ctx, &resp, query)
+	return resp, err
 }
 
 // check if `t` is in campaign time
