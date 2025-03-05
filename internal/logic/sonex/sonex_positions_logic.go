@@ -564,26 +564,23 @@ func (l *SonexPositionsLogic) GetLiquidityOperationEventsWithTokenValue(ctx cont
 		return nil, err
 	}
 
-	tokenIds := make([]*big.Int, 0)
+	tokenIds := make([]int64, 0)
 	for tokenId := range events {
-		tokenIds = append(tokenIds, big.NewInt(tokenId))
+		tokenIds = append(tokenIds, tokenId)
 	}
 
-	staticCaller, err := sonex.NewStaticCaller(l.svcCtx.Config)
+	transferEvents, err := l.transferModel.GetTransferEventsByEventTokenIdsWithPool(ctx, chainId, tokenIds)
 	if err != nil {
-		logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue NewStaticCaller error: %s", err.Error())
-		return nil, err
-	}
-	pm, err := staticCaller.BatchGetPositionMap(l.ctx, chainId, common.HexToAddress(sonexConf.PositionManager), tokenIds)
-	if err != nil {
-		logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue BatchGetPositionMap error: %s", err.Error())
+		logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue GetTransferEventsByEventTokenIdsWithPool error: %s", err.Error())
 		return nil, err
 	}
 
 	tokenAddresses := make([]string, 0)
-	for _, position := range pm {
-		tokenAddresses = append(tokenAddresses, position.Token0.Hex())
-		tokenAddresses = append(tokenAddresses, position.Token1.Hex())
+	for _, transferEvents := range transferEvents {
+		if len(transferEvents) > 0 {
+			tokenAddresses = append(tokenAddresses, transferEvents[0].ExtraToken0)
+			tokenAddresses = append(tokenAddresses, transferEvents[0].ExtraToken1)
+		}
 	}
 
 	tokenPricesRecords, err := l.getCurrentPrices(ctx, tokenAddresses)
@@ -602,45 +599,61 @@ func (l *SonexPositionsLogic) GetLiquidityOperationEventsWithTokenValue(ctx cont
 				event.DecreaseEvent.EventValue = new(big.Float)
 			}
 
-			// todo: 被 burn 掉的 token 无法参与计算，后期需要优化，从 db 中直接 join 出 token 信息，不直接从链上取
-			position, ok := pm[tokenId]
+			tEvents, ok := transferEvents[tokenId]
 			if !ok {
+				logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue tokenId: %v not found in transferEvents", tokenId)
 				continue
 			}
 
-			token0Price, ok0 := tokenPricesRecords[position.Token0.Hex()]
+			if len(tEvents) == 0 {
+				logx.Errorf("[SonexPositions]:GetLiquidityOperationEventsWithTokenValue tokenId: %v not found in transferEvents", tokenId)
+				continue
+			}
+
+			token0Address := tEvents[0].ExtraToken0
+			token1Address := tEvents[0].ExtraToken1
+
+			token0Price, ok0 := tokenPricesRecords[token0Address]
 			if !ok0 {
 				continue
 			}
-			token1Price, ok1 := tokenPricesRecords[position.Token1.Hex()]
+			token1Price, ok1 := tokenPricesRecords[token1Address]
 			if !ok1 {
 				continue
 			}
-			token0, err := global.GetToken(chainId, position.Token0.Hex())
+			token0, err := global.GetToken(chainId, token0Address)
 			if err != nil {
 				continue
 			}
-			token1, err := global.GetToken(chainId, position.Token1.Hex())
+			token1, err := global.GetToken(chainId, token1Address)
 			if err != nil {
 				continue
 			}
-
-			token0Value, err := sonex.NewTokenValue(event.IncreaseEvent.EventAmount0, int(token0.Decimals), sonex.WithTokenPrice(token0Price))
-			if err != nil {
-				continue
-			}
-			token1Value, err := sonex.NewTokenValue(event.IncreaseEvent.EventAmount1, int(token1.Decimals), sonex.WithTokenPrice(token1Price))
-			if err != nil {
-				continue
-			}
-			tokenPair := sonex.NewTokenPair(token0Value, token1Value)
 
 			// increase liquidity event
 			if event.LiquidityOperationEventType == LiquidityOperationEventTypeIncrease {
+				token0Value, err := sonex.NewTokenValue(event.IncreaseEvent.EventAmount0, int(token0.Decimals), sonex.WithTokenPrice(token0Price))
+				if err != nil {
+					continue
+				}
+				token1Value, err := sonex.NewTokenValue(event.IncreaseEvent.EventAmount1, int(token1.Decimals), sonex.WithTokenPrice(token1Price))
+				if err != nil {
+					continue
+				}
+				tokenPair := sonex.NewTokenPair(token0Value, token1Value)
 				event.IncreaseEvent.EventValue = tokenPair.Value()
 			}
 			// decrease liquidity event
 			if event.LiquidityOperationEventType == LiquidityOperationEventTypeDecrease {
+				token0Value, err := sonex.NewTokenValue(event.DecreaseEvent.EventAmount0, int(token0.Decimals), sonex.WithTokenPrice(token0Price))
+				if err != nil {
+					continue
+				}
+				token1Value, err := sonex.NewTokenValue(event.DecreaseEvent.EventAmount1, int(token1.Decimals), sonex.WithTokenPrice(token1Price))
+				if err != nil {
+					continue
+				}
+				tokenPair := sonex.NewTokenPair(token0Value, token1Value)
 				event.DecreaseEvent.EventValue = tokenPair.Value()
 			}
 		}

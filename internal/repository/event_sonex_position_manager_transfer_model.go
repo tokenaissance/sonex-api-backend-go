@@ -26,6 +26,7 @@ type (
 		FindByChainIdTokenIdWithPool(ctx context.Context, chainId int64, tokenId int64) (*EventSonexPositionManagerTransferWithPool, error)
 		GetValidTransferEvents(ctx context.Context, chainId int64, address string) ([]*EventSonexPositionManagerTransfer, error)
 		GetValidTransferEventsForGalxeAddLiquidity(ctx context.Context, address string) ([]*EventSonexPositionManagerTransfer, error)
+		GetTransferEventsByEventTokenIdsWithPool(ctx context.Context, chainId int64, eventTokenIds []int64) (map[int64][]*EventSonexPositionManagerTransferWithPool, error)
 		GetTransferEvents(ctx context.Context, chainId int64, address string, filterBurnt bool) ([]*types.Position, error)
 		GetTransferEvent(ctx context.Context, chainId int64, eventTokenId int64, filterBurnt bool) (map[int64]*types.Position, error)
 		GetAllUseablePositions(ctx context.Context, chainId int64, address, stakerAddress string) ([]*PositionTmpStruct, error)
@@ -62,6 +63,37 @@ func (m *customEventSonexPositionManagerTransferModel) New(ctx context.Context, 
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", m.table, eventSonexPositionManagerTransferRows)
 	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, blockNumber, txIndex, txHash, txAt, from, to, value, fromE, toE, tokenId)
 	return err
+}
+
+// GetTransferEventsByEventTokenIdsWithPool get transfer events by event token ids with pool
+func (m *customEventSonexPositionManagerTransferModel) GetTransferEventsByEventTokenIdsWithPool(ctx context.Context, chainId int64, eventTokenIds []int64) (map[int64][]*EventSonexPositionManagerTransferWithPool, error) {
+	eventSonexPoolMintModel := newEventSonexPoolMintModel(m.conn)
+	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
+	query := fmt.Sprintf(`
+		SELECT 
+			T.*,
+			S.extra_pool,
+			C.event_token0 AS extra_token0,
+			C.event_token1 AS extra_token1,
+			C.event_fee AS extra_fee,
+			C.event_tick_spacing AS extra_tick_spacing
+		FROM %s T 
+		INNER JOIN %s S ON S.tx_hash = T.tx_hash 
+		INNER JOIN %s C ON S.extra_pool = C.event_pool 
+		WHERE T.chain_id = $1 AND T.event_token_id = ANY($2)
+	`, m.table, eventSonexPoolMintModel.tableName(), eventSonexFactoryPoolCreatedModel.tableName())
+	var resp []*EventSonexPositionManagerTransferWithPool
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, eventTokenIds)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[int64][]*EventSonexPositionManagerTransferWithPool)
+	for _, item := range resp {
+		result[item.EventTokenId] = append(result[item.EventTokenId], item)
+	}
+
+	return result, nil
 }
 
 func (m *customEventSonexPositionManagerTransferModel) FindByChainIdTokenIdWithPool(ctx context.Context, chainId int64, tokenId int64) (*EventSonexPositionManagerTransferWithPool, error) {
