@@ -70,3 +70,8 @@ func (m *customSonexBadgeStakedPositionModel) SumValueByUser(ctx context.Context
 		return 0, err
 	}
 }
+
+// check if `t` is in campaign time
+func BadgeIsInCampaignTime(t time.Time) bool {
+	return t.After(BadgeCampaignStart) && t.Before(BadgeCampaignStop)
+}
