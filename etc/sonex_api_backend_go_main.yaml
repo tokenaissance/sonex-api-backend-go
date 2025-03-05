@@ -231,3 +231,5 @@ Puffer:
   SubTitle: Puffer
   LiquidityUSDLimits: 100
   DailyLimits: 7
+Badge:
+  SubTitle: SONEX-Badge
