@@ -1057,18 +1057,18 @@ type XpoolPoolListResponse_Pool struct {
 	BlockTime                     int64   `json:"blockTime"`           // 出块时长 单位ms
 	TVL                           string  `json:"tvl"`                 // 质押池的质押总价值（USD）
 	APR                           string  `json:"apr"`                 // 年化收益率
-	APRFloat                      float64 `json:"-"`                   // 年化收益率，辅助排序用
+	APRFloat                      float64 `json:"aprFloat"`            // 年化收益率，辅助排序用
 	Staked                        string  `json:"staked"`              // 用户已质押代币数量
 	Earned                        string  `json:"earned"`              // 用户可获得未领取奖励代币数量
 	JoinNum                       int64   `json:"joinNum"`             // 参与人数
 	Status                        string  `json:"status"`              // 运行状态
 	CreatedAt                     string  `json:"createdAt"`
 	UpdatedAt                     string  `json:"updatedAt"`
-	StakingTokenPriceWithDecimals string  `json:"-"` // 质押的代币价格(包含精度)
-	StakingTokenPriceDecimals     int64   `json:"-"` // 质押的代币价格精度
-	RewardTokenPriceWithDecimals  string  `json:"-"` // 奖励的代币价格(包含精度)
-	RewardTokenPriceDecimals      int64   `json:"-"` // 奖励的代币价格精度
-	Claimed                       string  `json:"-"` // 用户已领取的奖励代币数量
+	StakingTokenPriceWithDecimals string  `json:"stakingTokenPriceWithDecimals"` // 质押的代币价格(包含精度)
+	StakingTokenPriceDecimals     int64   `json:"stakingTokenPriceDecimals"`     // 质押的代币价格精度
+	RewardTokenPriceWithDecimals  string  `json:"rewardTokenPriceWithDecimals"`  // 奖励的代币价格(包含精度)
+	RewardTokenPriceDecimals      int64   `json:"rewardTokenPriceDecimals"`      // 奖励的代币价格精度
+	Claimed                       string  `json:"claimed"`                       // 用户已领取的奖励代币数量
 }
 
 type XpoolPoolStatsRequest struct {
