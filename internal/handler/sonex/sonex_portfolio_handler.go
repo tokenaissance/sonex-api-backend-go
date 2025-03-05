@@ -193,6 +193,11 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 				lpValueAtDayStart[tokenId] = valueBeforeDayStart
 				lpCurrentValue[tokenId] = currentValue
+
+				// count in total position assets before today begin
+				previousDayTotalAssets += valueBeforeDayStart
+				// count in total position assets now.
+				currentTotalAssets += currentValue
 			}
 
 			// count in total position & liquidity claimable fees
@@ -217,18 +222,6 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				portfolioStats.LiquidityPosition += position.Position
 				liquidityClaimableFees += position.ClaimableFees
 				totalFeeRevenue += position.PNL
-
-				txAt, err := time.Parse(time.RFC3339, position.TxAt)
-				if err != nil {
-					logx.Errorf("[SonexPortfolioHandler]: time.Parse error: %s, chainId: %d, address: %s", err.Error(), req.ChainId, req.Address)
-					continue
-				}
-				// count in total position assets before today begin
-				if txAt.UTC().Before(todayBegin) {
-					previousDayTotalAssets += lpValueAtDayStart[position.TokenID]
-				}
-				// count in total position assets now.
-				currentTotalAssets += lpCurrentValue[position.TokenID]
 			}
 		}
 
