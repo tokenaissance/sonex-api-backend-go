@@ -250,7 +250,7 @@ func checkUser(userAddress string) error {
 	}
 	return nil
 }
-func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
+func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
 
 	ret := &types.DashboardIncentiveWithStakedUsd{}
 	var err error
@@ -282,9 +282,20 @@ func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*
 		go func(record *repository.EventFarmIncentiveCreatedWithExtra) {
 			defer wg.Done()
 
+			rewardToken, err := global.GetToken(chainId, incincentiveCreatedRecordItem.ExtraRewardToken)
+			if err != nil {
+				logx.Errorf("GetToken ERR:%v ", err)
+				return
+			}
+
 			unclaimedTotalRewards, err := getRewardsAmount(farmConf.Staker, userAddress, record.EventIncentiveId, *chainConf)
 			if err != nil {
 				logx.Errorf("getRewardsAmount ERR:%v ", err)
+				return
+			}
+			rewardTokenAmount, err := sonex.NewTokenAmount(unclaimedTotalRewards.String(), int(rewardToken.Decimals))
+			if err != nil {
+				logx.Errorf("NewTokenAmount ERR:%v ", err)
 				return
 			}
 
@@ -305,6 +316,13 @@ func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*
 			//
 			revenueBigFloat := new(big.Float).Add(unclaimedFeesUSD, claimedAmountFeeUsd)
 			revenueString, _ := revenueBigFloat.Float64()
+
+			revenueAmountBigInt := new(big.Int).Add(unclaimedTotalRewards, totalClaimedAmount)
+			revenueAmount, err := sonex.NewTokenAmount(revenueAmountBigInt.String(), int(rewardToken.Decimals))
+			if err != nil {
+				logx.Errorf("NewTokenAmount ERR:%v ", err)
+				return
+			}
 
 			TotalFeeRevenue = new(big.Float).Add(TotalFeeRevenue, revenueBigFloat)
 			// 获取质押的数量
@@ -328,12 +346,15 @@ func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*
 				Token1Address:                token1Address,
 				Token1Symbol:                 token1Symbol,
 				Token1Logo:                   token1Logo,
+				RewardTokenLogo:              rewardToken.Logo,
 				Staked:                       stakedNum,
 				StakedUsd:                    lpBalance.String(),
 				TotalClaimableFeesUSD:        unclaimedFeesUSD.String(),
 				TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
+				TotalClaimableFeesAmount:     rewardTokenAmount.AmountWithoutDecimals(),
 				RevenueString:                claimedAmountFeeUsd.String(),
 				RevenueFloat64:               revenueString,
+				RevenueAmount:                revenueAmount.AmountWithoutDecimals(),
 			}
 			results <- dataResult
 		}(&incincentiveCreatedRecordItem)

@@ -8,4 +8,5 @@ type SonexConfig struct {
 	Quoter          string `json:",optional"`
 	SwapRouter      string `json:",optional"`
 	XToken          string `json:","`
+	XTokenLogo      string `json:",optional"`
 }

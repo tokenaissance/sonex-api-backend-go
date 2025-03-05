@@ -679,6 +679,33 @@
         ]
       }
     },
+    "/sonex/intractswap": {
+      "get": {
+        "operationId": "SonexIntractswapHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/IntractSwapResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "sonex"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/sonex/pools": {
       "get": {
         "operationId": "SonexPoolListHandler",
@@ -940,34 +967,53 @@
             "format": "int64"
           },
           {
-            "name": "liquiditySelected",
+            "name": "x-time-zone",
             "in": "query",
             "required": true,
-            "type": "boolean",
-            "format": "boolean",
-            "default": "false"
+            "type": "string"
           },
           {
-            "name": "farmSelected",
+            "name": "portfolioType",
             "in": "query",
             "required": true,
-            "type": "boolean",
-            "format": "boolean",
-            "default": "false"
-          },
-          {
-            "name": "xpoolSelected",
-            "in": "query",
-            "required": true,
-            "type": "boolean",
-            "format": "boolean",
-            "default": "false"
+            "type": "string",
+            "enum": [
+              "liquidity",
+              "farm",
+              "xpool"
+            ],
+            "default": "liquidity"
           },
           {
             "name": "address",
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "orderBy",
+            "description": " 排序字段",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "balance",
+              "revenue",
+              "stakedlp",
+              "apr",
+              "staked"
+            ]
+          },
+          {
+            "name": "orderDirection",
+            "description": " 排序方向",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "desc",
+              "asc"
+            ]
           },
           {
             "name": "pageSize",
@@ -1780,6 +1826,10 @@
           "type": "string",
           "description": " logo"
         },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " reward token logo"
+        },
         "staked": {
           "type": "integer",
           "format": "int64",
@@ -1798,6 +1848,10 @@
           "format": "double",
           "description": " 用户未领取的手续费的价值"
         },
+        "totalClaimableFeesAmount": {
+          "type": "string",
+          "description": " 用户未领取的手续的reward token 数量(去掉精度)"
+        },
         "revenueString": {
           "type": "string",
           "description": " 用户已经领取的手续的价值+用户未领取的手续费的价值"
@@ -1806,6 +1860,10 @@
           "type": "number",
           "format": "double",
           "description": " 用户已经领取的手续的价值++用户未领取的手续费的价值"
+        },
+        "revenueAmount": {
+          "type": "string",
+          "description": " 用户已经领取的手续的reward token 数量(去掉精度)"
         }
       },
       "title": "DashboardIncentiveInfo",
@@ -1819,12 +1877,15 @@
         "token1Address",
         "token1Symbol",
         "token1Logo",
+        "rewardTokenLogo",
         "staked",
         "StakedUsd",
         "totalClaimableFeesUsd",
         "totalClaimableFeesUSDFloat64",
+        "totalClaimableFeesAmount",
         "revenueString",
-        "revenueFloat64"
+        "revenueFloat64",
+        "revenueAmount"
       ]
     },
     "DashboardIncentiveWithStakedUsd": {
@@ -2640,6 +2701,31 @@
         "isPlayedOrNot"
       ]
     },
+    "IntractAddressRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      },
+      "title": "IntractAddressRequest",
+      "required": [
+        "address"
+      ]
+    },
+    "IntractSwapResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "IntractSwapResponse",
+      "required": [
+        "result"
+      ]
+    },
     "Invested": {
       "type": "object",
       "properties": {
@@ -3405,6 +3491,10 @@
           "type": "string",
           "description": " token0 代币合约地址"
         },
+        "token0Logo": {
+          "type": "string",
+          "description": " token0 logo"
+        },
         "token1Symbol": {
           "type": "string",
           "description": " token1 代币符号"
@@ -3412,6 +3502,14 @@
         "token1Address": {
           "type": "string",
           "description": " token1 代币合约地址"
+        },
+        "token1Logo": {
+          "type": "string",
+          "description": " token1 logo"
+        },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " reward token logo"
         },
         "positionValue": {
           "type": "string",
@@ -3421,9 +3519,22 @@
           "type": "string",
           "description": " 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值"
         },
+        "feeRevenueAmount": {
+          "type": "string",
+          "description": " 用户提取的质押奖励代币数量+用户未提取的质押奖励代币数量"
+        },
         "earned": {
           "type": "string",
           "description": " 用户未提取的质押奖励美元价值"
+        },
+        "earnedAmount": {
+          "type": "string",
+          "description": " 用户未提取的质押奖励代币数量"
+        },
+        "stakedLPNum": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 质押的LP的个数"
         },
         "positionValueFloat64": {
           "type": "number",
@@ -3437,100 +3548,18 @@
         "feeRatio",
         "token0Symbol",
         "token0Address",
+        "token0Logo",
         "token1Symbol",
         "token1Address",
+        "token1Logo",
+        "rewardTokenLogo",
         "positionValue",
         "feeRevenue",
+        "feeRevenueAmount",
         "earned",
+        "earnedAmount",
+        "stakedLPNum",
         "-"
-      ]
-    },
-    "PortfolioFarmFrame": {
-      "type": "object",
-      "properties": {
-        "position": {
-          "type": "number",
-          "format": "double",
-          "description": " farmed liquidity position 净值"
-        },
-        "token0Name": {
-          "type": "string",
-          "description": " token0 代币名称"
-        },
-        "token0Symbol": {
-          "type": "string",
-          "description": " token0 代币符号"
-        },
-        "token0Address": {
-          "type": "string",
-          "description": " token0 代币合约地址"
-        },
-        "token1Name": {
-          "type": "string",
-          "description": " token1 代币名称"
-        },
-        "token1Symbol": {
-          "type": "string",
-          "description": " token1 代币符号"
-        },
-        "token1Address": {
-          "type": "string",
-          "description": " token1 代币合约地址"
-        }
-      },
-      "title": "PortfolioFarmFrame",
-      "required": [
-        "position",
-        "token0Name",
-        "token0Symbol",
-        "token0Address",
-        "token1Name",
-        "token1Symbol",
-        "token1Address"
-      ]
-    },
-    "PortfolioLiquidityFrame": {
-      "type": "object",
-      "properties": {
-        "position": {
-          "type": "number",
-          "format": "double",
-          "description": " liquidity position 净值"
-        },
-        "token0Name": {
-          "type": "string",
-          "description": " token0 代币名称"
-        },
-        "token0Symbol": {
-          "type": "string",
-          "description": " token0 代币符号"
-        },
-        "token0Address": {
-          "type": "string",
-          "description": " token0 代币合约地址"
-        },
-        "token1Name": {
-          "type": "string",
-          "description": " token1 代币名称"
-        },
-        "token1Symbol": {
-          "type": "string",
-          "description": " token1 代币符号"
-        },
-        "token1Address": {
-          "type": "string",
-          "description": " token1 代币合约地址"
-        }
-      },
-      "title": "PortfolioLiquidityFrame",
-      "required": [
-        "position",
-        "token0Name",
-        "token0Symbol",
-        "token0Address",
-        "token1Name",
-        "token1Symbol",
-        "token1Address"
       ]
     },
     "PortfolioPosition": {
@@ -3571,23 +3600,36 @@
     "PortfolioRequest": {
       "type": "object",
       "properties": {
-        "liquiditySelected": {
-          "type": "boolean",
-          "format": "boolean",
-          "default": "false"
-        },
-        "farmSelected": {
-          "type": "boolean",
-          "format": "boolean",
-          "default": "false"
-        },
-        "xpoolSelected": {
-          "type": "boolean",
-          "format": "boolean",
-          "default": "false"
+        "portfolioType": {
+          "type": "string",
+          "enum": [
+            "liquidity",
+            "farm",
+            "xpool"
+          ],
+          "default": "liquidity"
         },
         "address": {
           "type": "string"
+        },
+        "orderBy": {
+          "type": "string",
+          "enum": [
+            "balance",
+            "revenue",
+            "stakedlp",
+            "apr",
+            "staked"
+          ],
+          "description": " 排序字段"
+        },
+        "orderDirection": {
+          "type": "string",
+          "enum": [
+            "desc",
+            "asc"
+          ],
+          "description": " 排序方向"
         },
         "pageSize": {
           "type": "integer",
@@ -3602,9 +3644,7 @@
       },
       "title": "PortfolioRequest",
       "required": [
-        "liquiditySelected",
-        "farmSelected",
-        "xpoolSelected",
+        "portfolioType",
         "address"
       ]
     },
@@ -3625,25 +3665,13 @@
         "meta": {
           "$ref": "#/definitions/PageResponse",
           "description": " pagination meta"
-        },
-        "totalPosition": {
-          "type": "number",
-          "format": "double",
-          "description": " 所有资产净值"
-        },
-        "claimableFees": {
-          "type": "number",
-          "format": "double",
-          "description": " 所有可提资产净值"
         }
       },
       "title": "PortfolioResponse",
       "required": [
         "stats",
         "positions",
-        "meta",
-        "totalPosition",
-        "claimableFees"
+        "meta"
       ]
     },
     "PortfolioStats": {
@@ -3663,6 +3691,11 @@
           "format": "double",
           "description": " 所有资产净值相比前一天的变化量（绝对值）"
         },
+        "earns": {
+          "type": "number",
+          "format": "double",
+          "description": " 所有可提资产净值 + 所有已提资产净值"
+        },
         "claimableFees": {
           "type": "number",
           "format": "double",
@@ -3673,36 +3706,15 @@
           "format": "double",
           "description": " liquidity position 净值总和"
         },
-        "liquidityFrame": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PortfolioLiquidityFrame"
-          },
-          "description": " liquidity position 的饼图 frame 数据"
-        },
         "totalFarmStaked": {
           "type": "number",
           "format": "double",
           "description": " farm pool 净值总和"
         },
-        "farmFrame": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PortfolioFarmFrame"
-          },
-          "description": " farm pool 的饼图 frame 数据"
-        },
         "totalXpoolStaked": {
           "type": "number",
           "format": "double",
           "description": " xpool stake 净值总和"
-        },
-        "xpoolFrame": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PortfolioXpoolFrame"
-          },
-          "description": " xpool 的饼图 frame 数据"
         }
       },
       "title": "PortfolioStats",
@@ -3710,6 +3722,7 @@
         "totalAssets",
         "totalAssetsRate",
         "totalAssetsChange",
+        "earns",
         "claimableFees",
         "liquidityPosition",
         "totalFarmStaked",
@@ -3735,6 +3748,14 @@
           "type": "string",
           "description": " 质押的代币合约地址"
         },
+        "stakingTokenLogo": {
+          "type": "string",
+          "description": " 质押的代币logo"
+        },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " 奖励的代币logo"
+        },
         "apr": {
           "type": "string",
           "description": " 年化收益率"
@@ -3747,9 +3768,17 @@
           "type": "string",
           "description": " 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值"
         },
+        "feeRevenueAmount": {
+          "type": "string",
+          "description": " 用户提取的质押奖励代币数量+用户未提取的质押奖励代币数量"
+        },
         "earned": {
           "type": "string",
           "description": " 用户未提取的质押奖励美元价值"
+        },
+        "earnedAmount": {
+          "type": "string",
+          "description": " 用户未提取的质押奖励代币数量"
         },
         "status": {
           "type": "string",
@@ -3759,6 +3788,11 @@
           "type": "number",
           "format": "double",
           "description": " 用户已经质押的美元价值 用于排序"
+        },
+        "aPRFlot64": {
+          "type": "number",
+          "format": "double",
+          "description": " 年化收益率 float64 辅助排序用"
         }
       },
       "title": "PortfolioXpool",
@@ -3767,41 +3801,16 @@
         "stakingTokenName",
         "stakingTokenSymbol",
         "stakingTokenAddress",
+        "stakingTokenLogo",
+        "rewardTokenLogo",
         "apr",
         "staked",
         "feeRevenue",
+        "feeRevenueAmount",
         "earned",
+        "earnedAmount",
         "status",
         "-"
-      ]
-    },
-    "PortfolioXpoolFrame": {
-      "type": "object",
-      "properties": {
-        "staked": {
-          "type": "number",
-          "format": "double",
-          "description": " 用户已经质押的美元价值"
-        },
-        "stakingTokenName": {
-          "type": "string",
-          "description": " 质押的代币名称"
-        },
-        "stakingTokenSymbol": {
-          "type": "string",
-          "description": " 质押的代币符号"
-        },
-        "stakingTokenAddress": {
-          "type": "string",
-          "description": " 质押的代币合约地址"
-        }
-      },
-      "title": "PortfolioXpoolFrame",
-      "required": [
-        "staked",
-        "stakingTokenName",
-        "stakingTokenSymbol",
-        "stakingTokenAddress"
       ]
     },
     "Position": {
@@ -5660,6 +5669,9 @@
           "format": "int64",
           "description": " 质押的代币合约精度"
         },
+        "stakingTokenLogo": {
+          "type": "string"
+        },
         "stakingTokenPrice": {
           "type": "string",
           "description": " 质押的代币价格"
@@ -5680,6 +5692,10 @@
           "type": "integer",
           "format": "int64",
           "description": " 奖励的代币合约精度"
+        },
+        "rewardTokenLogo": {
+          "type": "string",
+          "description": " 奖励的代币logo"
         },
         "rewardTokenPrice": {
           "type": "string",
@@ -5710,7 +5726,7 @@
           "type": "string",
           "description": " 年化收益率"
         },
-        "aPRFloat": {
+        "aprFloat": {
           "type": "number",
           "format": "double",
           "description": " 年化收益率，辅助排序用"
@@ -5767,11 +5783,13 @@
         "stakingTokenSymbol",
         "stakingTokenAddress",
         "stakingTokenDecimals",
+        "stakingTokenLogo",
         "stakingTokenPrice",
         "rewardTokenName",
         "rewardTokenSymbol",
         "rewardTokenAddress",
         "rewardTokenDecimals",
+        "rewardTokenLogo",
         "rewardTokenPrice",
         "poolAddress",
         "rewardPerBlock",
@@ -5779,13 +5797,18 @@
         "blockTime",
         "tvl",
         "apr",
-        "-",
+        "aprFloat",
         "staked",
         "earned",
         "joinNum",
         "status",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "stakingTokenPriceWithDecimals",
+        "stakingTokenPriceDecimals",
+        "rewardTokenPriceWithDecimals",
+        "rewardTokenPriceDecimals",
+        "claimed"
       ]
     },
     "XpoolPoolStatsRequest": {

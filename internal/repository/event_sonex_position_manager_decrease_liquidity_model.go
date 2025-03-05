@@ -73,7 +73,7 @@ func (m *customEventSonexPositionManagerDecreaseLiquidityModel) GetDecreaseLiqui
 	query := fmt.Sprintf(`
 		SELECT *
 		FROM %s
-		WHERE chain_id = $1 AND to_ = $2
+		WHERE chain_id = $1 AND from_ = $2
 	`, m.table)
 
 	err := m.conn.QueryRowsCtx(ctx, &events, query, chainId, address)
