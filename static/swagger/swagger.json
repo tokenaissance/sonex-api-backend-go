@@ -3665,25 +3665,13 @@
         "meta": {
           "$ref": "#/definitions/PageResponse",
           "description": " pagination meta"
-        },
-        "totalPosition": {
-          "type": "number",
-          "format": "double",
-          "description": " 所有资产净值"
-        },
-        "claimableFees": {
-          "type": "number",
-          "format": "double",
-          "description": " 所有可提资产净值"
         }
       },
       "title": "PortfolioResponse",
       "required": [
         "stats",
         "positions",
-        "meta",
-        "totalPosition",
-        "claimableFees"
+        "meta"
       ]
     },
     "PortfolioStats": {
