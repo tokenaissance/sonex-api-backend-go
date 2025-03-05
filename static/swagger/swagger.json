@@ -2713,7 +2713,7 @@
         "address"
       ]
     },
-    "IntractSwapResponse": {
+    "IntractDataStruct": {
       "type": "object",
       "properties": {
         "result": {
@@ -2721,9 +2721,42 @@
           "format": "boolean"
         }
       },
-      "title": "IntractSwapResponse",
+      "title": "IntractDataStruct",
       "required": [
         "result"
+      ]
+    },
+    "IntractErrorStruct": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "IntractErrorStruct",
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "IntractSwapResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/IntractErrorStruct"
+        },
+        "data": {
+          "$ref": "#/definitions/IntractDataStruct"
+        }
+      },
+      "title": "IntractSwapResponse",
+      "required": [
+        "error",
+        "data"
       ]
     },
     "Invested": {
