@@ -5726,7 +5726,7 @@
           "type": "string",
           "description": " 年化收益率"
         },
-        "aPRFloat": {
+        "aprFloat": {
           "type": "number",
           "format": "double",
           "description": " 年化收益率，辅助排序用"
@@ -5797,13 +5797,18 @@
         "blockTime",
         "tvl",
         "apr",
-        "-",
+        "aprFloat",
         "staked",
         "earned",
         "joinNum",
         "status",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "stakingTokenPriceWithDecimals",
+        "stakingTokenPriceDecimals",
+        "rewardTokenPriceWithDecimals",
+        "rewardTokenPriceDecimals",
+        "claimed"
       ]
     },
     "XpoolPoolStatsRequest": {
