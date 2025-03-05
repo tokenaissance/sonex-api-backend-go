@@ -133,7 +133,10 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 用户所在时区的当日 00:00
 		todayBegin := getUserTimeZoneDayStart(timeZone)
+		// 统计三种资产在当地时间 00:00 时的净值
 		var previousDayTotalAssets float64
+		// 统计三种资产的当前净值
+		var currentTotalAssets float64
 		// 每个 LP position 在当地时间 00:00 时的净值
 		lpValueAtDayStart := make(map[int64]float64)
 		// 每个 LP position 的当前净值
@@ -224,6 +227,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				if txAt.UTC().Before(todayBegin) {
 					previousDayTotalAssets += lpValueAtDayStart[position.TokenID]
 				}
+				// count in total position assets now.
+				currentTotalAssets += lpCurrentValue[position.TokenID]
 			}
 		}
 
@@ -242,6 +247,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						if txAt.Before(todayBegin) {
 							previousDayTotalAssets += event.DepositedEvent.EventValue
 						}
+						// count in total xpool deposit now.
+						currentTotalAssets += event.DepositedEvent.EventValue
 					}
 					// 提取事件
 					if event.XpoolUserEventType == xpool.XpoolUserEventTypeWithdrawed {
@@ -251,6 +258,8 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 						if txAt.Before(todayBegin) {
 							previousDayTotalAssets -= event.WithdrawedEvent.EventValue
 						}
+						// count in total xpool withdraw now.
+						currentTotalAssets -= event.WithdrawedEvent.EventValue
 					}
 				}
 			}
@@ -340,6 +349,11 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 								previousDayTotalAssets += lpValue
 							}
 						}
+
+						// 无论什么时候的质押资产，都计入当前总资产
+						if lpValue, exists := lpCurrentValue[positionId]; exists {
+							currentTotalAssets += lpValue
+						}
 					} else if event.FarmIncentivesOperationEventType == farm.FarmIncentivesOperationEventTypeUnstaked {
 						positionId = event.UnstakedEvent.EventTokenId
 						if event.UnstakedEvent.TxAt.Before(todayBegin) {
@@ -347,6 +361,11 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							if lpValue, exists := lpValueAtDayStart[positionId]; exists {
 								previousDayTotalAssets -= lpValue
 							}
+						}
+
+						// 无论什么时候的解质押资产，都计入当前总资产
+						if lpValue, exists := lpCurrentValue[positionId]; exists {
+							currentTotalAssets -= lpValue
 						}
 					}
 				}
@@ -378,7 +397,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							PositionValue:        incentive.StakedUsd,
 							RewardTokenLogo:      incentive.RewardTokenLogo,
 							PositionValueFloat64: stakedUsdFloat64,
-							FeeRevenue:           fmt.Sprintf("%.2f", feeRevenue),
+							FeeRevenue:           fmt.Sprintf("%.5f", feeRevenue),
 							FeeRevenueAmount:     incentive.RevenueAmount,
 							Earned:               incentive.TotalClaimableFeesUSD,
 							EarnedAmount:         incentive.TotalClaimableFeesAmount,
@@ -395,21 +414,21 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		// 计算总资产和可提资产
-		portfolioStats.TotalAssets = portfolioStats.LiquidityPosition + portfolioStats.TotalXpoolStaked + portfolioStats.TotalFarmStaked
+		portfolioStats.TotalAssets = currentTotalAssets
 		// 尚未被领取的收益
 		portfolioStats.ClaimableFees = liquidityClaimableFees + farmEarns + xpoolEarns
 		// 已经被领取的收益 + 尚未被领取的收益
 		portfolioStats.Earns = totalFeeRevenue
 		// Calculate total assets rate, handling division by zero
 		if previousDayTotalAssets > 0 {
-			portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (portfolioStats.TotalAssets/previousDayTotalAssets-1.0)*100)
-		} else if (previousDayTotalAssets == 0) && (portfolioStats.TotalAssets > 0) {
+			portfolioStats.TotalAssetsRate = fmt.Sprintf("%.2f%%", (currentTotalAssets/previousDayTotalAssets-1.0)*100)
+		} else if (previousDayTotalAssets == 0) && (currentTotalAssets > 0) {
 			portfolioStats.TotalAssetsRate = "100.00%"
 		} else {
 			portfolioStats.TotalAssetsRate = "0.00%"
 		}
 		// Calculate total assets change
-		portfolioStats.TotalAssetsChange = math.Abs(portfolioStats.TotalAssets - previousDayTotalAssets)
+		portfolioStats.TotalAssetsChange = math.Abs(currentTotalAssets - previousDayTotalAssets)
 		response.Stats = portfolioStats
 
 		// sort portfolio positions
@@ -424,10 +443,6 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			PageIndex: pageIndex,
 			Total:     int64(total),
 		}
-
-		// hotfix to compatible with online version
-		response.TotalPosition = portfolioStats.TotalAssets
-		response.ClaimableFees = portfolioStats.ClaimableFees
 
 		httpx.OkJsonCtx(r.Context(), w, response)
 	}
