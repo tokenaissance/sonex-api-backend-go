@@ -97,6 +97,8 @@ func (l *XTokenRecordsLogic) XTokenRecords(req *types.XTokenRecordsRequest) (res
 	options.User = req.User
 
 	// Page
+	orderBy := "DESC"
+	options.OrderBy = &orderBy
 	if req.PageSize == nil || *req.PageSize < 1 {
 		var defaultSize int64 = 20
 		req.PageSize = &defaultSize
