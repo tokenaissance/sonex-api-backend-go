@@ -397,7 +397,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							PositionValue:        incentive.StakedUsd,
 							RewardTokenLogo:      incentive.RewardTokenLogo,
 							PositionValueFloat64: stakedUsdFloat64,
-							FeeRevenue:           fmt.Sprintf("%.2f", feeRevenue),
+							FeeRevenue:           fmt.Sprintf("%.5f", feeRevenue),
 							FeeRevenueAmount:     incentive.RevenueAmount,
 							Earned:               incentive.TotalClaimableFeesUSD,
 							EarnedAmount:         incentive.TotalClaimableFeesAmount,
