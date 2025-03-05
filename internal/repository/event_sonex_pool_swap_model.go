@@ -68,6 +68,9 @@ type (
 		// 通过poolAddress,只计算正常的swap 交易
 		// 也就是说，如果 tx_hash 在跨池子中，计算过，那么需要排除掉那个tx_hash ,不计算
 		SummarizePoolVolumesUsdByPoolAddress(ctx context.Context, chainId int64, poolAddress string) (*PoolVolumeUsd, error)
+
+		// count by sender and time range
+		CountBySenderAndTimeRange(ctx context.Context, chainId int64, sender string, from time.Time, to time.Time) (uint32, error)
 	}
 
 	customEventSonexPoolSwapModel struct {
@@ -1656,4 +1659,17 @@ FROM
 	}
 
 	return poolVolumesUsd, nil
+}
+
+// count by sender and time range
+func (m *customEventSonexPoolSwapModel) CountBySenderAndTimeRange(ctx context.Context, chainId int64, sender string, from time.Time, to time.Time) (uint32, error) {
+	query := fmt.Sprintf("select count(*) from %s where chain_id = $1 and event_sender = $2 and tx_at >= $3 and tx_at < $4", m.table)
+	var count uint32
+	err := m.conn.QueryRowCtx(ctx, &count, query, chainId, sender, from, to)
+	switch err {
+	case nil:
+		return count, nil
+	default:
+		return 0, err
+	}
 }

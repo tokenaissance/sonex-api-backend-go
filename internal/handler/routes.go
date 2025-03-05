@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	acs "sonex_api_backend_go/internal/handler/acs"
+	badge "sonex_api_backend_go/internal/handler/badge"
 	farm "sonex_api_backend_go/internal/handler/farm"
 	pre_deposit "sonex_api_backend_go/internal/handler/pre_deposit"
 	sonex "sonex_api_backend_go/internal/handler/sonex"
@@ -42,6 +43,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 		},
 		rest.WithPrefix("/acs"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// Badge API for get summary of a user
+				Method:  http.MethodGet,
+				Path:    "/summary",
+				Handler: badge.BadgeSummaryHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/badge"),
 	)
 
 	server.AddRoutes(

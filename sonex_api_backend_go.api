@@ -5,6 +5,7 @@ import "./api/pre_deposit.api"
 import "./api/xpool.api"
 import "./api/farm.api"
 import "./api/acs.api"
+import "./api/badge.api"
 
 /*
 Global Module
