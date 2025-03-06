@@ -528,7 +528,7 @@ type FarmIncentivesOperationEvent struct {
 	UnstakedEvent                    *repository.EventFarmTokenUnstaked
 }
 
-func getRewardTokenLogo(tokenModel repository.TokenModel, configRewardTokenLogo string, chainId int64, rewardToken string) string {
+func getRewardTokenLogo(tokenModel repository.TokenModel, configRewardTokenLogo string, chainId int64, rewardToken string)  string {
 	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{rewardToken})
 	if err != nil {
 		logx.Errorf("QueryByChainIdAddress:%v ", err)

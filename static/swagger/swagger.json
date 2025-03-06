@@ -209,6 +209,55 @@
         ]
       }
     },
+    "/farm/pool/rewards": {
+      "get": {
+        "summary": "For air drop",
+        "operationId": "FarmRewardCalucateHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmRewardCalucateResponese"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "userAddress",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "incentiveId",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "farmAddress",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/farm/pool/roi": {
       "get": {
         "summary": "Farm pool roi",
@@ -2477,6 +2526,93 @@
         "endTime"
       ]
     },
+    "FarmRewardCalucateRequest": {
+      "type": "object",
+      "properties": {
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "farmAddress": {
+          "type": "string"
+        }
+      },
+      "title": "FarmRewardCalucateRequest",
+      "required": [
+        "userAddress",
+        "incentiveId",
+        "farmAddress"
+      ]
+    },
+    "FarmRewardCalucateResponese": {
+      "type": "object",
+      "properties": {
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "farmAddress": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "rewardTokenLogo": {
+          "type": "string"
+        },
+        "totalTokenAmount": {
+          "type": "string",
+          "description": " 对应的 tokenAmount"
+        },
+        "totalTokenAmountUsd": {
+          "type": "string",
+          "description": " 对应的USD"
+        },
+        "totalLiquidityUsd": {
+          "type": "string",
+          "description": " 自己所有曾经质押的LP的总的USD"
+        },
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StakedItem"
+          },
+          "description": " 曾经所有质押的LP的详情"
+        }
+      },
+      "title": "FarmRewardCalucateResponese",
+      "required": [
+        "incentiveId",
+        "userAddress",
+        "address",
+        "name",
+        "symbol",
+        "decimals",
+        "rewardTokenLogo",
+        "totalTokenAmount",
+        "totalTokenAmountUsd",
+        "totalLiquidityUsd",
+        "list"
+      ]
+    },
     "FarmStakeRequest": {
       "type": "object",
       "properties": {
@@ -4458,6 +4594,33 @@
         "token1Amount",
         "tokenUsd",
         "isNeedApproved"
+      ]
+    },
+    "StakedItem": {
+      "type": "object",
+      "properties": {
+        "positionId": {
+          "type": "integer",
+          "format": "int64",
+          "description": " position的tokenid"
+        },
+        "tokenUsd": {
+          "type": "string"
+        },
+        "liquidity": {
+          "type": "string"
+        },
+        "tokenAmount": {
+          "type": "string",
+          "description": " 计算出来的奖励,ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD"
+        }
+      },
+      "title": "StakedItem",
+      "required": [
+        "positionId",
+        "tokenUsd",
+        "liquidity",
+        "tokenAmount"
       ]
     },
     "SummaryRequest": {

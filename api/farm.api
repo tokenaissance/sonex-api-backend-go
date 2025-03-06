@@ -140,7 +140,6 @@ type FarmPoolRoiResponse {
 
 // harvest 
 // 显示多少可以收获的
-// harvest 
 type FarmPoolLiquidityRequest {
 	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
@@ -225,6 +224,40 @@ type UnstakePositionsInfoResponse_Data {
 	TokenUsd     string   `json:"tokenUsd"` 
 }
 
+
+// 计算 Rewards
+type FarmRewardCalucateRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`     // 用户地址
+	IncentiveId string `form:"incentiveId"`      // 质押池ID
+	FarmAddress string `form:"farmAddress"`
+}
+
+// 计算 Rewards
+type FarmRewardCalucateResponese {
+	IncentiveId  string `form:"incentiveId"`      // 质押池ID
+	UserAddress string `form:"userAddress"`                  // 用户地址
+	FarmAddress string `form:"farmAddress,optional"`
+	Address     string `json:"address"`
+	Name        string `json:"name"`
+	Symbol      string `json:"symbol"`
+	Decimals    int64  `json:"decimals"`
+	RewardTokenLogo  string `json:"rewardTokenLogo"`
+
+	TotalTokenAmount    string   `json:"totalTokenAmount"`  // 对应的 tokenAmount
+	TotalTokenAmountUsd    string   `json:"totalTokenAmountUsd"`  // 对应的USD
+	TotalLiquidityUsd    string   `json:"totalLiquidityUsd"`// 自己所有曾经质押的LP的总的USD 
+	List []StakedItem     `json:"list"` // 曾经所有质押的LP的详情
+}
+
+type StakedItem {
+    PositionId     int64  `json:"positionId"` // position的tokenid
+    TokenUsd       string `json:"tokenUsd"`
+	Liquidity   string `json:"liquidity"`
+	TokenAmount    string   `json:"tokenAmount"`  // 计算出来的奖励,ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
+}
+
+
 @server (
 	prefix: /farm
 	group:  farm
@@ -254,4 +287,8 @@ service sonex_api_backend_go {
 	@handler FarmPoolRoiHandler
 	get /pool/roi (FarmPoolRoiRequest) returns (FarmPoolRoiResponse)
 
+
+	@doc "For air drop"
+	@handler FarmRewardCalucateHandler
+	get /pool/rewards (FarmRewardCalucateRequest) returns (FarmRewardCalucateResponese)
 }

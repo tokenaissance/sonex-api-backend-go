@@ -23,6 +23,9 @@ type (
 		QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string, stakerAddress string) ([]EventFarmTokenStakedWithExtra, error)
 		QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64, stakerAddress string) ([]EventFarmTokenStakedWithExtra, error)
 
+		// 获取user所有质押的tokenid
+		QueryValidEverStakedByChainIdAndIncentiveId(ctx context.Context, chainId int64, incentiveId int64, userAddress, stakerAddress string) ([]CalucateRewardsModel, error)
+
 		// TODO DELETE
 		QueryValidByChainIdUser(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStaked, error)
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenStaked, error)
@@ -225,6 +228,41 @@ func (m *customEventFarmTokenStakedModel) QueryValidByChainIdUser(ctx context.Co
 	`, m.table, eventFarmIncentiveCreatedModel.table, eventFarmIncentiveCreatedModel.table, m.table, eventFarmTokenUnstakedModel.table)
 	var resp []EventFarmTokenStaked
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// airdrop
+type CalucateRewardsModel struct {
+	Id                  int64     `db:"id"`
+	CreatedAt           time.Time `db:"created_at"`
+	UpdatedAt           time.Time `db:"updated_at"`
+	ChainId             int64     `db:"chain_id"`
+	BlockNumber         int64     `db:"block_number"`
+	TxIndex             int64     `db:"tx_index"`
+	TxHash              string    `db:"tx_hash"`
+	TxAt                time.Time `db:"tx_at"`
+	From                string    `db:"from_"`
+	To                  string    `db:"to_"`
+	Value               string    `db:"value"`
+	EventUser           string    `db:"event_user"`
+	EventTokenId        int64     `db:"event_token_id"`
+	EventIncentiveId    int64     `db:"event_incentive_id"`
+	EventTotalLiquidity string    `db:"event_total_liquidity"`
+	EventPool           string    `db:"event_pool"`
+	EventRewardToken    string    `db:"event_reward_token"`
+	EventWeight         int64     `db:"event_weight"`
+}
+
+func (m *customEventFarmTokenStakedModel) QueryValidEverStakedByChainIdAndIncentiveId(ctx context.Context, chainId int64, incentiveId int64, userAddress, stakerAddress string) ([]CalucateRewardsModel, error) {
+	query := `
+SELECT  DISTINCT ON(event_token_id) S.* ,C.event_pool,C.event_reward_token,C.event_weight FROM  event_farm_token_staked S, event_farm_incentive_created C WHERE S.chain_id = $1 AND S.event_incentive_id = $2 AND S.from_ = $3 AND  S.to_ = $4 AND C.event_incentive_id = S.event_incentive_id AND c.to_= S.to_ ORDER BY event_token_id,tx_at DESC 
+
+				`
+	resp := []CalucateRewardsModel{}
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, incentiveId, userAddress, stakerAddress)
 	if err != nil {
 		return nil, err
 	}
