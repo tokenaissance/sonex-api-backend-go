@@ -407,7 +407,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		// 计算总资产和可提资产
-		portfolioStats.TotalAssets = currentTotalAssets
+		portfolioStats.TotalAssets = portfolioStats.LiquidityPosition + portfolioStats.TotalFarmStaked + portfolioStats.TotalXpoolStaked
 		// 尚未被领取的收益
 		portfolioStats.ClaimableFees = liquidityClaimableFees + farmEarns + xpoolEarns
 		// 已经被领取的收益 + 尚未被领取的收益
