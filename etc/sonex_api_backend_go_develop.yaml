@@ -76,7 +76,7 @@ PreDeposits:
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1946
-    Staker: 0xBaE0872462B2E0a426fd3293B44cd86DE5BF4c91
+    Staker: 0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6
     PointsHoldTimeLimits: 300
     PointsUSDLimits: 10
     Points: 5000
