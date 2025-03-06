@@ -69,6 +69,8 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 
+	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
+
 	// farmToAddress := l.svcCtx.Config.Farms[0].Staker
 
 	// farmToAddress_Hex := common.HexToAddress(farmToAddress)
@@ -86,7 +88,7 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
 
-	_, tokenIds, err := eventFarmTokenUnstakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), req.ChainId, req.UserAddress, int64(incentiveIdint))
+	_, tokenIds, err := eventFarmTokenUnstakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), req.ChainId, req.UserAddress, int64(incentiveIdint), farmConf.Staker)
 
 	if err != nil {
 		logx.Errorf(" FindByChainId:%v  ", err)
@@ -305,7 +307,7 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 				return
 			}
 
-			unclaimedFeesUSD, claimedAmountFeeUsd, err := getValueOfAmountTokenFordashboard(unclaimedTotalRewards, totalClaimedAmount, record.EventIncentiveId, chainId, chainConf, conn)
+			unclaimedFeesUSD, claimedAmountFeeUsd, err := getValueOfAmountTokenFordashboard(unclaimedTotalRewards, totalClaimedAmount, record.EventIncentiveId, chainId, chainConf, conn, farmConf.Staker)
 
 			if err != nil {
 				logx.Errorf("getValueOfAmountTokenFordashboard:%v ", err)
@@ -327,7 +329,7 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 			TotalFeeRevenue = new(big.Float).Add(TotalFeeRevenue, revenueBigFloat)
 			// 获取质押的数量
 			// 获取用户的  lpbalance
-			lpBalance, stakedNum, _, _, err := getStakedNum(conn, cacher, chainId, record.EventIncentiveId, userAddress)
+			lpBalance, stakedNum, _, _, err := getStakedNum(farmConf.Staker, conn, cacher, chainId, record.EventIncentiveId, userAddress)
 			if err != nil && err != sqlx.ErrNotFound {
 				return
 			}
@@ -412,11 +414,11 @@ func getToken0SymbolAndToken1(tokenModel repository.TokenModel, chainId int64, t
 }
 
 // 未领取的奖励,领取的奖励
-func getValueOfAmountTokenFordashboard(unclaimedTokenAmount, claimedTokenAmount *big.Int, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (*big.Float, *big.Float, error) {
+func getValueOfAmountTokenFordashboard(unclaimedTokenAmount, claimedTokenAmount *big.Int, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn, stakerAddress string) (*big.Float, *big.Float, error) {
 
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 
-	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId)
+	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId, stakerAddress)
 	switch err {
 	case nil:
 	case sqlx.ErrNotFound:

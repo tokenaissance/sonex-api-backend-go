@@ -698,9 +698,11 @@ func getFarmPools(ctx context.Context, svcCtx *svc.ServiceContext, req types.Por
 		incentivesChan <- farmIncentivesResult{incentives: incentives, err: err}
 	}()
 
+	farmConf := svcCtx.Config.GetFarmConfig(req.ChainId)
+
 	go func() {
 		// 用户质押&解质押事件
-		operationEvents, err := l.GetFarmIncentivesOperationEvents(req.ChainId, address)
+		operationEvents, err := l.GetFarmIncentivesOperationEvents(req.ChainId, address, farmConf.Staker)
 		operationEventsChan <- farmIncentivesOperationEventsResult{operationEvents: operationEvents, err: err}
 	}()
 
