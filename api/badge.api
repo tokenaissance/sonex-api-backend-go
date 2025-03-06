@@ -12,9 +12,11 @@ type BadgeSummaryRequest {
 
 // Response type of `/badge/summary`
 type BadgeSummaryResponse {
-	Milestones []*BadgeMilestone `json:"milestones"` // 3 个里程碑信息
-	GotPoints  int64            `json:"gotPoints"`   // 已获得的积分
-	GotNftId   int64            `json:"gotNftId"`    // 已获得的 NFT
+	Milestones       []*BadgeMilestone `json:"milestones"`       // 3 个里程碑信息
+	GotPoints        int64             `json:"gotPoints"`        // 已获得的积分
+	GotNftId         int64             `json:"gotNftId"`         // 已获得的 NFT
+	TotalSwaps       int64             `json:"totalSwaps"`       // 活动期间总的 swap 次数
+	TotalStakedValue int64             `json:"totalStakedValue"` // 活动期间总的质押价值
 }
 
 type BadgeMilestone {
