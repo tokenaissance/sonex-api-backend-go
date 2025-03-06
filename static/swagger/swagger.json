@@ -1765,19 +1765,13 @@
           "type": "boolean",
           "format": "boolean",
           "description": " 是否满足条件"
-        },
-        "got": {
-          "type": "boolean",
-          "format": "boolean",
-          "description": " 是否已获得积分奖励"
         }
       },
       "title": "BadgeMilestone",
       "required": [
         "swaps",
         "stakedValue",
-        "enough",
-        "got"
+        "enough"
       ]
     },
     "BadgeSummaryRequest": {
@@ -1812,13 +1806,25 @@
           "type": "integer",
           "format": "int64",
           "description": " 已获得的 NFT"
+        },
+        "totalSwaps": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 活动期间总的 swap 次数"
+        },
+        "totalStakedValue": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 活动期间总的质押价值"
         }
       },
       "title": "BadgeSummaryResponse",
       "required": [
         "milestones",
         "gotPoints",
-        "gotNftId"
+        "gotNftId",
+        "totalSwaps",
+        "totalStakedValue"
       ]
     },
     "ChainRequest": {
