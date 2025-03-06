@@ -1,18 +1,18 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : postgres
+ Source Server         : sonex-api-backend-go
  Source Server Type    : PostgreSQL
- Source Server Version : 160003 (160003)
- Source Host           : 10.0.0.150:5432
+ Source Server Version : 160006 (160006)
+ Source Host           : 10.1.84.8:5432
  Source Catalog        : sonex-api-backend-go
  Source Schema         : public
 
  Target Server Type    : PostgreSQL
- Target Server Version : 160003 (160003)
+ Target Server Version : 160006 (160006)
  File Encoding         : 65001
 
- Date: 18/02/2025 11:41:58
+ Date: 06/03/2025 21:22:12
 */
 
 
@@ -309,6 +309,7 @@ CREATE TABLE "public"."event_farm_user_rewards_updated" (
 -- ----------------------------
 CREATE UNIQUE INDEX "event_farm_incentive_created_chain_id_incentive_id" ON "public"."event_farm_incentive_created" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "to_" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
 CREATE UNIQUE INDEX "farm_incentive_created_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_incentive_created" USING btree (
@@ -327,6 +328,7 @@ ALTER TABLE "public"."event_farm_incentive_created" ADD CONSTRAINT "event_farm_i
 -- ----------------------------
 CREATE UNIQUE INDEX "event_farm_incentive_ended_index_chain_id_incentive_id" ON "public"."event_farm_incentive_ended" USING btree (
   "chain_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+  "to_" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "event_incentive_id" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
 CREATE UNIQUE INDEX "farm_incentive_ended_index_chain_id_tx_hash_tx_index" ON "public"."event_farm_incentive_ended" USING btree (
@@ -504,6 +506,13 @@ CREATE UNIQUE INDEX "farm_token_unstaked_index_chain_id_tx_hash_tx_index" ON "pu
   "tx_hash" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "tx_index" "pg_catalog"."int8_ops" ASC NULLS LAST
 );
+
+-- ----------------------------
+-- Triggers structure for table event_farm_token_unstaked
+-- ----------------------------
+CREATE TRIGGER "after_insert_event_farm_token_unstaked" AFTER INSERT ON "public"."event_farm_token_unstaked"
+FOR EACH ROW
+EXECUTE PROCEDURE "public"."delete_sonex_badge_staked_position"();
 
 -- ----------------------------
 -- Primary Key structure for table event_farm_token_unstaked
