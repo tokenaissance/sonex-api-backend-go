@@ -32,12 +32,14 @@ func (l *BadgeSummaryLogic) BadgeSummary(req *types.BadgeSummaryRequest) (resp *
 	if err != nil {
 		return resp, err
 	}
+	totalSwaps := swaps
 
 	stakedModel := repository.NewSonexBadgeStakedPositionModel(conn)
 	stakes, err := stakedModel.SumValueByUser(l.ctx, req.UserAddress)
 	if err != nil {
 		return resp, err
 	}
+	totalStakedValue := stakes
 
 	points, ntfId := int64(0), int64(0)
 	rewardsModel := repository.NewSonexBadgeRewardsModel(conn)
@@ -51,7 +53,7 @@ func (l *BadgeSummaryLogic) BadgeSummary(req *types.BadgeSummaryRequest) (resp *
 	}
 
 	milestones := make([]*types.BadgeMilestone, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		enough := true
 		s := repository.MilestoneCondsSwaps[i]
 		if swaps < s {
@@ -77,8 +79,10 @@ func (l *BadgeSummaryLogic) BadgeSummary(req *types.BadgeSummaryRequest) (resp *
 	}
 
 	return &types.BadgeSummaryResponse{
-		Milestones: milestones,
-		GotPoints:  points,
-		GotNftId:   ntfId,
+		Milestones:       milestones,
+		GotPoints:        points,
+		GotNftId:         ntfId,
+		TotalSwaps:       int64(totalSwaps),
+		TotalStakedValue: int64(totalStakedValue),
 	}, nil
 }
