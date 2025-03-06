@@ -44,3 +44,18 @@ func Test_EventFarmTokenStakedModelQueryValidByChainIdUserWithExtra(t *testing.T
 	}
 	_ = records
 }
+
+func Test_QueryValidEverStakedByChainIdAndIncentiveId(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
+	records, err := model.QueryValidEverStakedByChainIdAndIncentiveId(context.Background(), 1946, 4, "0x74A5Fe281F4d8B9fB3e96D97bBDE14949B5c44e2", "0xBaE0872462B2E0a426fd3293B44cd86DE5BF4c91")
+	if err != nil {
+		t.Error(err)
+	}
+	for i, v := range records {
+		logx.Infof("\n  i:%v v :%v \n  ", i, v)
+	}
+
+}

@@ -71,6 +71,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: farm.FarmPoolLiquidityHandler(serverCtx),
 			},
 			{
+				// For air drop
+				Method:  http.MethodGet,
+				Path:    "/pool/rewards",
+				Handler: farm.FarmRewardCalucateHandler(serverCtx),
+			},
+			{
 				// Farm pool roi
 				Method:  http.MethodGet,
 				Path:    "/pool/roi",
