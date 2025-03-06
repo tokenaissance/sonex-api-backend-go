@@ -512,11 +512,11 @@ type SonexTokenKlineResponse {
 
 type PortfolioRequest {
 	ChainRequest
-	// TimeZoneRequest
-	LiquiditySelected bool   `form:"liquiditySelected,default=false"`
-	FarmSelected      bool   `form:"farmSelected,default=false"`
-	XpoolSelected     bool   `form:"xpoolSelected,default=false"`
+	TimeZoneRequest
+	PortfolioType     string `form:"portfolioType,options=liquidity|farm|xpool,default=liquidity"`
 	Address           string `form:"address"`
+	OrderBy     	  string `form:"orderBy,optional,options=balance|revenue|stakedlp|apr|staked"` // 排序字段
+	OrderDirection 	  string `form:"orderDirection,optional,options=desc|asc"` // 排序方向
 	PageRequest
 }
 
@@ -526,26 +526,37 @@ type PortfolioXpool {
 	StakingTokenName    string `json:"stakingTokenName"`    // 质押的代币名称
 	StakingTokenSymbol  string `json:"stakingTokenSymbol"`  // 质押的代币符号
 	StakingTokenAddress string `json:"stakingTokenAddress"` // 质押的代币合约地址
+	StakingTokenLogo    string `json:"stakingTokenLogo"`    // 质押的代币logo
+	RewardTokenLogo     string `json:"rewardTokenLogo"`     // 奖励的代币logo
 	APR                 string `json:"apr"`                 // 年化收益率
 	Staked              string `json:"staked"`              // 用户已经质押的美元价值
 	FeeRevenue          string `json:"feeRevenue"`          // 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值
+	FeeRevenueAmount    string `json:"feeRevenueAmount"`    // 用户提取的质押奖励代币数量+用户未提取的质押奖励代币数量
 	Earned              string `json:"earned"`              // 用户未提取的质押奖励美元价值
+	EarnedAmount        string `json:"earnedAmount"`        // 用户未提取的质押奖励代币数量
 	Status              string `json:"status"`              // 运行状态{Staking}
 
-	StakedFloat64 float64 `json:"-"` // 用户已经质押的美元价值 用于排序
+	StakedFloat64 		float64 `json:"-"` // 用户已经质押的美元价值 用于排序
+	APRFlot64           float64 `json:"-"` // 年化收益率 float64 辅助排序用
 }
 
 // Farm Pool 在 portfolio 内的展示用数据结构
 type PortfolioFarm {
-	PoolAddress   string `json:"poolAddress"`   // v3 流动性池合约地址
-	FeeRatio      string `json:"feeRatio"`      // 池子手续费率
-	Token0Symbol  string `json:"token0Symbol"`  // token0 代币符号
-	Token0Address string `json:"token0Address"` // token0 代币合约地址
-	Token1Symbol  string `json:"token1Symbol"`  // token1 代币符号
-	Token1Address string `json:"token1Address"` // token1 代币合约地址
-	PositionValue string `json:"positionValue"` // pool position 美元净值
-	FeeRevenue    string `json:"feeRevenue"`    // 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值
-	Earned        string `json:"earned"`        // 用户未提取的质押奖励美元价值
+	PoolAddress   	string `json:"poolAddress"`   	  // v3 流动性池合约地址
+	FeeRatio      	string `json:"feeRatio"`      	  // 池子手续费率
+	Token0Symbol  	string `json:"token0Symbol"`  	  // token0 代币符号
+	Token0Address 	string `json:"token0Address"` 	  // token0 代币合约地址
+	Token0Logo 	  	string `json:"token0Logo"` 		  // token0 logo
+	Token1Symbol  	string `json:"token1Symbol"`  	  // token1 代币符号
+	Token1Address 	string `json:"token1Address"` 	  // token1 代币合约地址
+	Token1Logo	  	string `json:"token1Logo"` 		  // token1 logo
+	RewardTokenLogo string `json:"rewardTokenLogo"`	  // reward token logo
+	PositionValue 	string `json:"positionValue"` 	  // pool position 美元净值
+	FeeRevenue    	string `json:"feeRevenue"`    	  // 用户提取的质押奖励美元价值+用户未提取的质押奖励美元价值
+	FeeRevenueAmount string `json:"feeRevenueAmount"` // 用户提取的质押奖励代币数量+用户未提取的质押奖励代币数量
+	Earned        	string `json:"earned"`        	  // 用户未提取的质押奖励美元价值
+	EarnedAmount 	string `json:"earnedAmount"` 	  // 用户未提取的质押奖励代币数量
+	StakedLPNum	  	int64  `json:"stakedLPNum"` 	  // 质押的LP的个数
 
 	PositionValueFloat64 float64 `json:"-"` // pool position 美元净值 用于排序
 }
@@ -561,54 +572,22 @@ type PortfolioPosition {
 	LiquidityStakable bool `json:"liquidityStakeable,omitempty"` // liquidity position 是否支持 farm stake，当不支持或者type不为liquidity时，该值为false，且隐藏liquidityPosition
 }
 
-// liquidity position 的饼图 frame 数据结构
-type PortfolioLiquidityFrame {
-	Position      float64 `json:"position"`      // liquidity position 净值
-	Token0Name    string  `json:"token0Name"`    // token0 代币名称
-	Token0Symbol  string  `json:"token0Symbol"`  // token0 代币符号
-	Token0Address string  `json:"token0Address"` // token0 代币合约地址
-	Token1Name    string  `json:"token1Name"`    // token1 代币名称
-	Token1Symbol  string  `json:"token1Symbol"`  // token1 代币符号
-	Token1Address string  `json:"token1Address"` // token1 代币合约地址
-}
-
-// xpool 的饼图 frame 数据结构
-type PortfolioXpoolFrame {
-	Staked              float64 `json:"staked"`              // 用户已经质押的美元价值
-	StakingTokenName    string  `json:"stakingTokenName"`    // 质押的代币名称
-	StakingTokenSymbol  string  `json:"stakingTokenSymbol"`  // 质押的代币符号
-	StakingTokenAddress string  `json:"stakingTokenAddress"` // 质押的代币合约地址
-}
-
-// farm pool 的饼图 frame 数据结构
-type PortfolioFarmFrame {
-	Position      float64 `json:"position"`      // farmed liquidity position 净值
-	Token0Name    string  `json:"token0Name"`    // token0 代币名称
-	Token0Symbol  string  `json:"token0Symbol"`  // token0 代币符号
-	Token0Address string  `json:"token0Address"` // token0 代币合约地址
-	Token1Name    string  `json:"token1Name"`    // token1 代币名称
-	Token1Symbol  string  `json:"token1Symbol"`  // token1 代币符号
-	Token1Address string  `json:"token1Address"` // token1 代币合约地址
-}
-
 // portfolio 页面展示的 stats 数据结构
 type PortfolioStats {
 	TotalAssets       float64 `json:"totalAssets"`       // 所有资产净值
 	TotalAssetsRate   string  `json:"totalAssetsRate"`   // 所有资产净值相比前一天的变化率
 	TotalAssetsChange float64 `json:"totalAssetsChange"` // 所有资产净值相比前一天的变化量（绝对值）
+	Earns 			  float64 `json:"earns"`     	     // 所有可提资产净值 + 所有已提资产净值
 	ClaimableFees     float64 `json:"claimableFees"`     // 所有可提资产净值
 
 	// liquidity
-	LiquidityPosition float64                    `json:"liquidityPosition"`        // liquidity position 净值总和
-	LiquidityFrames   []*PortfolioLiquidityFrame `json:"liquidityFrame,omitempty"` // liquidity position 的饼图 frame 数据
+	LiquidityPosition float64             `json:"liquidityPosition"`        // liquidity position 净值总和
 
 	// farm
 	TotalFarmStaked float64               `json:"totalFarmStaked"`     // farm pool 净值总和
-	FarmFrames      []*PortfolioFarmFrame `json:"farmFrame,omitempty"` // farm pool 的饼图 frame 数据
 
 	// xpool
-	TotalXpoolStaked float64                `json:"totalXpoolStaked"`     // xpool stake 净值总和
-	XpoolFrames      []*PortfolioXpoolFrame `json:"xpoolFrame,omitempty"` // xpool 的饼图 frame 数据
+	TotalXpoolStaked float64              `json:"totalXpoolStaked"`     // xpool stake 净值总和
 }
 
 // portfolio 页面展示的 response 数据结构
@@ -616,10 +595,6 @@ type PortfolioResponse {
 	Stats     *PortfolioStats      `json:"stats"`     // portfolio 统计数据，所有资产净值，所有资产净值相比前一天的变化率，所有可提资产净值
 	Positions []*PortfolioPosition `json:"positions"` // portfolio position list, include liquidity, farm, xpool
 	Meta      PageResponse         `json:"meta"`      // pagination meta
-
-	// hotfix to compatible with online version
-	TotalPosition float64 `json:"totalPosition"` // 所有资产净值
-	ClaimableFees float64 `json:"claimableFees"` // 所有可提资产净值
 }
 
 type TokensInfoRequest {
@@ -657,6 +632,14 @@ type PoolInfoResponse {
 	Vol24hRatio      string              `json:"vol24hRatio"`
 	IsVol24hNegative bool                `json:"isVol24hNegative"`
 	Fee24h           float64             `json:"fee24h"`
+}
+
+type IntractAddressRequest {
+	Address string `form:"address"`
+}
+
+type IntractSwapResponse {
+	Result bool `json:"result"`
 }
 
 type GalxeAddressRequest {
@@ -800,6 +783,9 @@ service sonex_api_backend_go {
 
 	@handler SonexGalxeswapHandler
 	get /galxeswap (GalxeAddressRequest) returns (GalxeSwapResponse)
+
+	@handler SonexIntractswapHandler
+	get /intractswap (IntractAddressRequest) returns (IntractSwapResponse)
 
 	@handler SonexGalxeTgidHandler
 	get /galxetgid (GalxeTgIdRequest) returns (GalxeTgIdResponse)

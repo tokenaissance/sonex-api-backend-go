@@ -69,14 +69,14 @@ func (m *customEventXtokenTransferModel) PageQuery(ctx context.Context, opts Eve
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	if opts.OrderBy != nil {
-		query += fmt.Sprintf(" ORDER BY %s tx_at", *opts.OrderBy)
-	}
-
 	var total int64
 	err := m.conn.QueryRowCtx(ctx, &total, fmt.Sprintf("SELECT COUNT(*) %s", query), params...)
 	if err != nil {
 		return nil, 0, err
+	}
+
+	if opts.OrderBy != nil {
+		query += fmt.Sprintf(" ORDER BY tx_at %s", *opts.OrderBy)
 	}
 
 	if opts.PageSize != nil && opts.PageIndex != nil {

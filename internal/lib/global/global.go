@@ -102,7 +102,7 @@ func Initialize(config config.Config) error {
 			return fmt.Errorf("%s", "Miss sonex configure")
 		}
 
-		tokenCacher := cache.NewTokenCacher(chain, *sonexConf)
+		tokenCacher := cache.NewTokenCacher(chain, *sonexConf, c.PostgreSQL)
 		tokenCachersLock.Lock()
 		tokenCachers[chain.ChainId] = tokenCacher
 		tokenCachersLock.Unlock()
@@ -1113,7 +1113,7 @@ func BatchGetTotalSupplies(ctx context.Context, chainId int64, tokens []common.A
 }
 
 // CalucateOneTokenUsdInPool(balance0,oneItems.Price, oneItems.UsdDecimals,oneItems.TokenDecimals)
-func CalucateOneTokenUsdInPool(balance *big.Int, tokenPrice string, usdDecimals int64, tokenDecimals int64) (*big.Float,*big.Float)  {
+func CalucateOneTokenUsdInPool(balance *big.Int, tokenPrice string, usdDecimals int64, tokenDecimals int64) (*big.Float, *big.Float) {
 
 	price, _ := new(big.Int).SetString(tokenPrice, 10)
 	priceDecimal := int64(usdDecimals)
@@ -1130,5 +1130,5 @@ func CalucateOneTokenUsdInPool(balance *big.Int, tokenPrice string, usdDecimals 
 	priceQuopriceDecimal := new(big.Float).Quo(new(big.Float).SetInt(price), new(big.Float).SetFloat64(math.Pow10(int(priceDecimal))))
 	balanceQuoDecimal := new(big.Float).Quo(balanceFloat, new(big.Float).SetFloat64(math.Pow10(int(tokenDecimal))))
 	tokenVolume := new(big.Float).Mul(priceQuopriceDecimal, balanceQuoDecimal)
-	return tokenVolume,balanceQuoDecimal
+	return tokenVolume, balanceQuoDecimal
 }

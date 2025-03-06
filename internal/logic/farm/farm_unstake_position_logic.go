@@ -139,7 +139,7 @@ func returnUnstakedPositionByPoolAddress(chainRequest types.ChainRequest, config
 				}
 				respSonex, err := l2.SonexPosition(&reqPositions)
 				if err != nil {
-					logx.Errorf("SonexPosition %#v  Err:%v", reqPositions, err)
+					logx.Errorf("SonexPosition:%#v for tokenid %#v  Err:%v", reqPositions, v.TokenId.Int64(), err)
 					return &types.FarmUnstakeResponse{}, err
 				} else {
 					feeTier = int64(respSonex.Position.Pool.FeeTier)
@@ -250,7 +250,7 @@ func checkUser(userAddress string) error {
 	}
 	return nil
 }
-func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
+func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
 
 	ret := &types.DashboardIncentiveWithStakedUsd{}
 	var err error
@@ -282,9 +282,20 @@ func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*
 		go func(record *repository.EventFarmIncentiveCreatedWithExtra) {
 			defer wg.Done()
 
+			rewardToken, err := global.GetToken(chainId, incincentiveCreatedRecordItem.ExtraRewardToken)
+			if err != nil {
+				logx.Errorf("GetToken ERR:%v ", err)
+				return
+			}
+
 			unclaimedTotalRewards, err := getRewardsAmount(farmConf.Staker, userAddress, record.EventIncentiveId, *chainConf)
 			if err != nil {
 				logx.Errorf("getRewardsAmount ERR:%v ", err)
+				return
+			}
+			rewardTokenAmount, err := sonex.NewTokenAmount(unclaimedTotalRewards.String(), int(rewardToken.Decimals))
+			if err != nil {
+				logx.Errorf("NewTokenAmount ERR:%v ", err)
 				return
 			}
 
@@ -306,6 +317,13 @@ func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*
 			revenueBigFloat := new(big.Float).Add(unclaimedFeesUSD, claimedAmountFeeUsd)
 			revenueString, _ := revenueBigFloat.Float64()
 
+			revenueAmountBigInt := new(big.Int).Add(unclaimedTotalRewards, totalClaimedAmount)
+			revenueAmount, err := sonex.NewTokenAmount(revenueAmountBigInt.String(), int(rewardToken.Decimals))
+			if err != nil {
+				logx.Errorf("NewTokenAmount ERR:%v ", err)
+				return
+			}
+
 			TotalFeeRevenue = new(big.Float).Add(TotalFeeRevenue, revenueBigFloat)
 			// 获取质押的数量
 			// 获取用户的  lpbalance
@@ -316,21 +334,27 @@ func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*
 
 			totalStakedLp = new(big.Float).Add(totalStakedLp, lpBalance)
 
-			token0Symbol, token0Logo, token1Symbol, token1Logo := getToken0SymbolAndToken1(tokenModel, chainId, record.ExtraToken0, record.ExtraToken1)
+			token0Address, token0Symbol, token0Logo, token1Address, token1Symbol, token1Logo := getToken0SymbolAndToken1(tokenModel, chainId, record.ExtraToken0, record.ExtraToken1)
 
 			dataResult := &types.DashboardIncentiveInfo{
 				IncentiveId:                  record.EventIncentiveId,
+				PoolAddress:                  record.EventPool,
 				FeeRatio:                     record.ExtraFee,
+				Token0Address:                token0Address,
 				Token0Symbol:                 token0Symbol,
 				Token0Logo:                   token0Logo,
+				Token1Address:                token1Address,
 				Token1Symbol:                 token1Symbol,
 				Token1Logo:                   token1Logo,
+				RewardTokenLogo:              rewardToken.Logo,
 				Staked:                       stakedNum,
 				StakedUsd:                    lpBalance.String(),
 				TotalClaimableFeesUSD:        unclaimedFeesUSD.String(),
 				TotalClaimableFeesUSDFloat64: totalClaimableFeesUSDFloat64,
+				TotalClaimableFeesAmount:     rewardTokenAmount.AmountWithoutDecimals(),
 				RevenueString:                claimedAmountFeeUsd.String(),
 				RevenueFloat64:               revenueString,
+				RevenueAmount:                revenueAmount.AmountWithoutDecimals(),
 			}
 			results <- dataResult
 		}(&incincentiveCreatedRecordItem)
@@ -356,30 +380,34 @@ func GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*
 	return ret, err
 }
 
-func getToken0SymbolAndToken1(tokenModel repository.TokenModel, chainId int64, token0, token1 string) (string, string, string, string) {
+func getToken0SymbolAndToken1(tokenModel repository.TokenModel, chainId int64, token0, token1 string) (string, string, string, string, string, string) {
 	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{token0, token1})
 	if err != nil {
 		logx.Errorf("QueryByChainIdAddress:%v ", err)
-		return "", "", "", ""
+		return "", "", "", "", "", ""
 	}
 
+	token0Address := ""
 	token0Symbol := ""
 	token0Logo := ""
+	token1Address := ""
 	token1Symbol := ""
 	token1Logo := ""
 	for _, v := range tokensInfo {
 		if strings.EqualFold(v.Address, token0) {
+			token0Address = v.Address
 			token0Symbol = v.Symbol
 			token0Logo = v.Logo.String
 
 		}
 
 		if strings.EqualFold(v.Address, token1) {
+			token1Address = v.Address
 			token1Symbol = v.Symbol
 			token1Logo = v.Logo.String
 		}
 	}
-	return token0Symbol, token0Logo, token1Symbol, token1Logo
+	return token0Address, token0Symbol, token0Logo, token1Address, token1Symbol, token1Logo
 
 }
 

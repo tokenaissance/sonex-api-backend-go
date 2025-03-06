@@ -63,6 +63,8 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 		return &types.PoolInfoResponse{StatusCode: 500}, errors.New("internal error")
 	}
 
+	volRecordModel := repository.NewSonexPoolTvlRecordModel(conn)
+
 	chain := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	logx.Debug(req.ChainId, "---------------------------3")
 
@@ -145,6 +147,14 @@ func (l *SonexPoolInfoLogic) SonexPoolInfo(req *types.PoolInfoRequest) (resp *ty
 		logx.Infof("API: poolinfo SetVolume24HValue:%v ERR :%v", _poolAddress, err)
 	} else {
 		logx.Infof("API: poolinfo SetVolume24HValue:%v value:%v", _poolAddress, volume24HString)
+	}
+
+	//  更新 VOLUME，用于排序
+	_, err = volRecordModel.UpdateOrInsertTvlByPoolAddress(volume24HString, _poolAddressWithCheckSum, 6, req.ChainId, repository.ValueOfTypeVolume)
+	if err != nil {
+		logx.Errorf("err:%v", err)
+	} else {
+		logx.Debug("Volume:poolAddress:", _poolAddressWithCheckSum, " volume:", volume24HString)
 	}
 
 	fee24H, _ := GetTxhashFeesByExtraPool(conn, chain, cacher, req.ChainId, _poolAddressWithCheckSum, _eth_price_quo6decimals)

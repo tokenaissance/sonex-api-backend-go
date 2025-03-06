@@ -33,6 +33,10 @@ type (
 		QueryByChainIdTimeToken(ctx context.Context, chainId int64, from time.Time, to time.Time, tokens []string) ([]EventSonexPoolSwapWithPool, error)
 		QueryMergeWithExtra(ctx context.Context, opt *QueryMergePoolSwapWithExtraOptions) ([]EventSonexMergePoolSwapWithExtra, int64, error)
 		QueryByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexPoolSwapWithExtra, error)
+
+		// 查询是否有超过10U 交易，intract
+		QueryByWalletWithExtraMoreThanValueUsd(ctx context.Context, userAddress string, valueUsd int64) ([]*PoolVolumeUsd, error)
+
 		QueryMergeByWalletWithExtra(ctx context.Context, wallet string) ([]EventSonexMergePoolSwapWithExtra, error)
 		QueryByPoolWithExtra(ctx context.Context, pool string) ([]EventSonexPoolSwapWithExtra, error)
 		QueryMergeByPoolWithExtra(ctx context.Context, pool string) ([]EventSonexMergePoolSwapWithExtra, error)
@@ -296,7 +300,7 @@ FROM (
     SELECT
         t2.amount0,
         LAG(t2.amount0) OVER () AS last_amount0,
-        COALESCE(t2.amount0 / 1000000000000000000 * t4.price / 1000000, '0')  AS volumeusd, 
+        COALESCE(t2.amount0 / POWER(10,t5.decimals) * t4.price / 1000000, '0')  AS volumeusd, 
         EXTRACT (EPOCH FROM now() + concat(t1.day,'days')::interval ) ::INT  AS createdat
     FROM (
         SELECT generate_series(0,%v,-1) AS day
@@ -310,9 +314,11 @@ FROM (
         GROUP BY day
     ) AS t2 ON t2.day = t1.day
     JOIN event_sonex_factory_pool_created AS t3 ON  t3.event_pool = $1 
+	JOIN token t5 on t5.address = t3.event_token0
     JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t4 ON t4.token_address = t3.event_token0
     ORDER BY t1.day
 ) AS t
+
 	`, items, offsetDay, chainId)
 	var resp []types.VolumeDetailsRecord
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, pooladdress)
@@ -626,6 +632,31 @@ func (m *customEventSonexPoolSwapModel) QueryByWalletWithExtra(ctx context.Conte
 	`, m.table, eventSonexFactoryPoolCreatedModel.tableName())
 	var resp []EventSonexPoolSwapWithExtra
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, wallet)
+	if err != nil {
+		return nil, err
+	}
+	return resp, err
+}
+
+func (m *customEventSonexPoolSwapModel) QueryByWalletWithExtraMoreThanValueUsd(ctx context.Context, userAddress string, valueUsd int64) ([]*PoolVolumeUsd, error) {
+	query := `
+		
+	with valueInfo AS (
+SELECT t1.amount0 / POWER(10,t5.decimals) * t3.price / 1000000  AS value,
+	t1.extra_pool 
+FROM
+	(SELECT  extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >=  TIMESTAMP WITH TIME ZONE '2025-03-06 00:00:00+00' AND from_ = $1 GROUP BY extra_pool) AS t1
+	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
+	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
+	JOIN token t5 ON t5.address = t2.event_token0 
+)
+
+
+SELECT * FROM valueInfo WHERE valueInfo.value > $2;
+
+	`
+	var resp []*PoolVolumeUsd
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, userAddress, valueUsd)
 	if err != nil {
 		return nil, err
 	}
@@ -1112,12 +1143,13 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsdForSevenDaysForYi
 	volumeQuery := `
 
 SELECT CAST
-	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+	(t1.amount0 / POWER(10,t5.decimals) * t3.price / 1000000 AS TEXT) AS value,
 	t1.extra_pool 
 FROM
 	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '168 HOURS' AND chain_id = $1 GROUP BY extra_pool) AS t1
 	JOIN event_sonex_factory_pool_created AS t2 ON t1.extra_pool = t2.event_pool
 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
+	JOIN token t5 ON t5.address = t2.event_token0 
 
 
 `
@@ -1525,9 +1557,9 @@ with pool AS (
     left join event_sonex_factory_pool_created AS t4 ON t4.event_pool=t2.extra_pool
 		left join event_sonex_factory_pool_created AS t5 ON t5.event_pool= $3
 ), priceRecord AS (
-    SELECT price :: NUMERIC 
-		FROM sonex_token_price_record  t5 , pool
-		WHERE t5.token_address = pool.token0  
+     SELECT token.decimals, price :: NUMERIC 
+		FROM sonex_token_price_record  t5 , pool,token
+		WHERE t5.token_address = pool.token0   AND token.address =  t5.token_address
 		ORDER BY token_address, created_at DESC limit 1 
 		
 ), amount  AS (
@@ -1545,7 +1577,7 @@ where
 )
 
 select
-    amount.token_amount  / 1000000000000000000 * priceRecord.price / 1000000   AS value
+    amount.token_amount  / power(10,priceRecord.decimals) * priceRecord.price / 1000000   AS value
 from  amount , priceRecord
 
 `
@@ -1571,7 +1603,7 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsd(ctx context.Cont
 	volumeQuery := `
 	
 SELECT CAST
-	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+	(t1.amount0 / POWER(10,t5.decimals) * t3.price / 1000000 AS TEXT) AS value,
 	t1.extra_pool
 FROM
 	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >=to_timestamp( CAST($1 AS double precision) )   - INTERVAL '24 HOURS' AND chain_id =$2  GROUP BY extra_pool) AS t1
@@ -1579,6 +1611,7 @@ FROM
 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
 	-- 需要排除掉跨池子的交易hash 也就是说，如果 tx_hash 在跨池子中计算过，那么需要排除掉那个tx_hash ,不计算
 	JOIN event_sonex_factory_pool_created AS t4 ON t1.extra_pool = t4.event_pool AND  t4.tx_hash != t2.tx_hash
+	JOIN token t5 ON t5.address = t4.event_token0
 	
 	`
 
@@ -1598,7 +1631,7 @@ func (m *customEventSonexPoolSwapModel) SummarizePoolVolumesUsdByPoolAddress(ctx
 
 	volumeQuery := `
 SELECT CAST
-	(t1.amount0 / 1000000000000000000 * t3.price / 1000000 AS TEXT) AS value,
+	(t1.amount0 / POWER(10,t5.decimals) * t3.price / 1000000 AS TEXT) AS value,
 	t1.extra_pool
 FROM
 	(SELECT extra_pool, SUM(ABS(CAST (event_amount0 AS NUMERIC))) AS amount0 FROM event_sonex_pool_swap WHERE tx_at >= NOW() - INTERVAL '24 HOURS' AND chain_id = $1 AND extra_pool = $2 GROUP BY extra_pool) AS t1
@@ -1606,6 +1639,7 @@ FROM
 	JOIN (SELECT DISTINCT ON (token_address) token_address, price :: NUMERIC FROM sonex_token_price_record ORDER BY token_address, created_at DESC) AS t3 ON t3.token_address = t2.event_token0
 	-- 也就是说，如果 tx_hash 在跨池子中，计算过，那么需要排除掉那个tx_hash ,不计算
 	JOIN event_sonex_factory_pool_created AS t4 ON t1.extra_pool = t4.event_pool AND t4.event_pool = $2 AND  t4.tx_hash != t2.tx_hash
+	JOIN token t5 ON t5.address = t4.event_token0
 	`
 
 	// Execute the query and scan results into poolVolumes slice
