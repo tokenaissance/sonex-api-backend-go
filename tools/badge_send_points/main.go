@@ -96,12 +96,17 @@ func main() {
 				p,
 				c.Badge.SubTitle,
 				fmt.Sprintf("badge-%s", stake.UserAddress),
-				map[string]string{},
+				map[string]string{
+					"user":      stake.UserAddress,
+					"timestamp": strconv.FormatInt(time.Now().Unix(), 10),
+				},
 			)
 			if err != nil {
 				logx.Errorf("fails to send points: %v\n", err)
 				return
 			}
+
+			break
 		}
 	}
 }
