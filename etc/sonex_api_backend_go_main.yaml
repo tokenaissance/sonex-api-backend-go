@@ -76,7 +76,7 @@ PreDeposits:
     PointsTotalCap: 60000000
     SubTitle: PreDeposit
     RewardToken: 0x27a131ab51dDD12c31A7C28213A7A4584758bdE7
-    RewardDaily: 10000
+    RewardDaily: 5000
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1868
