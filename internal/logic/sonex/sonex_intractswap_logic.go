@@ -26,7 +26,7 @@ func NewSonexIntractswapLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-// 文档 https://intract-io.notion.site/Create-your-OWN-API-based-template-3cf655ee00e34d27bd230f1fa6deee1e 
+// 文档 https://intract-io.notion.site/Create-your-OWN-API-based-template-3cf655ee00e34d27bd230f1fa6deee1e
 // 参考而来
 func (l *SonexIntractswapLogic) SonexIntractswap(req *types.IntractAddressRequest) (resp *types.IntractSwapResponse, err error) {
 
@@ -54,7 +54,7 @@ func (l *SonexIntractswapLogic) SonexIntractswap(req *types.IntractAddressReques
 		return &types.IntractSwapResponse{
 				Error: types.IntractErrorStruct{
 					Code:    0,
-					Message: "value > 10U not exist",
+					Message: "value biggger than 10U not exist",
 				}, Data: types.IntractDataStruct{Result: false}},
 			nil
 
@@ -71,7 +71,7 @@ func (l *SonexIntractswapLogic) SonexIntractswap(req *types.IntractAddressReques
 		return &types.IntractSwapResponse{
 				Error: types.IntractErrorStruct{
 					Code:    200,
-					Message: "value > 10U not exist",
+					Message: "value biggger than 10U not exist",
 				}, Data: types.IntractDataStruct{Result: false}},
 			nil
 	}
