@@ -1665,7 +1665,13 @@ FROM
 
 // count by sender and time range
 func (m *customEventSonexPoolSwapModel) CountBySenderAndTimeRange(ctx context.Context, chainId int64, sender string, from time.Time, to time.Time) (uint32, error) {
-	query := fmt.Sprintf("select count(*) from %s where chain_id = $1 and event_sender = $2 and tx_at >= $3 and tx_at < $4", m.table)
+	query := fmt.Sprintf(`
+		SELECT COUNT(*) FROM (
+			SELECT DISTINCT ON (tx_hash) tx_hash
+			FROM %s
+			WHERE chain_id = $1 AND from_ = $2 AND tx_at >= $3 AND tx_at < $4			
+		)
+	`, m.table)
 	var count uint32
 	err := m.conn.QueryRowCtx(ctx, &count, query, chainId, sender, from, to)
 	switch err {
