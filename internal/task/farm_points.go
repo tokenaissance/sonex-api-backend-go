@@ -72,7 +72,7 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 	sonexTokenPriceRecordModel := repository.NewSonexTokenPriceRecordModel(conn)
 	farmPointsRecordModel := repository.NewFarmPointsRecordModel(conn)
 
-	stakedRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(ctx, chainConf.ChainId)
+	stakedRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(ctx, chainConf.ChainId, farmConf.Staker)
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,7 @@ func Test_EventFarmTokenStakedModelQueryValidByChainId(t *testing.T) {
 	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
 
 	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
-	records, err := model.QueryValidByChainId(context.Background(), 1946)
+	records, err := model.QueryValidByChainId(context.Background(), 1946, "0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6")
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,12 +33,12 @@ func TestEventFarmTokenStakedModelQueryValidByChainIdUser(t *testing.T) {
 	_ = records
 }
 
-func TestEventFarmTokenStakedModelQueryValidByChainIdUserWithExtra(t *testing.T) {
+func Test_EventFarmTokenStakedModelQueryValidByChainIdUserWithExtra(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
-	records, err := model.QueryValidByChainIdUserWithExtra(context.Background(), 1946, "0x2A32B1623a7F6431697F7d7643d629aa41dB5181")
+	records, err := model.QueryValidByChainIdUserWithExtra(context.Background(), 1946, "0x2A32B1623a7F6431697F7d7643d629aa41dB5181", "0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6")
 	if err != nil {
 		t.Error(err)
 	}

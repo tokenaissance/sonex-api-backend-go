@@ -63,6 +63,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 
 	redisCache := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
+	stakeAddress := farmConf.Staker
 	resp, tokenIds, err := l.GetResponse(req, chain, conn, farmConf, sonexConf, redisCache)
 
 	if err != nil {
@@ -90,7 +91,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		_ = usdAccuracy
 		eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
-		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserWithExtra(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex())
+		validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdUserWithExtra(l.ctx, req.ChainId, common.HexToAddress(req.UserAddress).Hex(), stakeAddress)
 		if err != nil {
 			logx.Errorf("ERR:%v", err)
 			return resp, err
@@ -146,7 +147,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 				return resp, err
 			}
 
-			totalClaimedFeesUSD_bigFloat, _, err := getValueOfAmountToken(totalClaimedAmount, item.IncentiveId, req.ChainId, chain, conn)
+			totalClaimedFeesUSD_bigFloat, _, err := getValueOfAmountToken(farmConf.Staker, totalClaimedAmount, item.IncentiveId, req.ChainId, chain, conn)
 
 			if err != nil {
 				return resp, err
@@ -231,7 +232,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 		logx.Errorf("ERR1:%v ", err)
 		return resp, nil, err
 	}
-	validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(l.ctx, req.ChainId)
+	validStakeRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(l.ctx, req.ChainId, farmConf.Staker)
 	if err != nil {
 		logx.Errorf("ERR2:%v ", err)
 		return resp, nil, err
@@ -351,7 +352,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				return
 			}
 
-			totalClaimableFeesUSD, _, err := getValueOfAmountToken(rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
+			totalClaimableFeesUSD, _, err := getValueOfAmountToken(farmConf.Staker, rewards, record.EventIncentiveId, req.ChainId, chainConf, conn)
 
 			if err != nil {
 				logx.Errorf("getValueOfAmountToken:ERR %v ", err)
@@ -551,7 +552,7 @@ func getRewardTokenLogo(tokenModel repository.TokenModel, configRewardTokenLogo 
 }
 
 // GetFarmIncentivesOperationEvents 获取 user address 质押/解质押事件, key 为 incentive id
-func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, userAddress string) (m map[int64][]*FarmIncentivesOperationEvent, err error) {
+func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, userAddress string, stakerAddress string) (m map[int64][]*FarmIncentivesOperationEvent, err error) {
 	type stakedResult struct {
 		events []*repository.EventFarmTokenStaked
 		err    error
@@ -566,12 +567,12 @@ func (l *FarmIncentivesLogic) GetFarmIncentivesOperationEvents(chainId int64, us
 
 	// Concurrent fetching using channels
 	go func() {
-		events, err := l.eventFarmTokenStakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+		events, err := l.eventFarmTokenStakedModel.FindByChainIdUser(l.ctx, chainId, userAddress, stakerAddress)
 		stakedChan <- stakedResult{events: events, err: err}
 	}()
 
 	go func() {
-		events, err := l.eventFarmTokenUnstakedModel.FindByChainIdUser(l.ctx, chainId, userAddress)
+		events, err := l.eventFarmTokenUnstakedModel.FindByChainIdUser(l.ctx, chainId, userAddress, stakerAddress)
 		unstakedChan <- unstakedResult{events: events, err: err}
 	}()
 
