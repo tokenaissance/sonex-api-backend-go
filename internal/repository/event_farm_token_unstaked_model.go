@@ -19,8 +19,8 @@ type (
 		withSession(session sqlx.Session) EventFarmTokenUnstakedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, tokenId int64, incentiveId int64, liquidity string) error
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenUnstaked, error)
-		FindByChainIdUser(ctx context.Context, chainId int64, event_user string) ([]*EventFarmTokenUnstaked, error)
-		QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenUnStakedWithExtra, []*big.Int, error)
+		FindByChainIdUser(ctx context.Context, chainId int64, event_user string, stakerAddress string) ([]*EventFarmTokenUnstaked, error)
+		QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64, stakerAddress string) ([]EventFarmTokenUnStakedWithExtra, []*big.Int, error)
 	}
 
 	customEventFarmTokenUnstakedModel struct {
@@ -64,10 +64,10 @@ func (m *customEventFarmTokenUnstakedModel) FindLatestByChainId(ctx context.Cont
 	}
 }
 
-func (m *customEventFarmTokenUnstakedModel) FindByChainIdUser(ctx context.Context, chainId int64, event_user string) ([]*EventFarmTokenUnstaked, error) {
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 and event_user = $2", eventFarmTokenUnstakedRows, m.table)
+func (m *customEventFarmTokenUnstakedModel) FindByChainIdUser(ctx context.Context, chainId int64, event_user string, stakerAddress string) ([]*EventFarmTokenUnstaked, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 and event_user = $2 AND to_ = $3", eventFarmTokenUnstakedRows, m.table)
 	var resp []*EventFarmTokenUnstaked
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, event_user)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, event_user, stakerAddress)
 	switch err {
 	case nil:
 		return resp, nil
@@ -78,10 +78,10 @@ func (m *customEventFarmTokenUnstakedModel) FindByChainIdUser(ctx context.Contex
 	}
 }
 
-func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string) ([]EventFarmTokenUnStakedWithExtra, error) {
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 and event_user = $2", eventFarmTokenUnstakedRows, m.table)
+func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string, stakerAddress string) ([]EventFarmTokenUnStakedWithExtra, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE chain_id = $1 and event_user = $2 AND to_ = $3", eventFarmTokenUnstakedRows, m.table)
 	var resp []EventFarmTokenUnStakedWithExtra
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, stakerAddress)
 	return resp, err
 }
 
@@ -90,7 +90,7 @@ func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserWithExtra(ctx
 
 //
 */
-func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64) ([]EventFarmTokenUnStakedWithExtra, []*big.Int, error) {
+func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64, stakerAddress string) ([]EventFarmTokenUnStakedWithExtra, []*big.Int, error) {
 	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
 	// eventFarmTokenStakedModel := newEventFarmTokenStakedModel(m.conn)
 	query := fmt.Sprintf(`
@@ -101,7 +101,7 @@ func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserIncentiveIdWi
 				C.event_reward_token AS extra_reward_token, C.event_pool AS extra_pool,
 				ROW_NUMBER() OVER (PARTITION BY S.event_token_id ORDER BY S.tx_at DESC) AS rn
 			FROM event_farm_token_staked S
-			JOIN %s C ON C.event_incentive_id = S.event_incentive_id
+			JOIN %s C ON C.event_incentive_id = S.event_incentive_id AND C.to_=$4
 			WHERE
 				S.chain_id = $1 AND S.event_user = $2 AND C.event_incentive_id = $3
 				AND (
@@ -116,7 +116,7 @@ func (m *customEventFarmTokenUnstakedModel) QueryValidByChainIdUserIncentiveIdWi
 		WHERE rn = 1
 	`, eventFarmIncentiveCreatedModel.table)
 	var resp []EventFarmTokenUnStakedWithExtra
-	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, incentiveId)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, user, incentiveId, stakerAddress)
 	if err != nil {
 		return nil, nil, err
 	}

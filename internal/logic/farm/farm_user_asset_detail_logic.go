@@ -54,7 +54,7 @@ func getRewardsDetailInfo(stakerAddress, userAddress string, incentiveIdint, cha
 		totalClaimableFees = "0"
 	}
 
-	totalClaimableFeesUSD, tokenDecials, err := getValueOfAmountToken(rewards, int64(incentiveIdint), chainId, chain, conn)
+	totalClaimableFeesUSD, tokenDecials, err := getValueOfAmountToken(stakerAddress, rewards, int64(incentiveIdint), chainId, chain, conn)
 	if err != nil {
 		return "0", big.NewFloat(0), 18, 0.0, err
 	}
@@ -66,12 +66,12 @@ func getRewardsDetailInfo(stakerAddress, userAddress string, incentiveIdint, cha
 }
 
 // 获取staked 质押 的个数
-func getStakedNum(conn sqlx.SqlConn, cacher cache.ICache, chainId, incentiveIdint int64, userAddress string) (*big.Float, int64, string, string, error) {
+func getStakedNum(farmStaker string, conn sqlx.SqlConn, cacher cache.ICache, chainId, incentiveIdint int64, userAddress string) (*big.Float, int64, string, string, error) {
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 
 	// 获取质押的数量
 	stakedNum := int64(0)
-	respStake, err := eventFarmTokenStakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), chainId, userAddress, incentiveIdint)
+	respStake, err := eventFarmTokenStakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), chainId, userAddress, incentiveIdint, farmStaker)
 	if err != nil && err != sqlx.ErrNotFound {
 		logx.Errorf("ERR:%v ", err)
 		return nil, stakedNum, "", "", err
@@ -188,13 +188,13 @@ func getTotalLiquidity(stakerAddress, token0Address, token1Address, positionMana
 
 }
 
-func getRewardTokenAndExtraPool(chainId, incentiveId int64, conn sqlx.SqlConn) (string, string) {
+func getRewardTokenAndExtraPool(stakerAddress string, chainId, incentiveId int64, conn sqlx.SqlConn) (string, string) {
 
 	rewardToken := ""
 	eventPool := ""
 
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
-	incentiveInfo, err := eventFarmIncentiveCreatedModel.GetExtraTokenAndExtraPoolByIncentiveId(context.Background(), chainId, incentiveId)
+	incentiveInfo, err := eventFarmIncentiveCreatedModel.GetExtraTokenAndExtraPoolByIncentiveId(context.Background(), chainId, incentiveId, stakerAddress)
 
 	if err != nil {
 		return rewardToken, eventPool
@@ -224,6 +224,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
+
 	// 获取 totalClaimableFeesUSD，  tokenDecials,
 	totalClaimableFees, totalClaimableFeesUSD, tokenDecials, _, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(incentiveIdint), req.ChainId, chain, conn)
 
@@ -232,13 +233,13 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	}
 	// 获取质押的数量
 	// 获取用户的  lpbalance
-	lpBalance, stakedNum, rewardToken, eventPool, err := getStakedNum(conn, cacher, req.ChainId, int64(incentiveIdint), req.UserAddress)
+	lpBalance, stakedNum, rewardToken, eventPool, err := getStakedNum(farmConf.Staker, conn, cacher, req.ChainId, int64(incentiveIdint), req.UserAddress)
 	if err != nil && err != sqlx.ErrNotFound {
 		return resp, err
 	}
 
 	if strings.EqualFold(rewardToken, "") || strings.EqualFold(eventPool, "") {
-		rewardToken, eventPool = getRewardTokenAndExtraPool(req.ChainId, int64(incentiveIdint), conn)
+		rewardToken, eventPool = getRewardTokenAndExtraPool(farmConf.Staker, req.ChainId, int64(incentiveIdint), conn)
 	}
 	// 获取可用的postion 个数
 	balanceNum, event_weight, token0Address, token1Address, err := getBalance(req.ChainId, int64(incentiveIdint), req.UserAddress, farmConf.Staker, conn)
@@ -342,11 +343,11 @@ func Multicall(ctx context.Context, chain config.ChainConfig, calls ...Call) err
 	return nil
 }
 
-func getValueOfAmountToken(rewards *big.Int, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (*big.Float, int64, error) {
+func getValueOfAmountToken(stakerAddress string, rewards *big.Int, incentiveId, chainId int64, chain *config.ChainConfig, conn sqlx.SqlConn) (*big.Float, int64, error) {
 
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 
-	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId)
+	tokenInfo, err := eventFarmIncentiveCreatedModel.FindRewardTokenInfoByIncentiveId(context.Background(), chainId, incentiveId, stakerAddress)
 	switch err {
 	case nil:
 	case sqlx.ErrNotFound:

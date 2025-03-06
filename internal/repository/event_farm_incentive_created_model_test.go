@@ -60,7 +60,7 @@ func Test_FindRewardTokenInfoByIncentiveId(t *testing.T) {
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
-	records, err := model.FindRewardTokenInfoByIncentiveId(context.Background(), 1946, 0)
+	records, err := model.FindRewardTokenInfoByIncentiveId(context.Background(), 1946, 0, "0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6")
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
 	}
