@@ -26,6 +26,8 @@ func NewSonexIntractswapLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
+// 文档 https://intract-io.notion.site/Create-your-OWN-API-based-template-3cf655ee00e34d27bd230f1fa6deee1e
+// 参考而来
 func (l *SonexIntractswapLogic) SonexIntractswap(req *types.IntractAddressRequest) (resp *types.IntractSwapResponse, err error) {
 
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
@@ -33,7 +35,12 @@ func (l *SonexIntractswapLogic) SonexIntractswap(req *types.IntractAddressReques
 
 	if !common.IsHexAddress(user_address) {
 		logx.Errorf("invalid SonexIntractswap address:%v ", user_address)
-		return &types.IntractSwapResponse{Result: false}, errors.New("invalid param")
+		return &types.IntractSwapResponse{
+				Error: types.IntractErrorStruct{
+					Code:    0,
+					Message: "invalid address",
+				}, Data: types.IntractDataStruct{Result: false}},
+			nil
 	}
 
 	user_addressWithCheckSum := common.HexToAddress(user_address).Hex()
@@ -42,14 +49,31 @@ func (l *SonexIntractswapLogic) SonexIntractswap(req *types.IntractAddressReques
 	volumesMoreThan10, err := poolSwapModel.QueryByWalletWithExtraMoreThanValueUsd(context.Background(), user_addressWithCheckSum, 10)
 
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
-		logx.Errorf("  SonexIntractswap address:%v ", user_address)
-		return &types.IntractSwapResponse{Result: false}, errors.New("invalid param")
+		logx.Errorf("  SonexIntractswap,ERR:%v  address:%v ", err, user_address)
+
+		return &types.IntractSwapResponse{
+				Error: types.IntractErrorStruct{
+					Code:    0,
+					Message: "value biggger than 10U not exist",
+				}, Data: types.IntractDataStruct{Result: false}},
+			nil
+
 	}
 
 	if len(volumesMoreThan10) > 0 {
-		return &types.IntractSwapResponse{Result: true}, nil
+		return &types.IntractSwapResponse{
+				Error: types.IntractErrorStruct{
+					Code:    200,
+					Message: "success",
+				}, Data: types.IntractDataStruct{Result: true}},
+			nil
 	} else {
-		return &types.IntractSwapResponse{Result: false}, nil
+		return &types.IntractSwapResponse{
+				Error: types.IntractErrorStruct{
+					Code:    200,
+					Message: "value biggger than 10U not exist",
+				}, Data: types.IntractDataStruct{Result: false}},
+			nil
 	}
 
 }

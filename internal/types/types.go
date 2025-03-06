@@ -255,8 +255,18 @@ type IntractAddressRequest struct {
 	Address string `form:"address"`
 }
 
-type IntractSwapResponse struct {
+type IntractDataStruct struct {
 	Result bool `json:"result"`
+}
+
+type IntractErrorStruct struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+}
+
+type IntractSwapResponse struct {
+	Error IntractErrorStruct `json:"error"`
+	Data  IntractDataStruct  `json:"data"`
 }
 
 type Invested struct {
