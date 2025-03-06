@@ -66,6 +66,42 @@
         ]
       }
     },
+    "/badge/summary": {
+      "get": {
+        "summary": "Badge API for get summary of a user",
+        "operationId": "BadgeSummaryHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BadgeSummaryResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "userAddress",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "badge"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/farm/incentives": {
       "get": {
         "summary": "Farm incentive list",
@@ -1710,6 +1746,79 @@
       "required": [
         "totalAmount0",
         "totalAmount1"
+      ]
+    },
+    "BadgeMilestone": {
+      "type": "object",
+      "properties": {
+        "swaps": {
+          "type": "integer",
+          "format": "int32",
+          "description": " 已完成的 swap 次数"
+        },
+        "stakedValue": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 所有质押的 position 的价值（按质押时的价值）"
+        },
+        "enough": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " 是否满足条件"
+        },
+        "got": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " 是否已获得积分奖励"
+        }
+      },
+      "title": "BadgeMilestone",
+      "required": [
+        "swaps",
+        "stakedValue",
+        "enough",
+        "got"
+      ]
+    },
+    "BadgeSummaryRequest": {
+      "type": "object",
+      "properties": {
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        }
+      },
+      "title": "BadgeSummaryRequest",
+      "required": [
+        "userAddress"
+      ]
+    },
+    "BadgeSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "milestones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BadgeMilestone"
+          },
+          "description": " 3 个里程碑信息"
+        },
+        "gotPoints": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 已获得的积分"
+        },
+        "gotNftId": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 已获得的 NFT"
+        }
+      },
+      "title": "BadgeSummaryResponse",
+      "required": [
+        "milestones",
+        "gotPoints",
+        "gotNftId"
       ]
     },
     "ChainRequest": {
