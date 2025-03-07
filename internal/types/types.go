@@ -8,6 +8,25 @@ type AggregatedAmounts struct {
 	TotalAmount1 float64 `json:"totalAmount1"`
 }
 
+type BadgeMilestone struct {
+	Swaps       uint32 `json:"swaps"`       // 已完成的 swap 次数
+	StakedValue uint64 `json:"stakedValue"` // 所有质押的 position 的价值（按质押时的价值）
+	Enough      bool   `json:"enough"`      // 是否满足条件
+}
+
+type BadgeSummaryRequest struct {
+	ChainRequest
+	UserAddress string `form:"userAddress"` // 用户地址
+}
+
+type BadgeSummaryResponse struct {
+	Milestones       []*BadgeMilestone `json:"milestones"`       // 3 个里程碑信息
+	GotPoints        int64             `json:"gotPoints"`        // 已获得的积分
+	GotNftId         int64             `json:"gotNftId"`         // 已获得的 NFT
+	TotalSwaps       int64             `json:"totalSwaps"`       // 活动期间总的 swap 次数
+	TotalStakedValue int64             `json:"totalStakedValue"` // 活动期间总的质押价值
+}
+
 type ChainRequest struct {
 	ChainId int64 `header:"x-chain-id"`
 }

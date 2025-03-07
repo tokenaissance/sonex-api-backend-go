@@ -1,0 +1,36 @@
+syntax = "v1"
+
+/*
+PRD: https://www.notion.so/sxteam/SONEX-OG-Badge-1abdfef90e608084a800fcab30747cde
+*/
+
+// Request type of `/badge/summary`
+type BadgeSummaryRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"` // 用户地址
+}
+
+// Response type of `/badge/summary`
+type BadgeSummaryResponse {
+	Milestones       []*BadgeMilestone `json:"milestones"`       // 3 个里程碑信息
+	GotPoints        int64             `json:"gotPoints"`        // 已获得的积分
+	GotNftId         int64             `json:"gotNftId"`         // 已获得的 NFT
+	TotalSwaps       int64             `json:"totalSwaps"`       // 活动期间总的 swap 次数
+	TotalStakedValue int64             `json:"totalStakedValue"` // 活动期间总的质押价值
+}
+
+type BadgeMilestone {
+	Swaps       uint32 `json:"swaps"`       // 已完成的 swap 次数
+	StakedValue uint64 `json:"stakedValue"` // 所有质押的 position 的价值（按质押时的价值）
+	Enough      bool   `json:"enough"`      // 是否满足条件
+}
+
+@server (
+	prefix: /badge
+	group:  badge
+)
+service sonex_api_backend_go {
+	@doc "Badge API for get summary of a user"
+	@handler BadgeSummaryHandler
+	get /summary (BadgeSummaryRequest) returns (BadgeSummaryResponse)
+}
