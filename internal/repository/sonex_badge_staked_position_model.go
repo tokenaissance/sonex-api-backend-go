@@ -25,7 +25,7 @@ var _ SonexBadgeStakedPositionModel = (*customSonexBadgeStakedPositionModel)(nil
 // 测试网参数
 var (
 	BadgeCampaignStart = time.Date(2025, time.March, 7, 15, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
-	BadgeCampaignStop  = time.Date(2025, time.March, 7, 15, 15, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
+	BadgeCampaignStop  = time.Date(2025, time.March, 7, 15, 16, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
 	// 3 个里程碑的 swap 次数要求
 	MilestoneCondsSwaps = []uint32{2, 4, 6}
 	// 3 个里程碑的质押的 position 总价值要求要求
@@ -61,7 +61,7 @@ func (m *customSonexBadgeStakedPositionModel) withSession(session sqlx.Session) 
 }
 
 func (m *customSonexBadgeStakedPositionModel) SumValueByUser(ctx context.Context, user string) (uint64, error) {
-	query := fmt.Sprintf("select CAST(COALESCE(SUM(position_value::NUMERIC),0)/1000000 as bigint) from %s where user_address = $1", m.table)
+	query := fmt.Sprintf("select CAST(COALESCE(SUM(position_value::NUMERIC),0) as bigint) from %s where user_address = $1", m.table)
 	var sum uint64
 	err := m.conn.QueryRowCtx(ctx, &sum, query, user)
 	switch err {

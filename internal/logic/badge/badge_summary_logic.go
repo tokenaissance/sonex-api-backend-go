@@ -40,6 +40,7 @@ func (l *BadgeSummaryLogic) BadgeSummary(req *types.BadgeSummaryRequest) (resp *
 		return resp, err
 	}
 	totalStakedValue := stakes
+	stakes /= 1000000
 
 	points, ntfId := int64(0), int64(0)
 	rewardsModel := repository.NewSonexBadgeRewardsModel(conn)
