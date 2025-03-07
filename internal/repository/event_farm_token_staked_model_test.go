@@ -11,7 +11,7 @@ import (
 
 func Test_EventFarmTokenStakedModelQueryValidByChainId(t *testing.T) {
 	var c config.Config
-	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
 	records, err := model.QueryValidByChainId(context.Background(), 1946, "0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6")
@@ -45,6 +45,17 @@ func Test_EventFarmTokenStakedModelQueryValidByChainIdUserWithExtra(t *testing.T
 	_ = records
 }
 
+func Test_QueryValidByChainIdUserIncentiveIdWithExtra(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewEventFarmTokenStakedModel(NewConn(c.PostgreSQL.DataSource()))
+	records, err := model.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), 1946, "0x2A32B1623a7F6431697F7d7643d629aa41dB5181", 0, "0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6")
+	if err != nil {
+		t.Error(err)
+	}
+	_ = records
+}
 func Test_QueryValidEverStakedByChainIdAndIncentiveId(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
