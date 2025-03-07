@@ -229,31 +229,31 @@ type UnstakePositionsInfoResponse_Data {
 type FarmRewardCalucateRequest {
 	ChainRequest
 	UserAddress string `form:"userAddress"`     // 用户地址
-	IncentiveId string `form:"incentiveId"`      // 质押池ID
-	FarmAddress string `form:"farmAddress"` // farm address 
+	IncentiveId string `form:"incentiveId"`     // 质押池ID
+	FarmAddress string `form:"farmAddress"`     // farm address 
 }
 
 // 计算 Rewards
 type FarmRewardCalucateResponese {
-	IncentiveId  string `form:"incentiveId"`      // 质押池ID
-	UserAddress string `form:"userAddress"`                  // 用户地址
-	FarmAddress string `form:"farmAddress,optional"`
-	Address     string `json:"address"`  // reward token address  
-	Name        string `json:"name"` //   reward token,  
-	Symbol      string `json:"symbol"`//  reward symbol
-	Decimals    int64  `json:"decimals"`  //  reward decimal
-	RewardTokenLogo  string `json:"rewardTokenLogo"`
+	IncentiveId         string `form:"incentiveId"`      // 质押池ID
+	UserAddress         string `form:"userAddress"`                  // 用户地址
+	FarmAddress         string `form:"farmAddress,optional"`
+	Address             string `json:"address"`  // reward token address  
+	Name                string `json:"name"` //   reward token,  
+	Symbol              string `json:"symbol"`//  reward symbol
+	Decimals            int64  `json:"decimals"`  //  reward decimal
+	RewardTokenLogo     string `json:"rewardTokenLogo"`
 	TotalTokenAmount    string   `json:"totalTokenAmount"`  // 对应的空投的 tokenAmount
-	TotalTokenAmountUsd    string   `json:"totalTokenAmountUsd"`  // 对应的空投的 tokenAmount 的USD
-	TotalLiquidityUsd    string   `json:"totalLiquidityUsd"`// 自己所有曾经质押的LP的总的USD 
-	List []StakedItem     `json:"list"` // 曾经所有质押的LP的详情
+	TotalTokenAmountUsd string   `json:"totalTokenAmountUsd"`  // 对应的空投的 tokenAmount 的USD
+	TotalLiquidityUsd   string   `json:"totalLiquidityUsd"`// 自己所有曾经质押的LP的总的USD 
+	List                []StakedItem     `json:"list"` // 曾经所有质押的LP的详情
 }
 
 type StakedItem {
     PositionId     int64  `json:"positionId"` // position的tokenid
     TokenUsd       string `json:"tokenUsd"`
-	Liquidity   string `json:"liquidity"`
-	TokenAmount    string   `json:"tokenAmount"`  // 计算出来的奖励,ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
+	Liquidity      string `json:"liquidity"`
+	TokenAmount    string `json:"tokenAmount"`  // 计算出来的奖励,ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
 }
 
 
