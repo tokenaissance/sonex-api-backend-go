@@ -314,3 +314,18 @@ func Test_QueryByWalletWithExtraMoreThanValueUsd(t *testing.T) {
 	}
 	// model.QueryByWalletWithExtra(context.Background(), "0xsadsa")
 }
+
+func TestCountBySenderAndTimeRange(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go_develop_local.yaml", &c)
+
+	badgeCampaignStart := time.Date(2025, time.March, 7, 11, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
+	badgeCampaignStop := time.Date(2025, time.March, 7, 12, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
+
+	model := NewEventSonexPoolSwapModel(NewConn(c.PostgreSQL.DataSource()))
+	total, err := model.CountBySenderAndTimeRange(context.Background(), 1946, "0xCaa90aff0f38A9508772B39Ecbc909e7895d6270", badgeCampaignStart, badgeCampaignStop)
+	if err != nil {
+		t.Error(err)
+	}
+	_ = total
+}
