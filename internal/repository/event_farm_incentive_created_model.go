@@ -118,7 +118,7 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
       	extra_reward_token, extra_rate,
 		CASE WHEN ( 
 			SELECT COUNT(*) FROM event_farm_incentive_ended E 
-			WHERE E.event_incentive_id = SelectTemp.event_incentive_id 
+			WHERE E.event_incentive_id = SelectTemp.event_incentive_id AND E.to_=$2 
 		) > 0 
 		THEN TRUE ELSE FALSE END AS extra_ended
 
@@ -187,7 +187,7 @@ func (m *customEventFarmIncentiveCreatedModel) PageQueryByChainIdStakerWithExtra
       	extra_reward_token, extra_rate,
 		CASE WHEN ( 
 			SELECT COUNT(*) FROM event_farm_incentive_ended E 
-			WHERE E.event_incentive_id = SelectTemp.event_incentive_id 
+			WHERE E.event_incentive_id = SelectTemp.event_incentive_id  AND E.to_ = $2
 		) > 0 
 		THEN TRUE ELSE FALSE END AS extra_ended
 
