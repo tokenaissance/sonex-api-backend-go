@@ -24,8 +24,8 @@ var _ SonexBadgeStakedPositionModel = (*customSonexBadgeStakedPositionModel)(nil
 
 // 测试网参数
 var (
-	BadgeCampaignStart = time.Date(2025, time.March, 7, 12, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
-	BadgeCampaignStop  = time.Date(2025, time.March, 7, 12, 30, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
+	BadgeCampaignStart = time.Date(2025, time.March, 7, 11, 30, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
+	BadgeCampaignStop  = time.Date(2025, time.March, 7, 12, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
 	// 3 个里程碑的 swap 次数要求
 	MilestoneCondsSwaps = []uint32{2, 4, 6}
 	// 3 个里程碑的质押的 position 总价值要求要求
