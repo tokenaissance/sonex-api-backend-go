@@ -9,7 +9,7 @@ import (
 	"sonex_api_backend_go/internal/types"
 )
 
-// For air drop
+// For air drop phase1 air token 
 func FarmRewardCalucateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.FarmRewardCalucateRequest
