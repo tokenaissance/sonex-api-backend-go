@@ -34,7 +34,7 @@ func Test_GetTransferEventsFarm(t *testing.T) {
 	// }
 	// logx.Infof("A:%v ", a)
 
-	model.GetAllUseablePositions(context.Background(), 1946, "0x74A5Fe281F4d8B9fB3e96D97bBDE14949B5c44e2", "0x330104ea738276971a6A7BCbAB60A56e2BF558f3")
+	model.GetAllUseablePositions(context.Background(), 1946, "0x74A5Fe281F4d8B9fB3e96D97bBDE14949B5c44e2", "0xBaE0872462B2E0a426fd3293B44cd86DE5BF4c91")
 }
 
 // func Test_customEventSonexPositionManagerTransferModel_GetTransferEventsGroupByPoolAddress(t *testing.T) {

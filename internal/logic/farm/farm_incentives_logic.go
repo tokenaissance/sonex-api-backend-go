@@ -76,6 +76,10 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		return resp, nil
 	}
 
+	logx.Infof("ZXXXresp:%v ", len(resp.List))
+	for i, v := range resp.List {
+		logx.Infof("i:%v v:%v ", i, v)
+	}
 	// Filter
 	if !strings.EqualFold(req.UserAddress, "") && common.IsHexAddress(req.UserAddress) {
 
@@ -218,7 +222,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chainConf *config.ChainConfig, conn sqlx.SqlConn, farmConf *config.FarmConfig, sonexConf *config.SonexConfig, cacher cache.ICache) (resp *types.FarmIncentivesResponse, tokenIds map[int64][]int64, err error) {
 	usdToken, err := global.GetToken(req.ChainId, chainConf.USD)
 	if err != nil {
-		logx.Errorf("ERR:%v ", err)
+		logx.Errorf("11111111111Get USD token error: %s %s", chainConf.USD, err)
 		return resp, nil, err
 	}
 	usdAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(usdToken.Decimals), nil))
@@ -291,11 +295,12 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			token0, err := global.GetToken(req.ChainId, record.ExtraToken0)
 			if err != nil {
 				logx.Errorf("%s", fmt.Sprintf("Get token0 error: %s %s", record.ExtraToken0, err))
+				logx.Errorf("Get token0 error: %s %s", record.ExtraToken0, err)
 				return
 			}
 			token1, err := global.GetToken(req.ChainId, record.ExtraToken1)
 			if err != nil {
-				logx.Errorf("%s", fmt.Sprintf("Get token1 error: %s %s", record.ExtraToken1, err))
+				logx.Errorf("Get token1 error: %s %s", record.ExtraToken1, err)
 				return
 			}
 			price0, ok := prices[token0.Address]
@@ -316,7 +321,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 			rewardToken, err := global.GetToken(req.ChainId, record.EventRewardToken)
 			if err != nil {
-				logx.Errorf("%s", fmt.Sprintf("Get extra token error: %s %s", record.EventRewardToken, err))
+				logx.Errorf("11111111111Get extra token error: %s %s", record.EventRewardToken, err)
 				return
 			}
 			ratepersecond, _ := new(big.Float).SetString(record.ExtraRate)
@@ -528,7 +533,7 @@ type FarmIncentivesOperationEvent struct {
 	UnstakedEvent                    *repository.EventFarmTokenUnstaked
 }
 
-func getRewardTokenLogo(tokenModel repository.TokenModel, configRewardTokenLogo string, chainId int64, rewardToken string)  string {
+func getRewardTokenLogo(tokenModel repository.TokenModel, configRewardTokenLogo string, chainId int64, rewardToken string) string {
 	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{rewardToken})
 	if err != nil {
 		logx.Errorf("QueryByChainIdAddress:%v ", err)
