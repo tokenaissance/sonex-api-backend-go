@@ -41,6 +41,12 @@ func main() {
 		repository.MilestoneCondsStakes[0] + repository.MilestoneCondsStakes[1] + repository.MilestoneCondsStakes[2],
 	}
 
+	accPoints := [3]uint64{
+		repository.MilestonePoints[0],
+		repository.MilestonePoints[0] + repository.MilestonePoints[1],
+		repository.MilestonePoints[0] + repository.MilestonePoints[1] + repository.MilestonePoints[2],
+	}
+
 	// get chain ID
 	chainId, err := strconv.ParseInt(os.Getenv("CHAIN_ID"), 10, 64)
 	if err != nil {
@@ -77,7 +83,7 @@ func main() {
 			if swaps < accCondsSwaps[i] || uint64(value) < accCondsStakes[i] {
 				continue
 			}
-			p := int64(repository.MilestonePoints[i])
+			p := int64(accPoints[i])
 			_, err := rewardsModel.Insert(context.Background(), &repository.SonexBadgeRewards{
 				UserAddress: stake.UserAddress,
 				Points:      p,
