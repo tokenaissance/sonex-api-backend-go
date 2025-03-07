@@ -10,24 +10,12 @@ import (
 
 var _ SonexBadgeStakedPositionModel = (*customSonexBadgeStakedPositionModel)(nil)
 
-// // 正式网参数
-// var (
-// 	BadgeCampaignStart = time.Date(2025, time.March, 7, 0, 0, 0, 0, time.UTC)
-// 	BadgeCampaignStop  = time.Date(2025, time.March, 31, 0, 0, 0, 0, time.UTC)
-// 	// 3 个里程碑的 swap 次数要求
-// 	MilestoneCondsSwaps = []uint32{10, 25, 45}
-// 	// 3 个里程碑的质押的 position 总价值要求要求
-// 	MilestoneCondsStakes = []uint64{20, 100, 200}
-// // 3 个里程碑的积分奖励
-// MilestonePoints      = []uint64{3000, 5000, 8000}
-// )
-
-// 测试网参数
+// 正式网参数
 var (
-	BadgeCampaignStart = time.Date(2025, time.March, 7, 15, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
-	BadgeCampaignStop  = time.Date(2025, time.March, 7, 16, 40, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
+	BadgeCampaignStart = time.Date(2025, time.March, 7, 9, 0, 0, 0, time.UTC)
+	BadgeCampaignStop  = time.Date(2025, time.March, 31, 9, 0, 0, 0, time.UTC)
 	// 3 个里程碑的 swap 次数要求
-	MilestoneCondsSwaps = []uint32{2, 4, 6}
+	MilestoneCondsSwaps = []uint32{10, 25, 45}
 	// 3 个里程碑的质押的 position 总价值要求要求
 	MilestoneCondsStakes = []uint64{20, 100, 200}
 	// 3 个里程碑的积分奖励
