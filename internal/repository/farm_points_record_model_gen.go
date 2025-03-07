@@ -27,7 +27,7 @@ type (
 	farmPointsRecordModel interface {
 		Insert(ctx context.Context, data *FarmPointsRecord) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*FarmPointsRecord, error)
-		FindOneByChainIdUserAddressIncentiveId(ctx context.Context, chainId int64, userAddress string, incentiveId int64) (*FarmPointsRecord, error)
+		FindOneByChainIdUserAddressIncentiveIdContract(ctx context.Context, chainId int64, userAddress string, incentiveId int64, contract string) (*FarmPointsRecord, error)
 		Update(ctx context.Context, data *FarmPointsRecord) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -52,6 +52,7 @@ type (
 		Price1        string    `db:"price1"`
 		UsdDecimals   int64     `db:"usd_decimals"`
 		StakedAt      time.Time `db:"staked_at"`
+		Contract      string    `db:"contract"`
 	}
 )
 
@@ -82,10 +83,10 @@ func (m *defaultFarmPointsRecordModel) FindOne(ctx context.Context, id int64) (*
 	}
 }
 
-func (m *defaultFarmPointsRecordModel) FindOneByChainIdUserAddressIncentiveId(ctx context.Context, chainId int64, userAddress string, incentiveId int64) (*FarmPointsRecord, error) {
+func (m *defaultFarmPointsRecordModel) FindOneByChainIdUserAddressIncentiveIdContract(ctx context.Context, chainId int64, userAddress string, incentiveId int64, contract string) (*FarmPointsRecord, error) {
 	var resp FarmPointsRecord
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 and user_address = $2 and incentive_id = $3 limit 1", farmPointsRecordRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, userAddress, incentiveId)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and user_address = $2 and incentive_id = $3 and contract = $4 limit 1", farmPointsRecordRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, userAddress, incentiveId, contract)
 	switch err {
 	case nil:
 		return &resp, nil
@@ -97,14 +98,14 @@ func (m *defaultFarmPointsRecordModel) FindOneByChainIdUserAddressIncentiveId(ct
 }
 
 func (m *defaultFarmPointsRecordModel) Insert(ctx context.Context, data *FarmPointsRecord) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", m.table, farmPointsRecordRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.Points, data.EventStakedId, data.IncentiveId, data.Amount0, data.Amount1, data.Price0, data.Price1, data.UsdDecimals, data.StakedAt)
+	query := fmt.Sprintf("insert into %s (%s) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", m.table, farmPointsRecordRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.ChainId, data.UserAddress, data.Points, data.EventStakedId, data.IncentiveId, data.Amount0, data.Amount1, data.Price0, data.Price1, data.UsdDecimals, data.StakedAt, data.Contract)
 	return ret, err
 }
 
 func (m *defaultFarmPointsRecordModel) Update(ctx context.Context, newData *FarmPointsRecord) error {
 	query := fmt.Sprintf("update %s set %s where id = $1", m.table, farmPointsRecordRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.UserAddress, newData.Points, newData.EventStakedId, newData.IncentiveId, newData.Amount0, newData.Amount1, newData.Price0, newData.Price1, newData.UsdDecimals, newData.StakedAt)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Id, newData.ChainId, newData.UserAddress, newData.Points, newData.EventStakedId, newData.IncentiveId, newData.Amount0, newData.Amount1, newData.Price0, newData.Price1, newData.UsdDecimals, newData.StakedAt, newData.Contract)
 	return err
 }
 

@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"net/http"
 	"sonex_api_backend_go/internal/config"
 	lib_common "sonex_api_backend_go/internal/lib/common"
 	"sonex_api_backend_go/internal/lib/global"
-	"sonex_api_backend_go/internal/lib/util"
+	"sonex_api_backend_go/internal/module/points"
 	"sonex_api_backend_go/internal/module/sonex"
 	"sonex_api_backend_go/internal/repository"
-	"strings"
 	"time"
 
 	"github.com/ahmetb/go-linq/v3"
@@ -19,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
-	"github.com/zeromicro/go-zero/rest/httpc"
 )
 
 func HandleFarmPoints(config *config.Config) {
@@ -28,23 +25,16 @@ func HandleFarmPoints(config *config.Config) {
 	err := retry.Do(
 		func() error {
 			conn := repository.NewConn(config.PostgreSQL.DataSource())
-			err := conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
-				for _, chainConf := range config.Chains {
-					farmConf := config.GetFarmConfig(chainConf.ChainId)
-					if farmConf == nil {
-						continue
-					}
-					err := farmPointsLogic(ctx, sqlx.NewSqlConnFromSession(s), *config, chainConf)
-					if err != nil {
-						logx.Errorf("HandleFarmPoints failed: %d %s", chainConf.ChainId, err)
-						return err
-					}
+			for _, chainConf := range config.Chains {
+				farmConf := config.GetFarmConfig(chainConf.ChainId)
+				if farmConf == nil {
+					continue
 				}
-
-				return nil
-			})
-			if err != nil {
-				return err
+				err := farmPointsLogic(context.Background(), conn, *config, chainConf)
+				if err != nil {
+					logx.Errorf("HandleFarmPoints failed: %d %s", chainConf.ChainId, err)
+					return err
+				}
 			}
 
 			return nil
@@ -65,6 +55,7 @@ func HandleFarmPoints(config *config.Config) {
 }
 
 func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config, chainConf config.ChainConfig) error {
+	pointsServiceConf := conf.PointsService
 	sonexConf := conf.GetSonexConfig(chainConf.ChainId)
 	farmConf := conf.GetFarmConfig(chainConf.ChainId)
 
@@ -72,7 +63,7 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 	sonexTokenPriceRecordModel := repository.NewSonexTokenPriceRecordModel(conn)
 	farmPointsRecordModel := repository.NewFarmPointsRecordModel(conn)
 
-	stakedRecords, err := eventFarmTokenStakedModel.QueryValidByChainId(ctx, chainConf.ChainId, farmConf.Staker)
+	stakedRecords, err := eventFarmTokenStakedModel.QueryValidByChainIdContract(ctx, chainConf.ChainId, farmConf.Staker)
 	if err != nil {
 		return err
 	}
@@ -126,7 +117,7 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 		}).
 		ToSlice(&stakedRecords)
 	for _, item := range stakedRecords {
-		_, err := farmPointsRecordModel.FindOneByChainIdUserAddressIncentiveId(ctx, chainConf.ChainId, item.EventUser, item.EventIncentiveId)
+		_, err := farmPointsRecordModel.FindOneByChainIdUserAddressIncentiveIdContract(ctx, chainConf.ChainId, item.EventUser, item.EventIncentiveId, farmConf.Staker)
 		switch err {
 		case repository.ErrNotFound:
 		case nil:
@@ -164,77 +155,94 @@ func farmPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config,
 		price1, _ := new(big.Int).SetString(price1Record.Price, 10)
 		value0 := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount0), new(big.Float).SetInt(price0)), accuracy0), accuracyUSD)
 		value1 := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(new(big.Float).SetInt(amount1), new(big.Float).SetInt(price1)), accuracy1), accuracyUSD)
+
 		if new(big.Float).Add(value0, value1).Cmp(big.NewFloat(farmConf.PointsUSDLimits)) < 0 {
 			continue
 		}
 
-		id, err := global.NewId()
+		err = conn.TransactCtx(context.Background(), func(ctx context.Context, s sqlx.Session) error {
+			id, err := global.NewId()
+			if err != nil {
+				return err
+			}
+			err = farmPointsRecordModel.New(ctx, id, chainConf.ChainId, item.EventUser, farmConf.Points, item.Id, item.EventIncentiveId, amount0, amount1, price0, price1, usd.Decimals, item.TxAt, farmConf.Staker)
+			if err != nil {
+				return err
+			}
+
+			// Common points
+			err = points.IncreasePoints(
+				ctx,
+				*pointsServiceConf,
+				item.EventUser,
+				farmConf.Points,
+				farmConf.SubTitle,
+				fmt.Sprintf("farm-%s-%d", item.EventUser, item.EventIncentiveId),
+				map[string]string{
+					"stakeId":     fmt.Sprintf("%d", item.Id),
+					"user":        item.EventUser,
+					"incentiveId": fmt.Sprintf("%d", item.EventIncentiveId),
+					"tokenId":     fmt.Sprintf("%d", item.EventTokenId),
+					"amount0":     amount0.String(),
+					"amount1":     amount1.String(),
+					"price0":      price0.String(),
+					"price1":      price1.String(),
+					"usdDecimals": fmt.Sprintf("%d", usd.Decimals),
+				},
+			)
+			if err != nil {
+				logx.Errorf("HandleFarmPoints increase points error: User %s, IncentiveId %d, TokenId %d, %s",
+					item.EventUser,
+					item.EventIncentiveId,
+					item.EventTokenId,
+					err,
+				)
+				return err
+			}
+
+			// Boost points
+			for _, boostConf := range farmConf.Boosts {
+				if !linq.From(boostConf.Tokens).Contains(token0.Address) || !linq.From(boostConf.Tokens).Contains(token1.Address) {
+					continue
+				}
+				if int64(time.Since(item.TxAt).Seconds()) < boostConf.PointsHoldTimeLimits || new(big.Float).Add(value0, value1).Cmp(big.NewFloat(boostConf.PointsUSDLimits)) < 0 {
+					continue
+				}
+
+				err = points.IncreasePoints(
+					ctx,
+					*pointsServiceConf,
+					item.EventUser,
+					boostConf.Points,
+					fmt.Sprintf("%s-Boost", farmConf.SubTitle),
+					fmt.Sprintf("farm-boost-%s-%d", item.EventUser, item.EventIncentiveId),
+					map[string]string{
+						"stakeId":     fmt.Sprintf("%d", item.Id),
+						"user":        item.EventUser,
+						"incentiveId": fmt.Sprintf("%d", item.EventIncentiveId),
+						"tokenId":     fmt.Sprintf("%d", item.EventTokenId),
+						"amount0":     amount0.String(),
+						"amount1":     amount1.String(),
+						"price0":      price0.String(),
+						"price1":      price1.String(),
+						"usdDecimals": fmt.Sprintf("%d", usd.Decimals),
+					},
+				)
+				if err != nil {
+					logx.Errorf("HandleFarmPoints increase boost points error: User %s, IncentiveId %d, TokenId %d, %s",
+						item.EventUser,
+						item.EventIncentiveId,
+						item.EventTokenId,
+						err,
+					)
+					return nil
+				}
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		err = farmPointsRecordModel.New(ctx, id, chainConf.ChainId, item.EventUser, farmConf.Points, item.Id, item.EventIncentiveId, amount0, amount1, price0, price1, usd.Decimals, item.TxAt)
-		if err != nil {
-			return err
-		}
-
-		req := struct {
-			User      string            `json:"user_address"`
-			Points    int64             `json:"points"`
-			Source    string            `json:"source"`
-			SubTitle  string            `json:"sub_title"`
-			ExtraId   string            `json:"extra_id"`
-			Extra     map[string]string `json:"extra"`
-			Signature string            `json:"signature"`
-		}{
-			User:     item.EventUser,
-			Points:   farmConf.Points,
-			Source:   conf.PointsService.Source,
-			SubTitle: farmConf.SubTitle,
-			ExtraId:  fmt.Sprintf("%s-%d", item.EventUser, item.EventIncentiveId),
-			Extra: map[string]string{
-				"stakeId":     fmt.Sprintf("%d", item.Id),
-				"user":        item.EventUser,
-				"incentiveId": fmt.Sprintf("%d", item.EventIncentiveId),
-				"tokenId":     fmt.Sprintf("%d", item.EventTokenId),
-				"amount0":     amount0.String(),
-				"amount1":     amount1.String(),
-				"price0":      price0.String(),
-				"price1":      price1.String(),
-				"usdDecimals": fmt.Sprintf("%d", usd.Decimals),
-			},
-		}
-		signature, err := util.Sign(&req, conf.PointsService.PrivateKey)
-		if err != nil {
-			return fmt.Errorf("%s", fmt.Sprintf("Sign failed: %s", err))
-		}
-		req.Signature = signature
-
-		url := fmt.Sprintf("%s/extra/increase_points", strings.TrimRight(conf.PointsService.Host, "/"))
-		resp, err := httpc.Do(context.Background(), http.MethodPost, url, req)
-		if err != nil {
-			logx.Errorf("HandleFarmPoints error: User %s, IncentiveId %d, TokenId %d, %s",
-				item.EventUser,
-				item.EventIncentiveId,
-				item.EventTokenId,
-				fmt.Sprintf("Increase points failed: %s %v", err, req),
-			)
-			return nil
-		}
-		if resp.StatusCode != http.StatusOK {
-			logx.Errorf("HandleFarmPoints error: User %s, IncentiveId %d, TokenId %d, %s",
-				item.EventUser,
-				item.EventIncentiveId,
-				item.EventTokenId,
-				fmt.Sprintf("Increase points failed: %s %v", err, req),
-			)
-			return nil
-		}
-		logx.Infof("HandleFarmPoints increase points: User %s, IncentiveId %d, TokenId %d, Points %d",
-			item.EventUser,
-			item.EventIncentiveId,
-			item.EventTokenId,
-			farmConf.Points,
-		)
 	}
 
 	return nil

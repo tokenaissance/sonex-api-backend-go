@@ -20,6 +20,7 @@ type (
 		Exists(ctx context.Context, event_user string) (bool, error)
 		FindByChainIdUser(ctx context.Context, chainId int64, event_user string, stakerAddress string) ([]*EventFarmTokenStaked, error)
 		QueryValidByChainId(ctx context.Context, chainId int64, stakerAddress string) ([]EventFarmTokenStaked, error)
+		QueryValidByChainIdContract(ctx context.Context, chainId int64, contract string) ([]EventFarmTokenStaked, error)
 		QueryValidByChainIdUserWithExtra(ctx context.Context, chainId int64, user string, stakerAddress string) ([]EventFarmTokenStakedWithExtra, error)
 		QueryValidByChainIdUserIncentiveIdWithExtra(ctx context.Context, chainId int64, user string, incentiveId int64, stakerAddress string) ([]EventFarmTokenStakedWithExtra, error)
 
@@ -126,6 +127,39 @@ WITH SelectTemp AS (
 
 	resp := []EventFarmTokenStaked{}
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, stakerAddress)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customEventFarmTokenStakedModel) QueryValidByChainIdContract(ctx context.Context, chainId int64, contract string) ([]EventFarmTokenStaked, error) {
+	eventFarmIncentiveCreatedModel := newEventFarmIncentiveCreatedModel(m.conn)
+	eventFarmTokenUnstakedModel := newEventFarmTokenUnstakedModel(m.conn)
+
+	query := fmt.Sprintf(`
+		WITH SelectTemp AS (
+			SELECT 
+				S.*, C.event_pool AS extral_pool
+			FROM %s S
+			LEFT JOIN %s C ON C.event_incentive_id = S.event_incentive_id
+			WHERE
+				S.chain_id = $1
+				AND S.to_ = $2
+				AND S.event_incentive_id IN (
+					SELECT event_incentive_id FROM %s C
+--					WHERE event_incentive_id NOT IN (SELECT event_incentive_id FROM event_farm_incentive_ended)
+				)
+				AND (SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id) >
+				(SELECT COUNT(*) FROM %s WHERE event_incentive_id = S.event_incentive_id AND event_token_id = S.event_token_id)
+		)
+
+		SELECT DISTINCT ON (event_token_id) *
+		FROM SelectTemp ORDER BY event_token_id, tx_at DESC
+	`, m.table, eventFarmIncentiveCreatedModel.table, eventFarmIncentiveCreatedModel.table, m.table, eventFarmTokenUnstakedModel.table)
+
+	resp := []EventFarmTokenStaked{}
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, contract)
 	if err != nil {
 		return nil, err
 	}
