@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func TestSonexTokenModelFindAllToMap(t *testing.T) {
@@ -44,5 +45,19 @@ func Test_FindByOneAddress(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	_ = records
+}
+
+func Test_QueryByChainIdAddress(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
+
+	model := NewTokenModel(NewConn(c.PostgreSQL.DataSource()))
+	records, err := model.QueryByChainIdAddress(context.Background(), 1946, []string{"0xB286606C1BDC17448B803476321a97BD72dDeeC2"})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	logx.Infof("len(record):%v", len(records))
 	_ = records
 }

@@ -57,7 +57,7 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 	}
 
 	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
-	// chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
+	chainConf := l.svcCtx.Config.GetChainConfig(req.ChainId)
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	//sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	tokenModel := repository.NewTokenModel(conn)
@@ -68,7 +68,6 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 
 	eventFarmTokenStakedModel := repository.NewEventFarmTokenStakedModel(conn)
 	stakedTokenId, err := eventFarmTokenStakedModel.QueryValidEverStakedByChainIdAndIncentiveId(context.Background(), req.ChainId, int64(incentiveIdint), req.UserAddress, stakeAddress)
-	logx.Infof("ZZZZZZZZZZCCC%v stakeAddress:%v req.UserAddress:%v incentiveIdint:%v l.svcCtx.Config.Redis.Host:%v  ", len(stakedTokenId), stakeAddress, req.UserAddress, incentiveIdint, l.svcCtx.Config.Redis.Host)
 
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
@@ -97,16 +96,14 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 	rewardToken := ""
 
 	lists := []types.StakedItem{}
-	for i, v := range stakedTokenId {
-		logx.Infof("XXXXXXXX i:%v v:%v ", i, v)
+	for _, v := range stakedTokenId {
 
 		eventTokenIdUsdString, err := GetPositionValue(cacher, v.EventPool, v.EventTokenId)
 		if err != nil {
 			logx.Errorf("ERR :%v ", err)
 			continue
 		}
-		eventTokenIdUsdStringBigFloat, aa := new(big.Float).SetString(eventTokenIdUsdString)
-		logx.Infof("AA :%v ", aa)
+		eventTokenIdUsdStringBigFloat, _ := new(big.Float).SetString(eventTokenIdUsdString)
 		lpBalance = new(big.Float).Add(lpBalance, eventTokenIdUsdStringBigFloat)
 
 		rewardToken = v.EventRewardToken
@@ -139,27 +136,25 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 
 	tokenInfo, rewardTokenLogo := getRewardTokenLogoAndToken(tokenModel, farmConf.XRewardToken, req.ChainId, rewardToken)
 
-	// tokenAmountString := tokenAmountTotal.String()
-	// tokenAmountBigInt, bb := new(big.Int).SetString(tokenAmountString, 10)
-	// tokenAmountBigFloat, cc, err := getValueOfAmountToken(farmConf.Staker, tokenAmountBigInt, int64(incentiveIdint), req.ChainId, chainConf, conn)
-	// if err != nil {
-	// 	logx.Errorf("getValueOfAmountTokenERR:%v  ", err)
-	// 	tokenAmountBigFloat = new(big.Float).SetFloat64(0)
-	// }
-	// logx.Infof("XXXXbb:%v cc:%v ", bb, cc)
+	tokenAmountBigInt, _ := tokenAmountTotal.Int(nil)
+	tokenAmountBigFloat, _, err := getValueOfAmountToken(farmConf.Staker, tokenAmountBigInt, int64(incentiveIdint), req.ChainId, chainConf, conn)
+	if err != nil {
+		logx.Errorf("getValueOfAmountTokenERR:%v  ", err)
+		tokenAmountBigFloat = new(big.Float).SetFloat64(0)
+	}
 	resp = &types.FarmRewardCalucateResponese{
-		FarmAddress:      req.FarmAddress,
-		IncentiveId:      req.IncentiveId,
-		UserAddress:      req.UserAddress,
-		RewardTokenLogo:  rewardTokenLogo,
-		TotalTokenAmount: tokenAmountTotal.String(),
-		// TotalTokenAmountUsd: tokenAmountBigFloat.String(),
-		TotalLiquidityUsd: lpBalance.String(),
-		Address:           tokenInfo.Address,  //        string       `json:"address"`
-		Name:              tokenInfo.Name,     //         string       `json:"name"`
-		Symbol:            tokenInfo.Symbol,   //          string       `json:"symbol"`
-		Decimals:          tokenInfo.Decimals, //        int64        `json:"decimals"`
-		List:              lists,
+		FarmAddress:         req.FarmAddress,
+		IncentiveId:         req.IncentiveId,
+		UserAddress:         req.UserAddress,
+		RewardTokenLogo:     rewardTokenLogo,
+		TotalTokenAmount:    tokenAmountTotal.String(),
+		TotalTokenAmountUsd: tokenAmountBigFloat.String(),
+		TotalLiquidityUsd:   lpBalance.String(),
+		Address:             tokenInfo.Address,
+		Name:                tokenInfo.Name,
+		Symbol:              tokenInfo.Symbol,
+		Decimals:            tokenInfo.Decimals,
+		List:                lists,
 	}
 
 	return
@@ -172,25 +167,27 @@ func getTimeOffset(tx_at time.Time) float64 {
 }
 
 func getRewardTokenLogoAndToken(tokenModel repository.TokenModel, configRewardTokenLogo string, chainId int64, rewardToken string) (repository.Token, string) {
-	ret := repository.Token{}
+	ret := repository.Token{
+		Name:     "UNKNOWN",
+		Symbol:   "UNKNOWN",
+		Address:  "UNKNOWN",
+		Decimals: 18,
+	}
+	rewardTokenLogo := configRewardTokenLogo
+
 	tokensInfo, err := tokenModel.QueryByChainIdAddress(context.Background(), chainId, []string{rewardToken})
 	if err != nil {
 		logx.Errorf("QueryByChainIdAddress:%v ", err)
-		return ret, ""
-	}
-	rewardTokenLogo := ""
-	if len(tokensInfo) > 0 {
-		for _, v := range tokensInfo {
-			if strings.EqualFold(v.Address, rewardToken) {
-				rewardTokenLogo = v.Logo.String
-				ret = v
-			}
-		}
+		return ret, rewardTokenLogo
 	}
 
-	if strings.EqualFold(rewardTokenLogo, "") {
-		if !strings.EqualFold(configRewardTokenLogo, "") {
-			rewardTokenLogo = configRewardTokenLogo
+	if len(tokensInfo) == 0 {
+		return ret, rewardTokenLogo
+	}
+	for _, v := range tokensInfo {
+		if strings.EqualFold(v.Address, rewardToken) {
+			rewardTokenLogo = v.Logo.String
+			ret = v
 		}
 	}
 	return ret, rewardTokenLogo

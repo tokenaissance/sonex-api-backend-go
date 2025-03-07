@@ -364,7 +364,6 @@ func getValueOfAmountToken(stakerAddress string, rewards *big.Int, incentiveId, 
 
 	totalClaimableFeesUSD, _ := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
 
-	logx.Infof("totalClaimableFeesUSD:%v", totalClaimableFeesUSD)
 
 	if totalClaimableFeesUSD.Cmp(big.NewFloat(0)) == 0 {
 		totalClaimableFeesUSD = big.NewFloat(0)
