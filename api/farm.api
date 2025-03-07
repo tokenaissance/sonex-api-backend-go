@@ -203,7 +203,7 @@ type FarmUnstakeRequest {
 	PageIndex   int64  `form:"pageIndex,default=1"`
 }
 
-// LIST :默认长度为3 个
+// LIST : 默认长度为3 个
 type FarmUnstakeResponse {
 	IncentiveId    string `form:"incentiveId"`      // 质押池ID
 	Total          int64  `json:"total"` 

@@ -245,6 +245,7 @@
           },
           {
             "name": "farmAddress",
+            "description": " farm address ",
             "in": "query",
             "required": true,
             "type": "string"
@@ -2538,7 +2539,8 @@
           "description": " 质押池ID"
         },
         "farmAddress": {
-          "type": "string"
+          "type": "string",
+          "description": " farm address"
         }
       },
       "title": "FarmRewardCalucateRequest",
@@ -2563,28 +2565,32 @@
           "type": "string"
         },
         "address": {
-          "type": "string"
+          "type": "string",
+          "description": " reward token address"
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "   reward token,"
         },
         "symbol": {
-          "type": "string"
+          "type": "string",
+          "description": "  reward symbol"
         },
         "decimals": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "description": "  reward decimal"
         },
         "rewardTokenLogo": {
           "type": "string"
         },
         "totalTokenAmount": {
           "type": "string",
-          "description": " 对应的 tokenAmount"
+          "description": " 对应的空投的 tokenAmount"
         },
         "totalTokenAmountUsd": {
           "type": "string",
-          "description": " 对应的USD"
+          "description": " 对应的空投的 tokenAmount 的USD"
         },
         "totalLiquidityUsd": {
           "type": "string",
