@@ -10,6 +10,7 @@ type FarmIncentivesRequest {
 	Status      string `form:"status,optional,options=active|closed"` // 运行状态
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
 	KeyWord     string `form:"keyWord,optional"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 	StakedOnly  bool   `form:"stakedOnly"`
 }
 
@@ -102,6 +103,7 @@ type FarmUserAssetDetailRequest {
 	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
 	UserAddress string `form:"userAddress"`      // 用户地址
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 // TODO 后续优化，应该是不需要 传incentiveid 全部 
@@ -124,6 +126,7 @@ type FarmPoolRoiRequest {
 	IncentiveId string `form:"incentiveId"`                      // 质押池ID
 	Amount      string `form:"amount"`                           // 金额（USD）
 	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmPoolRoiResponse {
@@ -143,6 +146,7 @@ type FarmPoolRoiResponse {
 type FarmPoolLiquidityRequest {
 	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmPoolLiquidityResponse {
@@ -168,6 +172,7 @@ type FarmStakeRequest {
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 
@@ -201,6 +206,7 @@ type FarmUnstakeRequest {
 	PoolAddress string `form:"poolAddress"`
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 // LIST : 默认长度为3 个
@@ -231,6 +237,7 @@ type FarmRewardCalucateRequest {
 	UserAddress string `form:"userAddress"`     // 用户地址
 	IncentiveId string `form:"incentiveId"`     // 质押池ID
 	FarmAddress string `form:"farmAddress"`     // farm address 
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 // 计算 Rewards

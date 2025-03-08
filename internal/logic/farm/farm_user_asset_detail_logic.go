@@ -225,29 +225,31 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 	sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 
+	stakerAddress := getFarmAddress(farmConf, req.Phase)
+
 	// 获取 totalClaimableFeesUSD，  tokenDecials,
-	totalClaimableFees, totalClaimableFeesUSD, tokenDecials, _, err := getRewardsDetailInfo(farmConf.Staker, req.UserAddress, int64(incentiveIdint), req.ChainId, chain, conn)
+	totalClaimableFees, totalClaimableFeesUSD, tokenDecials, _, err := getRewardsDetailInfo(stakerAddress, req.UserAddress, int64(incentiveIdint), req.ChainId, chain, conn)
 
 	if err != nil {
 		return resp, err
 	}
 	// 获取质押的数量
 	// 获取用户的  lpbalance
-	lpBalance, stakedNum, rewardToken, eventPool, err := getStakedNum(farmConf.Staker, conn, cacher, req.ChainId, int64(incentiveIdint), req.UserAddress)
+	lpBalance, stakedNum, rewardToken, eventPool, err := getStakedNum(stakerAddress, conn, cacher, req.ChainId, int64(incentiveIdint), req.UserAddress)
 	if err != nil && err != sqlx.ErrNotFound {
 		return resp, err
 	}
 
 	if strings.EqualFold(rewardToken, "") || strings.EqualFold(eventPool, "") {
-		rewardToken, eventPool = getRewardTokenAndExtraPool(farmConf.Staker, req.ChainId, int64(incentiveIdint), conn)
+		rewardToken, eventPool = getRewardTokenAndExtraPool(stakerAddress, req.ChainId, int64(incentiveIdint), conn)
 	}
 	// 获取可用的postion 个数
-	balanceNum, event_weight, token0Address, token1Address, err := getBalance(req.ChainId, int64(incentiveIdint), req.UserAddress, farmConf.Staker, conn)
+	balanceNum, event_weight, token0Address, token1Address, err := getBalance(req.ChainId, int64(incentiveIdint), req.UserAddress, stakerAddress, conn)
 	logx.Infof("useraddress:%v IncentiveId:%v ewardToken:%v , eventPool:%v ", userAddres, req.IncentiveId, rewardToken, eventPool)
 	if err != nil {
 		return resp, err
 	}
-	getTotalLiquidityUSD, err := getTotalLiquidity(farmConf.Staker, token0Address, token1Address, sonexConf.PositionManager, req.ChainId, int64(incentiveIdint), configFig, *chain, conn)
+	getTotalLiquidityUSD, err := getTotalLiquidity(stakerAddress, token0Address, token1Address, sonexConf.PositionManager, req.ChainId, int64(incentiveIdint), configFig, *chain, conn)
 	if err != nil {
 		return resp, err
 	}
@@ -259,7 +261,7 @@ func (l *FarmUserAssetDetailLogic) FarmUserAssetDetail(req *types.FarmUserAssetD
 
 	logx.Infof("totalRewardUSDString:%v", totalRewardUSDString)
 	totalRewardUSDBigFloat, _ := new(big.Float).SetString(totalRewardUSDString)
-	apr := getApr("FarmUserAssetDetail", eventPool, int64(incentiveIdint), totalRewardUSDBigFloat, getTotalLiquidityUSD, event_weight, farmConf.Staker, rewardToken, *chain, cacher)
+	apr := getApr("FarmUserAssetDetail", eventPool, int64(incentiveIdint), totalRewardUSDBigFloat, getTotalLiquidityUSD, event_weight, stakerAddress, rewardToken, *chain, cacher)
 
 	logx.Infof("lpBalance:%v ", lpBalance)
 	resp = &types.FarmUserAssetDetailResponse{
@@ -364,7 +366,6 @@ func getValueOfAmountToken(stakerAddress string, rewards *big.Int, incentiveId, 
 
 	totalClaimableFeesUSD, _ := global.CalucateOneTokenUsdInPool(rewards, tokenInfo.Price, int64(tokenInfo.UsdDecimals), tokenInfo.TokenDecimals)
 
-
 	if totalClaimableFeesUSD.Cmp(big.NewFloat(0)) == 0 {
 		totalClaimableFeesUSD = big.NewFloat(0)
 	}
@@ -439,9 +440,10 @@ func calucateFarmApr(tatalReward365 *big.Float, totalLiquidityUsd *big.Float, in
 
 	incentiveWeightBigFloatQuototalWeightBigFloatBigFloat := new(big.Float).Quo(incentiveWeightBigFloat, totalWeightBigFloat)
 	tatalReward365QuototalLiquidityBigFloat := new(big.Float).Quo(tatalReward365, totalLiquidityUsd)
-	logx.Infof("incentiveWeightBigFloatQuototalWeightBigFloatBigFloat:%v tatalReward365QuototalLiquidityBigFloat:%v  ", incentiveWeightBigFloatQuototalWeightBigFloatBigFloat, tatalReward365QuototalLiquidityBigFloat)
 
 	apr := new(big.Float).Mul(incentiveWeightBigFloatQuototalWeightBigFloatBigFloat, tatalReward365QuototalLiquidityBigFloat)
+	logx.Infof("incentiveWeightBigFloatQuototalWeightBigFloatBigFloat:%v tatalReward365QuototalLiquidityBigFloat:%v  incentiveWeightBigFloat:%v  ", incentiveWeightBigFloatQuototalWeightBigFloatBigFloat, tatalReward365QuototalLiquidityBigFloat, incentiveWeightBigFloat)
+
 	apr_mul100 := new(big.Float).Mul(apr, new(big.Float).SetInt64(100))
 	logx.Infof("apr:%v", apr)
 	return apr_mul100
