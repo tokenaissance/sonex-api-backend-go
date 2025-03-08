@@ -1,13 +1,17 @@
 package farm
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
 	"sonex_api_backend_go/internal/repository"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/zeromicro/go-zero/core/conf"
@@ -171,4 +175,50 @@ func Test_getBalance(t *testing.T) {
 		return
 	}
 	logx.Infof("a:%v , b:%v , ce:%v , d:%v ", a, b, ce, d)
+}
+
+func Test_writemainnet_positionvaluetoredis(t *testing.T) {
+	var configFile config.Config
+	conf.MustLoad("../../../etc/mainnet_only_read.yaml", &configFile)
+
+	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", configFile.Redis.Host, configFile.Redis.Port), configFile.Redis.Password, configFile.Redis.DB)
+
+	file, err := os.Open("./a.csv")
+	if err != nil {
+		logx.Errorf("OPENERROR:%v", err)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		a := strings.Split(line, ",")
+		if len(a) != 2 {
+			logx.Info("1111111 not right ", a)
+		} else {
+			if len(a) == 2 {
+				logx.Info("222222 right ", a)
+				err := cacher.Set(a[0], a[1], time.Hour*87600)
+				if err != nil {
+					logx.Errorf("ERRinSET :%v ", err)
+					return
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		logx.Errorf("scanner ERROR:%v", err)
+		return
+	}
+}
+
+func Test_ProcessForMainnetFarmValue(t *testing.T) {
+
+	err := ProcessForMainnetFarmValue()
+	if err != nil {
+		logx.Errorf("Err:%v ", err)
+	}
 }
