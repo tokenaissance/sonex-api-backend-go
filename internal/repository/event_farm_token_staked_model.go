@@ -26,6 +26,9 @@ type (
 		// 获取user所有质押的tokenid
 		QueryValidEverStakedByChainIdAndIncentiveId(ctx context.Context, chainId int64, incentiveId int64, userAddress, stakerAddress string) ([]CalucateRewardsModel, error)
 
+		// 获取在incentiveid里面所有质押的tokenid
+		QueryValidEverStakedByChainIdAndIncentiveIdForMainnet(ctx context.Context, chainId int64, incentiveId int64, stakerAddress string) ([]CalucateRewardsModel, error)
+
 		// TODO DELETE
 		QueryValidByChainIdUser(ctx context.Context, chainId int64, user string) ([]EventFarmTokenStaked, error)
 		FindLatestByChainId(ctx context.Context, chainId int64) (*EventFarmTokenStaked, error)
@@ -256,6 +259,35 @@ SELECT  DISTINCT ON(event_token_id) S.* ,C.event_pool,C.event_reward_token,C.eve
 				`
 	resp := []CalucateRewardsModel{}
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, incentiveId, userAddress, stakerAddress)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customEventFarmTokenStakedModel) QueryValidEverStakedByChainIdAndIncentiveIdForMainnet(ctx context.Context, chainId int64, incentiveId int64, stakerAddress string) ([]CalucateRewardsModel, error) {
+
+	query := `
+SELECT DISTINCT ON
+	( event_token_id ) S.* ,
+	C.event_pool,
+	C.event_reward_token,
+	C.event_weight 
+FROM
+	event_farm_token_staked S,
+	event_farm_incentive_created C 
+WHERE
+	S.chain_id = $1 
+	AND S.event_incentive_id = $2 
+	AND S.to_ = $3 
+	AND C.event_incentive_id = S.event_incentive_id 
+	AND C.to_ = S.to_ 
+ORDER BY
+	event_token_id,
+	tx_at DESC
+				`
+	resp := []CalucateRewardsModel{}
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, incentiveId, stakerAddress)
 	if err != nil {
 		return nil, err
 	}
