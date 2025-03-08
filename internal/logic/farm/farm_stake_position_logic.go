@@ -81,11 +81,15 @@ func (l *FarmStakePositionLogic) FarmStakePosition(req *types.FarmStakeRequest) 
 		logx.Errorf("SummarizeCurrentPositions Err:%v", err)
 		return &types.FarmStakeResponse{}, err
 	}
+	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
+
+	stakerAddress := getFarmAddress(farmConf, req.Phase)
+
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
-	return returnPositionByPoolAddress(chain, cacher, req.ChainRequest, l.svcCtx.Config, positions, poolAddress.String(), req.IncentiveId)
+	return returnPositionByPoolAddress(chain, cacher, req.ChainRequest, l.svcCtx.Config, stakerAddress, positions, poolAddress.String(), req.IncentiveId)
 }
 
-func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache, chainRequest types.ChainRequest, config config.Config, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmStakeResponse, err error) {
+func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache, chainRequest types.ChainRequest, config config.Config, stakerAddress string, positions []*sonex.Position, poolAddress string, incentiveId string) (resp *types.FarmStakeResponse, err error) {
 
 	// 处理成需要的结构体
 	if len(positions) == 0 {
@@ -99,7 +103,6 @@ func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache,
 	token0Symbol, token1Symbol := "", ""
 
 	sonexConf := config.GetSonexConfig(chainRequest.ChainId)
-	farmConf := config.GetFarmConfig(chainRequest.ChainId)
 
 	// 开始处理
 	if len(positions) > 0 {
@@ -123,7 +126,7 @@ func returnPositionByPoolAddress(chain *config.ChainConfig, cacher cache.ICache,
 					// 该 tokenid  approved 失败，意味着该 tokenid 不能 stake成功
 					// 比如 : 因为 burn  token id事件没有被扫描到导致的，需要补扫描
 					// 加了错误处理，保证可以 stake 的 tokenid 功能正常
-					isApprovedOrNot, err := getTokenIdApprovedOrNot(*chain, v.TokenId.Int64(), sonexConf.PositionManager, farmConf.Staker)
+					isApprovedOrNot, err := getTokenIdApprovedOrNot(*chain, v.TokenId.Int64(), sonexConf.PositionManager, stakerAddress)
 					if err != nil {
 						logx.Errorf("getTokenIdApprovedOrNot failed  for tokenID :%v ,maybe need rescanner error %v", v.TokenId.Int64(), err)
 					}

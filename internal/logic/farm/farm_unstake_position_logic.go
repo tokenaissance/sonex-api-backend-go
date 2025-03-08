@@ -70,7 +70,7 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 
 	farmConf := l.svcCtx.Config.GetFarmConfig(req.ChainId)
-
+	stakerAddress := getFarmAddress(farmConf, req.Phase)
 	// farmToAddress := l.svcCtx.Config.Farms[0].Staker
 
 	// farmToAddress_Hex := common.HexToAddress(farmToAddress)
@@ -88,7 +88,7 @@ func (l *FarmUnstakePositionLogic) FarmUnstakePosition(req *types.FarmUnstakeReq
 
 	eventFarmTokenUnstakedModel := repository.NewEventFarmTokenUnstakedModel(conn)
 
-	_, tokenIds, err := eventFarmTokenUnstakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), req.ChainId, req.UserAddress, int64(incentiveIdint), farmConf.Staker)
+	_, tokenIds, err := eventFarmTokenUnstakedModel.QueryValidByChainIdUserIncentiveIdWithExtra(context.Background(), req.ChainId, req.UserAddress, int64(incentiveIdint), stakerAddress)
 
 	if err != nil {
 		logx.Errorf(" FindByChainId:%v  ", err)
@@ -265,10 +265,12 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 	conn := repository.NewConn(conf.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", conf.Redis.Host, conf.Redis.Port), conf.Redis.Password, conf.Redis.DB)
 
+	stakerAddress := getFarmAddress(farmConf, DefaultPhase)
+
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
 
-	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(context.Background(), chainId, common.HexToAddress(farmConf.Staker).Hex())
+	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(context.Background(), chainId, common.HexToAddress(stakerAddress).Hex())
 	if err != nil {
 		logx.Errorf("ERR1:%v ", err)
 		return &types.DashboardIncentiveWithStakedUsd{}, err
@@ -290,7 +292,7 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 				return
 			}
 
-			unclaimedTotalRewards, err := getRewardsAmount(farmConf.Staker, userAddress, record.EventIncentiveId, *chainConf)
+			unclaimedTotalRewards, err := getRewardsAmount(stakerAddress, userAddress, record.EventIncentiveId, *chainConf)
 			if err != nil {
 				logx.Errorf("getRewardsAmount ERR:%v ", err)
 				return
@@ -307,7 +309,7 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 				return
 			}
 
-			unclaimedFeesUSD, claimedAmountFeeUsd, err := getValueOfAmountTokenFordashboard(unclaimedTotalRewards, totalClaimedAmount, record.EventIncentiveId, chainId, chainConf, conn, farmConf.Staker)
+			unclaimedFeesUSD, claimedAmountFeeUsd, err := getValueOfAmountTokenFordashboard(unclaimedTotalRewards, totalClaimedAmount, record.EventIncentiveId, chainId, chainConf, conn, stakerAddress)
 
 			if err != nil {
 				logx.Errorf("getValueOfAmountTokenFordashboard:%v ", err)
@@ -329,7 +331,7 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 			TotalFeeRevenue = new(big.Float).Add(TotalFeeRevenue, revenueBigFloat)
 			// 获取质押的数量
 			// 获取用户的  lpbalance
-			lpBalance, stakedNum, _, _, err := getStakedNum(farmConf.Staker, conn, cacher, chainId, record.EventIncentiveId, userAddress)
+			lpBalance, stakedNum, _, _, err := getStakedNum(stakerAddress, conn, cacher, chainId, record.EventIncentiveId, userAddress)
 			if err != nil && err != sqlx.ErrNotFound {
 				return
 			}
