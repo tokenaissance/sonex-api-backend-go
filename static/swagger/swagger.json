@@ -158,6 +158,14 @@
             "type": "string"
           },
           {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "stakedOnly",
             "in": "query",
             "required": true,
@@ -199,6 +207,14 @@
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -249,6 +265,14 @@
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -307,6 +331,14 @@
               "365",
               "1825"
             ]
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -372,6 +404,14 @@
             "type": "integer",
             "format": "int64",
             "default": "1"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -437,6 +477,14 @@
             "type": "integer",
             "format": "int64",
             "default": "1"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -480,6 +528,14 @@
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -2115,6 +2171,11 @@
         "keyWord": {
           "type": "string"
         },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
+        },
         "stakedOnly": {
           "type": "boolean",
           "format": "boolean"
@@ -2370,6 +2431,11 @@
         "incentiveId": {
           "type": "string",
           "description": " 质押池ID"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmPoolLiquidityRequest",
@@ -2464,6 +2530,11 @@
             "1825"
           ],
           "description": " 质押时长（单位：天）"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmPoolRoiRequest",
@@ -2541,6 +2612,11 @@
         "farmAddress": {
           "type": "string",
           "description": " farm address"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmRewardCalucateRequest",
@@ -2642,6 +2718,11 @@
           "type": "integer",
           "format": "int64",
           "default": "1"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmStakeRequest",
@@ -2728,6 +2809,11 @@
           "type": "integer",
           "format": "int64",
           "default": "1"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmUnstakeRequest",
@@ -2801,6 +2887,11 @@
         "userAddress": {
           "type": "string",
           "description": " 用户地址"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmUserAssetDetailRequest",

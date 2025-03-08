@@ -41,7 +41,6 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 	if req.ChainId <= 0 {
 		return &types.FarmRewardCalucateResponese{}, fmt.Errorf("invalid parameter")
 	}
-
 	// farmToAddress_Hex := common.HexToAddress(farmToAddress)
 	incentiveIdint, err := strconv.Atoi(req.IncentiveId)
 	if err != nil {
@@ -63,6 +62,7 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 	conn := repository.NewConn(l.svcCtx.Config.PostgreSQL.DataSource())
 	//sonexConf := l.svcCtx.Config.GetSonexConfig(req.ChainId)
 	tokenModel := repository.NewTokenModel(conn)
+	stakerAddress := getFarmAddress(farmConf, req.Phase)
 
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", l.svcCtx.Config.Redis.Host, l.svcCtx.Config.Redis.Port), l.svcCtx.Config.Redis.Password, l.svcCtx.Config.Redis.DB)
 
@@ -139,7 +139,7 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 	tokenInfo, rewardTokenLogo := getRewardTokenLogoAndToken(tokenModel, farmConf.XRewardToken, req.ChainId, rewardToken)
 
 	tokenAmountBigInt, _ := tokenAmountTotal.Int(nil)
-	tokenAmountBigFloat, _, err := getValueOfAmountToken(farmConf.Staker, tokenAmountBigInt, int64(incentiveIdint), req.ChainId, chainConf, conn)
+	tokenAmountBigFloat, _, err := getValueOfAmountToken(stakerAddress, tokenAmountBigInt, int64(incentiveIdint), req.ChainId, chainConf, conn)
 	if err != nil {
 		logx.Errorf("getValueOfAmountTokenERR:%v  ", err)
 		tokenAmountBigFloat = new(big.Float).SetFloat64(0)

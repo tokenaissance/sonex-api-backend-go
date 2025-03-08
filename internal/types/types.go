@@ -89,6 +89,7 @@ type FarmIncentivesRequest struct {
 	Status      string `form:"status,optional,options=active|closed"` // 运行状态
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
 	KeyWord     string `form:"keyWord,optional"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 	StakedOnly  bool   `form:"stakedOnly"`
 }
 
@@ -145,7 +146,8 @@ type FarmIncentivesResponse_Token struct {
 
 type FarmPoolLiquidityRequest struct {
 	ChainRequest
-	IncentiveId string `form:"incentiveId"` // 质押池ID
+	IncentiveId string `form:"incentiveId"`    // 质押池ID
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmPoolLiquidityResponse struct {
@@ -167,6 +169,7 @@ type FarmPoolRoiRequest struct {
 	IncentiveId string `form:"incentiveId"`                      // 质押池ID
 	Amount      string `form:"amount"`                           // 金额（USD）
 	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
+	Phase       int64  `form:"phase,optional"`                   // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmPoolRoiResponse struct {
@@ -183,9 +186,10 @@ type FarmPoolRoiResponse struct {
 
 type FarmRewardCalucateRequest struct {
 	ChainRequest
-	UserAddress string `form:"userAddress"` // 用户地址
-	IncentiveId string `form:"incentiveId"` // 质押池ID
-	FarmAddress string `form:"farmAddress"` // farm address
+	UserAddress string `form:"userAddress"`    // 用户地址
+	IncentiveId string `form:"incentiveId"`    // 质押池ID
+	FarmAddress string `form:"farmAddress"`    // farm address
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmRewardCalucateResponese struct {
@@ -210,6 +214,7 @@ type FarmStakeRequest struct {
 	IncentiveId string `form:"incentiveId"` // 质押池ID
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmStakeResponse struct {
@@ -231,6 +236,7 @@ type FarmUnstakeRequest struct {
 	PoolAddress string `form:"poolAddress"`
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmUnstakeResponse struct {
@@ -247,8 +253,9 @@ type FarmUnstakeResponse struct {
 
 type FarmUserAssetDetailRequest struct {
 	ChainRequest
-	IncentiveId string `form:"incentiveId"` // 质押池ID
-	UserAddress string `form:"userAddress"` // 用户地址
+	IncentiveId string `form:"incentiveId"`    // 质押池ID
+	UserAddress string `form:"userAddress"`    // 用户地址
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmUserAssetDetailResponse struct {
