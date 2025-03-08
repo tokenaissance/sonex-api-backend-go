@@ -201,6 +201,17 @@ func main() {
 					panic(err)
 				}
 				global.AddChainHandler(chain.ChainId, handler)
+
+				// OldVersion
+				if config.OldVersionStaker != nil {
+					oldVersionConf := *config
+					oldVersionConf.Staker = *config.OldVersionStaker
+					oldVersionHandler, err := farm.NewFarmHandler(c.PostgreSQL.DataSource(), chain, oldVersionConf)
+					if err != nil {
+						panic(err)
+					}
+					global.AddChainHandler(chain.ChainId, oldVersionHandler)
+				}
 			}
 		}
 
