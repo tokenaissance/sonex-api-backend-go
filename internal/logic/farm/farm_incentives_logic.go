@@ -343,8 +343,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
 
-			logx.Infof("XXXXXrewardToken.Address :%v ratepersecond:%v rewardPrice:%v rewardUSD:%v totalRewardUSD:%v rewardTokenAccuracy:%v incincentiveCreatedRecordItem:%v  ", rewardToken.Address, ratepersecond, rewardPrice, rewardUSD, totalRewardUSD, rewardToken.Decimals, incincentiveCreatedRecordItem)
-
 			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
 			if err != nil {
 				logx.Errorf("SetTotalReward365ForIncentiveId ERR:%v ", err)
