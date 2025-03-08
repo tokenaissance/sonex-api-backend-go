@@ -476,8 +476,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
 =======
 
-				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1000000), record.EventWeight, stakerAddress, record.ExtraRewardToken, *chainConf, cacher)
-				logx.Infof("222222222 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, big.NewFloat(1000000))
+				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, stakerAddress, record.ExtraRewardToken, *chainConf, cacher)
+				logx.Infof("222222222 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, big.NewFloat(1))
 
 >>>>>>> c0eb9f7 (add Phase in farm api)
 				dataResult = types.FarmIncentivesResponse_Data{
