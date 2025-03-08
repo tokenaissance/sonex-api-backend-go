@@ -95,10 +95,8 @@ func (m *customEventFarmIncentiveCreatedModel) FindLatestByChainId(ctx context.C
 }
 
 func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx context.Context, chainId int64, staker string) ([]EventFarmIncentiveCreatedWithExtra, error) {
-	eventSonexFactoryPoolCreatedModel := newEventSonexFactoryPoolCreatedModel(m.conn)
-	eventFarmRewardRateUpdatedModel := newEventFarmRewardRateUpdatedModel(m.conn)
 	var resp []EventFarmIncentiveCreatedWithExtra
-	query := fmt.Sprintf(`
+	query := `
 		WITH SelectTemp AS (
 			SELECT 
 				F.id, F.created_at, F.updated_at, F.chain_id, F.block_number, F.tx_index, F.tx_hash, F.tx_at, F.from_, F.to_, F.value,
@@ -106,9 +104,9 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 				P.event_token0 AS extra_token0, P.event_token1 AS extra_token1, P.event_fee AS extra_fee, P.event_tick_spacing AS extra_tick_spacing,
 				U.event_reward_token AS extra_reward_token, U.event_new_rate_per_second AS extra_rate,
 				ROW_NUMBER() OVER (PARTITION BY F.event_incentive_id ORDER BY U.tx_at DESC) AS rn
-			FROM %s F
-			JOIN %s P ON P.event_pool = F.event_pool 
-			JOIN %s U ON U.to_ = F.to_ 
+			FROM event_farm_incentive_created F
+			JOIN event_sonex_factory_pool_created P ON P.event_pool = F.event_pool 
+			JOIN event_farm_reward_rate_updated U ON U.to_ = $2 AND U.event_reward_token = F.event_reward_token 
 			WHERE F.chain_id = $1 AND F.to_ = $2
 		)
 
@@ -124,7 +122,7 @@ func (m *customEventFarmIncentiveCreatedModel) QueryByChainIdStakerWithExtra(ctx
 
 		FROM SelectTemp
 		WHERE rn = 1
-	`, m.table, eventSonexFactoryPoolCreatedModel.table, eventFarmRewardRateUpdatedModel.table)
+	`
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, staker)
 	if err != nil {
 		logx.Errorf("ERR %v", err)
