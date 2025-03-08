@@ -331,13 +331,19 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			}
 			rewardPrice := new(big.Float).SetInt(val)
 			// rewardTokenAccuracy := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(rewardToken.Decimals), nil))
-			rewardTokenAccuracy := new(big.Float).SetFloat64(math.Pow10(int(rewardToken.Decimals)))
+			// rewardTokenAccuracy := new(big.Float).SetFloat64(math.Pow10(int(rewardToken.Decimals)))
+			usdPower10 := new(big.Float).SetFloat64(math.Pow10((6)))
+			rewardPriceQuoDecimals := new(big.Float).Quo(rewardPrice, usdPower10)
 
-			rewardUSD := new(big.Float).Quo(new(big.Float).Quo(new(big.Float).Mul(ratepersecond, rewardPrice), rewardTokenAccuracy), usdAccuracy)
+			ratepersecondQuoTokenDecimals := new(big.Float).Quo(ratepersecond, new(big.Float).SetFloat64(math.Pow10((int(rewardToken.Decimals)))))
+
+			ratePerSecondUsdWithNoDecials := new(big.Float).Mul(ratepersecondQuoTokenDecimals, rewardPriceQuoDecimals)
+
+			rewardUSD := ratePerSecondUsdWithNoDecials
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
 
-			logx.Infof("XXXXXrewardToken.Address :%v ratepersecond:%v rewardPrice:%v rewardUSD:%v totalRewardUSD:%v rewardTokenAccuracy:%v incincentiveCreatedRecordItem:%v  ", rewardToken.Address, ratepersecond, rewardPrice, rewardUSD, totalRewardUSD, rewardTokenAccuracy, incincentiveCreatedRecordItem)
+			logx.Infof("ZZZZZZZZrewardToken.Address :%v ratepersecondQuoTokenDecimals:%v ratePerSecondUsdWithNoDecials:%v rewardPrice:%v rewardUSD:%v totalRewardUSD:%v rewardTokenAccuracy:%v  incentiveid:%v  ", rewardToken.Address, ratepersecondQuoTokenDecimals, ratePerSecondUsdWithNoDecials, rewardPrice, rewardUSD, totalRewardUSD, rewardToken.Decimals, incincentiveCreatedRecordItem.EventIncentiveId)
 
 			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
 			if err != nil {
@@ -414,7 +420,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 				apr := getApr("listok", record.EventPool, record.EventIncentiveId, totalRewardUSD, totalLiquidityUSD, record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
 
-				logx.Infof("1111111111 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, totalLiquidityUSD)
+				logx.Infof("222222222 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, totalLiquidityUSD)
 
 				var tids []int64
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
@@ -457,7 +463,7 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
 
 				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1000000), record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
-				logx.Infof("1111111111 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, big.NewFloat(1000000))
+				logx.Infof("222222222 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, big.NewFloat(1000000))
 
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:                  record.EventIncentiveId,

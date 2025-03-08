@@ -14,12 +14,12 @@ func Test_EventFarmIncentiveCreatedModelQueryByChainIdStakerWithExtra(t *testing
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
-	records, err := model.QueryByChainIdStakerWithExtra(context.Background(), 1946, "0xeC8BcA27444bA6360EfF22365b42012d029D6324")
+	records, err := model.QueryByChainIdStakerWithExtra(context.Background(), 1946, "0x3a048ACb139e0C59d7e8FCf9441E998E4845bE56")
 	if err != nil {
 		t.Error(err)
 	}
 	for i, v := range records {
-		logx.Infof("i:%v incentiveid:%v  status :%v ", i, v.EventIncentiveId, v.ExtraEnded)
+		logx.Infof("i:%v incentiveid:%v  v :%v ", i, v.EventIncentiveId, v)
 	}
 	_ = records
 }
