@@ -91,6 +91,7 @@ Farms:
         PointsHoldTimeLimits: 300
         PointsUSDLimits: 10
         Points: 5000
+    OldVersionStaker: 0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6
 Xpools:
   - ChainId: 1946
     Factory: 0xB1E6ef99cB82ae685b8289DE3251b5427Dc72148
