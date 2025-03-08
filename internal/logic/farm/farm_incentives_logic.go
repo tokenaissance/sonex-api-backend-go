@@ -414,6 +414,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 				apr := getApr("listok", record.EventPool, record.EventIncentiveId, totalRewardUSD, totalLiquidityUSD, record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
 
+				logx.Infof("1111111111 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, totalLiquidityUSD)
+
 				var tids []int64
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 
@@ -453,7 +455,9 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				// apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 				// 0 的时候  就应该按照1来算
 				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
-				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
+
+				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1000000), record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
+				logx.Infof("1111111111 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, big.NewFloat(1000000))
 
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:                  record.EventIncentiveId,
