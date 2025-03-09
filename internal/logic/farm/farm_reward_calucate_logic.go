@@ -305,10 +305,9 @@ func ProcessForMainnetFarmValue() error {
 
 func getTimeOffsetMainnet(tx_at time.Time) float64 {
 
-	return float64(14 * 86400)
-	// dt := time.Date(2025, time.March, 7, 12, 0, 0, 0, time.UTC)
-	// tx_at_second := dt.Sub(tx_at).Seconds()
-	// return tx_at_second
+	dt := time.Date(2025, time.March, 8, 12, 0, 0, 0, time.UTC)
+	tx_at_second := dt.Sub(tx_at).Seconds()
+	return tx_at_second
 }
 func getTotalLiquidityUSDByIncentiveId(incentiveId int64) *big.Float {
 
