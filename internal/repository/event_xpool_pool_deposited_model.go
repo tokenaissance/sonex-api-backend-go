@@ -18,7 +18,7 @@ type (
 		eventXpoolPoolDepositedModel
 		withSession(session sqlx.Session) EventXpoolPoolDepositedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, amount string, height int64) error
-		GetDepositedEvents(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error)
+		GetDepositedEventsByUserAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error)
 	}
 
 	customEventXpoolPoolDepositedModel struct {
@@ -43,8 +43,8 @@ func (m *customEventXpoolPoolDepositedModel) New(ctx context.Context, id int64, 
 	return err
 }
 
-// GetDepositedEvents 获取指定地址的存款事件
-func (m *customEventXpoolPoolDepositedModel) GetDepositedEvents(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error) {
+// GetDepositedEventsByUserAddress 获取指定地址的存款事件
+func (m *customEventXpoolPoolDepositedModel) GetDepositedEventsByUserAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error) {
 	var resp []*EventXpoolPoolDeposited
 	// 将用户地址转换为以太坊地址格式
 	address = common.HexToAddress(address).Hex()

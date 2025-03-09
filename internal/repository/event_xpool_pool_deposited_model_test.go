@@ -15,9 +15,9 @@ func Test_GetDepositedEvents(t *testing.T) {
 	ctx := context.Background()
 	model := NewEventXpoolPoolDepositedModel(NewConn(c.PostgreSQL.DataSource()))
 
-	events, err := model.GetDepositedEvents(ctx, 1946, "0x41Bc39CEa9eD3a41F67C7a9D65DE47a8aA1E09E1")
+	events, err := model.GetDepositedEventsByUserAddress(ctx, 1946, "0x41Bc39CEa9eD3a41F67C7a9D65DE47a8aA1E09E1")
 	if err != nil {
-		t.Fatalf("GetDepositedEvents failed: %v", err)
+		t.Fatalf("GetDepositedEventsByUserAddress failed: %v", err)
 	}
 	logx.Infof("Deposited events: %+v", events)
 
