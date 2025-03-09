@@ -144,15 +144,13 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			} else {
 				resp.List[i].Staked = val
 			}
-			totalClaimableFeesString, totalClaimableFeesUSD, _, totalClaimableFeesUSDFloat64, err := getRewardsDetailInfo(stakerAddress, req.UserAddress, int64(item.IncentiveId), req.ChainId, chain, conn)
+			_, totalClaimableFeesUSD, _, totalClaimableFeesUSDFloat64, err := getRewardsDetailInfo(stakerAddress, req.UserAddress, int64(item.IncentiveId), req.ChainId, chain, conn)
 
 			if err != nil {
 				return resp, err
 			}
 			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
 			resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
-
-			logx.Infof("UserAddress:%v incentiveid:%v totalClaimableFeesString:%v ", req.UserAddress, item.IncentiveId, totalClaimableFeesString)
 
 			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
 			if err != nil {
@@ -177,7 +175,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	}
 	if !strings.EqualFold(req.KeyWord, "") {
 		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
-			return strings.Contains(item.Token0Symbol, req.KeyWord) || strings.Contains(item.Token1Symbol, req.KeyWord)
+			return strings.Contains(strings.ToLower(item.Token0Symbol), strings.ToLower(req.KeyWord)) || strings.Contains(strings.ToLower(item.Token1Symbol), strings.ToLower(req.KeyWord))
 
 		}).ToSlice(&resp.List)
 	}
