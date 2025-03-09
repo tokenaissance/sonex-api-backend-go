@@ -123,7 +123,7 @@ func (l *XpoolPoolListLogic) GetUserOperationEvents(chainId int64, userAddress s
 		return nil, err
 	}
 
-	withdrawedEvents, err := l.eventXpoolPoolWithdrawedModel.GetWithdrawedEvents(l.ctx, chainId, userAddress)
+	withdrawedEvents, err := l.eventXpoolPoolWithdrawedModel.GetWithdrawedEventsByUserAddress(l.ctx, chainId, userAddress)
 	if err != nil {
 		logx.Errorf("[XpoolPoolList]: Get user withdrawed events error: %s", err)
 		return nil, err

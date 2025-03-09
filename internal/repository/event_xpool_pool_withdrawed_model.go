@@ -18,7 +18,8 @@ type (
 		eventXpoolPoolWithdrawedModel
 		withSession(session sqlx.Session) EventXpoolPoolWithdrawedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, withdrawed string, claimed string, height int64) error
-		GetWithdrawedEvents(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolWithdrawed, error)
+		GetWithdrawedEventsByUserAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolWithdrawed, error)
+		GetWithdrawedEventsByPoolAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolWithdrawed, error)
 	}
 
 	customEventXpoolPoolWithdrawedModel struct {
@@ -43,8 +44,28 @@ func (m *customEventXpoolPoolWithdrawedModel) New(ctx context.Context, id int64,
 	return err
 }
 
-// GetWithdrawedEvents 获取指定地址的提款事件
-func (m *customEventXpoolPoolWithdrawedModel) GetWithdrawedEvents(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolWithdrawed, error) {
+// GetWithdrawedEventsByPoolAddress 获取指定池子的提款事件
+func (m *customEventXpoolPoolWithdrawedModel) GetWithdrawedEventsByPoolAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolWithdrawed, error) {
+	var resp []*EventXpoolPoolWithdrawed
+	// 将池子地址转换为以太坊地址格式
+	address = common.HexToAddress(address).Hex()
+	query := fmt.Sprintf("SELECT * FROM %s WHERE chain_id = $1 AND from_ = $2", m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address)
+	if err != nil {
+		return nil, err
+	}
+
+	withdrawedEvents := make(map[string][]*EventXpoolPoolWithdrawed)
+	for _, event := range resp {
+		// 获取 user address 地址
+		userAddress := common.HexToAddress(event.To).Hex()
+		withdrawedEvents[userAddress] = append(withdrawedEvents[userAddress], event)
+	}
+	return withdrawedEvents, nil
+}
+
+// GetWithdrawedEventsByUserAddress 获取指定地址的提款事件
+func (m *customEventXpoolPoolWithdrawedModel) GetWithdrawedEventsByUserAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolWithdrawed, error) {
 	var resp []*EventXpoolPoolWithdrawed
 	// 将用户地址转换为以太坊地址格式
 	address = common.HexToAddress(address).Hex()
