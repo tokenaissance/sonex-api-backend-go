@@ -16,6 +16,7 @@ type (
 	XpoolPointsRecordModel interface {
 		xpoolPointsRecordModel
 		withSession(session sqlx.Session) XpoolPointsRecordModel
+		New(ctx context.Context, id int64, chainId int64, poolAddress string, userAddress string, points int64, amount string, tokenDecimals int64, price string, usdDecimals int64) error
 		GetUserPointsByPoolAddress(ctx context.Context, chainId int64, poolAddress string) (map[string][]*XpoolPointsRecord, error)
 	}
 
@@ -51,4 +52,10 @@ func (m *customXpoolPointsRecordModel) GetUserPointsByPoolAddress(ctx context.Co
 	}
 
 	return userPointsMap, nil
+}
+
+func (m *customXpoolPointsRecordModel) New(ctx context.Context, id int64, chainId int64, poolAddress string, userAddress string, points int64, amount string, tokenDecimals int64, price string, usdDecimals int64) error {
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", m.table, xpoolPointsRecordRows)
+	_, err := m.conn.ExecCtx(ctx, query, id, NowUTC(), NowUTC(), chainId, poolAddress, userAddress, points, amount, tokenDecimals, price, usdDecimals)
+	return err
 }
