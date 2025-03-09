@@ -117,7 +117,7 @@ func (l *XpoolPoolListLogic) GetUserOperationEvents(chainId int64, userAddress s
 	}
 
 	// get user deposited events
-	depositedEvents, err := l.eventXpoolPoolDepositedModel.GetDepositedEvents(l.ctx, chainId, userAddress)
+	depositedEvents, err := l.eventXpoolPoolDepositedModel.GetDepositedEventsByUserAddress(l.ctx, chainId, userAddress)
 	if err != nil {
 		logx.Errorf("[XpoolPoolList]: Get user deposited events error: %s", err)
 		return nil, err

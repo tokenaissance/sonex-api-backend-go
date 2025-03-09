@@ -9,7 +9,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-func Test_GetDepositedEvents(t *testing.T) {
+func Test_GetDepositedEventsByUserAddress(t *testing.T) {
 	var c config.Config
 	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
 	ctx := context.Background()
@@ -22,4 +22,17 @@ func Test_GetDepositedEvents(t *testing.T) {
 	logx.Infof("Deposited events: %+v", events)
 
 	t.Logf("Deposited events: %v", events)
+}
+
+func Test_GetDepositedEventsByPoolAddress(t *testing.T) {
+	var c config.Config
+	conf.MustLoad("../../etc/sonex_api_backend_go.yaml", &c)
+	ctx := context.Background()
+	model := NewEventXpoolPoolDepositedModel(NewConn(c.PostgreSQL.DataSource()))
+
+	events, err := model.GetDepositedEventsByPoolAddress(ctx, 1946, "0x09cf25c79e07F9F8CEd5F7850d2486Fa02AEfF5e")
+	if err != nil {
+		t.Fatalf("GetDepositedEventsByPoolAddress failed: %v", err)
+	}
+	logx.Infof("Deposited events: %+v", events)
 }
