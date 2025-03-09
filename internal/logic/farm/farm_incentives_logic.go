@@ -88,10 +88,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		return resp, nil
 	}
 
-	logx.Infof("ZXXXresp:%v ", len(resp.List))
-	for i, v := range resp.List {
-		logx.Infof("i:%v v:%v ", i, v)
-	}
 	// Filter
 	if !strings.EqualFold(req.UserAddress, "") && common.IsHexAddress(req.UserAddress) {
 
@@ -148,15 +144,13 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 			} else {
 				resp.List[i].Staked = val
 			}
-			totalClaimableFeesString, totalClaimableFeesUSD, _, totalClaimableFeesUSDFloat64, err := getRewardsDetailInfo(stakerAddress, req.UserAddress, int64(item.IncentiveId), req.ChainId, chain, conn)
+			_, totalClaimableFeesUSD, _, totalClaimableFeesUSDFloat64, err := getRewardsDetailInfo(stakerAddress, req.UserAddress, int64(item.IncentiveId), req.ChainId, chain, conn)
 
 			if err != nil {
 				return resp, err
 			}
 			resp.List[i].TotalClaimableFeesUSD = totalClaimableFeesUSD.String()
 			resp.List[i].TotalClaimableFeesUSDFloat64 = totalClaimableFeesUSDFloat64
-
-			logx.Infof("UserAddress:%v incentiveid:%v totalClaimableFeesString:%v ", req.UserAddress, item.IncentiveId, totalClaimableFeesString)
 
 			totalClaimedAmount, err := getClainedAmount(req.UserAddress, req.ChainId, item.IncentiveId, conn)
 			if err != nil {
@@ -181,7 +175,7 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 	}
 	if !strings.EqualFold(req.KeyWord, "") {
 		linq.From(resp.List).WhereT(func(item types.FarmIncentivesResponse_Data) bool {
-			return strings.Contains(item.Token0Symbol, req.KeyWord) || strings.Contains(item.Token1Symbol, req.KeyWord)
+			return strings.Contains(strings.ToLower(item.Token0Symbol), strings.ToLower(req.KeyWord)) || strings.Contains(strings.ToLower(item.Token1Symbol), strings.ToLower(req.KeyWord))
 
 		}).ToSlice(&resp.List)
 	}
@@ -357,8 +351,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
 
-			logx.Infof("ZZZZZZZZrewardToken.Address :%v price:%v ratepersecondQuoTokenDecimals:%v ratePerSecondUsdWithNoDecials:%v rewardPrice:%v rewardUSD:%v totalRewardUSD:%v rewardTokenAccuracy:%v  incentiveid:%v  ", rewardToken.Address, val, ratepersecondQuoTokenDecimals, ratePerSecondUsdWithNoDecials, rewardPrice, rewardUSD, totalRewardUSD, rewardToken.Decimals, incincentiveCreatedRecordItem.EventIncentiveId)
-
 			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
 			if err != nil {
 				logx.Errorf("SetTotalReward365ForIncentiveId ERR:%v ", err)
@@ -434,8 +426,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 
 				apr := getApr("listok", record.EventPool, record.EventIncentiveId, totalRewardUSD, totalLiquidityUSD, record.EventWeight, stakerAddress, record.ExtraRewardToken, *chainConf, cacher)
 
-				logx.Infof("222222222 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, totalLiquidityUSD)
-
 				var tids []int64
 				linq.From(tokenIds).SelectT(func(item *big.Int) int64 { return item.Int64() }).ToSlice(&tids)
 
@@ -477,7 +467,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
 
 				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, stakerAddress, record.ExtraRewardToken, *chainConf, cacher)
-				logx.Infof("222222222 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, big.NewFloat(1))
 
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:                  record.EventIncentiveId,
