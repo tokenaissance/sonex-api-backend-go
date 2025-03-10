@@ -11,6 +11,7 @@ import (
 
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/lib/cache"
+	sonex_logic "sonex_api_backend_go/internal/logic/sonex"
 	"sonex_api_backend_go/internal/repository"
 	"sonex_api_backend_go/internal/svc"
 	"sonex_api_backend_go/internal/types"
@@ -100,9 +101,25 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 
 		eventTokenIdUsdString, err := GetPositionValue(cacher, v.EventPool, v.EventTokenId)
 		if err != nil {
-			logx.Errorf("ERR :%v ", err)
-			continue
+			svcCtx := svc.NewServiceContext(l.svcCtx.Config)
+			l2 := sonex_logic.NewSonexPositionLogic(context.Background(), svcCtx)
+			reqPositions := types.PositionRequest{
+				ChainRequest: req.ChainRequest,
+				TokenId:      v.EventTokenId,
+			}
+			respSonex, err := l2.SonexPosition(&reqPositions)
+
+			if err != nil {
+				logx.Errorf("ERR :%v ", err)
+				eventTokenIdUsdString = "100" // defalut value
+			} else {
+				token0Usd, _ := calucateTokenUsd(respSonex.Position.TokenValue0.Amount, respSonex.Position.TokenValue0.Decimals, respSonex.Position.TokenValue0.Token_TokenPrice.Price, respSonex.Position.TokenValue0.Token_TokenPrice.Decimals)
+				token1Usd, _ := calucateTokenUsd(respSonex.Position.TokenValue1.Amount, respSonex.Position.TokenValue1.Decimals, respSonex.Position.TokenValue1.Token_TokenPrice.Price, respSonex.Position.TokenValue1.Token_TokenPrice.Decimals)
+				tokenUsd := new(big.Float).Add(token0Usd, token1Usd)
+				eventTokenIdUsdString = tokenUsd.String()
+			}
 		}
+
 		eventTokenIdUsdStringBigFloat, _ := new(big.Float).SetString(eventTokenIdUsdString)
 		lpBalance = new(big.Float).Add(lpBalance, eventTokenIdUsdStringBigFloat)
 
@@ -243,16 +260,25 @@ func ProcessForMainnetFarmValue() error {
 
 			eventTokenIdUsdString, err := GetPositionValue(cacher, v.EventPool, v.EventTokenId)
 			if err != nil {
-				// positions, err := staticCaller.BatchGetPositions(l.ctx, req.ChainId, common.HexToAddress(sonexConf.PositionManager), tokenIdsTotal)
-				// if err != nil {
-				// 	logx.Error(fmt.Errorf("BatchGetPositions error: %v", err))
-				// 	return
-				// }
+				svcCtx := svc.NewServiceContext(configFile)
+				l2 := sonex_logic.NewSonexPositionLogic(context.Background(), svcCtx)
+				reqPositions := types.PositionRequest{
+					ChainRequest: types.ChainRequest{
+						ChainId: 1868,
+					},
+					TokenId: v.EventTokenId,
+				}
+				respSonex, err := l2.SonexPosition(&reqPositions)
 
-				// 导入数据
-
-				logx.Errorf("ERR :%v v.EventPool:%v  v.EventTokenId:%v  ", err, v.EventPool, v.EventTokenId)
-				continue
+				if err != nil {
+					logx.Errorf("ERR :%v ", err)
+					eventTokenIdUsdString = "100" // defalut value
+				} else {
+					token0Usd, _ := calucateTokenUsd(respSonex.Position.TokenValue0.Amount, respSonex.Position.TokenValue0.Decimals, respSonex.Position.TokenValue0.Token_TokenPrice.Price, respSonex.Position.TokenValue0.Token_TokenPrice.Decimals)
+					token1Usd, _ := calucateTokenUsd(respSonex.Position.TokenValue1.Amount, respSonex.Position.TokenValue1.Decimals, respSonex.Position.TokenValue1.Token_TokenPrice.Price, respSonex.Position.TokenValue1.Token_TokenPrice.Decimals)
+					tokenUsd := new(big.Float).Add(token0Usd, token1Usd)
+					eventTokenIdUsdString = tokenUsd.String()
+				}
 			}
 
 			eventTokenIdUsdStringBigFloat, _ := new(big.Float).SetString(eventTokenIdUsdString)
@@ -307,7 +333,7 @@ func getTimeOffsetMainnet(tx_at time.Time) float64 {
 }
 func getTotalLiquidityUSDByIncentiveId(incentiveId int64) *big.Float {
 
-	totalLiquidityUsdBigFloat := big.NewFloat(0)
+	totalLiquidityUsdBigFloat := big.NewFloat(60000)
 	if incentiveId == 0 {
 		totalLiquidityUsdBigFloat, _ = new(big.Float).SetString("60000")
 	}
