@@ -89,10 +89,10 @@ func xpoolPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config
 	if err != nil {
 		return err
 	}
-	// 7 天前
-	beginDay := time.Now().UTC().AddDate(0, 0, -7).Format("2006-01-02")
-	// 1 天前
-	endDay := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+	// 70 分钟前
+	beginTime := time.Now().UTC().Add(-70 * time.Minute)
+	// 10 分钟前
+	endTime := time.Now().UTC().Add(-10 * time.Minute)
 
 	// 针对每个池子，先找出该池子 7 天前有质押的用户地址
 	// 判断用户是否被发过积分，发过就不再走积分统计逻辑
@@ -137,13 +137,13 @@ func xpoolPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config
 		}
 
 		// 根据 userAddresses, 针对 depositedEvents 和 withdrawedEvents 的 TxAt 进行按照日期的求和
-		// map[userAddress][day][amount]
+		// map[userAddress][timeStr][amount]
 		depositedAmountMap := make(map[string]map[string]*big.Int)
 		for _, userAddress := range userAddresses {
 			depositedAmountMap[userAddress] = make(map[string]*big.Int)
 		}
 
-		// 统计每一天的质押 & 解质押之后的余额
+		// 统计每个时间点的质押 & 解质押之后的余额
 		for _, userAddress := range userAddresses {
 			m := depositedAmountMap[userAddress]
 
@@ -152,17 +152,17 @@ func xpoolPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config
 				return depositedEvents[userAddress][i].TxAt.Before(depositedEvents[userAddress][j].TxAt)
 			})
 
-			// 计提每一天的质押金额
+			// 计提每个时间点的质押金额
 			for _, depositedEvent := range depositedEvents[userAddress] {
 				depositedAmount, _ := big.NewInt(0).SetString(depositedEvent.EventAmount, 10)
-				currentDay := depositedEvent.TxAt.UTC().Format("2006-01-02")
-				currentDepositedAmount, ok := m[currentDay]
+				timeStr := depositedEvent.TxAt.UTC().Format("2006-01-02 15:04:05")
+				currentDepositedAmount, ok := m[timeStr]
 				if !ok {
-					m[currentDay] = big.NewInt(0)
+					m[timeStr] = big.NewInt(0)
 					currentDepositedAmount = big.NewInt(0)
 				}
 
-				m[currentDay] = big.NewInt(0).Add(currentDepositedAmount, depositedAmount)
+				m[timeStr] = big.NewInt(0).Add(currentDepositedAmount, depositedAmount)
 			}
 
 			// 提款时间按照时间升序
@@ -170,38 +170,38 @@ func xpoolPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config
 				return withdrawedEvents[userAddress][i].TxAt.Before(withdrawedEvents[userAddress][j].TxAt)
 			})
 
-			// 计减每一天的提款金额
+			// 计减每个时间点的提款金额
 			for _, withdrawedEvent := range withdrawedEvents[userAddress] {
 				withdrawedAmount, _ := big.NewInt(0).SetString(withdrawedEvent.EventWithdrawn, 10)
-				currentDay := withdrawedEvent.TxAt.UTC().Format("2006-01-02")
-				currentWithdrawedAmount, ok := m[currentDay]
+				timeStr := withdrawedEvent.TxAt.UTC().Format("2006-01-02 15:04:05")
+				currentWithdrawedAmount, ok := m[timeStr]
 				if !ok {
-					m[currentDay] = big.NewInt(0)
+					m[timeStr] = big.NewInt(0)
 					currentWithdrawedAmount = big.NewInt(0)
 				}
 
-				m[currentDay] = big.NewInt(0).Sub(currentWithdrawedAmount, withdrawedAmount)
+				m[timeStr] = big.NewInt(0).Sub(currentWithdrawedAmount, withdrawedAmount)
 			}
 
-			// 日期排序
-			days := make([]string, 0)
-			for day := range m {
-				days = append(days, day)
+			// 时间点排序
+			timeStrs := make([]string, 0)
+			for timeStr := range m {
+				timeStrs = append(timeStrs, timeStr)
 			}
-			// 按照日期字符串排序
-			sort.Strings(days)
+			// 按照时间字符串排序（因为使用了标准格式，可以直接用字符串排序）
+			sort.Strings(timeStrs)
 
-			// 计算每一天的累积余额
+			// 计算每个时间点的累积余额
 			total := big.NewInt(0)
-			for _, day := range days {
-				amount := m[day]
+			for _, timeStr := range timeStrs {
+				amount := m[timeStr]
 				total = big.NewInt(0).Add(total, amount)
-				m[day] = big.NewInt(0).Set(total) // 更新为累积值
+				m[timeStr] = big.NewInt(0).Set(total) // 更新为累积值
 			}
 			depositedAmountMap[userAddress] = m
 
 			// 查询前七天到前一天的余额，判断每一天的余额是否 > 0，且第七天余额 > 100U，并且对满足条件的地址发放积分
-			qualified, lastDayAmount, err := checkUserQualification(m, beginDay, endDay)
+			qualified, lastDayAmount, err := checkUserQualification(m, beginTime, endTime)
 			if err != nil {
 				logx.Errorf("[HandleXpoolPoints]: Check qualification failed: %s", err)
 				continue
@@ -299,30 +299,32 @@ func xpoolPointsLogic(ctx context.Context, conn sqlx.SqlConn, conf config.Config
 }
 
 // checkUserQualification 检查用户是否满足获取积分的条件
-func checkUserQualification(balanceMap map[string]*big.Int, beginDay, endDay string) (bool, *big.Int, error) {
+func checkUserQualification(balanceMap map[string]*big.Int, beginTime, endTime time.Time) (bool, *big.Int, error) {
 	hasBalance := false
 
-	// 检查从beginDay到endDay的每一天
-	currentDay := beginDay
-	for currentDay <= endDay {
-		amount, exists := balanceMap[currentDay]
+	// 检查从beginTime到endTime的每个10分钟
+	currentTime := beginTime
+	for currentTime.Before(endTime) || currentTime.Equal(endTime) {
+		// 将时间转换为格式化的字符串作为map的key
+		timeKey := currentTime.Format("2006-01-02 15:04:05")
+		amount, exists := balanceMap[timeKey]
 		if !exists || amount.Cmp(big.NewInt(0)) <= 0 {
 			return false, nil, nil
 		}
 		hasBalance = true
 
-		// 移到下一天
-		t, _ := time.Parse("2006-01-02", currentDay)
-		currentDay = t.AddDate(0, 0, 1).Format("2006-01-02")
+		// 移到下一个10分钟
+		currentTime = currentTime.Add(10 * time.Minute)
 	}
 
-	// 获取最后一天的余额
-	lastDayAmount, exists := balanceMap[endDay]
+	// 获取最后一个时间点的余额
+	lastTimeKey := endTime.Format("2006-01-02 15:04:05")
+	lastAmount, exists := balanceMap[lastTimeKey]
 	if !exists {
 		return false, nil, nil
 	}
 
-	return hasBalance, lastDayAmount, nil
+	return hasBalance, lastAmount, nil
 }
 
 // getCurrentPrices 获取当前价格
