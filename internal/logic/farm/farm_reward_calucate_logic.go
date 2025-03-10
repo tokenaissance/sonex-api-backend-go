@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -159,12 +160,15 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 		logx.Errorf("getValueOfAmountTokenERR:%v  ", err)
 		tokenAmountBigFloat = new(big.Float).SetFloat64(0)
 	}
+
+	// quo decimals
+	tokenAmountTotalQuoDecimals := new(big.Float).Quo(tokenAmountTotal, new(big.Float).SetFloat64(math.Pow10(int(tokenInfo.Decimals))))
 	resp = &types.FarmRewardCalucateResponese{
 		FarmAddress:         req.FarmAddress,
 		IncentiveId:         req.IncentiveId,
 		UserAddress:         req.UserAddress,
 		RewardTokenLogo:     rewardTokenLogo,
-		TotalTokenAmount:    tokenAmountTotal.String(),
+		TotalTokenAmount:    tokenAmountTotalQuoDecimals.String(),
 		TotalTokenAmountUsd: tokenAmountBigFloat.String(),
 		TotalLiquidityUsd:   lpBalance.String(),
 		Address:             tokenInfo.Address,
