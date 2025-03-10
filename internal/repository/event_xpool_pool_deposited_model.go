@@ -18,7 +18,8 @@ type (
 		eventXpoolPoolDepositedModel
 		withSession(session sqlx.Session) EventXpoolPoolDepositedModel
 		New(ctx context.Context, id int64, chainId int64, blockNumber int64, txIndex int64, txHash string, txAt time.Time, from string, to string, value string, user string, amount string, height int64) error
-		GetDepositedEvents(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error)
+		GetDepositedEventsByUserAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error)
+		GetDepositedEventsByPoolAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error)
 	}
 
 	customEventXpoolPoolDepositedModel struct {
@@ -43,8 +44,33 @@ func (m *customEventXpoolPoolDepositedModel) New(ctx context.Context, id int64, 
 	return err
 }
 
-// GetDepositedEvents 获取指定地址的存款事件
-func (m *customEventXpoolPoolDepositedModel) GetDepositedEvents(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error) {
+// GetDepositedEventsByPoolAddress 获取指定池子的存款事件
+func (m *customEventXpoolPoolDepositedModel) GetDepositedEventsByPoolAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error) {
+	var resp []*EventXpoolPoolDeposited
+	query := fmt.Sprintf("SELECT * FROM %s WHERE chain_id = $1 AND to_ = $2", m.table)
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, chainId, address)
+	if err != nil {
+		return nil, err
+	}
+
+	// 将事件按 user address 地址分组
+	depositedEvents := make(map[string][]*EventXpoolPoolDeposited)
+	for _, event := range resp {
+		// 获取 user address
+		userAddress := common.HexToAddress(event.From).Hex()
+		// 将事件按 user address 地址分组
+		userEvents, ok := depositedEvents[userAddress]
+		if !ok {
+			userEvents = make([]*EventXpoolPoolDeposited, 0)
+		}
+		userEvents = append(userEvents, event)
+		depositedEvents[userAddress] = userEvents
+	}
+	return depositedEvents, nil
+}
+
+// GetDepositedEventsByUserAddress 获取指定地址的存款事件
+func (m *customEventXpoolPoolDepositedModel) GetDepositedEventsByUserAddress(ctx context.Context, chainId int64, address string) (map[string][]*EventXpoolPoolDeposited, error) {
 	var resp []*EventXpoolPoolDeposited
 	// 将用户地址转换为以太坊地址格式
 	address = common.HexToAddress(address).Hex()
