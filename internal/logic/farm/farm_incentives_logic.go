@@ -88,10 +88,6 @@ func (l *FarmIncentivesLogic) FarmIncentives(req *types.FarmIncentivesRequest, p
 		return resp, nil
 	}
 
-	logx.Infof("ZXXXresp:%v ", len(resp.List))
-	for i, v := range resp.List {
-		logx.Infof("i:%v v:%v ", i, v)
-	}
 	// Filter
 	if !strings.EqualFold(req.UserAddress, "") && common.IsHexAddress(req.UserAddress) {
 
@@ -356,7 +352,6 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 			rewardUSD := ratePerSecondUsdWithNoDecials
 
 			totalRewardUSD := new(big.Float).Mul(rewardUSD, big.NewFloat(365*24*60*60))
-			logx.Infof("ZZZZZZZZrewardToken.Address :%v price:%v ratepersecondQuoTokenDecimals:%v ratePerSecondUsdWithNoDecials:%v rewardPrice:%v rewardUSD:%v totalRewardUSD:%v rewardTokenAccuracy:%v  incentiveid:%v  ", rewardToken.Address, val, ratepersecondQuoTokenDecimals, ratePerSecondUsdWithNoDecials, rewardPrice, rewardUSD, totalRewardUSD, rewardToken.Decimals, incincentiveCreatedRecordItem.EventIncentiveId)
 
 			err = global.SetTotalReward365ForIncentiveId(cacher, global.Reward365ForIncentiveIdKey, record.EventIncentiveId, totalRewardUSD.String())
 			if err != nil {
@@ -472,14 +467,8 @@ func (l *FarmIncentivesLogic) GetResponse(req *types.FarmIncentivesRequest, chai
 				// apr := new(big.Float).Quo(totalRewardUSD, big.NewFloat(1))
 				// 0 的时候  就应该按照1来算
 				// 如果 totalliquidity 为0,那么按照 totalliquidity = 1 U 计算
-<<<<<<< HEAD
 				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, farmConf.Staker, record.ExtraRewardToken, *chainConf, cacher)
-=======
 
-				apr := getApr("listnotoknotok", record.EventPool, record.EventIncentiveId, totalRewardUSD, big.NewFloat(1), record.EventWeight, stakerAddress, record.ExtraRewardToken, *chainConf, cacher)
-				logx.Infof("222222222 record.EventIncentiveId:%v APR:%v  totalRewardUSD:%v, totalLiquidityUSD:%v ", record.EventIncentiveId, apr, totalRewardUSD, big.NewFloat(1))
-
->>>>>>> c0eb9f7 (add Phase in farm api)
 				dataResult = types.FarmIncentivesResponse_Data{
 					IncentiveId:                  record.EventIncentiveId,
 					PoolAddress:                  record.EventPool,
