@@ -161,7 +161,7 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 }
 
 func getTimeOffset(tx_at time.Time) float64 {
-	dt := time.Date(2025, time.March, 7, 12, 0, 0, 0, time.UTC)
+	dt := time.Date(2025, time.March, 11, 3, 0, 0, 0, time.UTC)
 	tx_at_second := dt.Sub(tx_at).Seconds()
 	return tx_at_second
 }
@@ -301,7 +301,7 @@ func ProcessForMainnetFarmValue() error {
 
 func getTimeOffsetMainnet(tx_at time.Time) float64 {
 
-	dt := time.Date(2025, time.March, 8, 12, 0, 0, 0, time.UTC)
+	dt := time.Date(2025, time.March, 11, 3, 0, 0, 0, time.UTC)
 	tx_at_second := dt.Sub(tx_at).Seconds()
 	return tx_at_second
 }
