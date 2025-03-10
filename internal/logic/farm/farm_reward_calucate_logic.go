@@ -82,16 +82,14 @@ func (l *FarmRewardCalucateLogic) FarmRewardCalucate(req *types.FarmRewardCaluca
 	}
 
 	// 常量
-	ratePerSecond := "1000000000000000000" // 0.01
-
-	totalWeight := "100"
-	TotalLiquidityUsd := "60000"
-
+	ratePerSecond := "34722222222222224" //  3000*10**18/86400 = 3.4722222222222224e+16
+	totalWeight := "65"
 	ratePerSecondBigFloat, _ := new(big.Float).SetString(ratePerSecond)
 
 	totalWeightBigFloat, _ := new(big.Float).SetString(totalWeight)
 
-	totalLiquidityUsdBigFloat, _ := new(big.Float).SetString(TotalLiquidityUsd)
+	//totalLiquidityUsdBigFloat, _ := new(big.Float).SetString(TotalLiquidityUsd)
+	totalLiquidityUsdBigFloat := getTotalLiquidityUSDByIncentiveId(int64(incentiveIdint))
 	// ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
 	lpBalance := new(big.Float).SetFloat64(0)
 	tokenAmountTotal := new(big.Float).SetFloat64(0)
@@ -219,9 +217,7 @@ func ProcessForMainnetFarmValue() error {
 	// ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
 	ratePerSecond := "34722222222222224" // 3000*10**18/86400 = 3.4722222222222224e+16
 
-	totalWeight := "55"
-	// TotalLiquidityUsd := "60000"
-
+	totalWeight := "65"
 	ratePerSecondBigFloat, _ := new(big.Float).SetString(ratePerSecond)
 
 	totalWeightBigFloat, _ := new(big.Float).SetString(totalWeight)
