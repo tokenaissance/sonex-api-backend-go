@@ -19,6 +19,7 @@ type Config struct {
 	Farms         []FarmConfig         `json:",optional"`
 	ACS           *ACSConfig           `json:",optional"`
 	Puffer        *PufferConfig        `json:",optional"`
+	Badge         *BadgeConfig         `json:",optional"`
 }
 
 // Get general configuration of a blockchain of `chainId`.

@@ -12,6 +12,7 @@ import (
 	"sonex_api_backend_go/internal/config"
 	"sonex_api_backend_go/internal/handler"
 	"sonex_api_backend_go/internal/handler/response"
+	farm_contract "sonex_api_backend_go/internal/lib/contract/farm"
 	contract_pre_deposit "sonex_api_backend_go/internal/lib/contract/pre_deposit"
 	"sonex_api_backend_go/internal/lib/global"
 	"sonex_api_backend_go/internal/lib/node_caller"
@@ -200,7 +201,23 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+
+				handler.OnTokenStaked(func(chainId int64, tx *node_caller.Transaction, event *farm_contract.UniswapV3StakerTokenStaked) {
+					farm.TokenStakedCallback(c, chainId, tx, event)
+				})
+
 				global.AddChainHandler(chain.ChainId, handler)
+
+				// OldVersion
+				if config.OldVersionStaker != nil {
+					oldVersionConf := *config
+					oldVersionConf.Staker = *config.OldVersionStaker
+					oldVersionHandler, err := farm.NewFarmHandler(c.PostgreSQL.DataSource(), chain, oldVersionConf)
+					if err != nil {
+						panic(err)
+					}
+					global.AddChainHandler(chain.ChainId, oldVersionHandler)
+				}
 			}
 		}
 

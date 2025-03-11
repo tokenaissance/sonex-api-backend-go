@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	acs "sonex_api_backend_go/internal/handler/acs"
+	badge "sonex_api_backend_go/internal/handler/badge"
 	farm "sonex_api_backend_go/internal/handler/farm"
 	pre_deposit "sonex_api_backend_go/internal/handler/pre_deposit"
 	sonex "sonex_api_backend_go/internal/handler/sonex"
@@ -46,6 +47,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// Badge API for get summary of a user
+				Method:  http.MethodGet,
+				Path:    "/summary",
+				Handler: badge.BadgeSummaryHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/badge"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
 				// Farm incentive list
 				Method:  http.MethodGet,
 				Path:    "/incentives",
@@ -56,6 +69,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/pool/liquidity",
 				Handler: farm.FarmPoolLiquidityHandler(serverCtx),
+			},
+			{
+				// For air drop
+				Method:  http.MethodGet,
+				Path:    "/pool/rewards",
+				Handler: farm.FarmRewardCalucateHandler(serverCtx),
 			},
 			{
 				// Farm pool roi

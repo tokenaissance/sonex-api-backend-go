@@ -81,12 +81,30 @@ PreDeposits:
     RewardPrice: 1 # USD
 Farms:
   - ChainId: 1868
-    Staker: 0xa704c7B3a6177E795c1fA3755223a428498F5909
+    Staker: 0x4Fe8E20879198d1551b737b566874120510e80a3
     PointsHoldTimeLimits: 604800
     PointsUSDLimits: 100
     Points: 5000
     SubTitle: Farm
     XRewardToken: https://img.sonex.so/X-Token-logo.svg
+    Boosts:
+      - Tokens:
+          [
+            0xc67476893C166c537afd9bc6bc87b3f228b44337,
+            0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441,
+          ]
+        PointsHoldTimeLimits: 604800
+        PointsUSDLimits: 100
+        Points: 5000
+      - Tokens:
+          [
+            0x2fc9a87b1ef46dCDdF4801C36d752E0d5F243E4b,
+            0x4200000000000000000000000000000000000006,
+          ]
+        PointsHoldTimeLimits: 604800
+        PointsUSDLimits: 100
+        Points: 5000
+    OldVersionStaker: 0xa704c7B3a6177E795c1fA3755223a428498F5909
 Xpools:
   - ChainId: 1868
     Factory: 0x894C819BE4BFf3eE3588fB4bFdFE6E7c40bb7451
@@ -232,3 +250,5 @@ Puffer:
   SubTitle: Puffer
   LiquidityUSDLimits: 100
   DailyLimits: 7
+Badge:
+  SubTitle: SONEX-Badge

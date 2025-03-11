@@ -66,6 +66,42 @@
         ]
       }
     },
+    "/badge/summary": {
+      "get": {
+        "summary": "Badge API for get summary of a user",
+        "operationId": "BadgeSummaryHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BadgeSummaryResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "userAddress",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "badge"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
     "/farm/incentives": {
       "get": {
         "summary": "Farm incentive list",
@@ -122,6 +158,14 @@
             "type": "string"
           },
           {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "stakedOnly",
             "in": "query",
             "required": true,
@@ -163,6 +207,72 @@
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "farm"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/farm/pool/rewards": {
+      "get": {
+        "summary": "For air drop",
+        "operationId": "FarmRewardCalucateHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FarmRewardCalucateResponese"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-chain-id",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "userAddress",
+            "description": " 用户地址",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "incentiveId",
+            "description": " 质押池ID",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "farmAddress",
+            "description": " farm address ",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -221,6 +331,14 @@
               "365",
               "1825"
             ]
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -286,6 +404,14 @@
             "type": "integer",
             "format": "int64",
             "default": "1"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -351,6 +477,14 @@
             "type": "integer",
             "format": "int64",
             "default": "1"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -394,6 +528,14 @@
             "in": "query",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "phase",
+            "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1712,6 +1854,85 @@
         "totalAmount1"
       ]
     },
+    "BadgeMilestone": {
+      "type": "object",
+      "properties": {
+        "swaps": {
+          "type": "integer",
+          "format": "int32",
+          "description": " 已完成的 swap 次数"
+        },
+        "stakedValue": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 所有质押的 position 的价值（按质押时的价值）"
+        },
+        "enough": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": " 是否满足条件"
+        }
+      },
+      "title": "BadgeMilestone",
+      "required": [
+        "swaps",
+        "stakedValue",
+        "enough"
+      ]
+    },
+    "BadgeSummaryRequest": {
+      "type": "object",
+      "properties": {
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        }
+      },
+      "title": "BadgeSummaryRequest",
+      "required": [
+        "userAddress"
+      ]
+    },
+    "BadgeSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "milestones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BadgeMilestone"
+          },
+          "description": " 3 个里程碑信息"
+        },
+        "gotPoints": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 已获得的积分"
+        },
+        "gotNftId": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 已获得的 NFT"
+        },
+        "totalSwaps": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 活动期间总的 swap 次数"
+        },
+        "totalStakedValue": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 活动期间总的质押价值"
+        }
+      },
+      "title": "BadgeSummaryResponse",
+      "required": [
+        "milestones",
+        "gotPoints",
+        "gotNftId",
+        "totalSwaps",
+        "totalStakedValue"
+      ]
+    },
     "ChainRequest": {
       "type": "object",
       "title": "ChainRequest"
@@ -1949,6 +2170,11 @@
         },
         "keyWord": {
           "type": "string"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         },
         "stakedOnly": {
           "type": "boolean",
@@ -2205,6 +2431,11 @@
         "incentiveId": {
           "type": "string",
           "description": " 质押池ID"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmPoolLiquidityRequest",
@@ -2299,6 +2530,11 @@
             "1825"
           ],
           "description": " 质押时长（单位：天）"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmPoolRoiRequest",
@@ -2362,6 +2598,103 @@
         "endTime"
       ]
     },
+    "FarmRewardCalucateRequest": {
+      "type": "object",
+      "properties": {
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "farmAddress": {
+          "type": "string",
+          "description": " farm address"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
+        }
+      },
+      "title": "FarmRewardCalucateRequest",
+      "required": [
+        "userAddress",
+        "incentiveId",
+        "farmAddress"
+      ]
+    },
+    "FarmRewardCalucateResponese": {
+      "type": "object",
+      "properties": {
+        "incentiveId": {
+          "type": "string",
+          "description": " 质押池ID"
+        },
+        "userAddress": {
+          "type": "string",
+          "description": " 用户地址"
+        },
+        "farmAddress": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string",
+          "description": " reward token address"
+        },
+        "name": {
+          "type": "string",
+          "description": "   reward token,"
+        },
+        "symbol": {
+          "type": "string",
+          "description": "  reward symbol"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "int64",
+          "description": "  reward decimal"
+        },
+        "rewardTokenLogo": {
+          "type": "string"
+        },
+        "totalTokenAmount": {
+          "type": "string",
+          "description": " 对应的空投的 tokenAmount"
+        },
+        "totalTokenAmountUsd": {
+          "type": "string",
+          "description": " 对应的空投的 tokenAmount 的USD"
+        },
+        "totalLiquidityUsd": {
+          "type": "string",
+          "description": " 自己所有曾经质押的LP的总的USD"
+        },
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StakedItem"
+          },
+          "description": " 曾经所有质押的LP的详情"
+        }
+      },
+      "title": "FarmRewardCalucateResponese",
+      "required": [
+        "incentiveId",
+        "userAddress",
+        "address",
+        "name",
+        "symbol",
+        "decimals",
+        "rewardTokenLogo",
+        "totalTokenAmount",
+        "totalTokenAmountUsd",
+        "totalLiquidityUsd",
+        "list"
+      ]
+    },
     "FarmStakeRequest": {
       "type": "object",
       "properties": {
@@ -2385,6 +2718,11 @@
           "type": "integer",
           "format": "int64",
           "default": "1"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmStakeRequest",
@@ -2471,6 +2809,11 @@
           "type": "integer",
           "format": "int64",
           "default": "1"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmUnstakeRequest",
@@ -2544,6 +2887,11 @@
         "userAddress": {
           "type": "string",
           "description": " 用户地址"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "FarmUserAssetDetailRequest",
@@ -4343,6 +4691,33 @@
         "token1Amount",
         "tokenUsd",
         "isNeedApproved"
+      ]
+    },
+    "StakedItem": {
+      "type": "object",
+      "properties": {
+        "positionId": {
+          "type": "integer",
+          "format": "int64",
+          "description": " position的tokenid"
+        },
+        "tokenUsd": {
+          "type": "string"
+        },
+        "liquidity": {
+          "type": "string"
+        },
+        "tokenAmount": {
+          "type": "string",
+          "description": " 计算出来的奖励,ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD"
+        }
+      },
+      "title": "StakedItem",
+      "required": [
+        "positionId",
+        "tokenUsd",
+        "liquidity",
+        "tokenAmount"
       ]
     },
     "SummaryRequest": {

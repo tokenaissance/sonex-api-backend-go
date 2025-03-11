@@ -14,12 +14,12 @@ func Test_EventFarmIncentiveCreatedModelQueryByChainIdStakerWithExtra(t *testing
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
-	records, err := model.QueryByChainIdStakerWithExtra(context.Background(), 1946, "0xeC8BcA27444bA6360EfF22365b42012d029D6324")
+	records, err := model.QueryByChainIdStakerWithExtra(context.Background(), 1946, "0x3a048ACb139e0C59d7e8FCf9441E998E4845bE56")
 	if err != nil {
 		t.Error(err)
 	}
 	for i, v := range records {
-		logx.Infof("i:%v incentiveid:%v  status :%v ", i, v.EventIncentiveId, v.ExtraEnded)
+		logx.Infof("i:%v incentiveid:%v  v :%v ", i, v.EventIncentiveId, v)
 	}
 	_ = records
 }
@@ -47,7 +47,7 @@ func Test_GetExtraTokenAndExtraPoolByIncentiveId(t *testing.T) {
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
-	records, err := model.GetExtraTokenAndExtraPoolByIncentiveId(context.Background(), 1946, 2)
+	records, err := model.GetExtraTokenAndExtraPoolByIncentiveId(context.Background(), 1946, 2, "0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6")
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
 	}
@@ -60,7 +60,7 @@ func Test_FindRewardTokenInfoByIncentiveId(t *testing.T) {
 	conf.MustLoad("../../etc/forlocaluse0109.yaml", &c)
 
 	model := NewEventFarmIncentiveCreatedModel(NewConn(c.PostgreSQL.DataSource()))
-	records, err := model.FindRewardTokenInfoByIncentiveId(context.Background(), 1946, 0)
+	records, err := model.FindRewardTokenInfoByIncentiveId(context.Background(), 1946, 0, "0xc8bE5f649f440Ff36Bf1A53aF2aC3443b04B47e6")
 	if err != nil {
 		logx.Errorf("ERR:%v ", err)
 	}

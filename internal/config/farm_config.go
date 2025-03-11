@@ -10,6 +10,7 @@ type FarmConfig struct {
 	SubTitle             string            `json:","`
 	XRewardToken         string            `json:","`
 	Boosts               []FarmBoostConfig `json:","`
+	OldVersionStaker     *string           `json:",optional"`
 }
 
 type FarmBoostConfig struct {
