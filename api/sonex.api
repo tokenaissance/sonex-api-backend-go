@@ -557,9 +557,8 @@ type PortfolioFarm {
 	Earned        	string `json:"earned"`        	  // 用户未提取的质押奖励美元价值
 	EarnedAmount 	string `json:"earnedAmount"` 	  // 用户未提取的质押奖励代币数量
 	StakedLPNum	  	int64  `json:"stakedLPNum"` 	  // 质押的LP的个数
-
+	Phase           int64  `json:"phase"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 	PositionValueFloat64 float64 `json:"-"` // pool position 美元净值 用于排序
-	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 // portfolio 页面展示的 position 数据结构

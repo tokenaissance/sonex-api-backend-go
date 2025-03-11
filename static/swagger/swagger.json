@@ -2060,6 +2060,11 @@
           "type": "string",
           "description": " 质押的 LP 的 USD"
         },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
+        },
         "totalClaimableFeesUsd": {
           "type": "string",
           "description": " 用户未领取的手续费的价值"
@@ -2085,11 +2090,6 @@
         "revenueAmount": {
           "type": "string",
           "description": " 用户已经领取的手续的reward token 数量(去掉精度)"
-        },
-        "phase": {
-          "type": "integer",
-          "format": "int64",
-          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "DashboardIncentiveInfo",
@@ -2106,6 +2106,7 @@
         "rewardTokenLogo",
         "staked",
         "StakedUsd",
+        "phase",
         "totalClaimableFeesUsd",
         "totalClaimableFeesUSDFloat64",
         "totalClaimableFeesAmount",
@@ -3922,15 +3923,15 @@
           "format": "int64",
           "description": " 质押的LP的个数"
         },
-        "positionValueFloat64": {
-          "type": "number",
-          "format": "double",
-          "description": " pool position 美元净值 用于排序"
-        },
         "phase": {
           "type": "integer",
           "format": "int64",
           "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
+        },
+        "positionValueFloat64": {
+          "type": "number",
+          "format": "double",
+          "description": " pool position 美元净值 用于排序"
         }
       },
       "title": "PortfolioFarm",
@@ -3950,6 +3951,7 @@
         "earned",
         "earnedAmount",
         "stakedLPNum",
+        "phase",
         "-"
       ]
     },
