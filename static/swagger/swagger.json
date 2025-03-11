@@ -2085,6 +2085,11 @@
         "revenueAmount": {
           "type": "string",
           "description": " 用户已经领取的手续的reward token 数量(去掉精度)"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "DashboardIncentiveInfo",
@@ -3921,6 +3926,11 @@
           "type": "number",
           "format": "double",
           "description": " pool position 美元净值 用于排序"
+        },
+        "phase": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据"
         }
       },
       "title": "PortfolioFarm",
