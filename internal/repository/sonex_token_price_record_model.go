@@ -287,9 +287,13 @@ func (m *customSonexTokenPriceRecordModel) Kline(ctx context.Context, address st
 
 func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices(ctx context.Context) (map[string]*big.Int, error) {
 	query := fmt.Sprintf(`
-		SELECT DISTINCT ON (token_address) token_address, price, created_at
-		FROM %s
-		ORDER BY token_address, created_at DESC;
+		SELECT token_address, price, created_at
+		FROM (
+    		SELECT token_address, price, created_at,
+           		ROW_NUMBER() OVER (PARTITION BY token_address ORDER BY created_at DESC) AS row_num
+    		FROM %s
+		) t
+		WHERE row_num = 1
 	`, m.table)
 
 	var records []MiniTokenPriceRecord
