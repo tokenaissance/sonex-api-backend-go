@@ -313,19 +313,14 @@ func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPrices(ctx context.
 
 func (m *customSonexTokenPriceRecordModel) QueryLatestHistoryPricesByAddresses(ctx context.Context, tokenAddresses []string) (map[string]*big.Int, error) {
 	query := fmt.Sprintf(`
-		WITH latest_prices AS (
-    		SELECT token_address, price, created_at
+		SELECT token_address, price, created_at
+		FROM (
+    		SELECT token_address, price, created_at,
+           		ROW_NUMBER() OVER (PARTITION BY token_address ORDER BY created_at DESC) AS row_num
     		FROM %s
-    		WHERE 
-				token_address = ANY($1)
-		)
-		SELECT lp.token_address, lp.price, lp.created_at
-		FROM latest_prices lp
-		JOIN (
-    		SELECT token_address, MAX(created_at) AS max_created_at
-    		FROM latest_prices
-    		GROUP BY token_address
-		) latest ON lp.token_address = latest.token_address AND lp.created_at = latest.max_created_at
+			WHERE token_address = ANY($1)
+		) t
+		WHERE row_num = 1
 	`, m.table)
 
 	var records []MiniTokenPriceRecord
