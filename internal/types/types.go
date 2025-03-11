@@ -73,6 +73,7 @@ type DashboardIncentiveInfo struct {
 	RevenueString                string  `json:"revenueString"`                // 用户已经领取的手续的价值+用户未领取的手续费的价值
 	RevenueFloat64               float64 `json:"revenueFloat64"`               // 用户已经领取的手续的价值++用户未领取的手续费的价值
 	RevenueAmount                string  `json:"revenueAmount"`                // 用户已经领取的手续的reward token 数量(去掉精度)
+	Phase                        int64   `form:"phase,optional"`               // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type DashboardIncentiveWithStakedUsd struct {
@@ -532,6 +533,7 @@ type PortfolioFarm struct {
 	EarnedAmount         string  `json:"earnedAmount"`     // 用户未提取的质押奖励代币数量
 	StakedLPNum          int64   `json:"stakedLPNum"`      // 质押的LP的个数
 	PositionValueFloat64 float64 `json:"-"`                // pool position 美元净值 用于排序
+	Phase                int64   `form:"phase,optional"`   // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type PortfolioPosition struct {

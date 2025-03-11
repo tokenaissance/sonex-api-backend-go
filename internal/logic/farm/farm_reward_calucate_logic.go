@@ -221,6 +221,7 @@ type StakedItemForMainniet struct {
 	TokenUsd          string  `json:"tokenUsd"`
 	Liquidity         string  `json:"liquidity"`
 	TokenAmount       string  `json:"tokenAmount"` // 计算出来的奖励,ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
+	IncentiveId       int64   `json:"incentiveId"`
 }
 
 func ProcessForMainnetFarmValue() error {
@@ -244,6 +245,14 @@ func ProcessForMainnetFarmValue() error {
 	totalWeightBigFloat, _ := new(big.Float).SetString(totalWeight)
 
 	totalAmountForAll := new(big.Float).SetFloat64(0)
+	userAddress000 := ""
+	userAmountAddress000 := ""
+
+	userAddress001 := ""
+	userAmountAddress001 := ""
+
+	userAddress002 := ""
+	userAmountAddress002 := ""
 	// ratePersecond * weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
 	for incentiveId := int64(0); incentiveId < 3; incentiveId++ {
 		lpBalance := new(big.Float).SetFloat64(0)
@@ -305,14 +314,19 @@ func ProcessForMainnetFarmValue() error {
 
 			tokenAmountOfmul1divTotalWeightMultimeOffsetBigFloatMulLpUsdQuoliquidityUsd := new(big.Float).Quo(mul1divTotalWeightMultimeOffsetBigFloatMulLpUsd, totalLiquidityUsdBigFloat)
 
+			tokenAmountBigIntAAAAAAAAA, _ := tokenAmountOfmul1divTotalWeightMultimeOffsetBigFloatMulLpUsdQuoliquidityUsd.Int(nil)
+
+			aValue := tokenAmountBigIntAAAAAAAAA.Text(10)
 			tokenAmountTotal = new(big.Float).Add(tokenAmountTotal, tokenAmountOfmul1divTotalWeightMultimeOffsetBigFloatMulLpUsdQuoliquidityUsd)
 			item := StakedItemForMainniet{
-				UserAddress:       v.From,
-				PositionId:        v.EventTokenId,
-				TokenUsd:          eventTokenIdUsdString,
-				Liquidity:         v.EventTotalLiquidity,
-				TokenAmount:       tokenAmountOfmul1divTotalWeightMultimeOffsetBigFloatMulLpUsdQuoliquidityUsd.String(),
+				UserAddress: v.From,
+				PositionId:  v.EventTokenId,
+				TokenUsd:    eventTokenIdUsdString,
+				Liquidity:   v.EventTotalLiquidity,
+				TokenAmount: aValue,
+				//   tokenAmountOfmul1divTotalWeightMultimeOffsetBigFloatMulLpUsdQuoliquidityUsd.String(),
 				OffSetTimeSeconds: timeOffset,
+				IncentiveId:       v.EventIncentiveId,
 			}
 
 			lists = append(lists, item)
@@ -320,10 +334,37 @@ func ProcessForMainnetFarmValue() error {
 
 		totalAmountForAll = new(big.Float).Add(totalAmountForAll, tokenAmountTotal)
 		logx.Infof("incentiveId :%v tokenAmountTotal:%v ", incentiveId, tokenAmountTotal)
-		for i, v := range lists {
-			logx.Infof("incentiveId :%v i:%v v.useraddress :%v,v.PositionId:%v v.PositionUsd:%v v.TokenAmount:%v   ", incentiveId, i, v.UserAddress, v.PositionId, v.TokenUsd, v.TokenAmount)
+		for _, v := range lists {
+			if v.IncentiveId == 0 {
+				userAddress000 += fmt.Sprintf("%v%v%v%v", `"`, v.UserAddress, `"`, ",")
+				userAmountAddress000 += fmt.Sprintf("%v%v%v%v", `"`, v.TokenAmount, `"`, ",")
+			}
+			if v.IncentiveId == 1 {
+				userAddress001 += fmt.Sprintf("%v%v%v%v", `"`, v.UserAddress, `"`, ",")
+				userAmountAddress001 += fmt.Sprintf("%v%v%v%v", `"`, v.TokenAmount, `"`, ",")
+
+			}
+
+			if v.IncentiveId == 2 {
+				userAddress002 += fmt.Sprintf("%v%v%v%v", `"`, v.UserAddress, `"`, ",")
+				userAmountAddress002 += fmt.Sprintf("%v%v%v%v", `"`, v.TokenAmount, `"`, ",")
+			}
+			// logx.Infof("incentiveId :%v i:%v v.useraddress :%v,v.PositionId:%v v.PositionUsd:%v v.TokenAmount:%v   ", incentiveId, i, v.UserAddress, v.PositionId, v.TokenUsd, v.TokenAmount)
 		}
 	}
+
+	fmt.Println("incentiveid 0")
+
+	fmt.Printf("\n const users = [ %v ] \n ", userAddress000)
+	fmt.Printf("\n const amounts = [%v ] \n", userAmountAddress000)
+
+	fmt.Println("incentiveid 1")
+	fmt.Printf("\n const users = [ %v ] \n", userAddress001)
+	fmt.Printf("\n const amounts = [%v ] \n ", userAmountAddress001)
+
+	fmt.Println("incentiveid 2")
+	fmt.Printf("\n const users = [ %v ] \n", userAddress002)
+	fmt.Printf("\n const amounts = [%v ] \n ", userAmountAddress002)
 
 	logx.Infof("totalAmountForAll:%v ", totalAmountForAll)
 	return nil

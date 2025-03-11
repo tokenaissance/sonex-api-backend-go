@@ -96,6 +96,7 @@ type DashboardIncentiveInfo {
 	RevenueString string `json:"revenueString"`     // 用户已经领取的手续的价值+用户未领取的手续费的价值
 	RevenueFloat64 	 float64 `json:"revenueFloat64"`     // 用户已经领取的手续的价值++用户未领取的手续费的价值
 	RevenueAmount string `json:"revenueAmount"` // 用户已经领取的手续的reward token 数量(去掉精度)
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 

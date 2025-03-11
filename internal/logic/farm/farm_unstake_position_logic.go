@@ -252,20 +252,25 @@ func checkUser(userAddress string) error {
 	}
 	return nil
 }
-func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
 
-	ret := &types.DashboardIncentiveWithStakedUsd{}
+// totalStakedLp , totalFeeRevenue
+func getFarmIncentivesByContractAddress(conf config.Config, chainId int64, userAddress string, stakerAddress string, phase int64) ([]types.DashboardIncentiveInfo, *big.Float, *big.Float, error) {
+
+	ret := []types.DashboardIncentiveInfo{}
+	totalStakedLp := big.NewFloat(0)
+	totalFeeRevenue := big.NewFloat(0)
+
 	var err error
 	if checkUser(userAddress) != nil {
-		return &types.DashboardIncentiveWithStakedUsd{}, err
+		return []types.DashboardIncentiveInfo{}, totalStakedLp, totalFeeRevenue, err
 	}
 
-	farmConf := conf.GetFarmConfig(chainId)
+	// farmConf := conf.GetFarmConfig(chainId)
 	chainConf := conf.GetChainConfig(chainId)
 	conn := repository.NewConn(conf.PostgreSQL.DataSource())
 	cacher := cache.NewRedisCache(fmt.Sprintf("%s:%d", conf.Redis.Host, conf.Redis.Port), conf.Redis.Password, conf.Redis.DB)
 
-	stakerAddress := getFarmAddress(farmConf, DefaultPhase)
+	// stakerAddress := getFarmAddress(farmConf, DefaultPhase)
 
 	eventFarmIncentiveCreatedModel := repository.NewEventFarmIncentiveCreatedModel(conn)
 	tokenModel := repository.NewTokenModel(conn)
@@ -273,14 +278,14 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 	incentiveCreatedRecords, err := eventFarmIncentiveCreatedModel.QueryByChainIdStakerWithExtra(context.Background(), chainId, common.HexToAddress(stakerAddress).Hex())
 	if err != nil {
 		logx.Errorf("ERR1:%v ", err)
-		return &types.DashboardIncentiveWithStakedUsd{}, err
+		return []types.DashboardIncentiveInfo{}, totalStakedLp, totalFeeRevenue, err
 	}
 
 	var wg sync.WaitGroup
 	results := make(chan *types.DashboardIncentiveInfo, len(incentiveCreatedRecords))
 
-	totalStakedLp := big.NewFloat(0)
-	TotalFeeRevenue := big.NewFloat(0)
+	// totalStakedLp := big.NewFloat(0)
+	// totalFeeRevenue := big.NewFloat(0)
 	for _, incincentiveCreatedRecordItem := range incentiveCreatedRecords {
 		wg.Add(1)
 		go func(record *repository.EventFarmIncentiveCreatedWithExtra) {
@@ -328,7 +333,7 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 				return
 			}
 
-			TotalFeeRevenue = new(big.Float).Add(TotalFeeRevenue, revenueBigFloat)
+			totalFeeRevenue = new(big.Float).Add(totalFeeRevenue, revenueBigFloat)
 			// 获取质押的数量
 			// 获取用户的  lpbalance
 			lpBalance, stakedNum, _, _, err := getStakedNum(stakerAddress, conn, cacher, chainId, record.EventIncentiveId, userAddress)
@@ -359,6 +364,7 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 				RevenueString:                claimedAmountFeeUsd.String(),
 				RevenueFloat64:               revenueString,
 				RevenueAmount:                revenueAmount.AmountWithoutDecimals(),
+				Phase:                        phase,
 			}
 			results <- dataResult
 		}(&incincentiveCreatedRecordItem)
@@ -370,10 +376,48 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 	}()
 
 	for pool := range results {
-		ret.DashboardIncentives = append(ret.DashboardIncentives, *pool)
+		ret = append(ret, *pool)
 	}
-	totalFeeRevenueFloat64, _ := TotalFeeRevenue.Float64()
-	ret.TotalRevenueUsd = TotalFeeRevenue.String()
+
+	return ret, totalStakedLp, totalFeeRevenue, nil
+}
+
+func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId int64, userAddress string) (*types.DashboardIncentiveWithStakedUsd, error) {
+
+	ret := &types.DashboardIncentiveWithStakedUsd{}
+	var err error
+	if checkUser(userAddress) != nil {
+		return &types.DashboardIncentiveWithStakedUsd{}, err
+	}
+	farmConf := conf.GetFarmConfig(chainId)
+
+	totalFeeRevenue := new(big.Float).SetFloat64(0)
+	totalStakedLp := new(big.Float).SetFloat64(0)
+	newData, newDataTotalStakedLp, newDataTotalFeeRevenue, err2 := getFarmIncentivesByContractAddress(conf, chainId, userAddress, farmConf.Staker, DefaultPhase)
+
+	if err2 != nil {
+		logx.Infof("get old data Error %v", err2)
+		return ret, err
+	}
+
+	totalFeeRevenue = new(big.Float).Add(totalFeeRevenue, newDataTotalFeeRevenue)
+	totalStakedLp = new(big.Float).Add(totalStakedLp, newDataTotalStakedLp)
+
+	ret.DashboardIncentives = append(ret.DashboardIncentives, newData...)
+
+	oldData, oldDataTotalStakedLp, oldDataTotalFeeRevenue, err1 := getFarmIncentivesByContractAddress(conf, chainId, userAddress, *farmConf.OldVersionStaker, OldPhase)
+	if err1 != nil {
+		logx.Infof("get new data Error %v", err1)
+		return ret, err
+	}
+
+	ret.DashboardIncentives = append(ret.DashboardIncentives, oldData...)
+
+	totalFeeRevenue = new(big.Float).Add(totalFeeRevenue, oldDataTotalFeeRevenue)
+	totalStakedLp = new(big.Float).Add(totalStakedLp, oldDataTotalStakedLp)
+
+	totalFeeRevenueFloat64, _ := totalFeeRevenue.Float64()
+	ret.TotalRevenueUsd = totalFeeRevenue.String()
 	ret.TotalRevenueUsdFloat64 = totalFeeRevenueFloat64
 
 	ret.TotalStakedLpUsd = totalStakedLp.String()

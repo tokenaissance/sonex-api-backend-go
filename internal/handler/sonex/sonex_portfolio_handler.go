@@ -395,6 +395,7 @@ func SonexPortfolioHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 							Earned:               incentive.TotalClaimableFeesUSD,
 							EarnedAmount:         incentive.TotalClaimableFeesAmount,
 							StakedLPNum:          incentive.Staked, // 质押的LP个数
+							Phase:                incentive.Phase,  // 0:latest 1: old data
 						},
 					})
 				}
