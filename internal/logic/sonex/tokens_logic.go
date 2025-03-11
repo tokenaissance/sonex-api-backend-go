@@ -32,6 +32,11 @@ type CacheWarpper struct {
 	LastUpdate time.Time
 }
 
+type PriceCacheWarpper struct {
+	Data       map[string]*big.Int
+	LastUpdate time.Time
+}
+
 type VolumeCacheWarpper struct {
 	Data       map[string]*big.Int
 	LastUpdate time.Time
@@ -196,10 +201,28 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	go func() {
 		defer wg.Done()
 
-		currentPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, tokenAddressStrs)
-		if err != nil {
-			logx.Errorf("Get current price error: %s", err)
-			return
+		priceCacheKey := fmt.Sprintf("sonex:tokens_price:%d", req.ChainId)
+		// Check cache
+		if !req.NoCache {
+			var cacheWarpper PriceCacheWarpper
+			lastUpdate, err := redisCache.Get(priceCacheKey)
+			if err == nil && lastUpdate != "" {
+				err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+				if err == nil {
+					currentPriceRecords = cacheWarpper.Data
+					if time.Now().UTC().After(cacheWarpper.LastUpdate.Add(time.Minute * 5)) {
+						currentPriceRecords = nil
+					}
+				}
+			}
+		}
+
+		if currentPriceRecords == nil {
+			currentPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddresses(l.ctx, tokenAddressStrs)
+			if err != nil {
+				logx.Errorf("Get current price error: %s", err)
+				return
+			}
 		}
 	}()
 
@@ -209,10 +232,28 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	go func() {
 		defer wg.Done()
 
-		last1DPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1d")
-		if err != nil {
-			logx.Errorf("Get last 1D price error: %s", err)
-			return
+		priceCacheKey := fmt.Sprintf("sonex:tokens_price_1d:%d", req.ChainId)
+		// Check cache
+		if !req.NoCache {
+			var cacheWarpper PriceCacheWarpper
+			lastUpdate, err := redisCache.Get(priceCacheKey)
+			if err == nil && lastUpdate != "" {
+				err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+				if err == nil {
+					last1DPriceRecords = cacheWarpper.Data
+					if time.Now().UTC().After(cacheWarpper.LastUpdate.Add(time.Minute * 5)) {
+						last1DPriceRecords = nil
+					}
+				}
+			}
+		}
+
+		if last1DPriceRecords == nil {
+			last1DPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1d")
+			if err != nil {
+				logx.Errorf("Get last 1D price error: %s", err)
+				return
+			}
 		}
 	}()
 
@@ -222,10 +263,28 @@ func (l *TokensLogic) Tokens(req *types.TokensRequest) (resp *response.ApiRespon
 	go func() {
 		defer wg.Done()
 
-		last1HPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1h")
-		if err != nil {
-			logx.Errorf("Get last 1H price error: %s", err)
-			return
+		priceCacheKey := fmt.Sprintf("sonex:tokens_price_1h:%d", req.ChainId)
+		// Check cache
+		if !req.NoCache {
+			var cacheWarpper PriceCacheWarpper
+			lastUpdate, err := redisCache.Get(priceCacheKey)
+			if err == nil && lastUpdate != "" {
+				err := json.Unmarshal([]byte(lastUpdate), &cacheWarpper)
+				if err == nil {
+					last1HPriceRecords = cacheWarpper.Data
+					if time.Now().UTC().After(cacheWarpper.LastUpdate.Add(time.Minute * 5)) {
+						last1HPriceRecords = nil
+					}
+				}
+			}
+		}
+
+		if last1HPriceRecords == nil {
+			last1HPriceRecords, err = tokenPriceModel.QueryLatestHistoryPricesByAddressesInterval(l.ctx, tokenAddressStrs, "1h")
+			if err != nil {
+				logx.Errorf("Get last 1H price error: %s", err)
+				return
+			}
 		}
 	}()
 
