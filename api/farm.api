@@ -10,6 +10,7 @@ type FarmIncentivesRequest {
 	Status      string `form:"status,optional,options=active|closed"` // 运行状态
 	OrderBy     string `form:"orderBy,optional,options=hot|apr"`      // 排序字段
 	KeyWord     string `form:"keyWord,optional"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 	StakedOnly  bool   `form:"stakedOnly"`
 }
 
@@ -102,6 +103,7 @@ type FarmUserAssetDetailRequest {
 	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
 	UserAddress string `form:"userAddress"`      // 用户地址
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 // TODO 后续优化，应该是不需要 传incentiveid 全部 
@@ -124,6 +126,7 @@ type FarmPoolRoiRequest {
 	IncentiveId string `form:"incentiveId"`                      // 质押池ID
 	Amount      string `form:"amount"`                           // 金额（USD）
 	Duration    int    `form:"duration,options=1|7|30|365|1825"` // 质押时长（单位：天）
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmPoolRoiResponse {
@@ -140,10 +143,10 @@ type FarmPoolRoiResponse {
 
 // harvest 
 // 显示多少可以收获的
-// harvest 
 type FarmPoolLiquidityRequest {
 	ChainRequest
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 type FarmPoolLiquidityResponse {
@@ -169,6 +172,7 @@ type FarmStakeRequest {
 	IncentiveId string `form:"incentiveId"`      // 质押池ID
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
 
@@ -202,9 +206,10 @@ type FarmUnstakeRequest {
 	PoolAddress string `form:"poolAddress"`
 	PageSize    int64  `form:"pageSize,default=3"`
 	PageIndex   int64  `form:"pageIndex,default=1"`
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
 }
 
-// LIST :默认长度为3 个
+// LIST : 默认长度为3 个
 type FarmUnstakeResponse {
 	IncentiveId    string `form:"incentiveId"`      // 质押池ID
 	Total          int64  `json:"total"` 
@@ -224,6 +229,40 @@ type UnstakePositionsInfoResponse_Data {
 	Token1Amount string   `json:"token1Amount"`
 	TokenUsd     string   `json:"tokenUsd"` 
 }
+
+
+// 计算 Rewards
+type FarmRewardCalucateRequest {
+	ChainRequest
+	UserAddress string `form:"userAddress"`     // 用户地址
+	IncentiveId string `form:"incentiveId"`     // 质押池ID
+	FarmAddress string `form:"farmAddress"`     // farm address 
+	Phase       int64  `form:"phase,optional"` // 默认不传,phase= 0,默认新的合约数据;phase=1，老的合约数据
+}
+
+// 计算 Rewards
+type FarmRewardCalucateResponese {
+	IncentiveId         string `form:"incentiveId"`      // 质押池ID
+	UserAddress         string `form:"userAddress"`                  // 用户地址
+	FarmAddress         string `form:"farmAddress,optional"`
+	Address             string `json:"address"`  // reward token address  
+	Name                string `json:"name"` //   reward token,  
+	Symbol              string `json:"symbol"`//  reward symbol
+	Decimals            int64  `json:"decimals"`  //  reward decimal
+	RewardTokenLogo     string `json:"rewardTokenLogo"`
+	TotalTokenAmount    string   `json:"totalTokenAmount"`  // 对应的空投的 tokenAmount
+	TotalTokenAmountUsd string   `json:"totalTokenAmountUsd"`  // 对应的空投的 tokenAmount 的USD
+	TotalLiquidityUsd   string   `json:"totalLiquidityUsd"`// 自己所有曾经质押的LP的总的USD 
+	List                []StakedItem     `json:"list"` // 曾经所有质押的LP的详情
+}
+
+type StakedItem {
+    PositionId     int64  `json:"positionId"` // position的tokenid
+    TokenUsd       string `json:"tokenUsd"`
+	Liquidity      string `json:"liquidity"`
+	TokenAmount    string `json:"tokenAmount"`  // 计算出来的奖励,ratePersecond *weight/totalWeight*timeOffset*liquidityUsd/totalLiquidtyUSD
+}
+
 
 @server (
 	prefix: /farm
@@ -254,4 +293,8 @@ service sonex_api_backend_go {
 	@handler FarmPoolRoiHandler
 	get /pool/roi (FarmPoolRoiRequest) returns (FarmPoolRoiResponse)
 
+
+	@doc "For air drop"
+	@handler FarmRewardCalucateHandler
+	get /pool/rewards (FarmRewardCalucateRequest) returns (FarmRewardCalucateResponese)
 }

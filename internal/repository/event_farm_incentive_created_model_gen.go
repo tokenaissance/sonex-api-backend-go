@@ -27,7 +27,7 @@ type (
 	eventFarmIncentiveCreatedModel interface {
 		Insert(ctx context.Context, data *EventFarmIncentiveCreated) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*EventFarmIncentiveCreated, error)
-		FindOneByChainIdEventIncentiveId(ctx context.Context, chainId int64, eventIncentiveId int64) (*EventFarmIncentiveCreated, error)
+		FindOneByChainIdToEventIncentiveId(ctx context.Context, chainId int64, to string, eventIncentiveId int64) (*EventFarmIncentiveCreated, error)
 		FindOneByChainIdTxHashTxIndex(ctx context.Context, chainId int64, txHash string, txIndex int64) (*EventFarmIncentiveCreated, error)
 		Update(ctx context.Context, data *EventFarmIncentiveCreated) error
 		Delete(ctx context.Context, id int64) error
@@ -86,10 +86,10 @@ func (m *defaultEventFarmIncentiveCreatedModel) FindOne(ctx context.Context, id 
 	}
 }
 
-func (m *defaultEventFarmIncentiveCreatedModel) FindOneByChainIdEventIncentiveId(ctx context.Context, chainId int64, eventIncentiveId int64) (*EventFarmIncentiveCreated, error) {
+func (m *defaultEventFarmIncentiveCreatedModel) FindOneByChainIdToEventIncentiveId(ctx context.Context, chainId int64, to string, eventIncentiveId int64) (*EventFarmIncentiveCreated, error) {
 	var resp EventFarmIncentiveCreated
-	query := fmt.Sprintf("select %s from %s where chain_id = $1 and event_incentive_id = $2 limit 1", eventFarmIncentiveCreatedRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, eventIncentiveId)
+	query := fmt.Sprintf("select %s from %s where chain_id = $1 and to_ = $2 and event_incentive_id = $3 limit 1", eventFarmIncentiveCreatedRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, chainId, to, eventIncentiveId)
 	switch err {
 	case nil:
 		return &resp, nil
