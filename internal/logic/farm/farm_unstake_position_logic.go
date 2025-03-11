@@ -424,7 +424,6 @@ func (l *FarmUnstakePositionLogic) GetFarmIncentives(conf config.Config, chainId
 	totalStakedLpFloat64, _ := totalStakedLp.Float64()
 	ret.TotalStakedLpUsdFloat64 = totalStakedLpFloat64
 
-	logx.Infof(" GetUserDashboardInfo sret %#v ", ret)
 	return ret, err
 }
 
